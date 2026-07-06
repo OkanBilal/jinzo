@@ -5,7 +5,7 @@ import { projectsRepo } from "./projects.repo";
 import { LINKABLE_KINDS, normalizeRemoteOrigin } from "./projects.utils";
 import { workspaceRepo } from "../workspace";
 import { runsRepo } from "../runs/runs.repo";
-import { gitService } from "../git/git.service";
+import { gitService } from "../git";
 import { getIssuesByResourceIds } from "../entities";
 import type {
   AvailableResource,
@@ -214,6 +214,27 @@ export const projectsService = {
       console.error(`[ProjectsService] Failed to delete project ${id}:`, error);
       return fail("Failed to delete project");
     }
+  },
+
+  /**
+   * Live branch names of the project's repo (local + remote, deduped with
+   * `remotes/…` prefixes stripped). Throw-style: the envelope is applied by
+   * `handle()` at the IPC seam.
+   */
+  async listBranchNames(id: string): Promise<string[]> {
+    const project = await projectsRepo.findById(id);
+    if (!project) throw new Error("Project not found");
+    const { all } = await gitService.getBranches(project.rootPath);
+    const seen = new Set<string>();
+    const names: string[] = [];
+    for (const raw of all) {
+      const name = raw.replace(/^remotes\/[^/]+\//, "");
+      if (!seen.has(name)) {
+        seen.add(name);
+        names.push(name);
+      }
+    }
+    return names;
   },
 
   async archive(id: string): Promise<ServiceResponse<ProjectResponse>> {

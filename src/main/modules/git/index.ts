@@ -1,9 +1,16 @@
-export { registerGitIpc, unregisterGitIpc } from "./git.ipc";
+// The git module is main-process-internal: no IPC surface, no preload
+// namespace. Renderer-triggered git effects go through workspace/gitFlow
+// operations. See CONTEXT.md "git module".
 export { gitService } from "./git.service";
 export type {
   GitStatusResponse,
-  GitBranchInfo,
   GitLogEntry,
   GitRemote,
   WorktreeImportResult,
+  DirectImportResult,
 } from "./git.service";
+export {
+  hashContent,
+  buildPerFileDiffHashes,
+  type DiffSnapshot,
+} from "./git-snapshot";

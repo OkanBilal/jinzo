@@ -14,6 +14,7 @@ export {
   type IpcHandler,
   type IpcInvokeContext,
 } from "./handler-registry";
+export { handle } from "./handle";
 export { WebSocketSink, type WsClientConnection } from "./websocket-sink";
 export { serveConnection, type WsConnection } from "./ws-server";
 

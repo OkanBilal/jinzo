@@ -86,26 +86,9 @@ export const CHANNELS = {
     readFileText: "fileExplorer:readFileText",
     searchFiles: "fileExplorer:searchFiles",
   },
-  git: {
-    cloneRepo: "git:cloneRepo",
-    createBranch: "git:createBranch",
-    createWorktree: "git:createWorktree",
-    getBranches: "git:getBranches",
-    getCurrentBranch: "git:getCurrentBranch",
-    getDiff: "git:getDiff",
-    getLog: "git:getLog",
-    getRemotes: "git:getRemotes",
-    getRepoRoot: "git:getRepoRoot",
-    getStatus: "git:getStatus",
-    getWorktreesDir: "git:getWorktreesDir",
-    importLocalRepo: "git:importLocalRepo",
-    importLocalRepoDirect: "git:importLocalRepoDirect",
-    initRepo: "git:initRepo",
-    isRepo: "git:isRepo",
-    removeWorktree: "git:removeWorktree",
-    renameBranch: "git:renameBranch",
-    resetHard: "git:resetHard",
-  },
+  // NOTE: there is deliberately no `git` namespace — the git module is
+  // main-process-internal. Renderer-triggered git effects are workspace/gitFlow
+  // operations. See CONTEXT.md "git module".
   gitFlow: {
     getStatus: "gitFlow:getStatus",
     commit: "gitFlow:commit",
@@ -158,6 +141,7 @@ export const CHANNELS = {
     findOrCreate: "projects:findOrCreate",
     get: "projects:get",
     list: "projects:list",
+    listBranches: "projects:listBranches",
     listByAccount: "projects:listByAccount",
     remove: "projects:remove",
     update: "projects:update",
@@ -332,6 +316,8 @@ export const CHANNELS = {
     scriptComplete: "workspace:scriptComplete",
     selectDirectory: "workspace:selectDirectory",
     update: "workspace:update",
+    renameBranch: "workspace:renameBranch",
+    discardChanges: "workspace:discardChanges",
     // ── activity ──
     createActivity: "workspace:createActivity",
     createManyActivity: "workspace:createManyActivity",

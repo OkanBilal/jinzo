@@ -8,9 +8,8 @@ import { emit } from "../../ipc-kit";
 import { workspaceRepo } from "./workspace.repo";
 import { projectsRepo } from "../projects/projects.repo";
 import { normalizeRemoteOrigin } from "../projects/projects.utils";
-import { gitService } from "../git/git.service";
+import { gitService } from "../git";
 import { appSettingsService } from "../appSettings/appSettings.service";
-import { buildDiffSnapshot } from "./workspace-diff-snapshot";
 import type { CreateProjectPayload, ProjectResponse } from "../projects/projects.dto";
 import type {
   CreateWorkspacePayload,
@@ -111,12 +110,6 @@ export function emitFindingsChanged(workspaceId: string | undefined): void {
 // projects.service imports the workspace barrel.
 // ─────────────────────────────────────────────────────────────
 
-/** Unwrap a git `ServiceResponse`, or throw with a caller-friendly message. */
-function expectOk<T>(res: ServiceResponse<T>, fallback: string): T {
-  if (res.success && res.data != null) return res.data;
-  throw new Error(!res.success ? res.error : fallback);
-}
-
 /** Last path segment, e.g. `/a/b/my-repo` → `my-repo`. */
 function basename(p: string): string {
   return p.split("/").pop() || "Untitled";
@@ -130,15 +123,21 @@ async function preferWorktrees(): Promise<boolean> {
 
 /** Read the `origin` fetch URL of a repo, or null when there's no remote. */
 async function readOriginUrl(rootPath: string): Promise<string | null> {
-  const res = await gitService.getRemotes(rootPath);
-  if (!res.success || !res.data) return null;
-  return res.data.find((r) => r.name === "origin")?.fetchUrl ?? null;
+  try {
+    const remotes = await gitService.getRemotes(rootPath);
+    return remotes.find((r) => r.name === "origin")?.fetchUrl ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /** Read the checked-out branch of a repo, falling back to `main`. */
 async function readCurrentBranch(rootPath: string): Promise<string> {
-  const res = await gitService.getCurrentBranch(rootPath);
-  return res.success && res.data ? res.data : "main";
+  try {
+    return (await gitService.getCurrentBranch(rootPath)) || "main";
+  } catch {
+    return "main";
+  }
 }
 
 /** A project's worktree dir is the parent of its first worktree. */
@@ -327,11 +326,12 @@ export const workspaceService = {
   },
 
   /**
-   * Turn a git repo into a project + workspace pair. The three sources
-   * (picked `folder`, `clone` of a URL, fresh `init`) each yield a local repo
-   * path; the shared tail imports it (worktree or direct), finds-or-creates
-   * the project, and creates the workspace. The worktree-vs-direct ordering
-   * difference lives here, not at call sites. See CONTEXT.md "Workspace intake".
+   * Turn a git repo into a project + workspace pair. The four sources
+   * (picked `folder`, `clone` of a URL, fresh `init`, additional `worktree`
+   * for an existing project) each yield a local repo path; the shared tail
+   * imports it (worktree or direct), finds-or-creates the project, and
+   * creates the workspace. The worktree-vs-direct ordering difference lives
+   * here, not at call sites. See CONTEXT.md "Workspace intake".
    */
   async createFromSource(
     payload: WorkspaceIntakePayload,
@@ -341,10 +341,7 @@ export const workspaceService = {
 
       // ── init: brand-new empty repo. Always direct, no remote. ──
       if (source.kind === "init") {
-        const init = expectOk(
-          await gitService.initRepo(source.name),
-          "Failed to create project",
-        );
+        const init = await gitService.initRepo(source.name);
         const project = await findOrCreateProject({
           accountId,
           name: source.name,
@@ -370,13 +367,49 @@ export const workspaceService = {
         });
       }
 
+      // ── worktree: an additional worktree workspace for an existing project.
+      // The project already exists, so find-or-create is a lookup. ──
+      if (source.kind === "worktree") {
+        const project = await projectsRepo.findById(source.projectId);
+        if (!project) return fail("Project not found");
+
+        const imported = await gitService.importLocalRepo(
+          project.rootPath,
+          project.name,
+        );
+        if (!project.workspacesPath) {
+          await projectsRepo.update(project.id, {
+            workspacesPath: deriveWorkspacesPath(imported.worktreePath),
+          });
+        }
+        return this.create({
+          accountId,
+          name: project.name,
+          rootPath: imported.worktreePath,
+          repoUrl: imported.originUrl ?? project.remoteOrigin ?? undefined,
+          defaultBranch: imported.branchName,
+          metadata: buildMetadata({
+            tracking: imported.tracking,
+            ahead: imported.ahead,
+            behind: imported.behind,
+            baseBranch: imported.baseBranch,
+            branchName: imported.branchName,
+            originUrl: imported.originUrl ?? project.remoteOrigin ?? null,
+            worktree: {
+              name: imported.worktreeName,
+              path: imported.worktreePath,
+              sourcePath: project.rootPath,
+            },
+          }),
+          projectId: project.id,
+        });
+      }
+
       // ── folder / clone: obtain a local repo path, then import it. ──
       const sourcePath =
         source.kind === "clone"
-          ? expectOk(
-              await gitService.cloneRepo(source.url, source.targetPath),
-              "Failed to clone repository",
-            ).clonedPath
+          ? (await gitService.cloneRepo(source.url, source.targetPath))
+              .clonedPath
           : source.path;
       const name = basename(sourcePath);
 
@@ -392,9 +425,9 @@ export const workspaceService = {
           remoteOrigin: originUrl ?? undefined,
           defaultBranch: baseBranch,
         });
-        const imported = expectOk(
-          await gitService.importLocalRepo(sourcePath, project.name),
-          "Not a git repository",
+        const imported = await gitService.importLocalRepo(
+          sourcePath,
+          project.name,
         );
         if (!project.workspacesPath) {
           await projectsRepo.update(project.id, {
@@ -425,10 +458,7 @@ export const workspaceService = {
       }
 
       // Direct: import in place, then create the project from the result.
-      const imported = expectOk(
-        await gitService.importLocalRepoDirect(sourcePath),
-        "Not a git repository",
-      );
+      const imported = await gitService.importLocalRepoDirect(sourcePath);
       const project = await findOrCreateProject({
         accountId,
         name,
@@ -553,6 +583,64 @@ export const workspaceService = {
       );
       return fail("Failed to archive workspace");
     }
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // ── Git operations ──
+  // Throw-style: these return plain values and throw on failure; the envelope
+  // is applied by `handle()` at the IPC seam. See CONTEXT.md "Workspace git
+  // operations".
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Rename the workspace's branch — against the worktree's source repo when
+   * applicable — then update `defaultBranch` + `metadata.worktree.branch` in
+   * the same operation.
+   */
+  async renameBranch(
+    workspaceId: string,
+    newBranchName: string,
+  ): Promise<WorkspaceResponse> {
+    const workspace = await workspaceRepo.findById(workspaceId);
+    if (!workspace) throw new Error("Workspace not found");
+    const oldBranch = workspace.defaultBranch;
+    if (!oldBranch || !workspace.rootPath) {
+      throw new Error("Workspace has no branch to rename");
+    }
+
+    // A worktree's branch is owned by its source repo, not the checkout.
+    const worktree = workspace.metadata?.worktree;
+    const gitPath =
+      worktree?.enabled && worktree.sourcePath
+        ? worktree.sourcePath
+        : workspace.rootPath;
+    await gitService.renameBranch(gitPath, oldBranch, newBranchName);
+
+    const metadata: WorkspaceMetadata = workspace.metadata
+      ? { ...workspace.metadata }
+      : {};
+    if (metadata.worktree?.enabled) {
+      metadata.worktree = { ...metadata.worktree, branch: newBranchName };
+    }
+    const updated = await workspaceRepo.update(workspaceId, {
+      defaultBranch: newBranchName,
+      metadata,
+    });
+    if (!updated) throw new Error("Workspace not found");
+    return updated;
+  },
+
+  /**
+   * Discard the workspace's pending changes: hard-reset the working tree to
+   * the recorded diff's baseRef and drop the latest diff row.
+   */
+  async discardChanges(workspaceId: string): Promise<void> {
+    const workspace = await workspaceRepo.findById(workspaceId);
+    if (!workspace) throw new Error("Workspace not found");
+    const latest = await workspaceRepo.findLatestDiffByWorkspace(workspaceId);
+    if (!latest?.baseRef) throw new Error("No recorded diff to discard");
+    await gitService.resetHard(workspace.rootPath, latest.baseRef);
+    await workspaceRepo.deleteLatestDiffByWorkspace(workspaceId);
   },
 
   // ─────────────────────────────────────────────────────────────
@@ -729,11 +817,10 @@ export const workspaceService = {
       // stays in the `baseRef..workingTree` range and keeps showing up even
       // though the tree is clean. This mirrors the in-process commit tool, which
       // advances baseRef to the post-commit HEAD (see mains-tools.core.ts).
-      const headResult = await gitService.getHeadSha(workspace.rootPath);
-      const baseRef =
-        headResult.success && headResult.data
-          ? headResult.data
-          : (existing?.baseRef ?? null);
+      const head = await gitService
+        .getHeadSha(workspace.rootPath)
+        .catch(() => null);
+      const baseRef = head ?? existing?.baseRef ?? null;
 
       // No baseRef means it's not a git repo (or git failed). Drop any stale
       // row defensively, then bail.
@@ -744,11 +831,10 @@ export const workspaceService = {
         return ok(null);
       }
 
-      const snapshot = await buildDiffSnapshot({
-        rootPath: workspace.rootPath,
+      const snapshot = await gitService.captureDiffSnapshot(
+        workspace.rootPath,
         baseRef,
-      });
-      if (!snapshot) return fail("Failed to compute diff");
+      );
 
       if (snapshot.files.length === 0) {
         if (existing) {

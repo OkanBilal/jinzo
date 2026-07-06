@@ -71,7 +71,8 @@ export interface UpdateWorkspacePayload {
 export type WorkspaceIntakeSource =
   | { kind: "folder"; path: string }
   | { kind: "clone"; url: string; targetPath: string }
-  | { kind: "init"; name: string };
+  | { kind: "init"; name: string }
+  | { kind: "worktree"; projectId: string };
 
 export interface WorkspaceIntakePayload {
   accountId: string;
@@ -317,6 +318,38 @@ export const workspaceApi = baseApi.injectEndpoints({
       query: () => ({ handler: CHANNELS.workspace.selectDirectory }),
       transformResponse: (response: ServiceResponse<string | null>) =>
         unwrap(response),
+    }),
+
+    // ── Git operations (see CONTEXT.md "Workspace git operations") ──
+    // Renames the branch (against the worktree's source repo when applicable)
+    // and updates defaultBranch + metadata.worktree.branch in one operation.
+    renameWorkspaceBranch: builder.mutation<
+      Workspace,
+      { id: string; newBranchName: string }
+    >({
+      query: ({ id, newBranchName }) => ({
+        handler: CHANNELS.workspace.renameBranch,
+        args: [id, newBranchName],
+      }),
+      transformResponse: (response: ServiceResponse<Workspace>) =>
+        unwrap(response),
+      invalidatesTags: (_result, _error, { id }) => [
+        "Workspaces",
+        { type: "Workspaces", id },
+      ],
+    }),
+
+    // Hard-resets the working tree to the recorded diff's baseRef and drops
+    // the latest diff row.
+    discardWorkspaceChanges: builder.mutation<void, string>({
+      query: (workspaceId) => ({
+        handler: CHANNELS.workspace.discardChanges,
+        args: [workspaceId],
+      }),
+      transformResponse: (response: ServiceResponse<void>) => unwrap(response),
+      invalidatesTags: (_result, _error, workspaceId) => [
+        { type: "WorkspaceDiffs", id: workspaceId },
+      ],
     }),
 
     // ── Activity ──
@@ -574,6 +607,8 @@ export const {
   useDeleteWorkspaceMutation,
   useArchiveWorkspaceMutation,
   useSelectWorkspaceDirectoryMutation,
+  useRenameWorkspaceBranchMutation,
+  useDiscardWorkspaceChangesMutation,
   // activity
   useListWorkspaceActivityQuery,
   useCreateWorkspaceActivityMutation,

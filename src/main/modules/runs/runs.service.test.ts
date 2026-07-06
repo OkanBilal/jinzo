@@ -55,13 +55,11 @@ vi.mock("../providers/adapters", () => ({
   couldModifyFiles: vi.fn().mockReturnValue(false),
 }));
 
+// gitService is throw-style: plain resolved values, rejects on failure.
 vi.mock("../git/git.service", () => ({
   gitService: {
     getHeadSha: vi.fn(),
-    getDiffSince: vi.fn(),
-    getChangedFilesSince: vi.fn(),
-    getShortStatSince: vi.fn(),
-    getUntrackedFiles: vi.fn(),
+    captureDiffSnapshot: vi.fn(),
   },
 }));
 
@@ -94,6 +92,18 @@ import { gitService } from "../git/git.service";
 describe("runsService", () => {
   beforeEach(() => {
     ({ db, sqlite: _sqlite, cleanup } = createTestDb());
+    // Defaults for the throw-style git mock: no repo unless a test overrides,
+    // and an empty snapshot so sessions that DO get a baseRef can finalize.
+    vi.mocked(gitService.getHeadSha).mockRejectedValue(
+      new Error("not a git repo"),
+    );
+    vi.mocked(gitService.captureDiffSnapshot).mockResolvedValue({
+      baseRef: "",
+      diffText: "",
+      files: [],
+      untrackedFiles: [],
+      shortstat: "",
+    });
     createAccount(db, { id: "default" });
     createProvider(db, { id: "copilot_cli" });
   });
@@ -1085,7 +1095,7 @@ describe("runsService", () => {
     it("captures git base ref at run start", async () => {
       createWorkspace(db, { id: "ws1", rootPath: "/tmp/test-repo" });
       setupMockAdapter();
-      vi.mocked(gitService.getHeadSha).mockResolvedValue({ success: true, data: "abc123" });
+      vi.mocked(gitService.getHeadSha).mockResolvedValue("abc123");
 
       await runsService.executeRun(basePayload());
       expect(gitService.getHeadSha).toHaveBeenCalledWith("/tmp/test-repo");

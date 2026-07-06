@@ -174,6 +174,8 @@ const api = {
     remove: (id: string) => ipcRenderer.invoke(CHANNELS.projects.remove, id),
     delete: (id: string) => ipcRenderer.invoke(CHANNELS.projects.delete, id),
     archive: (id: string) => ipcRenderer.invoke(CHANNELS.projects.archive, id),
+    listBranches: (id: string) =>
+      ipcRenderer.invoke(CHANNELS.projects.listBranches, id),
     // ── resources ──
     listResources: (projectId: string) =>
       ipcRenderer.invoke(CHANNELS.projects.listResources, projectId),
@@ -308,6 +310,11 @@ const api = {
       ipcRenderer.invoke(CHANNELS.workspace.delete, id),
     archive: (id: string) =>
       ipcRenderer.invoke(CHANNELS.workspace.archive, id),
+    // ── git operations (see CONTEXT.md "Workspace git operations") ──
+    renameBranch: (id: string, newBranchName: string) =>
+      ipcRenderer.invoke(CHANNELS.workspace.renameBranch, id, newBranchName),
+    discardChanges: (id: string) =>
+      ipcRenderer.invoke(CHANNELS.workspace.discardChanges, id),
     selectDirectory: () =>
       ipcRenderer.invoke(CHANNELS.workspace.selectDirectory),
     onScriptComplete: (
@@ -607,96 +614,9 @@ const api = {
       excludePatterns?: string[];
     }) => ipcRenderer.invoke(CHANNELS.fileExplorer.searchFiles, options),
   },
-  // Git operations
-  git: {
-    /**
-     * Check if a path is a git repository
-     */
-    isRepo: (rootPath: string) => ipcRenderer.invoke(CHANNELS.git.isRepo, rootPath),
-    /**
-     * Get the current branch name
-     */
-    getCurrentBranch: (rootPath: string) =>
-      ipcRenderer.invoke(CHANNELS.git.getCurrentBranch, rootPath),
-    /**
-     * Get all branches
-     */
-    getBranches: (rootPath: string) =>
-      ipcRenderer.invoke(CHANNELS.git.getBranches, rootPath),
-    /**
-     * Get git status (modified, staged, untracked files, etc.)
-     */
-    getStatus: (rootPath: string) =>
-      ipcRenderer.invoke(CHANNELS.git.getStatus, rootPath),
-    /**
-     * Get recent commits
-     */
-    getLog: (rootPath: string, limit?: number) =>
-      ipcRenderer.invoke(CHANNELS.git.getLog, rootPath, limit),
-    /**
-     * Get remote URLs
-     */
-    getRemotes: (rootPath: string) =>
-      ipcRenderer.invoke(CHANNELS.git.getRemotes, rootPath),
-    /**
-     * Get diff for a file or all files
-     */
-    getDiff: (rootPath: string, filePath?: string) =>
-      ipcRenderer.invoke(CHANNELS.git.getDiff, rootPath, filePath),
-    /**
-     * Get the root directory of the git repository
-     */
-    getRepoRoot: (rootPath: string) =>
-      ipcRenderer.invoke(CHANNELS.git.getRepoRoot, rootPath),
-    /**
-     * Create a new local branch
-     */
-    createBranch: (rootPath: string, branchName: string) =>
-      ipcRenderer.invoke(CHANNELS.git.createBranch, rootPath, branchName),
-    /**
-     * Create a worktree for a branch
-     */
-    createWorktree: (rootPath: string, worktreePath: string, branchName: string) =>
-      ipcRenderer.invoke(CHANNELS.git.createWorktree, rootPath, worktreePath, branchName),
-    /**
-     * Import a local git repo by creating a branch + worktree.
-     * Returns full metadata needed for workspace creation.
-     */
-    importLocalRepo: (sourcePath: string, projectName?: string, customBranchName?: string) =>
-      ipcRenderer.invoke(CHANNELS.git.importLocalRepo, sourcePath, projectName, customBranchName),
-    importLocalRepoDirect: (sourcePath: string) =>
-      ipcRenderer.invoke(CHANNELS.git.importLocalRepoDirect, sourcePath),
-    /**
-     * Rename a local branch
-     */
-    renameBranch: (rootPath: string, oldName: string, newName: string) =>
-      ipcRenderer.invoke(CHANNELS.git.renameBranch, rootPath, oldName, newName),
-    /**
-     * Remove a worktree
-     */
-    removeWorktree: (sourcePath: string, worktreePath: string) =>
-      ipcRenderer.invoke(CHANNELS.git.removeWorktree, sourcePath, worktreePath),
-    /**
-     * Get the worktrees directory path
-     */
-    getWorktreesDir: () => ipcRenderer.invoke(CHANNELS.git.getWorktreesDir),
-    /**
-     * Clone a remote git repository to a local path
-     */
-    cloneRepo: (url: string, targetPath: string) =>
-      ipcRenderer.invoke(CHANNELS.git.cloneRepo, url, targetPath),
-    /**
-     * Initialize a new git repo in a fresh folder under parentPath
-     * (defaults to user Desktop). Always uses `main` as the branch.
-     */
-    initRepo: (projectName: string, parentPath?: string) =>
-      ipcRenderer.invoke(CHANNELS.git.initRepo, projectName, parentPath),
-    /**
-     * Hard-reset working tree to a given ref and clean untracked files
-     */
-    resetHard: (rootPath: string, ref: string) =>
-      ipcRenderer.invoke(CHANNELS.git.resetHard, rootPath, ref),
-  },
+  // NOTE: there is deliberately no `git` namespace — the git module is
+  // main-process-internal. Renderer-triggered git effects are workspace/gitFlow
+  // operations. See CONTEXT.md "git module".
   // Deterministic commit / push / PR flow (no chat agent)
   gitFlow: {
     /** Live branch + ahead/behind + pending +/- stats for the commit panel */

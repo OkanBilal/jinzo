@@ -80,6 +80,7 @@ vi.mock("fs", async (importOriginal) => {
 
 // Workspace intake collaborators — stubbed so the intake can be exercised
 // end-to-end against the test db without touching real git or settings.
+// gitService is throw-style: mocks resolve plain values / reject Errors.
 vi.mock("../git/git.service", () => ({
   gitService: {
     initRepo: vi.fn(),
@@ -89,6 +90,9 @@ vi.mock("../git/git.service", () => ({
     getRemotes: vi.fn(),
     getCurrentBranch: vi.fn(),
     getHeadSha: vi.fn(),
+    renameBranch: vi.fn(),
+    resetHard: vi.fn(),
+    captureDiffSnapshot: vi.fn(),
   },
 }));
 
@@ -2654,29 +2658,23 @@ describe("workspaceService — createFromSource (workspace intake)", () => {
 
   it("folder + worktree: creates the project before the import, lands a worktree workspace", async () => {
     setWorktrees(true);
-    gitMock.getRemotes.mockResolvedValue({
-      success: true,
-      data: [
-        {
-          name: "origin",
-          fetchUrl: "https://github.com/foo/bar.git",
-          pushUrl: undefined,
-        },
-      ],
-    });
-    gitMock.getCurrentBranch.mockResolvedValue({ success: true, data: "main" });
-    gitMock.importLocalRepo.mockResolvedValue({
-      success: true,
-      data: {
-        branchName: "feature/x",
-        worktreePath: "/work/worktrees/bar/apple",
-        worktreeName: "apple",
-        baseBranch: "main",
-        tracking: null,
-        ahead: 0,
-        behind: 0,
-        originUrl: "https://github.com/foo/bar.git",
+    gitMock.getRemotes.mockResolvedValue([
+      {
+        name: "origin",
+        fetchUrl: "https://github.com/foo/bar.git",
+        pushUrl: undefined,
       },
+    ]);
+    gitMock.getCurrentBranch.mockResolvedValue("main");
+    gitMock.importLocalRepo.mockResolvedValue({
+      branchName: "feature/x",
+      worktreePath: "/work/worktrees/bar/apple",
+      worktreeName: "apple",
+      baseBranch: "main",
+      tracking: null,
+      ahead: 0,
+      behind: 0,
+      originUrl: "https://github.com/foo/bar.git",
     });
 
     const result = await workspaceService.createFromSource({
@@ -2704,16 +2702,13 @@ describe("workspaceService — createFromSource (workspace intake)", () => {
   it("folder + direct: imports in place, no worktree, no workspacesPath", async () => {
     setWorktrees(false);
     gitMock.importLocalRepoDirect.mockResolvedValue({
-      success: true,
-      data: {
-        branchName: "main",
-        sourcePath: "/repos/baz",
-        baseBranch: "main",
-        tracking: "origin/main",
-        ahead: 1,
-        behind: 0,
-        originUrl: "https://github.com/foo/baz.git",
-      },
+      branchName: "main",
+      sourcePath: "/repos/baz",
+      baseBranch: "main",
+      tracking: "origin/main",
+      ahead: 1,
+      behind: 0,
+      originUrl: "https://github.com/foo/baz.git",
     });
 
     const result = await workspaceService.createFromSource({
@@ -2732,24 +2727,18 @@ describe("workspaceService — createFromSource (workspace intake)", () => {
   it("clone + direct: clones first, then imports the cloned path", async () => {
     setWorktrees(false);
     gitMock.cloneRepo.mockResolvedValue({
-      success: true,
-      data: {
-        clonedPath: "/clones/qux",
-        defaultBranch: "main",
-        originUrl: "https://github.com/foo/qux.git",
-      },
+      clonedPath: "/clones/qux",
+      defaultBranch: "main",
+      originUrl: "https://github.com/foo/qux.git",
     });
     gitMock.importLocalRepoDirect.mockResolvedValue({
-      success: true,
-      data: {
-        branchName: "main",
-        sourcePath: "/clones/qux",
-        baseBranch: "main",
-        tracking: null,
-        ahead: 0,
-        behind: 0,
-        originUrl: "https://github.com/foo/qux.git",
-      },
+      branchName: "main",
+      sourcePath: "/clones/qux",
+      baseBranch: "main",
+      tracking: null,
+      ahead: 0,
+      behind: 0,
+      originUrl: "https://github.com/foo/qux.git",
     });
 
     const result = await workspaceService.createFromSource({
@@ -2774,8 +2763,8 @@ describe("workspaceService — createFromSource (workspace intake)", () => {
   it("init: fresh repo — always direct, no import, no origin", async () => {
     setWorktrees(true); // ignored for init
     gitMock.initRepo.mockResolvedValue({
-      success: true,
-      data: { rootPath: "/desktop/newproj", defaultBranch: "main" },
+      rootPath: "/desktop/newproj",
+      defaultBranch: "main",
     });
 
     const result = await workspaceService.createFromSource({
@@ -2797,16 +2786,13 @@ describe("workspaceService — createFromSource (workspace intake)", () => {
   it("dedups the project by normalized origin across two intakes", async () => {
     setWorktrees(false);
     gitMock.importLocalRepoDirect.mockResolvedValue({
-      success: true,
-      data: {
-        branchName: "main",
-        sourcePath: "/repos/dup",
-        baseBranch: "main",
-        tracking: null,
-        ahead: 0,
-        behind: 0,
-        originUrl: "git@github.com:foo/dup.git",
-      },
+      branchName: "main",
+      sourcePath: "/repos/dup",
+      baseBranch: "main",
+      tracking: null,
+      ahead: 0,
+      behind: 0,
+      originUrl: "git@github.com:foo/dup.git",
     });
 
     const a = await workspaceService.createFromSource({
@@ -2827,10 +2813,9 @@ describe("workspaceService — createFromSource (workspace intake)", () => {
 
   it("surfaces the git error message when the import fails", async () => {
     setWorktrees(false);
-    gitMock.importLocalRepoDirect.mockResolvedValue({
-      success: false,
-      error: "Not a git repository",
-    });
+    gitMock.importLocalRepoDirect.mockRejectedValue(
+      new Error("Not a git repository"),
+    );
 
     const result = await workspaceService.createFromSource({
       accountId: "default",
@@ -2839,5 +2824,197 @@ describe("workspaceService — createFromSource (workspace intake)", () => {
 
     assertFail(result);
     expect(result.error).toBe("Not a git repository");
+  });
+
+  it("worktree: an additional worktree workspace for an existing project", async () => {
+    setWorktrees(false); // ignored — worktree source is always a worktree
+    const project = createProject(db, {
+      id: "p-wt",
+      name: "bar",
+      rootPath: "/repos/bar",
+      remoteOrigin: "https://github.com/foo/bar.git",
+    });
+    gitMock.importLocalRepo.mockResolvedValue({
+      branchName: "cherry-ab12",
+      worktreePath: "/work/worktrees/bar/cherry-ab12",
+      worktreeName: "cherry-ab12",
+      baseBranch: "main",
+      tracking: null,
+      ahead: 0,
+      behind: 0,
+      originUrl: "https://github.com/foo/bar.git",
+    });
+
+    const result = await workspaceService.createFromSource({
+      accountId: "default",
+      source: { kind: "worktree", projectId: project.id },
+    });
+
+    assertOk(result);
+    expect(gitMock.importLocalRepo).toHaveBeenCalledWith("/repos/bar", "bar");
+    expect(result.data.projectId).toBe("p-wt");
+    expect(result.data.rootPath).toBe("/work/worktrees/bar/cherry-ab12");
+    expect(result.data.metadata?.worktree).toEqual({
+      enabled: true,
+      name: "cherry-ab12",
+      path: "/work/worktrees/bar/cherry-ab12",
+      sourcePath: "/repos/bar",
+      branch: "cherry-ab12",
+    });
+    // Derived from the first worktree's parent dir.
+    const updated = await projectsRepo.findById("p-wt");
+    expect(updated!.workspacesPath).toBe("/work/worktrees/bar");
+  });
+
+  it("worktree: fails when the project does not exist", async () => {
+    const result = await workspaceService.createFromSource({
+      accountId: "default",
+      source: { kind: "worktree", projectId: "missing" },
+    });
+    assertFail(result);
+    expect(result.error).toBe("Project not found");
+  });
+});
+
+// ════════════════════════════════════════════════════════════════
+// 7. Workspace git operations (renameBranch / discardChanges)
+//
+// Throw-style methods — the envelope is applied by handle() at the IPC seam,
+// so these assert on resolved values / rejections, not ServiceResponse.
+// ════════════════════════════════════════════════════════════════
+
+describe("workspaceService — git operations", () => {
+  const gitMock = vi.mocked(gitService);
+
+  beforeEach(() => {
+    ({ db, sqlite: _sqlite, cleanup } = createTestDb());
+    createAccount(db, { id: "default" });
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  describe("renameBranch", () => {
+    it("renames against the worktree's source repo and updates metadata", async () => {
+      createWorkspace(db, {
+        id: "ws-wt",
+        defaultBranch: "apple-1234",
+        rootPath: "/work/worktrees/bar/apple-1234",
+        metadata: JSON.stringify({
+          worktree: {
+            enabled: true,
+            name: "apple-1234",
+            path: "/work/worktrees/bar/apple-1234",
+            sourcePath: "/repos/bar",
+            branch: "apple-1234",
+          },
+        }),
+      });
+      gitMock.renameBranch.mockResolvedValue("feature/renamed");
+
+      const updated = await workspaceService.renameBranch(
+        "ws-wt",
+        "feature/renamed",
+      );
+
+      // Branch rename runs against the source repo, not the worktree checkout.
+      expect(gitMock.renameBranch).toHaveBeenCalledWith(
+        "/repos/bar",
+        "apple-1234",
+        "feature/renamed",
+      );
+      expect(updated.defaultBranch).toBe("feature/renamed");
+      expect((updated.metadata?.worktree as any).branch).toBe(
+        "feature/renamed",
+      );
+    });
+
+    it("renames against rootPath for non-worktree workspaces", async () => {
+      createWorkspace(db, {
+        id: "ws-plain",
+        defaultBranch: "main",
+        rootPath: "/repos/plain",
+      });
+      gitMock.renameBranch.mockResolvedValue("dev");
+
+      await workspaceService.renameBranch("ws-plain", "dev");
+
+      expect(gitMock.renameBranch).toHaveBeenCalledWith(
+        "/repos/plain",
+        "main",
+        "dev",
+      );
+    });
+
+    it("throws when the workspace has no branch", async () => {
+      createWorkspace(db, {
+        id: "ws-nobranch",
+        defaultBranch: null,
+        rootPath: "/repos/x",
+      });
+      await expect(
+        workspaceService.renameBranch("ws-nobranch", "dev"),
+      ).rejects.toThrow("Workspace has no branch to rename");
+      expect(gitMock.renameBranch).not.toHaveBeenCalled();
+    });
+
+    it("propagates git failures without touching the workspace row", async () => {
+      createWorkspace(db, {
+        id: "ws-fail",
+        defaultBranch: "main",
+        rootPath: "/repos/fail",
+      });
+      gitMock.renameBranch.mockRejectedValue(new Error("branch exists"));
+
+      await expect(
+        workspaceService.renameBranch("ws-fail", "dev"),
+      ).rejects.toThrow("branch exists");
+      const ws = await workspaceRepo.findById("ws-fail");
+      expect(ws!.defaultBranch).toBe("main");
+    });
+  });
+
+  describe("discardChanges", () => {
+    it("hard-resets to the recorded diff's baseRef and drops the diff row", async () => {
+      createWorkspace(db, { id: "ws-d", rootPath: "/repos/d" });
+      createWorkspaceDiff(db, {
+        workspaceId: "ws-d",
+        baseRef: "sha-base",
+        diffText: "diff",
+      });
+      gitMock.resetHard.mockResolvedValue(undefined);
+
+      await workspaceService.discardChanges("ws-d");
+
+      expect(gitMock.resetHard).toHaveBeenCalledWith("/repos/d", "sha-base");
+      const latest = await workspaceRepo.findLatestDiffByWorkspace("ws-d");
+      expect(latest).toBeNull();
+    });
+
+    it("throws when there is no recorded diff", async () => {
+      createWorkspace(db, { id: "ws-nodiff", rootPath: "/repos/nd" });
+      await expect(
+        workspaceService.discardChanges("ws-nodiff"),
+      ).rejects.toThrow("No recorded diff to discard");
+      expect(gitMock.resetHard).not.toHaveBeenCalled();
+    });
+
+    it("keeps the diff row when the reset fails", async () => {
+      createWorkspace(db, { id: "ws-rf", rootPath: "/repos/rf" });
+      createWorkspaceDiff(db, {
+        workspaceId: "ws-rf",
+        baseRef: "sha-base",
+        diffText: "diff",
+      });
+      gitMock.resetHard.mockRejectedValue(new Error("reset failed"));
+
+      await expect(workspaceService.discardChanges("ws-rf")).rejects.toThrow(
+        "reset failed",
+      );
+      const latest = await workspaceRepo.findLatestDiffByWorkspace("ws-rf");
+      expect(latest).not.toBeNull();
+    });
   });
 });

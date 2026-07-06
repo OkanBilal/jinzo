@@ -1,6 +1,7 @@
 import { ok } from "../../../shared/ipc-kit/service-response";
 import { dialog, BrowserWindow } from "electron";
 import { ipcMain } from "../../ipc-kit/ipc-main";
+import { handle } from "../../ipc-kit/handle";
 import { workspaceService } from "./workspace.service";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
 import type {
@@ -60,6 +61,19 @@ export function registerWorkspaceIpc(): void {
 
   ipcMain.handle(CHANNELS.workspace.archive, async (_, id: string) =>
     workspaceService.archive(id),
+  );
+
+  // ── git operations (throw-style services; envelope via handle()) ──
+  ipcMain.handle(
+    CHANNELS.workspace.renameBranch,
+    handle((id: string, newBranchName: string) =>
+      workspaceService.renameBranch(id, newBranchName),
+    ),
+  );
+
+  ipcMain.handle(
+    CHANNELS.workspace.discardChanges,
+    handle((id: string) => workspaceService.discardChanges(id)),
   );
 
   ipcMain.handle(CHANNELS.workspace.selectDirectory, async () => {
@@ -218,6 +232,8 @@ export function unregisterWorkspaceIpc(): void {
     CHANNELS.workspace.update,
     CHANNELS.workspace.delete,
     CHANNELS.workspace.archive,
+    CHANNELS.workspace.renameBranch,
+    CHANNELS.workspace.discardChanges,
     CHANNELS.workspace.selectDirectory,
     // activity
     CHANNELS.workspace.listActivity,

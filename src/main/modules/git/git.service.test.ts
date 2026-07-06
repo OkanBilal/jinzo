@@ -1,1030 +1,413 @@
-import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+import { execFileSync } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 // ─────────────────────────────────────────────────────────────
-// Mock simple-git
+// git module tests — real temporary repos, no simple-git mock.
+//
+// The interface is the test surface: semantics-bearing methods (three-dot
+// branch diff, auto-upstream push, worktree import, snapshot synthesis) are
+// exercised against actual git behavior. Pure pass-through methods get no
+// dedicated tests. See CONTEXT.md "git test surface".
 // ─────────────────────────────────────────────────────────────
 
-const mockGitInstance = {
-  checkIsRepo: vi.fn(),
-  revparse: vi.fn(),
-  branch: vi.fn(),
-  status: vi.fn(),
-  log: vi.fn(),
-  getRemotes: vi.fn(),
-  diff: vi.fn(),
-  raw: vi.fn(),
-  checkoutLocalBranch: vi.fn(),
-  add: vi.fn(),
-  commit: vi.fn(),
-  clone: vi.fn(),
-  reset: vi.fn(),
-  clean: vi.fn(),
-};
-
-vi.mock("simple-git", () => ({
-  default: vi.fn(() => mockGitInstance),
-}));
-
-// Mock fs
-vi.mock("fs", () => ({
-  default: {
-    existsSync: vi.fn(),
-    mkdirSync: vi.fn(),
+// gitService reads app.getPath("userData") for the worktrees dir and
+// app.getPath("desktop") for initRepo's default parent; point both at the
+// test sandbox.
+const paths = vi.hoisted(() => ({ base: "" }));
+vi.mock("electron", () => ({
+  app: {
+    getPath: (name: string) => path.join(paths.base, name),
   },
-  existsSync: vi.fn(),
-  mkdirSync: vi.fn(),
 }));
 
 import { gitService } from "./git.service";
-import fs from "fs";
+import { hashContent, buildPerFileDiffHashes } from "./git-snapshot";
+
+let sandbox: string;
+
+/** Run git in a repo (isolated from the user's global/system config). */
+function git(cwd: string, ...args: string[]): string {
+  return execFileSync("git", args, { cwd, encoding: "utf-8" }).trim();
+}
+
+let repoCounter = 0;
+
+/** Fresh repo on `main` with a committed README and a local identity. */
+function makeRepo(): string {
+  const repo = path.join(sandbox, `repo-${++repoCounter}`);
+  fs.mkdirSync(repo, { recursive: true });
+  git(repo, "init", "-b", "main");
+  git(repo, "config", "user.email", "test@mains.local");
+  git(repo, "config", "user.name", "Mains Test");
+  fs.writeFileSync(path.join(repo, "README.md"), "# test\n");
+  git(repo, "add", ".");
+  git(repo, "commit", "-m", "init");
+  return repo;
+}
+
+function write(repo: string, file: string, content: string): void {
+  fs.writeFileSync(path.join(repo, file), content);
+}
+
+beforeAll(() => {
+  sandbox = fs.mkdtempSync(path.join(os.tmpdir(), "mains-git-test-"));
+  paths.base = sandbox;
+});
+
+afterAll(() => {
+  fs.rmSync(sandbox, { recursive: true, force: true });
+});
 
 // ─────────────────────────────────────────────────────────────
-// Tests
+// captureDiffSnapshot
 // ─────────────────────────────────────────────────────────────
 
-describe("GitService", () => {
-  const TEST_PATH = "/tmp/test-repo";
+describe("captureDiffSnapshot", () => {
+  it("returns an empty snapshot for a clean tree", async () => {
+    const repo = makeRepo();
+    const head = await gitService.getHeadSha(repo);
 
-  beforeEach(() => {
-    vi.clearAllMocks();
+    const snap = await gitService.captureDiffSnapshot(repo, head);
+
+    expect(snap.baseRef).toBe(head);
+    expect(snap.diffText).toBe("");
+    expect(snap.files).toEqual([]);
+    expect(snap.untrackedFiles).toEqual([]);
+    expect(snap.shortstat).toBe("");
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
+  it("captures tracked modifications with shortstat", async () => {
+    const repo = makeRepo();
+    const head = await gitService.getHeadSha(repo);
+    write(repo, "README.md", "# changed\n");
+
+    const snap = await gitService.captureDiffSnapshot(repo, head);
+
+    expect(snap.diffText).toContain("-# test");
+    expect(snap.diffText).toContain("+# changed");
+    expect(snap.files).toEqual(["README.md"]);
+    expect(snap.untrackedFiles).toEqual([]);
+    expect(snap.shortstat).toContain("1 file changed");
   });
 
-  // ─── isGitRepo ──────────────────────────────────────────────
+  it("inlines small untracked files as synthetic hunks and merges the shortstat", async () => {
+    const repo = makeRepo();
+    const head = await gitService.getHeadSha(repo);
+    write(repo, "new.txt", "hello\nworld\n");
 
-  describe("isGitRepo", () => {
-    it("returns true when path is a git repo", async () => {
-      mockGitInstance.checkIsRepo.mockResolvedValue(true);
+    const snap = await gitService.captureDiffSnapshot(repo, head);
 
-      const result = await gitService.isGitRepo(TEST_PATH);
-      assertOk(result);
-      expect(result.data).toBe(true);
-    });
-
-    it("returns false when path is not a git repo", async () => {
-      mockGitInstance.checkIsRepo.mockResolvedValue(false);
-
-      const result = await gitService.isGitRepo(TEST_PATH);
-      assertOk(result);
-      expect(result.data).toBe(false);
-    });
-
-    it("returns error on failure", async () => {
-      mockGitInstance.checkIsRepo.mockRejectedValue(new Error("Not a directory"));
-
-      const result = await gitService.isGitRepo(TEST_PATH);
-      assertFail(result);
-      expect(result.error).toBe("Not a directory");
-    });
-
-    it("returns fallback error for non-Error throws", async () => {
-      mockGitInstance.checkIsRepo.mockRejectedValue("string error");
-
-      const result = await gitService.isGitRepo(TEST_PATH);
-      assertFail(result);
-      expect(result.error).toBe("Failed to check git repo");
-    });
+    expect(snap.diffText).toContain("diff --git a/new.txt b/new.txt");
+    expect(snap.diffText).toContain("new file mode 100644");
+    expect(snap.diffText).toContain("+hello");
+    expect(snap.files).toContain("new.txt");
+    expect(snap.untrackedFiles).toEqual(["new.txt"]);
+    // git's shortstat omits untracked files; the snapshot merges them in.
+    expect(snap.shortstat).toContain("1 file changed");
+    expect(snap.shortstat).toMatch(/insertion/);
   });
 
-  // ─── getCurrentBranch ───────────────────────────────────────
+  it("stubs large untracked files instead of inlining them", async () => {
+    const repo = makeRepo();
+    const head = await gitService.getHeadSha(repo);
+    write(repo, "big.bin", "x".repeat(300 * 1024));
 
-  describe("getCurrentBranch", () => {
-    it("returns the current branch name trimmed", async () => {
-      mockGitInstance.revparse.mockResolvedValue("  main  \n");
+    const snap = await gitService.captureDiffSnapshot(repo, head);
 
-      const result = await gitService.getCurrentBranch(TEST_PATH);
-      assertOk(result);
-      expect(result.data).toBe("main");
-    });
-
-    it("returns error on failure", async () => {
-      mockGitInstance.revparse.mockRejectedValue(new Error("detached HEAD"));
-
-      const result = await gitService.getCurrentBranch(TEST_PATH);
-      assertFail(result);
-      expect(result.error).toBe("detached HEAD");
-    });
-
-    it("returns fallback error for non-Error throws", async () => {
-      mockGitInstance.revparse.mockRejectedValue(42);
-
-      const result = await gitService.getCurrentBranch(TEST_PATH);
-      assertFail(result);
-      expect(result.error).toBe("Failed to get current branch");
-    });
+    expect(snap.diffText).toContain("Binary or large file");
+    expect(snap.diffText).not.toContain("+xxx");
+    expect(snap.untrackedFiles).toEqual(["big.bin"]);
   });
 
-  // ─── getBranches ────────────────────────────────────────────
+  it("throws on an unknown baseRef instead of degrading to an empty diff (all-or-throw)", async () => {
+    const repo = makeRepo();
+    write(repo, "README.md", "# dirty\n");
 
-  describe("getBranches", () => {
-    it("returns branch info", async () => {
-      const branchSummary = {
-        current: "main",
-        all: ["main", "feature/test"],
-        branches: {
-          main: { current: true, name: "main", commit: "abc123", label: "main" },
-          "feature/test": { current: false, name: "feature/test", commit: "def456", label: "feature/test" },
-        },
-      };
-      mockGitInstance.branch.mockResolvedValue(branchSummary);
-
-      const result = await gitService.getBranches(TEST_PATH);
-      assertOk(result);
-      expect(result.data).toEqual({
-        current: "main",
-        all: ["main", "feature/test"],
-        branches: branchSummary.branches,
-      });
-    });
-
-    it("returns error on failure", async () => {
-      mockGitInstance.branch.mockRejectedValue(new Error("git error"));
-
-      const result = await gitService.getBranches(TEST_PATH);
-      assertFail(result);
-      expect(result.error).toBe("git error");
-    });
-
-    it("returns fallback error for non-Error throws", async () => {
-      mockGitInstance.branch.mockRejectedValue(null);
-
-      const result = await gitService.getBranches(TEST_PATH);
-      assertFail(result);
-      expect(result.error).toBe("Failed to get branches");
-    });
+    await expect(
+      gitService.captureDiffSnapshot(repo, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"),
+    ).rejects.toThrow();
   });
 
-  // ─── getStatus ──────────────────────────────────────────────
+  it("throws when the path is not a git repo", async () => {
+    const dir = path.join(sandbox, "not-a-repo");
+    fs.mkdirSync(dir, { recursive: true });
 
-  describe("getStatus", () => {
-    it("returns full status info", async () => {
-      const mockStatus = {
-        isClean: () => false,
-        current: "main",
-        tracking: "origin/main",
-        ahead: 1,
-        behind: 0,
-        staged: ["file1.ts"],
-        modified: ["file2.ts"],
-        deleted: [],
-        not_added: ["file3.ts"],
-        conflicted: [],
-      };
-      mockGitInstance.status.mockResolvedValue(mockStatus);
-
-      const result = await gitService.getStatus(TEST_PATH);
-      assertOk(result);
-      expect(result.data).toEqual({
-        isClean: false,
-        current: "main",
-        tracking: "origin/main",
-        ahead: 1,
-        behind: 0,
-        staged: ["file1.ts"],
-        modified: ["file2.ts"],
-        deleted: [],
-        untracked: ["file3.ts"],
-        conflicted: [],
-      });
-    });
-
-    it("returns clean status", async () => {
-      const mockStatus = {
-        isClean: () => true,
-        current: "main",
-        tracking: "origin/main",
-        ahead: 0,
-        behind: 0,
-        staged: [],
-        modified: [],
-        deleted: [],
-        not_added: [],
-        conflicted: [],
-      };
-      mockGitInstance.status.mockResolvedValue(mockStatus);
-
-      const result = await gitService.getStatus(TEST_PATH);
-      assertOk(result);
-      expect(result.data!.isClean).toBe(true);
-    });
-
-    it("returns error on failure", async () => {
-      mockGitInstance.status.mockRejectedValue(new Error("status failed"));
-
-      const result = await gitService.getStatus(TEST_PATH);
-      assertFail(result);
-      expect(result.error).toBe("status failed");
-    });
-
-    it("returns fallback error for non-Error throws", async () => {
-      mockGitInstance.status.mockRejectedValue(undefined);
-
-      const result = await gitService.getStatus(TEST_PATH);
-      assertFail(result);
-      expect(result.error).toBe("Failed to get git status");
-    });
+    await expect(gitService.captureDiffSnapshot(dir, "HEAD")).rejects.toThrow();
   });
+});
 
-  // ─── getLog ─────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// importLocalRepo / importLocalRepoDirect
+// ─────────────────────────────────────────────────────────────
 
-  describe("getLog", () => {
-    it("returns log entries with default limit", async () => {
-      const mockLog = {
-        all: [
-          { hash: "abc123", date: "2024-01-01", message: "init", author_name: "User", author_email: "u@e.com" },
-          { hash: "def456", date: "2024-01-02", message: "second", author_name: "User", author_email: "u@e.com" },
-        ],
-      };
-      mockGitInstance.log.mockResolvedValue(mockLog);
+describe("importLocalRepo", () => {
+  it("creates a branch + worktree under the project's worktrees dir", async () => {
+    const repo = makeRepo();
 
-      const result = await gitService.getLog(TEST_PATH);
-      assertOk(result);
-      expect(result.data).toHaveLength(2);
-      expect(result.data![0].hash).toBe("abc123");
-      expect(result.data![1].message).toBe("second");
-      expect(mockGitInstance.log).toHaveBeenCalledWith({ maxCount: 10 });
-    });
+    const result = await gitService.importLocalRepo(repo, "myproj");
 
-    it("respects custom limit", async () => {
-      mockGitInstance.log.mockResolvedValue({ all: [] });
-
-      const result = await gitService.getLog(TEST_PATH, 5);
-      assertOk(result);
-      expect(result.data).toEqual([]);
-      expect(mockGitInstance.log).toHaveBeenCalledWith({ maxCount: 5 });
-    });
-
-    it("returns error on failure", async () => {
-      mockGitInstance.log.mockRejectedValue(new Error("log failed"));
-
-      const result = await gitService.getLog(TEST_PATH);
-      assertFail(result);
-      expect(result.error).toBe("log failed");
-    });
-
-    it("returns fallback error for non-Error throws", async () => {
-      mockGitInstance.log.mockRejectedValue(false);
-
-      const result = await gitService.getLog(TEST_PATH);
-      assertFail(result);
-      expect(result.error).toBe("Failed to get git log");
-    });
-  });
-
-  // ─── getRemotes ─────────────────────────────────────────────
-
-  describe("getRemotes", () => {
-    it("returns remotes with fetch and push URLs", async () => {
-      const mockRemotes = [
-        { name: "origin", refs: { fetch: "https://github.com/user/repo.git", push: "git@github.com:user/repo.git" } },
-        { name: "upstream", refs: { fetch: "https://github.com/org/repo.git", push: undefined } },
-      ];
-      mockGitInstance.getRemotes.mockResolvedValue(mockRemotes);
-
-      const result = await gitService.getRemotes(TEST_PATH);
-      assertOk(result);
-      expect(result.data).toEqual([
-        { name: "origin", fetchUrl: "https://github.com/user/repo.git", pushUrl: "git@github.com:user/repo.git" },
-        { name: "upstream", fetchUrl: "https://github.com/org/repo.git", pushUrl: undefined },
-      ]);
-      expect(mockGitInstance.getRemotes).toHaveBeenCalledWith(true);
-    });
-
-    it("returns empty array when no remotes", async () => {
-      mockGitInstance.getRemotes.mockResolvedValue([]);
-
-      const result = await gitService.getRemotes(TEST_PATH);
-      assertOk(result);
-      expect(result.data).toEqual([]);
-    });
-
-    it("returns error on failure", async () => {
-      mockGitInstance.getRemotes.mockRejectedValue(new Error("no remotes"));
-
-      const result = await gitService.getRemotes(TEST_PATH);
-      assertFail(result);
-      expect(result.error).toBe("no remotes");
-    });
-
-    it("returns fallback error for non-Error throws", async () => {
-      mockGitInstance.getRemotes.mockRejectedValue({});
-
-      const result = await gitService.getRemotes(TEST_PATH);
-      assertFail(result);
-      expect(result.error).toBe("Failed to get remotes");
-    });
-  });
-
-  // ─── getDiff ────────────────────────────────────────────────
-
-  describe("getDiff", () => {
-    it("returns diff for all files when no filePath given", async () => {
-      mockGitInstance.diff.mockResolvedValue("diff --git a/file.ts\n+added line");
-
-      const result = await gitService.getDiff(TEST_PATH);
-      assertOk(result);
-      expect(result.data).toBe("diff --git a/file.ts\n+added line");
-      expect(mockGitInstance.diff).toHaveBeenCalledWith();
-    });
-
-    it("returns diff for a specific file", async () => {
-      mockGitInstance.diff.mockResolvedValue("diff for file.ts");
-
-      const result = await gitService.getDiff(TEST_PATH, "file.ts");
-      assertOk(result);
-      expect(result.data).toBe("diff for file.ts");
-      expect(mockGitInstance.diff).toHaveBeenCalledWith(["file.ts"]);
-    });
-
-    it("returns error on failure", async () => {
-      mockGitInstance.diff.mockRejectedValue(new Error("diff error"));
-
-      const result = await gitService.getDiff(TEST_PATH);
-      assertFail(result);
-      expect(result.error).toBe("diff error");
-    });
-
-    it("returns fallback error for non-Error throws", async () => {
-      mockGitInstance.diff.mockRejectedValue(0);
-
-      const result = await gitService.getDiff(TEST_PATH);
-      assertFail(result);
-      expect(result.error).toBe("Failed to get diff");
-    });
-  });
-
-  // ─── getHeadSha ─────────────────────────────────────────────
-
-  describe("getHeadSha", () => {
-    it("returns trimmed HEAD sha", async () => {
-      mockGitInstance.revparse.mockResolvedValue("abc123def456\n");
-
-      const result = await gitService.getHeadSha(TEST_PATH);
-      assertOk(result);
-      expect(result.data).toBe("abc123def456");
-      expect(mockGitInstance.revparse).toHaveBeenCalledWith(["HEAD"]);
-    });
-
-    it("returns error on failure", async () => {
-      mockGitInstance.revparse.mockRejectedValue(new Error("no HEAD"));
-
-      const result = await gitService.getHeadSha(TEST_PATH);
-      assertFail(result);
-      expect(result.error).toBe("no HEAD");
-    });
-
-    it("returns fallback error for non-Error throws", async () => {
-      mockGitInstance.revparse.mockRejectedValue(null);
-
-      const result = await gitService.getHeadSha(TEST_PATH);
-      assertFail(result);
-      expect(result.error).toBe("Failed to get HEAD sha");
-    });
-  });
-
-  // ─── getDiffSince ──────────────────────────────────────────
-
-  describe("getDiffSince", () => {
-    it("returns diff since base sha", async () => {
-      mockGitInstance.diff.mockResolvedValue("diff since base");
-
-      const result = await gitService.getDiffSince(TEST_PATH, "abc123");
-      assertOk(result);
-      expect(result.data).toBe("diff since base");
-      expect(mockGitInstance.diff).toHaveBeenCalledWith(["abc123"]);
-    });
-
-    it("returns error on failure", async () => {
-      mockGitInstance.diff.mockRejectedValue(new Error("bad sha"));
-
-      const result = await gitService.getDiffSince(TEST_PATH, "invalid");
-      assertFail(result);
-      expect(result.error).toBe("bad sha");
-    });
-
-    it("returns fallback error for non-Error throws", async () => {
-      mockGitInstance.diff.mockRejectedValue(undefined);
-
-      const result = await gitService.getDiffSince(TEST_PATH, "abc");
-      assertFail(result);
-      expect(result.error).toBe("Failed to get diff since base");
-    });
-  });
-
-  // ─── getChangedFilesSince ───────────────────────────────────
-
-  describe("getChangedFilesSince", () => {
-    it("returns list of changed files", async () => {
-      mockGitInstance.diff.mockResolvedValue("file1.ts\nfile2.ts\nfile3.ts\n");
-
-      const result = await gitService.getChangedFilesSince(TEST_PATH, "abc123");
-      assertOk(result);
-      expect(result.data).toEqual(["file1.ts", "file2.ts", "file3.ts"]);
-      expect(mockGitInstance.diff).toHaveBeenCalledWith(["--name-only", "abc123"]);
-    });
-
-    it("filters empty lines and trims whitespace", async () => {
-      mockGitInstance.diff.mockResolvedValue("  file1.ts  \n\n  file2.ts \n\n");
-
-      const result = await gitService.getChangedFilesSince(TEST_PATH, "abc123");
-      assertOk(result);
-      expect(result.data).toEqual(["file1.ts", "file2.ts"]);
-    });
-
-    it("returns empty array when no changes", async () => {
-      mockGitInstance.diff.mockResolvedValue("");
-
-      const result = await gitService.getChangedFilesSince(TEST_PATH, "abc123");
-      assertOk(result);
-      expect(result.data).toEqual([]);
-    });
-
-    it("returns error on failure", async () => {
-      mockGitInstance.diff.mockRejectedValue(new Error("diff error"));
-
-      const result = await gitService.getChangedFilesSince(TEST_PATH, "abc123");
-      assertFail(result);
-      expect(result.error).toBe("diff error");
-    });
-
-    it("returns fallback error for non-Error throws", async () => {
-      mockGitInstance.diff.mockRejectedValue(123);
-
-      const result = await gitService.getChangedFilesSince(TEST_PATH, "abc");
-      assertFail(result);
-      expect(result.error).toBe("Failed to get changed files");
-    });
-  });
-
-  // ─── getShortStatSince ──────────────────────────────────────
-
-  describe("getShortStatSince", () => {
-    it("returns trimmed shortstat", async () => {
-      mockGitInstance.diff.mockResolvedValue("  3 files changed, 10 insertions(+), 2 deletions(-)  \n");
-
-      const result = await gitService.getShortStatSince(TEST_PATH, "abc123");
-      assertOk(result);
-      expect(result.data).toBe("3 files changed, 10 insertions(+), 2 deletions(-)");
-      expect(mockGitInstance.diff).toHaveBeenCalledWith(["--shortstat", "abc123"]);
-    });
-
-    it("returns error on failure", async () => {
-      mockGitInstance.diff.mockRejectedValue(new Error("stat error"));
-
-      const result = await gitService.getShortStatSince(TEST_PATH, "abc");
-      assertFail(result);
-      expect(result.error).toBe("stat error");
-    });
-
-    it("returns fallback error for non-Error throws", async () => {
-      mockGitInstance.diff.mockRejectedValue(null);
-
-      const result = await gitService.getShortStatSince(TEST_PATH, "abc");
-      assertFail(result);
-      expect(result.error).toBe("Failed to get shortstat");
-    });
-  });
-
-  // ─── getUntrackedFiles ─────────────────────────────────────
-
-  describe("getUntrackedFiles", () => {
-    it("returns list of untracked files", async () => {
-      mockGitInstance.raw.mockResolvedValue("new-file.ts\nanother.ts\n");
-
-      const result = await gitService.getUntrackedFiles(TEST_PATH);
-      assertOk(result);
-      expect(result.data).toEqual(["new-file.ts", "another.ts"]);
-      expect(mockGitInstance.raw).toHaveBeenCalledWith(["ls-files", "--others", "--exclude-standard"]);
-    });
-
-    it("returns empty array when no untracked files", async () => {
-      mockGitInstance.raw.mockResolvedValue("");
-
-      const result = await gitService.getUntrackedFiles(TEST_PATH);
-      assertOk(result);
-      expect(result.data).toEqual([]);
-    });
-
-    it("returns error on failure", async () => {
-      mockGitInstance.raw.mockRejectedValue(new Error("ls-files error"));
-
-      const result = await gitService.getUntrackedFiles(TEST_PATH);
-      assertFail(result);
-      expect(result.error).toBe("ls-files error");
-    });
-
-    it("returns fallback error for non-Error throws", async () => {
-      mockGitInstance.raw.mockRejectedValue(undefined);
-
-      const result = await gitService.getUntrackedFiles(TEST_PATH);
-      assertFail(result);
-      expect(result.error).toBe("Failed to get untracked files");
-    });
-  });
-
-  // ─── getRepoRoot ───────────────────────────────────────────
-
-  describe("getRepoRoot", () => {
-    it("returns trimmed repo root", async () => {
-      mockGitInstance.revparse.mockResolvedValue("/home/user/project\n");
-
-      const result = await gitService.getRepoRoot(TEST_PATH);
-      assertOk(result);
-      expect(result.data).toBe("/home/user/project");
-      expect(mockGitInstance.revparse).toHaveBeenCalledWith(["--show-toplevel"]);
-    });
-
-    it("returns error on failure", async () => {
-      mockGitInstance.revparse.mockRejectedValue(new Error("not a repo"));
-
-      const result = await gitService.getRepoRoot(TEST_PATH);
-      assertFail(result);
-      expect(result.error).toBe("not a repo");
-    });
-
-    it("returns fallback error for non-Error throws", async () => {
-      mockGitInstance.revparse.mockRejectedValue(null);
-
-      const result = await gitService.getRepoRoot(TEST_PATH);
-      assertFail(result);
-      expect(result.error).toBe("Failed to get repo root");
-    });
-  });
-
-  // ─── getWorktreesDir ───────────────────────────────────────
-
-  describe("getWorktreesDir", () => {
-    it("returns worktrees directory path", () => {
-      const dir = gitService.getWorktreesDir();
-      // electron mock returns /tmp/mains-test/userData
-      expect(dir).toContain("worktrees");
-      expect(typeof dir).toBe("string");
-    });
-  });
-
-  // ─── createBranch ──────────────────────────────────────────
-
-  describe("createBranch", () => {
-    it("creates a branch and returns its name", async () => {
-      mockGitInstance.checkoutLocalBranch.mockResolvedValue(undefined);
-
-      const result = await gitService.createBranch(TEST_PATH, "feature/new");
-      assertOk(result);
-      expect(result.data).toBe("feature/new");
-      expect(mockGitInstance.checkoutLocalBranch).toHaveBeenCalledWith("feature/new");
-    });
-
-    it("returns error on failure", async () => {
-      mockGitInstance.checkoutLocalBranch.mockRejectedValue(new Error("branch exists"));
-
-      const result = await gitService.createBranch(TEST_PATH, "feature/new");
-      assertFail(result);
-      expect(result.error).toBe("branch exists");
-    });
-
-    it("returns fallback error for non-Error throws", async () => {
-      mockGitInstance.checkoutLocalBranch.mockRejectedValue(null);
-
-      const result = await gitService.createBranch(TEST_PATH, "x");
-      assertFail(result);
-      expect(result.error).toBe("Failed to create branch");
-    });
-  });
-
-  // ─── createWorktree ────────────────────────────────────────
-
-  describe("createWorktree", () => {
-    it("creates worktree and returns its path", async () => {
-      mockGitInstance.raw.mockResolvedValue("");
-
-      const result = await gitService.createWorktree(TEST_PATH, "/tmp/wt", "feature/new");
-      assertOk(result);
-      expect(result.data).toBe("/tmp/wt");
-      expect(mockGitInstance.raw).toHaveBeenCalledWith(["worktree", "add", "/tmp/wt", "feature/new"]);
-    });
-
-    it("returns error on failure", async () => {
-      mockGitInstance.raw.mockRejectedValue(new Error("worktree error"));
-
-      const result = await gitService.createWorktree(TEST_PATH, "/tmp/wt", "branch");
-      assertFail(result);
-      expect(result.error).toBe("worktree error");
-    });
-
-    it("returns fallback error for non-Error throws", async () => {
-      mockGitInstance.raw.mockRejectedValue(false);
-
-      const result = await gitService.createWorktree(TEST_PATH, "/tmp/wt", "b");
-      assertFail(result);
-      expect(result.error).toBe("Failed to create worktree");
-    });
-  });
-
-  // ─── importLocalRepo ───────────────────────────────────────
-
-  describe("importLocalRepo", () => {
-    it("imports a local repo with worktree creation", async () => {
-      mockGitInstance.checkIsRepo.mockResolvedValue(true);
-      mockGitInstance.revparse.mockResolvedValue("main\n");
-      mockGitInstance.getRemotes.mockResolvedValue([
-        { name: "origin", refs: { fetch: "https://github.com/user/repo.git", push: "git@github.com:user/repo.git" } },
-      ]);
-      mockGitInstance.raw.mockResolvedValue("");
-      mockGitInstance.status.mockResolvedValue({
-        tracking: "origin/main",
-        ahead: 0,
-        behind: 0,
-      });
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-
-      const result = await gitService.importLocalRepo("/source/path");
-      assertOk(result);
-      expect(result.data!.baseBranch).toBe("main");
-      expect(result.data!.originUrl).toBe("https://github.com/user/repo.git");
-      expect(result.data!.branchName).toBeTruthy();
-      expect(result.data!.worktreePath).toContain("worktrees");
-      expect(result.data!.worktreeName).toBe(result.data!.branchName);
-      expect(result.data!.tracking).toBe("origin/main");
-      expect(result.data!.ahead).toBe(0);
-      expect(result.data!.behind).toBe(0);
-    });
-
-    it("creates worktrees directory if it does not exist", async () => {
-      mockGitInstance.checkIsRepo.mockResolvedValue(true);
-      mockGitInstance.revparse.mockResolvedValue("main\n");
-      mockGitInstance.getRemotes.mockResolvedValue([]);
-      mockGitInstance.raw.mockResolvedValue("");
-      mockGitInstance.status.mockResolvedValue({ tracking: null, ahead: 0, behind: 0 });
-      vi.mocked(fs.existsSync).mockReturnValue(false);
-
-      const result = await gitService.importLocalRepo("/source/path");
-      assertOk(result);
-      expect(fs.mkdirSync).toHaveBeenCalledWith(expect.any(String), { recursive: true });
-    });
-
-    it("uses project name subfolder when provided", async () => {
-      mockGitInstance.checkIsRepo.mockResolvedValue(true);
-      mockGitInstance.revparse.mockResolvedValue("main\n");
-      mockGitInstance.getRemotes.mockResolvedValue([]);
-      mockGitInstance.raw.mockResolvedValue("");
-      mockGitInstance.status.mockResolvedValue({ tracking: null, ahead: 0, behind: 0 });
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-
-      const result = await gitService.importLocalRepo("/source/path", "my-project");
-      assertOk(result);
-      expect(result.data!.worktreePath).toContain("my-project");
-    });
-
-    it("returns error when path is not a git repo", async () => {
-      mockGitInstance.checkIsRepo.mockResolvedValue(false);
-
-      const result = await gitService.importLocalRepo("/not-a-repo");
-      assertFail(result);
-      expect(result.error).toBe("Not a git repository");
-    });
-
-    it("handles missing remotes gracefully (originUrl null)", async () => {
-      mockGitInstance.checkIsRepo.mockResolvedValue(true);
-      mockGitInstance.revparse.mockResolvedValue("main\n");
-      mockGitInstance.getRemotes.mockRejectedValue(new Error("no remotes"));
-      mockGitInstance.raw.mockResolvedValue("");
-      mockGitInstance.status.mockResolvedValue({ tracking: null, ahead: 0, behind: 0 });
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-
-      const result = await gitService.importLocalRepo("/source/path");
-      assertOk(result);
-      expect(result.data!.originUrl).toBeNull();
-    });
-
-    it("handles remotes without origin", async () => {
-      mockGitInstance.checkIsRepo.mockResolvedValue(true);
-      mockGitInstance.revparse.mockResolvedValue("main\n");
-      mockGitInstance.getRemotes.mockResolvedValue([
-        { name: "upstream", refs: { fetch: "https://github.com/org/repo.git" } },
-      ]);
-      mockGitInstance.raw.mockResolvedValue("");
-      mockGitInstance.status.mockResolvedValue({ tracking: null, ahead: 0, behind: 0 });
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-
-      const result = await gitService.importLocalRepo("/source/path");
-      assertOk(result);
-      expect(result.data!.originUrl).toBeNull();
-    });
-
-    it("returns error on unexpected failure", async () => {
-      mockGitInstance.checkIsRepo.mockRejectedValue(new Error("disk error"));
-
-      const result = await gitService.importLocalRepo("/source/path");
-      assertFail(result);
-      expect(result.error).toBe("disk error");
-    });
-
-    it("returns fallback error for non-Error throws", async () => {
-      mockGitInstance.checkIsRepo.mockRejectedValue(42);
-
-      const result = await gitService.importLocalRepo("/source/path");
-      assertFail(result);
-      expect(result.error).toBe("Failed to import local repo");
-    });
-  });
-
-  // ─── importLocalRepoDirect ─────────────────────────────────
-
-  describe("importLocalRepoDirect", () => {
-    it("imports a local repo directly without worktree", async () => {
-      mockGitInstance.checkIsRepo.mockResolvedValue(true);
-      mockGitInstance.revparse.mockResolvedValue("develop\n");
-      mockGitInstance.getRemotes.mockResolvedValue([
-        { name: "origin", refs: { fetch: "https://github.com/user/repo.git", push: "git@github.com:user/repo.git" } },
-      ]);
-      mockGitInstance.status.mockResolvedValue({
-        tracking: "origin/develop",
-        ahead: 2,
-        behind: 1,
-      });
-
-      const result = await gitService.importLocalRepoDirect("/source/path");
-      assertOk(result);
-      expect(result.data).toEqual({
-        branchName: "develop",
-        sourcePath: "/source/path",
-        baseBranch: "develop",
-        tracking: "origin/develop",
-        ahead: 2,
-        behind: 1,
-        originUrl: "https://github.com/user/repo.git",
-      });
-    });
-
-    it("returns error when path is not a git repo", async () => {
-      mockGitInstance.checkIsRepo.mockResolvedValue(false);
-
-      const result = await gitService.importLocalRepoDirect("/not-a-repo");
-      assertFail(result);
-      expect(result.error).toBe("Not a git repository");
-    });
-
-    it("handles missing remotes gracefully", async () => {
-      mockGitInstance.checkIsRepo.mockResolvedValue(true);
-      mockGitInstance.revparse.mockResolvedValue("main\n");
-      mockGitInstance.getRemotes.mockRejectedValue(new Error("no remotes"));
-      mockGitInstance.status.mockResolvedValue({ tracking: null, ahead: 0, behind: 0 });
-
-      const result = await gitService.importLocalRepoDirect("/source/path");
-      assertOk(result);
-      expect(result.data!.originUrl).toBeNull();
-    });
-
-    it("handles remotes without origin entry", async () => {
-      mockGitInstance.checkIsRepo.mockResolvedValue(true);
-      mockGitInstance.revparse.mockResolvedValue("main\n");
-      mockGitInstance.getRemotes.mockResolvedValue([
-        { name: "upstream", refs: { fetch: "https://github.com/org/repo.git" } },
-      ]);
-      mockGitInstance.status.mockResolvedValue({ tracking: null, ahead: 0, behind: 0 });
-
-      const result = await gitService.importLocalRepoDirect("/source/path");
-      assertOk(result);
-      expect(result.data!.originUrl).toBeNull();
-    });
-
-    it("uses push URL when fetch URL is missing", async () => {
-      mockGitInstance.checkIsRepo.mockResolvedValue(true);
-      mockGitInstance.revparse.mockResolvedValue("main\n");
-      mockGitInstance.getRemotes.mockResolvedValue([
-        { name: "origin", refs: { fetch: undefined, push: "git@github.com:user/repo.git" } },
-      ]);
-      mockGitInstance.status.mockResolvedValue({ tracking: null, ahead: 0, behind: 0 });
-
-      const result = await gitService.importLocalRepoDirect("/source/path");
-      assertOk(result);
-      expect(result.data!.originUrl).toBe("git@github.com:user/repo.git");
-    });
-
-    it("returns error on unexpected failure", async () => {
-      mockGitInstance.checkIsRepo.mockRejectedValue(new Error("disk error"));
-
-      const result = await gitService.importLocalRepoDirect("/source/path");
-      assertFail(result);
-      expect(result.error).toBe("disk error");
-    });
-
-    it("returns fallback error for non-Error throws", async () => {
-      mockGitInstance.checkIsRepo.mockRejectedValue(null);
-
-      const result = await gitService.importLocalRepoDirect("/source/path");
-      assertFail(result);
-      expect(result.error).toBe("Failed to import local repo");
-    });
-  });
-
-  // ─── cloneRepo ─────────────────────────────────────────────
-
-  describe("cloneRepo", () => {
-    it("clones a repo and returns metadata", async () => {
-      mockGitInstance.clone.mockResolvedValue(undefined);
-      mockGitInstance.revparse.mockResolvedValue("main\n");
-
-      const result = await gitService.cloneRepo(
-        "https://github.com/user/my-repo.git",
-        "/tmp/clones"
-      );
-      assertOk(result);
-      expect(result.data!.clonedPath).toBe("/tmp/clones/my-repo");
-      expect(result.data!.defaultBranch).toBe("main");
-      expect(result.data!.originUrl).toBe("https://github.com/user/my-repo.git");
-    });
-
-    it("strips .git suffix from repo name", async () => {
-      mockGitInstance.clone.mockResolvedValue(undefined);
-      mockGitInstance.revparse.mockResolvedValue("main\n");
-
-      const result = await gitService.cloneRepo(
-        "https://github.com/user/project.git",
-        "/tmp"
-      );
-      assertOk(result);
-      expect(result.data!.clonedPath).toBe("/tmp/project");
-    });
-
-    it("handles URL without .git suffix", async () => {
-      mockGitInstance.clone.mockResolvedValue(undefined);
-      mockGitInstance.revparse.mockResolvedValue("main\n");
-
-      const result = await gitService.cloneRepo(
-        "https://github.com/user/project",
-        "/tmp"
-      );
-      assertOk(result);
-      expect(result.data!.clonedPath).toBe("/tmp/project");
-    });
-
-    it("returns error on clone failure", async () => {
-      mockGitInstance.clone.mockRejectedValue(new Error("auth failed"));
-
-      const result = await gitService.cloneRepo(
-        "https://github.com/user/repo.git",
-        "/tmp"
-      );
-      assertFail(result);
-      expect(result.error).toBe("auth failed");
-    });
-
-    it("returns fallback error for non-Error throws", async () => {
-      mockGitInstance.clone.mockRejectedValue(undefined);
-
-      const result = await gitService.cloneRepo("https://github.com/user/repo", "/tmp");
-      assertFail(result);
-      expect(result.error).toBe("Failed to clone repository");
-    });
-
-    it("accepts scp-like ssh URLs", async () => {
-      mockGitInstance.clone.mockResolvedValue(undefined);
-      mockGitInstance.revparse.mockResolvedValue("main\n");
-
-      const result = await gitService.cloneRepo("git@github.com:user/repo.git", "/tmp");
-      assertOk(result);
-      expect(result.data!.clonedPath).toBe("/tmp/repo");
-    });
-
-    it.each([
-      "ext::sh -c 'touch /tmp/pwned'",
-      "file:///etc/passwd",
-      "/some/local/path",
-      "--upload-pack=touch /tmp/pwned",
-      "",
-    ])("rejects unsafe clone URL %j without invoking git", async (url) => {
-      const result = await gitService.cloneRepo(url, "/tmp");
-      assertFail(result);
-      expect(mockGitInstance.clone).not.toHaveBeenCalled();
-    });
-  });
-
-  // ─── resetHard ─────────────────────────────────────────────
-
-  describe("resetHard", () => {
-    it("resets to a ref and cleans untracked files", async () => {
-      mockGitInstance.reset.mockResolvedValue(undefined);
-      mockGitInstance.clean.mockResolvedValue(undefined);
-
-      const result = await gitService.resetHard(TEST_PATH, "origin/main");
-      assertOk(result);
-      expect(mockGitInstance.reset).toHaveBeenCalledWith(["--hard", "origin/main"]);
-      expect(mockGitInstance.clean).toHaveBeenCalledWith("f", ["-d"]);
-    });
-
-    it.each(["--hard", "-x", "", "ref with space"])(
-      "rejects unsafe ref %j without invoking git",
-      async (ref) => {
-        const result = await gitService.resetHard(TEST_PATH, ref);
-        assertFail(result);
-        expect(result.error).toBe("Invalid git ref");
-        expect(mockGitInstance.reset).not.toHaveBeenCalled();
-      }
+    expect(result.baseBranch).toBe("main");
+    expect(result.branchName).toBe(result.worktreeName);
+    expect(result.worktreePath).toBe(
+      path.join(sandbox, "userData", "worktrees", "myproj", result.worktreeName),
     );
+    expect(fs.existsSync(path.join(result.worktreePath, "README.md"))).toBe(true);
+    // The import branch exists in the source repo.
+    expect(git(repo, "branch", "--list", result.branchName)).toContain(
+      result.branchName,
+    );
+    expect(result.originUrl).toBeNull();
+  });
 
-    it("returns error on reset failure", async () => {
-      mockGitInstance.reset.mockRejectedValue(new Error("bad ref"));
+  it("honors a custom branch name", async () => {
+    const repo = makeRepo();
 
-      const result = await gitService.resetHard(TEST_PATH, "origin/main");
-      assertFail(result);
-      expect(result.error).toBe("bad ref");
+    const result = await gitService.importLocalRepo(repo, "myproj", "my-branch");
+
+    expect(result.branchName).toBe("my-branch");
+    expect(result.worktreeName).toBe("my-branch");
+  });
+
+  it("throws for a non-repo path", async () => {
+    const dir = path.join(sandbox, "plain-dir");
+    fs.mkdirSync(dir, { recursive: true });
+
+    await expect(gitService.importLocalRepo(dir, "p")).rejects.toThrow(
+      "Not a git repository",
+    );
+  });
+});
+
+describe("importLocalRepoDirect", () => {
+  it("returns the active branch and origin metadata without creating a worktree", async () => {
+    const repo = makeRepo();
+    git(repo, "remote", "add", "origin", "https://github.com/foo/bar.git");
+
+    const result = await gitService.importLocalRepoDirect(repo);
+
+    expect(result.branchName).toBe("main");
+    expect(result.baseBranch).toBe("main");
+    expect(result.sourcePath).toBe(repo);
+    expect(result.originUrl).toBe("https://github.com/foo/bar.git");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// initRepo / cloneRepo
+// ─────────────────────────────────────────────────────────────
+
+describe("initRepo", () => {
+  it("creates a fresh repo on main with an initial commit", async () => {
+    const parent = path.join(sandbox, "init-parent");
+    fs.mkdirSync(parent, { recursive: true });
+
+    const result = await gitService.initRepo("fresh", parent);
+
+    expect(result.rootPath).toBe(path.join(parent, "fresh"));
+    expect(result.defaultBranch).toBe("main");
+    expect(await gitService.getCurrentBranch(result.rootPath)).toBe("main");
+    expect(git(result.rootPath, "log", "--oneline")).toContain("Initial commit");
+  });
+
+  it("throws when the folder already exists", async () => {
+    const parent = path.join(sandbox, "init-parent-2");
+    fs.mkdirSync(path.join(parent, "taken"), { recursive: true });
+
+    await expect(gitService.initRepo("taken", parent)).rejects.toThrow(
+      "Folder already exists",
+    );
+  });
+});
+
+describe("cloneRepo — URL hardening", () => {
+  it("rejects option-injection and non-transport URLs", async () => {
+    await expect(
+      gitService.cloneRepo("-oProxyCommand=evil", sandbox),
+    ).rejects.toThrow("Invalid repository URL");
+    await expect(
+      gitService.cloneRepo("file:///etc/passwd", sandbox),
+    ).rejects.toThrow(/repository URLs are supported/);
+    await expect(
+      gitService.cloneRepo("/local/path", sandbox),
+    ).rejects.toThrow(/repository URLs are supported/);
+    await expect(
+      gitService.cloneRepo("ext::sh -c whoami", sandbox),
+    ).rejects.toThrow(/repository URLs are supported/);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// push — auto-upstream
+// ─────────────────────────────────────────────────────────────
+
+describe("push", () => {
+  it("sets the upstream automatically when the branch has none", async () => {
+    const origin = path.join(sandbox, "origin.git");
+    fs.mkdirSync(origin);
+    git(origin, "init", "--bare", "-b", "main");
+    const repo = makeRepo();
+    git(repo, "remote", "add", "origin", origin);
+
+    const result = await gitService.push(repo);
+
+    expect(result).toEqual({ branch: "main", remote: "origin" });
+    // Upstream tracking is now configured…
+    expect(git(repo, "rev-parse", "--abbrev-ref", "main@{upstream}")).toBe(
+      "origin/main",
+    );
+    // …so a second push (new commit) succeeds without --set-upstream.
+    write(repo, "b.txt", "b\n");
+    git(repo, "add", ".");
+    git(repo, "commit", "-m", "second");
+    await expect(gitService.push(repo)).resolves.toEqual({
+      branch: "main",
+      remote: "origin",
     });
   });
 
-  // ─── stageFiles ────────────────────────────────────────────
+  it("throws when there is no remote", async () => {
+    const repo = makeRepo();
+    await expect(gitService.push(repo)).rejects.toThrow();
+  });
+});
 
-  describe("stageFiles", () => {
-    it("stages specific files", async () => {
-      mockGitInstance.add.mockResolvedValue(undefined);
+// ─────────────────────────────────────────────────────────────
+// getBranchDiff / getBranchLog — base..HEAD semantics
+// ─────────────────────────────────────────────────────────────
 
-      await gitService.stageFiles(TEST_PATH, ["file1.ts", "file2.ts"]);
-      expect(mockGitInstance.add).toHaveBeenCalledWith(["file1.ts", "file2.ts"]);
-    });
+describe("getBranchDiff", () => {
+  it("three-dot diff contains only the branch's own changes", async () => {
+    const repo = makeRepo();
+    // Branch work: change a.txt on feat.
+    git(repo, "checkout", "-b", "feat");
+    write(repo, "a.txt", "feat change\n");
+    git(repo, "add", ".");
+    git(repo, "commit", "-m", "feat: a");
+    // Base moves on independently: b.txt lands on main after divergence.
+    git(repo, "checkout", "main");
+    write(repo, "b.txt", "main change\n");
+    git(repo, "add", ".");
+    git(repo, "commit", "-m", "main: b");
+    git(repo, "checkout", "feat");
 
-    it("stages all files when no files provided", async () => {
-      mockGitInstance.add.mockResolvedValue(undefined);
+    const diff = await gitService.getBranchDiff(repo, "main");
 
-      await gitService.stageFiles(TEST_PATH);
-      expect(mockGitInstance.add).toHaveBeenCalledWith("-A");
-    });
+    expect(diff).toContain("a.txt");
+    // Two-dot would show main's b.txt as a deletion; three-dot must not.
+    expect(diff).not.toContain("b.txt");
+  });
+});
 
-    it("stages all files when empty array provided", async () => {
-      mockGitInstance.add.mockResolvedValue(undefined);
+describe("getBranchLog", () => {
+  it("lists only commits unique to the branch", async () => {
+    const repo = makeRepo();
+    git(repo, "checkout", "-b", "feat");
+    write(repo, "a.txt", "1\n");
+    git(repo, "add", ".");
+    git(repo, "commit", "-m", "feat commit");
 
-      await gitService.stageFiles(TEST_PATH, []);
-      expect(mockGitInstance.add).toHaveBeenCalledWith("-A");
-    });
+    const log = await gitService.getBranchLog(repo, "main");
 
-    it("throws on failure (no try-catch in stageFiles)", async () => {
-      mockGitInstance.add.mockRejectedValue(new Error("stage error"));
+    expect(log).toEqual(["feat commit"]);
+  });
+});
 
-      await expect(gitService.stageFiles(TEST_PATH, ["f.ts"])).rejects.toThrow("stage error");
-    });
+// ─────────────────────────────────────────────────────────────
+// resetHard / renameBranch
+// ─────────────────────────────────────────────────────────────
+
+describe("resetHard", () => {
+  it("discards tracked modifications and cleans untracked files", async () => {
+    const repo = makeRepo();
+    write(repo, "README.md", "# dirty\n");
+    write(repo, "junk.txt", "junk\n");
+
+    await gitService.resetHard(repo, "HEAD");
+
+    const status = await gitService.getStatus(repo);
+    expect(status.isClean).toBe(true);
+    expect(fs.existsSync(path.join(repo, "junk.txt"))).toBe(false);
+    expect(fs.readFileSync(path.join(repo, "README.md"), "utf-8")).toBe(
+      "# test\n",
+    );
   });
 
-  // ─── commit ────────────────────────────────────────────────
+  it("rejects refs that would parse as git options", async () => {
+    const repo = makeRepo();
+    await expect(gitService.resetHard(repo, "--hard")).rejects.toThrow(
+      "Invalid git ref",
+    );
+  });
+});
 
-  describe("commit", () => {
-    it("commits and returns hash and summary", async () => {
-      mockGitInstance.commit.mockResolvedValue({
-        commit: "abc123",
-        summary: { changes: 3, insertions: 10, deletions: 2 },
-      });
+describe("renameBranch", () => {
+  it("renames the branch", async () => {
+    const repo = makeRepo();
 
-      const result = await gitService.commit(TEST_PATH, "feat: add feature");
-      expect(result.hash).toBe("abc123");
-      expect(result.summary).toBe("3 changed, 10 insertions, 2 deletions");
-      expect(mockGitInstance.commit).toHaveBeenCalledWith("feat: add feature");
-    });
+    await gitService.renameBranch(repo, "main", "trunk");
 
-    it("returns empty hash when commit is falsy", async () => {
-      mockGitInstance.commit.mockResolvedValue({
-        commit: "",
-        summary: { changes: 0, insertions: 0, deletions: 0 },
-      });
+    expect(await gitService.getCurrentBranch(repo)).toBe("trunk");
+  });
+});
 
-      const result = await gitService.commit(TEST_PATH, "empty commit");
-      expect(result.hash).toBe("");
-      expect(result.summary).toBe("0 changed, 0 insertions, 0 deletions");
-    });
+// ─────────────────────────────────────────────────────────────
+// stage → staged diff → commit round-trip
+// ─────────────────────────────────────────────────────────────
 
-    it("throws on failure (no try-catch in commit)", async () => {
-      mockGitInstance.commit.mockRejectedValue(new Error("commit error"));
+describe("stageFiles / getStagedDiff / commit", () => {
+  it("stages everything, exposes the index diff, and commits it", async () => {
+    const repo = makeRepo();
+    write(repo, "c.txt", "content\n");
 
-      await expect(gitService.commit(TEST_PATH, "msg")).rejects.toThrow("commit error");
-    });
+    await gitService.stageFiles(repo);
+    const staged = await gitService.getStagedDiff(repo);
+    expect(staged).toContain("c.txt");
+
+    const result = await gitService.commit(repo, "add c");
+    expect(result.hash).toBeTruthy();
+    expect((await gitService.getStatus(repo)).isClean).toBe(true);
+    expect(git(repo, "log", "-1", "--pretty=%s")).toBe("add c");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// getBranches — raw names (deduping is the caller's concern)
+// ─────────────────────────────────────────────────────────────
+
+describe("getBranches", () => {
+  it("lists local branches with the current one", async () => {
+    const repo = makeRepo();
+    git(repo, "branch", "extra");
+
+    const result = await gitService.getBranches(repo);
+
+    expect(result.current).toBe("main");
+    expect(result.all).toContain("main");
+    expect(result.all).toContain("extra");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// Pure diff-text helpers
+// ─────────────────────────────────────────────────────────────
+
+describe("buildPerFileDiffHashes", () => {
+  const chunk = (name: string, body: string) =>
+    `diff --git a/${name} b/${name}\n--- a/${name}\n+++ b/${name}\n@@ -1 +1 @@\n${body}\n`;
+
+  it("maps each file to a hash of its own chunk", () => {
+    const diff = chunk("a.ts", "+x") + chunk("b.ts", "+y");
+    const hashes = buildPerFileDiffHashes(diff);
+
+    expect([...hashes.keys()]).toEqual(["a.ts", "b.ts"]);
+    expect(hashes.get("a.ts")).toBe(hashContent(chunk("a.ts", "+x")));
+    expect(hashes.get("a.ts")).not.toBe(hashes.get("b.ts"));
   });
 
-  // ─── removeWorktree ────────────────────────────────────────
-
-  describe("removeWorktree", () => {
-    it("removes worktree successfully", async () => {
-      mockGitInstance.raw.mockResolvedValue("");
-
-      const result = await gitService.removeWorktree(TEST_PATH, "/tmp/wt");
-      assertOk(result);
-      expect(mockGitInstance.raw).toHaveBeenCalledWith(["worktree", "remove", "/tmp/wt", "--force"]);
-    });
-
-    it("returns error on failure", async () => {
-      mockGitInstance.raw.mockRejectedValue(new Error("worktree not found"));
-
-      const result = await gitService.removeWorktree(TEST_PATH, "/tmp/wt");
-      assertFail(result);
-      expect(result.error).toBe("worktree not found");
-    });
-
-    it("returns fallback error for non-Error throws", async () => {
-      mockGitInstance.raw.mockRejectedValue(undefined);
-
-      const result = await gitService.removeWorktree(TEST_PATH, "/tmp/wt");
-      assertFail(result);
-      expect(result.error).toBe("Failed to remove worktree");
-    });
+  it("returns an empty map for empty input", () => {
+    expect(buildPerFileDiffHashes("").size).toBe(0);
   });
 });
