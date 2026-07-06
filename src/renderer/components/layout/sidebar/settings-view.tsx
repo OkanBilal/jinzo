@@ -152,7 +152,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
           style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
         >
           <ChevronUp className="size-4 rotate-270 text-primary-900 dark:text-primary-200" />
-          <Body className="font-normal">
+          <Body className="font-normal text-s">
             Back
           </Body>
         </Button>

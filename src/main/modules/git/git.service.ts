@@ -65,6 +65,29 @@ import { ok, fail, type ServiceResponse } from "../../../shared/ipc-kit/service-
 export type { ServiceResponse };
 
 // ─────────────────────────────────────────────────────────────
+// Argument hardening
+// ─────────────────────────────────────────────────────────────
+
+// Transports like ext:: ("ext::sh -c ...") and fd:: execute arbitrary commands;
+// file:// and bare local paths turn "clone" into local filesystem reads.
+const SAFE_CLONE_URL =
+  /^(https?:\/\/|ssh:\/\/|git:\/\/|[A-Za-z0-9._-]+@[A-Za-z0-9._~-]+:)/;
+
+function validateCloneUrl(url: string): string | null {
+  if (!url || url.startsWith("-")) return "Invalid repository URL";
+  if (!SAFE_CLONE_URL.test(url)) {
+    return "Only https://, ssh://, git:// or user@host: repository URLs are supported";
+  }
+  return null;
+}
+
+// A ref starting with "-" would be parsed as an option by git, not a revision.
+function validateRef(ref: string): string | null {
+  if (!ref || ref.startsWith("-") || /[\s\0]/.test(ref)) return "Invalid git ref";
+  return null;
+}
+
+// ─────────────────────────────────────────────────────────────
 // Git Service
 // ─────────────────────────────────────────────────────────────
 
@@ -663,6 +686,9 @@ class GitService {
     targetPath: string
   ): Promise<ServiceResponse<{ clonedPath: string; defaultBranch: string; originUrl: string }>> {
     try {
+      const urlError = validateCloneUrl(url);
+      if (urlError) return fail(urlError);
+
       // Extract repo name from URL for the folder name
       const repoName = url
         .replace(/\.git$/, "")
@@ -821,6 +847,9 @@ class GitService {
     ref: string
   ): Promise<ServiceResponse<void>> {
     try {
+      const refError = validateRef(ref);
+      if (refError) return fail(refError);
+
       const git = this.getGit(rootPath);
       await git.reset(["--hard", ref]);
       await git.clean("f", ["-d"]);

@@ -197,9 +197,9 @@ function SessionTimeBar({
             title="Copy response"
           >
             {copied ? (
-              <Check className="size-3.5" />
+              <Check className="size-4" />
             ) : (
-              <Clipboard className="size-3.5" />
+              <Clipboard className="size-4" />
             )}
           </Button>
         </>

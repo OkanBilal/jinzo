@@ -156,6 +156,9 @@
     "ip-address": "^10.2.0",
     "picomatch": "^4.0.4",
     "qs": "^6.15.2",
-    "uuid": "^11.1.1"
+    "uuid": "^11.1.1",
+    "pptx-preview": {
+      "echarts": "^6.1.0"
+    }
   }
 }

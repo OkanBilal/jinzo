@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
-import { Body, Caption, Input, Toggle, Button, toast } from "@/components/ui";
+import {
+  Alert,
+  Body,
+  Caption,
+  Input,
+  Toggle,
+  Button,
+  toast,
+} from "@/components/ui";
 import { Clipboard, Check } from "@/components/ui/icons";
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import { SettingsSection, SettingsDivider } from "./settings-layout";
@@ -63,6 +71,7 @@ function CopyButton({ value, tooltip }: { value: string; tooltip: string }) {
 export function LocalBackendShare() {
   const [status, setStatus] = useState<Status | null>(null);
   const [busy, setBusy] = useState<Busy>(null);
+  const [confirmLan, setConfirmLan] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -150,16 +159,34 @@ export function LocalBackendShare() {
             <div className="flex-1 pr-8">
               <Body className="mb-1">Network access (LAN)</Body>
               <Caption>
-                Also bind your LAN / Tailscale IPs for direct access (token-gated,
-                less private).
+                Also bind your LAN / Tailscale IPs for direct access. Token-gated
+                but unencrypted (plain ws://) — prefer Tailscale HTTPS or SSH.
               </Caption>
             </div>
             <Toggle
               enabled={lanOn}
-              onChange={(v) => run("lan", window.api.localBackend.setLanAccess(v))}
+              onChange={(v) => {
+                if (v) setConfirmLan(true);
+                else void run("lan", window.api.localBackend.setLanAccess(false));
+              }}
               disabled={busy !== null}
             />
           </div>
+
+          <Alert
+            isOpen={confirmLan}
+            title="Expose over unencrypted network?"
+            description="Plain ws:// — the pairing token and all traffic are unencrypted, and the token grants full control of this machine. Prefer Tailscale HTTPS or SSH."
+            primaryButtonText="Enable anyway"
+            secondaryButtonText="Cancel"
+            isPrimaryLoading={busy === "lan"}
+            onPrimary={() =>
+              void run("lan", window.api.localBackend.setLanAccess(true)).finally(
+                () => setConfirmLan(false),
+              )
+            }
+            onSecondary={() => setConfirmLan(false)}
+          />
         </div>
       )}
 

@@ -18,6 +18,8 @@ const mockGitInstance = {
   add: vi.fn(),
   commit: vi.fn(),
   clone: vi.fn(),
+  reset: vi.fn(),
+  clean: vi.fn(),
 };
 
 vi.mock("simple-git", () => ({
@@ -875,9 +877,62 @@ describe("GitService", () => {
     it("returns fallback error for non-Error throws", async () => {
       mockGitInstance.clone.mockRejectedValue(undefined);
 
-      const result = await gitService.cloneRepo("url", "/tmp");
+      const result = await gitService.cloneRepo("https://github.com/user/repo", "/tmp");
       assertFail(result);
       expect(result.error).toBe("Failed to clone repository");
+    });
+
+    it("accepts scp-like ssh URLs", async () => {
+      mockGitInstance.clone.mockResolvedValue(undefined);
+      mockGitInstance.revparse.mockResolvedValue("main\n");
+
+      const result = await gitService.cloneRepo("git@github.com:user/repo.git", "/tmp");
+      assertOk(result);
+      expect(result.data!.clonedPath).toBe("/tmp/repo");
+    });
+
+    it.each([
+      "ext::sh -c 'touch /tmp/pwned'",
+      "file:///etc/passwd",
+      "/some/local/path",
+      "--upload-pack=touch /tmp/pwned",
+      "",
+    ])("rejects unsafe clone URL %j without invoking git", async (url) => {
+      const result = await gitService.cloneRepo(url, "/tmp");
+      assertFail(result);
+      expect(mockGitInstance.clone).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── resetHard ─────────────────────────────────────────────
+
+  describe("resetHard", () => {
+    it("resets to a ref and cleans untracked files", async () => {
+      mockGitInstance.reset.mockResolvedValue(undefined);
+      mockGitInstance.clean.mockResolvedValue(undefined);
+
+      const result = await gitService.resetHard(TEST_PATH, "origin/main");
+      assertOk(result);
+      expect(mockGitInstance.reset).toHaveBeenCalledWith(["--hard", "origin/main"]);
+      expect(mockGitInstance.clean).toHaveBeenCalledWith("f", ["-d"]);
+    });
+
+    it.each(["--hard", "-x", "", "ref with space"])(
+      "rejects unsafe ref %j without invoking git",
+      async (ref) => {
+        const result = await gitService.resetHard(TEST_PATH, ref);
+        assertFail(result);
+        expect(result.error).toBe("Invalid git ref");
+        expect(mockGitInstance.reset).not.toHaveBeenCalled();
+      }
+    );
+
+    it("returns error on reset failure", async () => {
+      mockGitInstance.reset.mockRejectedValue(new Error("bad ref"));
+
+      const result = await gitService.resetHard(TEST_PATH, "origin/main");
+      assertFail(result);
+      expect(result.error).toBe("bad ref");
     });
   });
 
