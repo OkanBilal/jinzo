@@ -119,4 +119,4 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## License
 
-[MIT](./LICENSE) &copy; [Okan Bilal Balci](https://github.com/OkanBilal)
+[MIT](./LICENSE) &copy; [Mains](https://github.com/mainsdotdev)

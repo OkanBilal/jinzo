@@ -90,7 +90,10 @@ module.exports = {
   },
   packagerConfig: {
     name: 'Mains',
-    executableName: 'mains',
+    // No executableName override: @electron/packager uses it verbatim as
+    // CFBundleDisplayName (Dock, ⌘-Tab, menu bar, TCC dialogs), so a
+    // lowercase binary name leaks into every user-visible surface. Leaving
+    // it unset derives both the executable and display name from `name`.
     appBundleId: 'dev.mains.app',
     // TCC: Apple Events (kTCCServiceAppleEvents), screen capture (kTCCServiceScreenCapture).
     extendInfo: {
@@ -107,6 +110,7 @@ module.exports = {
     extraResource: [
       'src/main/db/migrations',
       'src/renderer/public/icon.png',
+      'THIRD-PARTY-NOTICES.txt',
     ],
     ...((() => {
       const hasSigningVars = process.env.APPLE_ID && process.env.APPLE_PASSWORD && process.env.APPLE_TEAM_ID;
@@ -121,8 +125,12 @@ module.exports = {
       }
       return {
         osxSign: {
-          identity: 'Developer ID Application: Okan Bilal Balci (Y4MVJ7JSH6)',
-          identityValidation: false,
+          // Signing cert comes from the env so forks/CI aren't tied to one
+          // person's certificate. When unset, osx-sign auto-discovers the
+          // Developer ID identity in the keychain.
+          ...(process.env.APPLE_SIGNING_IDENTITY
+            ? { identity: process.env.APPLE_SIGNING_IDENTITY, identityValidation: false }
+            : {}),
           optionsForFile: () => ({
             hardenedRuntime: true,
             entitlements: 'entitlements.plist',

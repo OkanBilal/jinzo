@@ -1003,10 +1003,14 @@ if (!SERVE.serve) {
   }
 }
 
-// Ensure app name is "mains" even in dev (Electron Forge defaults to "Electron")
+// Ensure app name is "Mains" even in dev (Electron Forge defaults to "Electron")
 if (!app.isPackaged) {
-  app.setName("mains");
+  app.setName("Mains");
 }
+// The display name is "Mains", but userData has always lived under the
+// lowercase dir — pin it so existing installs keep their data even on
+// case-sensitive filesystems.
+app.setPath("userData", path.join(app.getPath("appData"), "mains"));
 
 // Custom About panel
 app.setAboutPanelOptions({
