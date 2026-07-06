@@ -29,6 +29,7 @@ import { useLocalImageUrl } from "@/hooks/use-local-image-url";
 import { useCapabilities } from "@/lib/platform";
 import { DocumentArtifact } from "@/features/workspace/components/tools/document-artifact";
 import { classifyDocType, type DocType } from "@/lib/document-viewer";
+import { useSmoothText } from "../../hooks/use-smooth-text";
 
 const IMAGE_PATH_REGEX = /([~/]?[\w./-]+\.(?:png|jpe?g|webp|gif))\b/gi;
 
@@ -732,18 +733,22 @@ function ArtifactBody({
   onPreview: (att: { name: string; dataUrl: string } | null) => void;
   workspaceRootPath?: string;
 }) {
+  // Bursty SDK chunks are revealed a few characters per frame so the text
+  // flows instead of popping in chunk-sized jumps. Instant when not streaming.
+  const displayContent = useSmoothText(content, isStreaming);
+
   const resolvedImages = useMemo(() => {
     const out: Array<{ key: string; raw: string; abs: string; name: string }> =
       [];
     const seen = new Set<string>();
-    for (const raw of extractImagePaths(content)) {
+    for (const raw of extractImagePaths(displayContent)) {
       const abs = resolveImagePath(raw, workspaceRootPath);
       if (!abs || seen.has(abs)) continue;
       seen.add(abs);
       out.push({ key: abs, raw, abs, name: raw.split("/").pop() ?? raw });
     }
     return out;
-  }, [content, workspaceRootPath]);
+  }, [displayContent, workspaceRootPath]);
 
   // Track images whose load failed so we hide them instead of leaving a
   // broken icon. The extractor pulls path-like substrings from the markdown,
@@ -764,7 +769,7 @@ function ArtifactBody({
             components={markdownComponents}
             remarkPlugins={[remarkGfm]}
           >
-            {content}
+            {displayContent}
           </ReactMarkdown>
         </div>
       </div>

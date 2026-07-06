@@ -865,19 +865,24 @@ html.mains-web.dark #root {
   background: var(--color-primary-900);
 }
 
-/* ── Streaming text blur-in animation ── */
-@keyframes stream-blur-in {
-  from { filter: blur(4px); opacity: 0.4; }
-  to { filter: blur(0); opacity: 1; }
+/* ── Streaming text ── */
+/* Soft fade for blocks as they mount; the per-character reveal that makes
+   appended text flow lives in useSmoothText. Children must keep their
+   natural display so the streaming layout matches the final layout —
+   forcing them inline made paragraphs run together and the whole message
+   reflow when the stream completed. */
+@keyframes stream-block-in {
+  from { opacity: 0; filter: blur(2px); }
+  to { opacity: 1; filter: blur(0); }
 }
 
 .streaming-text > * {
-  display: inline;
-  animation: fresh-blur-in 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: stream-block-in 0.3s ease-out both;
 }
 
-.streaming-text > *:last-child {
-  display: inline;
-  animation: fresh-blur-in 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+@media (prefers-reduced-motion: reduce) {
+  .streaming-text > * {
+    animation: none;
+  }
 }
 
