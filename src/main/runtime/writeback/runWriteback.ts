@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import { RunArtifactKind, runsService } from "../../modules/runs";
-import { toolsService, toolsRepo } from "../../modules/tools";
+import { toolsService } from "../../modules/tools";
 import type { WorkRunEvent } from "../../modules/providers/adapters";
 import { createHash } from "crypto";
 
@@ -149,7 +149,7 @@ export function createRunWriteback(config: RunWritebackConfig): RunWriteback {
             let dbRowId: number | null = null;
 
             if (toolCallId) {
-              dbRowId = await toolsRepo.findToolCallRowIdByRunAndToolCallId(
+              dbRowId = await toolsService.findToolCallRowId(
                 runId,
                 toolCallId,
               );
@@ -174,7 +174,7 @@ export function createRunWriteback(config: RunWritebackConfig): RunWriteback {
             }
 
             if (!dbRowId) {
-              dbRowId = await toolsRepo.findOpenToolCallRowIdByRunAndToolName(
+              dbRowId = await toolsService.findOpenToolCallRowId(
                 runId,
                 event.toolName,
               );

@@ -1,6 +1,5 @@
 export { registerConnectionsHandlers, unregisterConnectionsHandlers } from "./connections.ipc";
 export { connectionsService, getConnectionWithSecrets } from "./connections.service";
-export { connectionsRepo } from "./connections.repo";
 
 // Only safe-to-share helpers leak across the seam. Crypto / provider-secret
 // parsing stay private — cross-module callers should use the named helper

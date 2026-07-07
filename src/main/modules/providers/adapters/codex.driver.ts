@@ -57,7 +57,11 @@ import {
   requestToolApproval,
 } from "../../runs/user-input-broker";
 import { runsRepo } from "../../runs/runs.repo";
-import { workspaceRepo, logWorkspaceActivity } from "../../workspace";
+import { logWorkspaceActivity } from "../../workspace";
+// Direct repo import — a known driver egress-seam leak (see CONTEXT.md
+// "Repos are module-internal"); goes away when review persistence routes
+// through the SaveReview/SaveFinding tools.
+import { workspaceRepo } from "../../workspace/workspace.repo";
 import {
   createLogger,
   safeJson,

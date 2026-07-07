@@ -19,17 +19,16 @@ import { execFile } from "node:child_process";
 import { basename } from "node:path";
 import { promisify } from "node:util";
 import {
-  workspaceRepo,
+  workspaceService,
   logWorkspaceActivity,
   emitFindingsChanged,
+  recordWorkspaceDiff,
   type WorkspaceMetadata,
 } from "../workspace";
 import { runSessionRegistry } from "../runs/run-session-registry";
 import { gitService } from "../git";
-import { projectsRepo } from "../projects/projects.repo";
-import { appSettingsRepo } from "../appSettings/appSettings.repo";
-import { SETTINGS_ID } from "../appSettings/appSettings.constants";
-import { providersRepo } from "../providers/providers.repo";
+import { projectsService } from "../projects";
+import { appSettingsService } from "../appSettings";
 // `createWorkAdapter` is imported lazily inside the generation methods to break
 // the gitFlow ↔ providers/adapters (mains-tools) require cycle.
 
@@ -155,7 +154,7 @@ export const gitFlowService = {
   async resolveRoot(
     workspaceId: string,
   ): Promise<{ rootPath: string; projectId: string | null }> {
-    const workspace = await workspaceRepo.findById(workspaceId);
+    const workspace = await workspaceService.get(workspaceId);
     if (!workspace) throw new Error("Workspace not found");
     if (!workspace.rootPath) throw new Error("Workspace has no root path");
     return {
@@ -166,23 +165,23 @@ export const gitFlowService = {
 
   /** Commit instructions, project-level first then app-level. */
   async getCommitInstructions(workspaceId: string): Promise<string | null> {
-    const workspace = await workspaceRepo.findById(workspaceId);
+    const workspace = await workspaceService.get(workspaceId);
     if (workspace?.projectId) {
-      const project = await projectsRepo.findById(workspace.projectId);
+      const project = await projectsService.get(workspace.projectId);
       if (project?.commitInstructions) return project.commitInstructions;
     }
-    const settings = await appSettingsRepo.findById(SETTINGS_ID);
+    const settings = await appSettingsService.getSettings();
     return settings?.commitInstructions || null;
   },
 
   /** PR instructions, project-level first then app-level. */
   async getPrInstructions(workspaceId: string): Promise<string | null> {
-    const workspace = await workspaceRepo.findById(workspaceId);
+    const workspace = await workspaceService.get(workspaceId);
     if (workspace?.projectId) {
-      const project = await projectsRepo.findById(workspace.projectId);
+      const project = await projectsService.get(workspace.projectId);
       if (project?.prInstructions) return project.prInstructions;
     }
-    const settings = await appSettingsRepo.findById(SETTINGS_ID);
+    const settings = await appSettingsService.getSettings();
     return settings?.prInstructions || null;
   },
 
@@ -207,9 +206,9 @@ export const gitFlowService = {
     rootPath: string,
   ): Promise<void> {
     if (!workspaceId) return;
-    const workspace = await workspaceRepo.findById(workspaceId);
+    const workspace = await workspaceService.get(workspaceId);
     if (!workspace?.projectId) return;
-    const project = await projectsRepo.findById(workspace.projectId);
+    const project = await projectsService.get(workspace.projectId);
     if (!project?.remoteOrigin) return;
     const remotes = await gitService.getRemotes(rootPath).catch(() => null);
     if (!remotes) return;
@@ -232,12 +231,12 @@ export const gitFlowService = {
    */
   async resolveBaseBranch(workspaceId: string | null): Promise<string | null> {
     if (!workspaceId) return null;
-    const workspace = await workspaceRepo.findById(workspaceId);
+    const workspace = await workspaceService.get(workspaceId);
     if (!workspace) return null;
     const fromMeta = readBaseBranchFromMetadata(workspace.metadata);
     if (fromMeta) return fromMeta;
     if (workspace.projectId) {
-      const project = await projectsRepo.findById(workspace.projectId);
+      const project = await projectsService.get(workspace.projectId);
       if (project?.defaultBranch) return project.defaultBranch;
     }
     return null;
@@ -269,26 +268,14 @@ export const gitFlowService = {
     const newHead = await gitService.getHeadSha(rootPath).catch(() => null);
 
     if (workspaceId && newHead) {
-      await workspaceRepo.deleteDiffsByWorkspace(workspaceId);
+      await workspaceService.deleteDiffs(workspaceId);
       try {
         const snapshot = await gitService.captureDiffSnapshot(
           rootPath,
           newHead,
         );
         if (snapshot.files.length > 0) {
-          await workspaceRepo.insertDiff({
-            id: crypto.randomUUID(),
-            workspaceId,
-            runId: runId ?? undefined,
-            baseRef: newHead,
-            diffText: snapshot.diffText,
-            filesJson: JSON.stringify(snapshot.files),
-            statsJson: JSON.stringify({
-              shortstat: snapshot.shortstat,
-              files: snapshot.files.length,
-              newFiles: snapshot.untrackedFiles.length,
-            }),
-          });
+          await recordWorkspaceDiff(workspaceId, runId, snapshot);
         }
       } catch (err) {
         // Best-effort: the commit itself succeeded; the stale pre-commit diff
@@ -303,7 +290,7 @@ export const gitFlowService = {
 
     // Committed code is accepted — drop its review findings.
     if (workspaceId) {
-      await workspaceRepo.deleteFindingsByWorkspace(workspaceId);
+      await workspaceService.deleteFindingsByWorkspace(workspaceId);
       emitFindingsChanged(workspaceId);
       logWorkspaceActivity({
         workspaceId,
@@ -409,7 +396,9 @@ export const gitFlowService = {
     }
     if (!diff.trim()) throw new Error("No staged changes to summarize");
 
-    const provider = await providersRepo.findById(params.providerId);
+    // Lazy: breaks the gitFlow ↔ providers/adapters (mains-tools) require cycle.
+    const { providersService } = await import("../providers/providers.service");
+    const provider = await providersService.getById(params.providerId);
     if (!provider) throw new Error("Provider not found");
     const { createWorkAdapter } = await import(
       "../providers/adapters/adapter.factory"
@@ -480,7 +469,9 @@ export const gitFlowService = {
       diff = [staged, working].filter(Boolean).join("\n");
     }
 
-    const provider = await providersRepo.findById(params.providerId);
+    // Lazy: breaks the gitFlow ↔ providers/adapters (mains-tools) require cycle.
+    const { providersService } = await import("../providers/providers.service");
+    const provider = await providersService.getById(params.providerId);
     if (!provider) throw new Error("Provider not found");
     const { createWorkAdapter } = await import(
       "../providers/adapters/adapter.factory"
@@ -548,7 +539,7 @@ export const gitFlowService = {
 
   /** Live status for the commit panel header + button enablement. */
   async getStatus(workspaceId: string): Promise<GitFlowStatus> {
-    const workspace = await workspaceRepo.findById(workspaceId);
+    const workspace = await workspaceService.get(workspaceId);
     if (!workspace) throw new Error("Workspace not found");
     if (!workspace.rootPath) throw new Error("Workspace has no root path");
     const rootPath = workspace.rootPath;
@@ -568,7 +559,7 @@ export const gitFlowService = {
     // historical reasons; metadata.baseBranch is the PR base/default branch.
     let defaultBranch = readBaseBranchFromMetadata(workspace.metadata);
     if (!defaultBranch && workspace.projectId) {
-      const project = await projectsRepo.findById(workspace.projectId);
+      const project = await projectsService.get(workspace.projectId);
       defaultBranch = project?.defaultBranch ?? null;
     }
     defaultBranch ??= workspace.defaultBranch ?? null;
@@ -690,9 +681,9 @@ export const gitFlowService = {
 
     // Default repo name from the project, then the workspace, then the folder.
     let name = "";
-    const workspace = await workspaceRepo.findById(workspaceId);
+    const workspace = await workspaceService.get(workspaceId);
     if (projectId) {
-      const project = await projectsRepo.findById(projectId);
+      const project = await projectsService.get(projectId);
       name = project?.name || "";
     }
     if (!name) name = workspace?.name || basename(rootPath);
@@ -804,7 +795,7 @@ export const gitFlowService = {
     // Record the origin + default branch on the project so assertRemoteMatches
     // and future push/PR flows treat this as a normal remote-backed repo.
     if (projectId) {
-      await projectsRepo.update(projectId, {
+      await projectsService.update(projectId, {
         remoteOrigin: htmlUrl,
         defaultBranch: branch,
       });

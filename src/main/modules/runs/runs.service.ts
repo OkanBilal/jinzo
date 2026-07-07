@@ -1,8 +1,8 @@
 import { createHash } from "crypto";
 
 import { runsRepo } from "./runs.repo";
-import { providersRepo } from "../providers/providers.repo";
-import { workspaceRepo } from "../workspace";
+import { providersService } from "../providers";
+import { workspaceService } from "../workspace";
 import {
   createWorkAdapter,
   type WorkRunContextItem,
@@ -211,6 +211,11 @@ export const runsService = {
     await runsRepo.deleteRun(id);
   },
 
+  /** Delete every run of a workspace (project removal cleanup). */
+  async deleteRunsByWorkspace(workspaceId: string): Promise<void> {
+    await runsRepo.deleteRunsByWorkspaceId(workspaceId);
+  },
+
   async archiveRun(id: string): Promise<RunResponse> {
     const archived = await runsRepo.archiveRun(id);
     if (!archived) throw new Error("Run not found");
@@ -288,7 +293,7 @@ export const runsService = {
   async executeRun(payload: StartRunPayload): Promise<StartRunResponse> {
     const runId = generateRunId();
     try {
-      const provider = await providersRepo.findById(payload.providerId);
+      const provider = await providersService.getById(payload.providerId);
       if (!provider) {
         throw new Error(`Provider "${payload.providerId}" not found`);
       }
@@ -301,12 +306,12 @@ export const runsService = {
         );
       }
 
-      const workspace = await workspaceRepo.findById(payload.workspaceId);
+      const workspace = await workspaceService.get(payload.workspaceId);
       if (!workspace) {
         throw new Error(`Workspace "${payload.workspaceId}" not found`);
       }
 
-      await workspaceRepo.update(payload.workspaceId, { status: "in_progress" });
+      await workspaceService.update(payload.workspaceId, { status: "in_progress" });
 
       await runsRepo.insertRun({
         id: runId,
@@ -388,7 +393,7 @@ export const runsService = {
   async executeReview(payload: ReviewRunPayload): Promise<StartRunResponse> {
     const runId = generateRunId();
     try {
-      const provider = await providersRepo.findById(payload.providerId);
+      const provider = await providersService.getById(payload.providerId);
       if (!provider) {
         throw new Error(`Provider "${payload.providerId}" not found`);
       }
@@ -401,12 +406,12 @@ export const runsService = {
         );
       }
 
-      const workspace = await workspaceRepo.findById(payload.workspaceId);
+      const workspace = await workspaceService.get(payload.workspaceId);
       if (!workspace) {
         throw new Error(`Workspace "${payload.workspaceId}" not found`);
       }
 
-      await workspaceRepo.update(payload.workspaceId, { status: "in_review" });
+      await workspaceService.update(payload.workspaceId, { status: "in_review" });
 
       const goalDescription = `Review ${
         payload.target.type === "uncommittedChanges"
@@ -499,7 +504,7 @@ export const runsService = {
         throw new Error("Run does not belong to this account");
       }
 
-      const provider = await providersRepo.findById(run.providerId);
+      const provider = await providersService.getById(run.providerId);
       if (!provider) {
         throw new Error(`Provider "${run.providerId}" not found`);
       }
@@ -508,7 +513,7 @@ export const runsService = {
       }
 
       const workspace = run.workspaceId
-        ? await workspaceRepo.findById(run.workspaceId)
+        ? await workspaceService.get(run.workspaceId)
         : null;
 
       const adapter = createWorkAdapter(provider);
@@ -529,7 +534,7 @@ export const runsService = {
       );
 
       if (workspace) {
-        await workspaceRepo.update(workspace.id, { status: "in_progress" });
+        await workspaceService.update(workspace.id, { status: "in_progress" });
       }
 
       await runsRepo.updateRun(runId, {
@@ -608,7 +613,7 @@ export const runsService = {
         throw new Error("Source run does not belong to this account");
       }
 
-      const provider = await providersRepo.findById(sourceRun.providerId);
+      const provider = await providersService.getById(sourceRun.providerId);
       if (!provider) {
         throw new Error(`Provider "${sourceRun.providerId}" not found`);
       }
@@ -617,7 +622,7 @@ export const runsService = {
       }
 
       const workspace = sourceRun.workspaceId
-        ? await workspaceRepo.findById(sourceRun.workspaceId)
+        ? await workspaceService.get(sourceRun.workspaceId)
         : null;
 
       const adapter = createWorkAdapter(provider);
@@ -634,7 +639,7 @@ export const runsService = {
       }
 
       if (workspace) {
-        await workspaceRepo.update(workspace.id, { status: "in_progress" });
+        await workspaceService.update(workspace.id, { status: "in_progress" });
       }
 
       await runsRepo.insertRun({
@@ -728,7 +733,7 @@ export const runsService = {
       return false;
     }
 
-    const provider = await providersRepo.findById(run.providerId);
+    const provider = await providersService.getById(run.providerId);
     if (!provider) return false;
 
     const adapter = createWorkAdapter(provider);
@@ -745,7 +750,7 @@ export const runsService = {
     const run = await runsRepo.findRunById(runId);
     if (!run) throw new Error("Run not found");
 
-    const provider = await providersRepo.findById(run.providerId);
+    const provider = await providersService.getById(run.providerId);
     if (!provider) return;
 
     const adapter = createWorkAdapter(provider);

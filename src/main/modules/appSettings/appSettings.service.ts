@@ -29,6 +29,20 @@ export const appSettingsService = {
     return this.ensureSettings();
   },
 
+  /**
+   * Internal write for the backend-access toggles. These fields are
+   * deliberately absent from the renderer patch allowlist
+   * (sanitizeAppSettingsPatch) — only main-process code flips them.
+   */
+  async updateBackendAccess(patch: {
+    backendRemoteAccess?: boolean;
+    backendLanAccess?: boolean;
+    backendTailscaleHttps?: boolean;
+  }): Promise<void> {
+    await this.ensureSettings();
+    await appSettingsRepo.update(SETTINGS_ID, patch);
+  },
+
   async updateSettings(patch: unknown): Promise<AppSettingsRecord> {
     const sanitized = sanitizeAppSettingsPatch(patch);
     if (!sanitized) {

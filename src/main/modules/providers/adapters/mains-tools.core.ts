@@ -7,7 +7,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import {
-  workspaceRepo,
+  workspaceService,
   logWorkspaceActivity,
   emitFindingsChanged,
 } from "../../workspace";
@@ -73,8 +73,8 @@ export async function handleGetWorkspaceDiff(
   }
 
   const row = args.runId
-    ? await workspaceRepo.findDiffByRun(args.runId)
-    : await workspaceRepo.findLatestDiffByWorkspace(ctx.workspaceId!);
+    ? await workspaceService.getDiffByRun(args.runId)
+    : await workspaceService.getLatestDiff(ctx.workspaceId!);
 
   if (!row) {
     return { content: [{ type: "text" as const, text: "No diff found" }] };
@@ -89,7 +89,7 @@ export async function handleSaveReview(
   args: SaveReviewArgs,
   ctx: MainsToolContext,
 ) {
-  const reviewId = await workspaceRepo.insertReview({
+  const reviewId = await workspaceService.createReview({
     workspaceId: ctx.workspaceId ?? undefined,
     title: args.title,
     summary: args.summary,
@@ -117,7 +117,7 @@ export async function handleSaveFinding(
   args: SaveFindingArgs,
   ctx: MainsToolContext,
 ) {
-  const findingId = await workspaceRepo.insertFinding({
+  const findingId = await workspaceService.createFinding({
     reviewId: args.reviewId,
     severity: args.severity as any,
     file: args.file,
@@ -157,7 +157,7 @@ export async function handleSaveFindings(
   args: SaveFindingsArgs,
   ctx: MainsToolContext,
 ) {
-  const findingIds = await workspaceRepo.insertManyFindings(
+  const findingIds = await workspaceService.createManyFindings(
     args.findings.map((f) => ({
       reviewId: args.reviewId,
       severity: f.severity as any,

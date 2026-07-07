@@ -31,6 +31,22 @@ export const toolsService = {
     return toolsRepo.insertToolCall(payload);
   },
 
+  /** Row id of a run's tool call by its provider-stable toolCallId. */
+  async findToolCallRowId(
+    runId: string,
+    toolCallId: string,
+  ): Promise<number | null> {
+    return toolsRepo.findToolCallRowIdByRunAndToolCallId(runId, toolCallId);
+  },
+
+  /** Row id of a run's oldest still-open tool call with the given name. */
+  async findOpenToolCallRowId(
+    runId: string,
+    toolName: string,
+  ): Promise<number | null> {
+    return toolsRepo.findOpenToolCallRowIdByRunAndToolName(runId, toolName);
+  },
+
   async updateToolCall(
     id: number,
     payload: UpdateToolCallPayload,

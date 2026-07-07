@@ -3,8 +3,8 @@
 // ─────────────────────────────────────────────────────────────
 
 import { runsService } from "../../modules/runs";
-import { providersRepo } from "../../modules/providers/providers.repo";
-import { workspaceRepo } from "../../modules/workspace";
+import { providersService } from "../../modules/providers";
+import { workspaceService } from "../../modules/workspace";
 import {
   createWorkAdapter,
   isSupportedWorkProvider,
@@ -51,7 +51,7 @@ export async function dispatchRun(request: DispatchRunRequest): Promise<Dispatch
   const runId = generateRunId();
 
   // 1. Load and validate provider
-  const provider = await providersRepo.findById(request.providerId);
+  const provider = await providersService.getById(request.providerId);
   if (!provider) {
     throw new Error(`Provider "${request.providerId}" not found`);
   }
@@ -66,7 +66,7 @@ export async function dispatchRun(request: DispatchRunRequest): Promise<Dispatch
   }
 
   // 2. Load workspace
-  const workspace = await workspaceRepo.findById(request.workspaceId);
+  const workspace = await workspaceService.get(request.workspaceId);
   if (!workspace) {
     throw new Error(`Workspace "${request.workspaceId}" not found`);
   }
@@ -201,7 +201,7 @@ async function dispatchRunInternal(
   request: DispatchRunRequest
 ): Promise<WorkRunResult> {
   // 1. Load and validate provider
-  const provider = await providersRepo.findById(request.providerId);
+  const provider = await providersService.getById(request.providerId);
   if (!provider) {
     throw new Error(`Provider "${request.providerId}" not found`);
   }
@@ -213,7 +213,7 @@ async function dispatchRunInternal(
   }
 
   // 2. Load workspace
-  const workspace = await workspaceRepo.findById(request.workspaceId);
+  const workspace = await workspaceService.get(request.workspaceId);
   if (!workspace) {
     throw new Error(`Workspace "${request.workspaceId}" not found`);
   }

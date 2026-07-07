@@ -5,7 +5,6 @@ export { registerAccountIpc, unregisterAccountIpc } from "./account.ipc";
 export { accountService } from "./account.service";
 
 // Repository
-export { accountRepo } from "./account.repo";
 
 // Validation
 export { validateUpdatePayload, type ValidationResult } from "./account.validation";

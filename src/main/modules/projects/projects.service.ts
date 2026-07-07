@@ -2,8 +2,7 @@ import { randomUUID } from "crypto";
 import * as fs from "fs";
 import { projectsRepo } from "./projects.repo";
 import { LINKABLE_KINDS, normalizeRemoteOrigin } from "./projects.utils";
-import { workspaceRepo } from "../workspace";
-import { runsRepo } from "../runs/runs.repo";
+import { workspaceService } from "../workspace";
 import { gitService } from "../git";
 import { getIssuesByResourceIds } from "../entities";
 import type {
@@ -126,7 +125,7 @@ export const projectsService = {
       throw new Error("Project not found");
     }
 
-    const projectWorkspaces = await workspaceRepo.findByProjectId(id);
+    const projectWorkspaces = await workspaceService.listByProject(id);
 
     for (const ws of projectWorkspaces) {
       if (
@@ -154,12 +153,15 @@ export const projectsService = {
       }
     }
 
+    // Lazy: breaks the projects → runs → providers/adapters → gitFlow →
+    // projects require cycle.
+    const { runsService } = await import("../runs/runs.service");
     for (const ws of projectWorkspaces) {
-      await runsRepo.deleteRunsByWorkspaceId(ws.id);
-      await workspaceRepo.deleteReviewsByWorkspace(ws.id);
+      await runsService.deleteRunsByWorkspace(ws.id);
+      await workspaceService.deleteReviewsByWorkspace(ws.id);
     }
 
-    await workspaceRepo.deleteByProjectId(id);
+    await workspaceService.deleteByProject(id);
     await projectsRepo.delete(id);
   },
 

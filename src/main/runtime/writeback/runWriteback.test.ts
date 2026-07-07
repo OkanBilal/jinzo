@@ -11,16 +11,14 @@ vi.mock("../../modules/tools", () => ({
   toolsService: {
     createToolCall: vi.fn().mockResolvedValue(1),
     updateToolCall: vi.fn().mockResolvedValue(undefined),
-  },
-  toolsRepo: {
-    findToolCallRowIdByRunAndToolCallId: vi.fn().mockResolvedValue(null),
-    findOpenToolCallRowIdByRunAndToolName: vi.fn().mockResolvedValue(null),
+    findToolCallRowId: vi.fn().mockResolvedValue(null),
+    findOpenToolCallRowId: vi.fn().mockResolvedValue(null),
   },
 }));
 
 import { createRunWriteback } from "./runWriteback";
 import { runsService } from "../../modules/runs";
-import { toolsService, toolsRepo } from "../../modules/tools";
+import { toolsService } from "../../modules/tools";
 
 const CONFIG = {
   accountId: "acc-1",
@@ -167,7 +165,7 @@ describe("runWriteback", () => {
   // ─────────────────────────────────────────────────────────────
   describe("tool_call end", () => {
     it("correlates by toolCallId via DB lookup", async () => {
-      vi.mocked(toolsRepo.findToolCallRowIdByRunAndToolCallId).mockResolvedValueOnce(42);
+      vi.mocked(toolsService.findToolCallRowId).mockResolvedValueOnce(42);
 
       const wb = createRunWriteback(CONFIG);
 
@@ -180,7 +178,7 @@ describe("runWriteback", () => {
         endedAt: 2000,
       });
 
-      expect(toolsRepo.findToolCallRowIdByRunAndToolCallId).toHaveBeenCalledWith("run-1", "tc-1");
+      expect(toolsService.findToolCallRowId).toHaveBeenCalledWith("run-1", "tc-1");
       expect(toolsService.updateToolCall).toHaveBeenCalledWith(
         42,
         expect.objectContaining({
@@ -191,7 +189,7 @@ describe("runWriteback", () => {
     });
 
     it("correlates by pending map when DB lookup fails", async () => {
-      vi.mocked(toolsRepo.findToolCallRowIdByRunAndToolCallId).mockResolvedValue(null);
+      vi.mocked(toolsService.findToolCallRowId).mockResolvedValue(null);
       vi.mocked(toolsService.createToolCall).mockResolvedValueOnce(99);
 
       const wb = createRunWriteback(CONFIG);
@@ -219,7 +217,7 @@ describe("runWriteback", () => {
     });
 
     it("correlates by toolName fallback when key not in pending map", async () => {
-      vi.mocked(toolsRepo.findToolCallRowIdByRunAndToolCallId).mockResolvedValue(null);
+      vi.mocked(toolsService.findToolCallRowId).mockResolvedValue(null);
       vi.mocked(toolsService.createToolCall).mockResolvedValueOnce(77);
 
       const wb = createRunWriteback(CONFIG);
@@ -251,8 +249,8 @@ describe("runWriteback", () => {
     });
 
     it("falls back to DB open tool call lookup when not in pending map", async () => {
-      vi.mocked(toolsRepo.findToolCallRowIdByRunAndToolCallId).mockResolvedValue(null);
-      vi.mocked(toolsRepo.findOpenToolCallRowIdByRunAndToolName).mockResolvedValueOnce(55);
+      vi.mocked(toolsService.findToolCallRowId).mockResolvedValue(null);
+      vi.mocked(toolsService.findOpenToolCallRowId).mockResolvedValueOnce(55);
 
       const wb = createRunWriteback(CONFIG);
 
@@ -262,7 +260,7 @@ describe("runWriteback", () => {
         metadata: { phase: "end", toolCallId: "unknown-tc" },
       });
 
-      expect(toolsRepo.findOpenToolCallRowIdByRunAndToolName).toHaveBeenCalledWith("run-1", "Write");
+      expect(toolsService.findOpenToolCallRowId).toHaveBeenCalledWith("run-1", "Write");
       expect(toolsService.updateToolCall).toHaveBeenCalledWith(
         55,
         expect.objectContaining({ status: "done" }),
@@ -270,8 +268,8 @@ describe("runWriteback", () => {
     });
 
     it("creates new record when no correlation found", async () => {
-      vi.mocked(toolsRepo.findToolCallRowIdByRunAndToolCallId).mockResolvedValue(null);
-      vi.mocked(toolsRepo.findOpenToolCallRowIdByRunAndToolName).mockResolvedValue(null);
+      vi.mocked(toolsService.findToolCallRowId).mockResolvedValue(null);
+      vi.mocked(toolsService.findOpenToolCallRowId).mockResolvedValue(null);
       vi.mocked(toolsService.createToolCall).mockResolvedValueOnce(88);
 
       const wb = createRunWriteback(CONFIG);
@@ -293,7 +291,7 @@ describe("runWriteback", () => {
     });
 
     it("sets error status when event has error", async () => {
-      vi.mocked(toolsRepo.findToolCallRowIdByRunAndToolCallId).mockResolvedValueOnce(10);
+      vi.mocked(toolsService.findToolCallRowId).mockResolvedValueOnce(10);
 
       const wb = createRunWriteback(CONFIG);
 

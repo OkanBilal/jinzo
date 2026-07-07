@@ -1,7 +1,6 @@
 export { registerRunsIpc, unregisterRunsIpc } from "./runs.ipc";
 export { runsService } from "./runs.service";
 export { runSessionRegistry } from "./run-session-registry";
-export { runsRepo } from "./runs.repo";
 export type {
   RunStatus,
   RunContextKind,

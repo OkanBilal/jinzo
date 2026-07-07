@@ -1,6 +1,5 @@
 export { registerProvidersIpc, unregisterProvidersIpc } from "./providers.ipc";
 export { providersService } from "./providers.service";
-export { providersRepo } from "./providers.repo";
 export type {
   ProviderKind,
   ProviderConfig,

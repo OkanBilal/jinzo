@@ -101,9 +101,9 @@ vi.mock("../appSettings/appSettings.service", () => ({
 
 import {
   workspaceService,
-  workspaceRepo,
   logWorkspaceActivity,
 } from "./index";
+import { workspaceRepo } from "./workspace.repo";
 import { projectsRepo } from "../projects/projects.repo";
 import { gitService } from "../git/git.service";
 import { appSettingsService } from "../appSettings/appSettings.service";

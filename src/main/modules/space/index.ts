@@ -5,7 +5,6 @@ export { registerSpaceIpc, unregisterSpaceIpc } from "./space.ipc";
 export { spaceService } from "./space.service";
 
 // Repository
-export { spaceRepo } from "./space.repo";
 
 // Validation
 export { sanitizeSpacePayload, sanitizeString, generateSlug } from "./space.validation";

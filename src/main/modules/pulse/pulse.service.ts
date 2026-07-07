@@ -1,8 +1,7 @@
 import { pulseRepo } from "./pulse.repo";
 import { validateCreate, validateUpdate } from "./pulse.validation";
 import { runsService } from "../runs/runs.service";
-import { appSettingsRepo } from "../appSettings/appSettings.repo";
-import { SETTINGS_ID } from "../appSettings/appSettings.constants";
+import { appSettingsService } from "../appSettings";
 import { PROVIDER_IDS } from "../../../shared/provider-ids";
 import type {
   CreatePulseInput,
@@ -219,13 +218,13 @@ export const pulseService = {
     pulseRepo.claimNextRun(id, nextRunAt);
 
     try {
-      const settings = await appSettingsRepo.findById(SETTINGS_ID);
+      const settings = await appSettingsService.getSettings();
       const configSnapshot = buildConfigSnapshot(pulse.providerId, pulse);
 
       const result = await runsService.executeRun({
         accountId: pulse.accountId,
         workspaceId: pulse.workspaceId,
-        spaceId: settings?.activeSpaceId ?? undefined,
+        spaceId: settings.activeSpaceId ?? undefined,
         providerId: pulse.providerId,
         model: pulse.model,
         goal: pulse.prompt,
