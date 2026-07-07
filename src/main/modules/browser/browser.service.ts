@@ -1,4 +1,3 @@
-import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import {
   app,
   BrowserWindow,
@@ -18,7 +17,6 @@ import type {
   BrowserNavState,
   BrowserSelectionPayload,
   BrowserSelectionResult,
-  ServiceResponse,
 } from "./browser.dto";
 
 // ─────────────────────────────────────────────────────────────
@@ -341,9 +339,9 @@ export const browserService = {
     }, IDLE_PARK_MS);
   },
 
-  async attach(bounds: BrowserBounds): Promise<ServiceResponse<BrowserNavState>> {
+  async attach(bounds: BrowserBounds): Promise<BrowserNavState> {
     const host = this._findHost();
-    if (!host) return fail("No active window");
+    if (!host) throw new Error("No active window");
 
     const view = this._ensureView();
     this.host = host;
@@ -368,10 +366,10 @@ export const browserService = {
       canGoForward: wc.navigationHistory?.canGoForward?.() ?? false,
       isLoading: wc.isLoading(),
     };
-    return ok(state);
+    return state;
   },
 
-  detach(): ServiceResponse<null> {
+  detach(): null {
     const view = this.view;
     const host = this.host;
     if (view && host && !host.isDestroyed()) {
@@ -384,10 +382,10 @@ export const browserService = {
     this.visible = false;
     if (this.selectMode) this.setSelectMode(false);
     this._scheduleIdlePark();
-    return ok(null);
+    return null;
   },
 
-  destroy(): ServiceResponse<null> {
+  destroy(): null {
     this._clearIdleParkTimer();
     this.detach();
     if (this.view && !this.view.webContents.isDestroyed()) {
@@ -401,47 +399,45 @@ export const browserService = {
     this.host = null;
     this.bounds = null;
     this.selectMode = false;
-    return ok(null);
+    return null;
   },
 
-  deleteCapture(captureName: string): ServiceResponse<null> {
+  deleteCapture(captureName: string): null {
     if (!captureName || typeof captureName !== "string") {
-      return fail("captureName required");
+      throw new Error("captureName required");
     }
     if (captureName.includes("/") || captureName.includes("\\") || captureName.includes("..")) {
-      return fail("Invalid capture name");
+      throw new Error("Invalid capture name");
     }
     const base = cacheDir();
     const target = path.resolve(path.join(base, captureName));
     const resolvedBase = path.resolve(base);
     if (!target.startsWith(resolvedBase + path.sep)) {
-      return fail("Path escape denied");
+      throw new Error("Path escape denied");
     }
     safeUnlink(target);
-    return ok(null);
+    return null;
   },
 
-  setBounds(bounds: BrowserBounds): ServiceResponse<null> {
+  setBounds(bounds: BrowserBounds): null {
     const view = this.view;
-    if (!view || view.webContents.isDestroyed()) return fail("No browser view");
+    if (!view || view.webContents.isDestroyed()) {
+      throw new Error("No browser view");
+    }
     const rect: Rectangle = {
       x: Math.max(0, Math.floor(bounds.x)),
       y: Math.max(0, Math.floor(bounds.y)),
       width: Math.max(1, Math.floor(bounds.width)),
       height: Math.max(1, Math.floor(bounds.height)),
     };
-    try {
-      view.setBounds(rect);
-      this.bounds = rect;
-    } catch (err) {
-      return fail((err as Error).message);
-    }
-    return ok(null);
+    view.setBounds(rect);
+    this.bounds = rect;
+    return null;
   },
 
-  setVisible(visible: boolean): ServiceResponse<null> {
+  setVisible(visible: boolean): null {
     const view = this.view;
-    if (!view || view.webContents.isDestroyed()) return ok(null);
+    if (!view || view.webContents.isDestroyed()) return null;
     try {
       view.setVisible?.(visible);
     } catch {
@@ -454,10 +450,10 @@ export const browserService = {
     } else {
       this._scheduleIdlePark();
     }
-    return ok(null);
+    return null;
   },
 
-  async navigate(rawUrl: string): Promise<ServiceResponse<null>> {
+  async navigate(rawUrl: string): Promise<null> {
     const view = this._ensureView();
     const url = ensureAllowed(normalizeUrl(rawUrl));
     try {
@@ -466,100 +462,78 @@ export const browserService = {
       // loadURL rejects on abort/redirect; surface benign errors quietly
       const msg = (err as Error)?.message || "";
       if (!/ERR_ABORTED/.test(msg)) {
-        return fail(msg);
+        throw err;
       }
     }
     this._emitNav();
-    return ok(null);
+    return null;
   },
 
-  async goBack(): Promise<ServiceResponse<null>> {
+  async goBack(): Promise<null> {
     const wc = this.view?.webContents;
-    if (!wc || wc.isDestroyed()) return fail("No browser view");
-    try {
-      if (wc.navigationHistory?.canGoBack?.()) wc.navigationHistory.goBack();
-      else if ((wc as any).canGoBack?.()) (wc as any).goBack();
-    } catch (err) {
-      return fail((err as Error).message);
-    }
+    if (!wc || wc.isDestroyed()) throw new Error("No browser view");
+    if (wc.navigationHistory?.canGoBack?.()) wc.navigationHistory.goBack();
+    else if ((wc as any).canGoBack?.()) (wc as any).goBack();
     this._emitNav();
-    return ok(null);
+    return null;
   },
 
-  async goForward(): Promise<ServiceResponse<null>> {
+  async goForward(): Promise<null> {
     const wc = this.view?.webContents;
-    if (!wc || wc.isDestroyed()) return fail("No browser view");
-    try {
-      if (wc.navigationHistory?.canGoForward?.()) wc.navigationHistory.goForward();
-      else if ((wc as any).canGoForward?.()) (wc as any).goForward();
-    } catch (err) {
-      return fail((err as Error).message);
-    }
+    if (!wc || wc.isDestroyed()) throw new Error("No browser view");
+    if (wc.navigationHistory?.canGoForward?.()) wc.navigationHistory.goForward();
+    else if ((wc as any).canGoForward?.()) (wc as any).goForward();
     this._emitNav();
-    return ok(null);
+    return null;
   },
 
-  async reload(): Promise<ServiceResponse<null>> {
+  async reload(): Promise<null> {
     const wc = this.view?.webContents;
-    if (!wc || wc.isDestroyed()) return fail("No browser view");
-    try {
-      wc.reload();
-    } catch (err) {
-      return fail((err as Error).message);
-    }
-    return ok(null);
+    if (!wc || wc.isDestroyed()) throw new Error("No browser view");
+    wc.reload();
+    return null;
   },
 
-  async stop(): Promise<ServiceResponse<null>> {
+  async stop(): Promise<null> {
     const wc = this.view?.webContents;
-    if (!wc || wc.isDestroyed()) return ok(null);
+    if (!wc || wc.isDestroyed()) return null;
     try {
       wc.stop();
     } catch {
       // ignore
     }
-    return ok(null);
+    return null;
   },
 
-  async setSelectMode(enabled: boolean): Promise<ServiceResponse<{ enabled: boolean }>> {
+  async setSelectMode(enabled: boolean): Promise<{ enabled: boolean }> {
     const wc = this.view?.webContents;
     if (!wc || wc.isDestroyed()) {
       this.selectMode = false;
-      return fail("No browser view");
+      throw new Error("No browser view");
     }
-    try {
-      await wc.executeJavaScript(buildInspectorScript(enabled), true);
-      this.selectMode = enabled;
-      this._sendToRenderer("browser:selectModeChanged", { enabled });
-      return ok({ enabled });
-    } catch (err) {
-      return fail((err as Error).message);
-    }
+    await wc.executeJavaScript(buildInspectorScript(enabled), true);
+    this.selectMode = enabled;
+    this._sendToRenderer("browser:selectModeChanged", { enabled });
+    return { enabled };
   },
 
-  async getNavState(): Promise<ServiceResponse<BrowserNavState>> {
+  async getNavState(): Promise<BrowserNavState> {
     const wc = this.view?.webContents;
     if (!wc || wc.isDestroyed()) {
       return {
-        success: true,
-        data: {
-          url: "",
-          title: "",
-          canGoBack: false,
-          canGoForward: false,
-          isLoading: false,
-        },
+        url: "",
+        title: "",
+        canGoBack: false,
+        canGoForward: false,
+        isLoading: false,
       };
     }
     return {
-      success: true,
-      data: {
-        url: wc.getURL(),
-        title: wc.getTitle(),
-        canGoBack: wc.navigationHistory?.canGoBack?.() ?? false,
-        canGoForward: wc.navigationHistory?.canGoForward?.() ?? false,
-        isLoading: wc.isLoading(),
-      },
+      url: wc.getURL(),
+      title: wc.getTitle(),
+      canGoBack: wc.navigationHistory?.canGoBack?.() ?? false,
+      canGoForward: wc.navigationHistory?.canGoForward?.() ?? false,
+      isLoading: wc.isLoading(),
     };
   },
 };

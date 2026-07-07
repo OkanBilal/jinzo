@@ -1,4 +1,3 @@
-import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import {
@@ -47,26 +46,19 @@ describe("connectionsService", () => {
   // ─────────────────────────────────────────────────────────────
   describe("getByProvider", () => {
     it("returns error when provider is empty", async () => {
-      const result = await connectionsService.getByProvider("");
-      assertFail(result);
-      if (!result.success) expect(result.error).toBe("Provider is required");
+      await expect(connectionsService.getByProvider("")).rejects.toThrow();
     });
 
     it("returns error when connection not found", async () => {
-      const result = await connectionsService.getByProvider("github");
-      assertFail(result);
-      if (!result.success) expect(result.error).toContain("connection not found");
+      await expect(connectionsService.getByProvider("github")).rejects.toThrow();
     });
 
     it("returns connection when found", async () => {
       createConnection(db, { id: "c1", provider: "github", metadata: '{"org":"test"}' });
 
       const result = await connectionsService.getByProvider("github");
-      assertOk(result);
-      if (result.success) {
-        expect(result.data.connection.id).toBe("c1");
-        expect(result.data.connection.provider).toBe("github");
-      }
+      expect(result.connection.id).toBe("c1");
+      expect(result.connection.provider).toBe("github");
     });
   });
 
@@ -75,21 +67,15 @@ describe("connectionsService", () => {
   // ─────────────────────────────────────────────────────────────
   describe("getSelectedResources", () => {
     it("returns error when provider is empty", async () => {
-      const result = await connectionsService.getSelectedResources("");
-      assertFail(result);
-      if (!result.success) expect(result.error).toBe("Provider is required");
+      await expect(connectionsService.getSelectedResources("")).rejects.toThrow();
     });
 
     it("returns error for unsupported provider", async () => {
-      const result = await connectionsService.getSelectedResources("unknown_provider");
-      assertFail(result);
-      if (!result.success) expect(result.error).toContain("Unsupported provider");
+      await expect(connectionsService.getSelectedResources("unknown_provider")).rejects.toThrow();
     });
 
     it("returns error when no connection", async () => {
-      const result = await connectionsService.getSelectedResources("github");
-      assertFail(result);
-      if (!result.success) expect(result.error).toContain("connection not found");
+      await expect(connectionsService.getSelectedResources("github")).rejects.toThrow();
     });
 
     it("returns selected resources for github", async () => {
@@ -109,13 +95,10 @@ describe("connectionsService", () => {
         selected: false,
       });
 
-      const result = await connectionsService.getSelectedResources("github");
-      assertOk(result);
-      if (result.success) {
-        const data = result.data as any;
-        expect(data.repos).toHaveLength(1);
-        expect(data.connectionId).toBe("c1");
-      }
+      const result: any = await connectionsService.getSelectedResources("github");
+      const data = result as any;
+      expect(data.repos).toHaveLength(1);
+      expect(data.connectionId).toBe("c1");
     });
 
     it("returns selected resources for linear", async () => {
@@ -128,12 +111,9 @@ describe("connectionsService", () => {
         selected: true,
       });
 
-      const result = await connectionsService.getSelectedResources("linear");
-      assertOk(result);
-      if (result.success) {
-        const data = result.data as any;
-        expect(data.teams).toHaveLength(1);
-      }
+      const result: any = await connectionsService.getSelectedResources("linear");
+      const data = result as any;
+      expect(data.teams).toHaveLength(1);
     });
   });
 
@@ -142,32 +122,15 @@ describe("connectionsService", () => {
   // ─────────────────────────────────────────────────────────────
   describe("saveResources", () => {
     it("returns error when provider/connectionId missing", async () => {
-      const result = await connectionsService.saveResources({
-        provider: "",
-        connectionId: "",
-      });
-      assertFail(result);
-      if (!result.success) expect(result.error).toBe("Provider and connectionId are required");
+      await expect(connectionsService.saveResources({ provider: "", connectionId: "", })).rejects.toThrow();
     });
 
     it("returns error for unsupported provider", async () => {
-      const result = await connectionsService.saveResources({
-        provider: "unknown",
-        connectionId: "c1",
-        resources: [{}],
-      });
-      assertFail(result);
-      if (!result.success) expect(result.error).toContain("Unsupported provider");
+      await expect(connectionsService.saveResources({ provider: "unknown", connectionId: "c1", resources: [{}], })).rejects.toThrow();
     });
 
     it("returns error when resources empty", async () => {
-      const result = await connectionsService.saveResources({
-        provider: "github",
-        connectionId: "c1",
-        resources: [],
-      });
-      assertFail(result);
-      if (!result.success) expect(result.error).toBe("Resources are required");
+      await expect(connectionsService.saveResources({ provider: "github", connectionId: "c1", resources: [], })).rejects.toThrow();
     });
 
     it("saves github resources", async () => {
@@ -193,9 +156,7 @@ describe("connectionsService", () => {
           },
         ],
       });
-
-      assertOk(result);
-      if (result.success) expect(result.data.count).toBe(1);
+      expect(result.count).toBe(1);
 
       // Verify resource was actually saved
       const resources = await import("./connections.repo").then((m) =>
@@ -215,7 +176,7 @@ describe("connectionsService", () => {
         selected: false,
       });
 
-      const result = await connectionsService.saveResources({
+      await connectionsService.saveResources({
         provider: "github",
         connectionId: "c1",
         resources: [
@@ -236,8 +197,6 @@ describe("connectionsService", () => {
         ],
       });
 
-      assertOk(result);
-
       // Should still be 1 resource (upserted, not duplicated)
       const resources = await import("./connections.repo").then((m) =>
         m.connectionsRepo.findResourcesByConnectionId("c1")
@@ -252,15 +211,11 @@ describe("connectionsService", () => {
   // ─────────────────────────────────────────────────────────────
   describe("removeResource", () => {
     it("returns error when resourceId is empty", async () => {
-      const result = await connectionsService.removeResource("");
-      assertFail(result);
-      if (!result.success) expect(result.error).toBe("Resource ID is required");
+      await expect(connectionsService.removeResource("")).rejects.toThrow();
     });
 
     it("returns error when resource not found", async () => {
-      const result = await connectionsService.removeResource("nonexistent");
-      assertFail(result);
-      if (!result.success) expect(result.error).toBe("Resource not found");
+      await expect(connectionsService.removeResource("nonexistent")).rejects.toThrow();
     });
 
     it("removes existing resource", async () => {
@@ -274,8 +229,7 @@ describe("connectionsService", () => {
       });
 
       const result = await connectionsService.removeResource("res1");
-      assertOk(result);
-      if (result.success) expect(result.data.message).toContain("removed successfully");
+      expect(result.message).toContain("removed successfully");
     });
   });
 
@@ -284,9 +238,7 @@ describe("connectionsService", () => {
   // ─────────────────────────────────────────────────────────────
   describe("deleteResource", () => {
     it("returns error when resourceId is empty", async () => {
-      const result = await connectionsService.deleteResource("");
-      assertFail(result);
-      if (!result.success) expect(result.error).toBe("Resource ID is required");
+      await expect(connectionsService.deleteResource("")).rejects.toThrow();
     });
 
     it("deletes a resource", async () => {
@@ -299,8 +251,7 @@ describe("connectionsService", () => {
         name: "test",
       });
 
-      const result = await connectionsService.deleteResource("res1");
-      assertOk(result);
+      await connectionsService.deleteResource("res1");
     });
   });
 
@@ -309,15 +260,11 @@ describe("connectionsService", () => {
   // ─────────────────────────────────────────────────────────────
   describe("revoke", () => {
     it("returns error when provider is empty", async () => {
-      const result = await connectionsService.revoke("");
-      assertFail(result);
-      if (!result.success) expect(result.error).toBe("Provider is required");
+      await expect(connectionsService.revoke("")).rejects.toThrow();
     });
 
     it("returns error when connection not found", async () => {
-      const result = await connectionsService.revoke("github");
-      assertFail(result);
-      if (!result.success) expect(result.error).toContain("connection not found");
+      await expect(connectionsService.revoke("github")).rejects.toThrow();
     });
 
     it("revokes connection and cleans up", async () => {
@@ -330,8 +277,7 @@ describe("connectionsService", () => {
         name: "test",
       });
 
-      const result = await connectionsService.revoke("github");
-      assertOk(result);
+      await connectionsService.revoke("github");
 
       // Connection should be revoked
       const { connectionsRepo } = await import("./connections.repo");
@@ -353,22 +299,16 @@ describe("connectionsService", () => {
   // ─────────────────────────────────────────────────────────────
   describe("getGithubRepos", () => {
     it("returns error when connectionId is empty", async () => {
-      const result = await connectionsService.getGithubRepos("");
-      assertFail(result);
-      if (!result.success) expect(result.error).toBe("connectionId is required");
+      await expect(connectionsService.getGithubRepos("")).rejects.toThrow();
     });
 
     it("returns error when connection not found", async () => {
-      const result = await connectionsService.getGithubRepos("nonexistent");
-      assertFail(result);
-      if (!result.success) expect(result.error).toBe("Connection not found");
+      await expect(connectionsService.getGithubRepos("nonexistent")).rejects.toThrow();
     });
 
     it("returns error when token not found", async () => {
       createConnection(db, { id: "c1", provider: "github" });
-      const result = await connectionsService.getGithubRepos("c1");
-      assertFail(result);
-      if (!result.success) expect(result.error).toBe("Token not found");
+      await expect(connectionsService.getGithubRepos("c1")).rejects.toThrow();
     });
   });
 
@@ -377,15 +317,11 @@ describe("connectionsService", () => {
   // ─────────────────────────────────────────────────────────────
   describe("getLinearTeams", () => {
     it("returns error when connectionId is empty", async () => {
-      const result = await connectionsService.getLinearTeams("");
-      assertFail(result);
-      if (!result.success) expect(result.error).toBe("connectionId is required");
+      await expect(connectionsService.getLinearTeams("")).rejects.toThrow();
     });
 
     it("returns error when connection not found", async () => {
-      const result = await connectionsService.getLinearTeams("nonexistent");
-      assertFail(result);
-      if (!result.success) expect(result.error).toBe("Connection not found");
+      await expect(connectionsService.getLinearTeams("nonexistent")).rejects.toThrow();
     });
   });
 
@@ -394,14 +330,11 @@ describe("connectionsService", () => {
   // ─────────────────────────────────────────────────────────────
   describe("getJiraProjects", () => {
     it("returns error when connectionId is empty", async () => {
-      const result = await connectionsService.getJiraProjects("");
-      assertFail(result);
-      if (!result.success) expect(result.error).toBe("connectionId is required");
+      await expect(connectionsService.getJiraProjects("")).rejects.toThrow();
     });
 
     it("returns error when connection not found", async () => {
-      const result = await connectionsService.getJiraProjects("nonexistent");
-      assertFail(result);
+      await expect(connectionsService.getJiraProjects("nonexistent")).rejects.toThrow();
     });
   });
 
@@ -410,14 +343,11 @@ describe("connectionsService", () => {
   // ─────────────────────────────────────────────────────────────
   describe("getAsanaProjects", () => {
     it("returns error when connectionId is empty", async () => {
-      const result = await connectionsService.getAsanaProjects("");
-      assertFail(result);
-      if (!result.success) expect(result.error).toBe("connectionId is required");
+      await expect(connectionsService.getAsanaProjects("")).rejects.toThrow();
     });
 
     it("returns error when connection not found", async () => {
-      const result = await connectionsService.getAsanaProjects("nonexistent");
-      assertFail(result);
+      await expect(connectionsService.getAsanaProjects("nonexistent")).rejects.toThrow();
     });
   });
 
@@ -426,14 +356,11 @@ describe("connectionsService", () => {
   // ─────────────────────────────────────────────────────────────
   describe("getGitlabProjects", () => {
     it("returns error when connectionId is empty", async () => {
-      const result = await connectionsService.getGitlabProjects("");
-      assertFail(result);
-      if (!result.success) expect(result.error).toBe("connectionId is required");
+      await expect(connectionsService.getGitlabProjects("")).rejects.toThrow();
     });
 
     it("returns error when connection not found", async () => {
-      const result = await connectionsService.getGitlabProjects("nonexistent");
-      assertFail(result);
+      await expect(connectionsService.getGitlabProjects("nonexistent")).rejects.toThrow();
     });
   });
 
@@ -442,14 +369,11 @@ describe("connectionsService", () => {
   // ─────────────────────────────────────────────────────────────
   describe("getTrelloBoards", () => {
     it("returns error when connectionId is empty", async () => {
-      const result = await connectionsService.getTrelloBoards("");
-      assertFail(result);
-      if (!result.success) expect(result.error).toBe("connectionId is required");
+      await expect(connectionsService.getTrelloBoards("")).rejects.toThrow();
     });
 
     it("returns error when connection not found", async () => {
-      const result = await connectionsService.getTrelloBoards("nonexistent");
-      assertFail(result);
+      await expect(connectionsService.getTrelloBoards("nonexistent")).rejects.toThrow();
     });
   });
 
@@ -464,48 +388,43 @@ describe("connectionsService", () => {
         connectionId: "c1",
         resources: [{ id: "t1", key: "TEAM", name: "Team A", description: null, icon: null, color: null, private: false, updatedAt: null, url: "https://linear.app/team" }],
       });
-      assertOk(result);
-      if (result.success) expect(result.data.count).toBe(1);
+      expect(result.count).toBe(1);
     });
 
     it("saves jira resources", async () => {
       createConnection(db, { id: "c1", provider: "jira" });
-      const result = await connectionsService.saveResources({
+      await connectionsService.saveResources({
         provider: "jira",
         connectionId: "c1",
         resources: [{ id: "p1", key: "PROJ", name: "Project", projectTypeKey: "software", avatarUrl: null, description: null, isPrivate: false, url: "https://jira.com/PROJ" }],
       });
-      assertOk(result);
     });
 
     it("saves trello resources", async () => {
       createConnection(db, { id: "c1", provider: "trello" });
-      const result = await connectionsService.saveResources({
+      await connectionsService.saveResources({
         provider: "trello",
         connectionId: "c1",
         resources: [{ id: "b1", name: "Board", shortLink: "abc", shortUrl: "https://trello.com/b/abc", desc: "", closed: false, organizationName: null }],
       });
-      assertOk(result);
     });
 
     it("saves gitlab resources", async () => {
       createConnection(db, { id: "c1", provider: "gitlab" });
-      const result = await connectionsService.saveResources({
+      await connectionsService.saveResources({
         provider: "gitlab",
         connectionId: "c1",
         resources: [{ id: 1, name: "project", pathWithNamespace: "user/project", webUrl: "https://gitlab.com/user/project", description: null, visibility: "public", lastActivityAt: null, stars: 0, forks: 0, defaultBranch: "main", private: false }],
       });
-      assertOk(result);
     });
 
     it("saves asana resources", async () => {
       createConnection(db, { id: "c1", provider: "asana" });
-      const result = await connectionsService.saveResources({
+      await connectionsService.saveResources({
         provider: "asana",
         connectionId: "c1",
         resources: [{ gid: "123", name: "Project", archived: false, color: null, workspaceGid: "w1", workspaceName: "ws", teamGid: null, teamName: null, modifiedAt: null, public: true, url: "https://app.asana.com/0/123" }],
       });
-      assertOk(result);
     });
   });
 
@@ -516,45 +435,33 @@ describe("connectionsService", () => {
     it("returns selected jira resources", async () => {
       createConnection(db, { id: "c1", provider: "jira" });
       createConnectionResource(db, { connectionId: "c1", externalId: "PROJ", kind: "jira_project", name: "Project", selected: true });
-      const result = await connectionsService.getSelectedResources("jira");
-      assertOk(result);
-      if (result.success) {
-        const data = result.data as any;
-        expect(data.projects).toHaveLength(1);
-      }
+      const result: any = await connectionsService.getSelectedResources("jira");
+      const data = result as any;
+      expect(data.projects).toHaveLength(1);
     });
 
     it("returns selected asana resources", async () => {
       createConnection(db, { id: "c1", provider: "asana" });
       createConnectionResource(db, { connectionId: "c1", externalId: "123", kind: "asana_project", name: "Proj", selected: true });
-      const result = await connectionsService.getSelectedResources("asana");
-      assertOk(result);
-      if (result.success) {
-        const data = result.data as any;
-        expect(data.projects).toHaveLength(1);
-      }
+      const result: any = await connectionsService.getSelectedResources("asana");
+      const data = result as any;
+      expect(data.projects).toHaveLength(1);
     });
 
     it("returns selected gitlab resources", async () => {
       createConnection(db, { id: "c1", provider: "gitlab" });
       createConnectionResource(db, { connectionId: "c1", externalId: "1", kind: "gitlab_project", name: "proj", selected: true });
-      const result = await connectionsService.getSelectedResources("gitlab");
-      assertOk(result);
-      if (result.success) {
-        const data = result.data as any;
-        expect(data.projects).toHaveLength(1);
-      }
+      const result: any = await connectionsService.getSelectedResources("gitlab");
+      const data = result as any;
+      expect(data.projects).toHaveLength(1);
     });
 
     it("returns selected trello resources", async () => {
       createConnection(db, { id: "c1", provider: "trello" });
       createConnectionResource(db, { connectionId: "c1", externalId: "b1", kind: "trello_board", name: "Board", selected: true });
-      const result = await connectionsService.getSelectedResources("trello");
-      assertOk(result);
-      if (result.success) {
-        const data = result.data as any;
-        expect(data.boards).toHaveLength(1);
-      }
+      const result: any = await connectionsService.getSelectedResources("trello");
+      const data = result as any;
+      expect(data.boards).toHaveLength(1);
     });
   });
 
@@ -564,49 +471,33 @@ describe("connectionsService", () => {
   describe("error handling", () => {
     it("getByProvider returns error on failure", async () => {
       vi.spyOn(connectionsRepo, "findByProvider").mockRejectedValueOnce(new Error("db"));
-      const result = await connectionsService.getByProvider("github");
-      assertFail(result);
-      if (!result.success) expect(result.error).toBe("Failed to fetch connection");
+      await expect(connectionsService.getByProvider("github")).rejects.toThrow("db");
     });
 
     it("getSelectedResources returns error on failure", async () => {
       vi.spyOn(connectionsRepo, "findByProvider").mockRejectedValueOnce(new Error("db"));
-      const result = await connectionsService.getSelectedResources("github");
-      assertFail(result);
-      if (!result.success) expect(result.error).toBe("Failed to fetch selected resources");
+      await expect(connectionsService.getSelectedResources("github")).rejects.toThrow("db");
     });
 
     it("saveResources returns error on failure", async () => {
       createConnection(db, { id: "c1", provider: "github" });
       vi.spyOn(connectionsRepo, "findResourceByExternalId").mockRejectedValueOnce(new Error("db"));
-      const result = await connectionsService.saveResources({
-        provider: "github",
-        connectionId: "c1",
-        resources: [{ id: 1, fullName: "u/r", name: "r", owner: "u", private: false, description: null, language: null, stars: 0, forks: 0, defaultBranch: "main", htmlUrl: "", updatedAt: null }],
-      });
-      assertFail(result);
-      if (!result.success) expect(result.error).toBe("Failed to save resources");
+      await expect(connectionsService.saveResources({ provider: "github", connectionId: "c1", resources: [{ id: 1, fullName: "u/r", name: "r", owner: "u", private: false, description: null, language: null, stars: 0, forks: 0, defaultBranch: "main", htmlUrl: "", updatedAt: null }], })).rejects.toThrow("db");
     });
 
     it("removeResource returns error on failure", async () => {
       vi.spyOn(connectionsRepo, "deleteResource").mockRejectedValueOnce(new Error("db"));
-      const result = await connectionsService.removeResource("res1");
-      assertFail(result);
-      if (!result.success) expect(result.error).toBe("Failed to remove resource");
+      await expect(connectionsService.removeResource("res1")).rejects.toThrow("db");
     });
 
     it("deleteResource returns error on failure", async () => {
       vi.spyOn(connectionsRepo, "deleteResource").mockRejectedValueOnce(new Error("db"));
-      const result = await connectionsService.deleteResource("res1");
-      assertFail(result);
-      if (!result.success) expect(result.error).toBe("Failed to delete resource");
+      await expect(connectionsService.deleteResource("res1")).rejects.toThrow("db");
     });
 
     it("revoke returns error on failure", async () => {
       vi.spyOn(connectionsRepo, "findByProvider").mockRejectedValueOnce(new Error("db"));
-      const result = await connectionsService.revoke("github");
-      assertFail(result);
-      if (!result.success) expect(result.error).toBe("Failed to revoke connection");
+      await expect(connectionsService.revoke("github")).rejects.toThrow("db");
     });
   });
 });

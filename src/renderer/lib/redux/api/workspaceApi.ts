@@ -5,7 +5,6 @@
 // Tag types stay split (Workspaces, WorkspaceActivity, WorkspaceDiffs,
 // Reviews, ReviewFindings) so UI sections refresh independently.
 
-import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { appApi } from "@/lib/transport";
 import { baseApi } from "./baseApi";
 import { CHANNELS } from "../../../../shared/ipc-kit/channels";
@@ -217,18 +216,15 @@ export const workspaceApi = baseApi.injectEndpoints({
     // ── Workspace lifecycle ──
     listWorkspaces: builder.query<Workspace[], void>({
       query: () => ({ handler: CHANNELS.workspace.list }),
-      transformResponse: (response: ServiceResponse<Workspace[]>) =>
-        unwrap(response),
       providesTags: ["Workspaces"],
     }),
 
-    getWorkspace: builder.query<Workspace, string>({
+    // Absence rule: a missing workspace arrives as null data, not an error.
+    getWorkspace: builder.query<Workspace | null, string>({
       query: (id) => ({
         handler: CHANNELS.workspace.get,
         args: [id],
       }),
-      transformResponse: (response: ServiceResponse<Workspace>) =>
-        unwrap(response),
       providesTags: (_result, _error, id) => [{ type: "Workspaces", id }],
     }),
 
@@ -237,21 +233,17 @@ export const workspaceApi = baseApi.injectEndpoints({
         handler: CHANNELS.workspace.listByAccount,
         args: [accountId],
       }),
-      transformResponse: (response: ServiceResponse<Workspace[]>) =>
-        unwrap(response),
       providesTags: ["Workspaces"],
     }),
 
     getWorkspaceByRootPath: builder.query<
-      Workspace,
+      Workspace | null,
       { accountId: string; rootPath: string }
     >({
       query: ({ accountId, rootPath }) => ({
         handler: CHANNELS.workspace.getByRootPath,
         args: [accountId, rootPath],
       }),
-      transformResponse: (response: ServiceResponse<Workspace>) =>
-        unwrap(response),
       providesTags: ["Workspaces"],
     }),
 
@@ -260,8 +252,6 @@ export const workspaceApi = baseApi.injectEndpoints({
         handler: CHANNELS.workspace.create,
         args: [payload],
       }),
-      transformResponse: (response: ServiceResponse<string>) =>
-        unwrap(response),
       invalidatesTags: ["Workspaces"],
     }),
 
@@ -272,8 +262,6 @@ export const workspaceApi = baseApi.injectEndpoints({
         handler: CHANNELS.workspace.createFromSource,
         args: [payload],
       }),
-      transformResponse: (response: ServiceResponse<Workspace>) =>
-        unwrap(response),
       invalidatesTags: ["Workspaces", "Projects"],
     }),
 
@@ -285,8 +273,6 @@ export const workspaceApi = baseApi.injectEndpoints({
         handler: CHANNELS.workspace.update,
         args: [id, payload],
       }),
-      transformResponse: (response: ServiceResponse<Workspace>) =>
-        unwrap(response),
       invalidatesTags: (_result, _error, { id }) => [
         "Workspaces",
         { type: "Workspaces", id },
@@ -306,8 +292,6 @@ export const workspaceApi = baseApi.injectEndpoints({
         handler: CHANNELS.workspace.archive,
         args: [id],
       }),
-      transformResponse: (response: ServiceResponse<Workspace>) =>
-        unwrap(response),
       invalidatesTags: (_result, _error, id) => [
         "Workspaces",
         { type: "Workspaces", id },
@@ -316,8 +300,6 @@ export const workspaceApi = baseApi.injectEndpoints({
 
     selectWorkspaceDirectory: builder.mutation<string | null, void>({
       query: () => ({ handler: CHANNELS.workspace.selectDirectory }),
-      transformResponse: (response: ServiceResponse<string | null>) =>
-        unwrap(response),
     }),
 
     // ── Git operations (see CONTEXT.md "Workspace git operations") ──
@@ -331,8 +313,6 @@ export const workspaceApi = baseApi.injectEndpoints({
         handler: CHANNELS.workspace.renameBranch,
         args: [id, newBranchName],
       }),
-      transformResponse: (response: ServiceResponse<Workspace>) =>
-        unwrap(response),
       invalidatesTags: (_result, _error, { id }) => [
         "Workspaces",
         { type: "Workspaces", id },
@@ -346,7 +326,6 @@ export const workspaceApi = baseApi.injectEndpoints({
         handler: CHANNELS.workspace.discardChanges,
         args: [workspaceId],
       }),
-      transformResponse: (response: ServiceResponse<void>) => unwrap(response),
       invalidatesTags: (_result, _error, workspaceId) => [
         { type: "WorkspaceDiffs", id: workspaceId },
       ],
@@ -361,7 +340,6 @@ export const workspaceApi = baseApi.injectEndpoints({
         handler: CHANNELS.workspace.listActivity,
         args: [workspaceId, limit],
       }),
-      transformResponse: (response: any) => response?.data ?? [],
       keepUnusedDataFor: 30,
       providesTags: (_result, _error, { workspaceId }) => [
         { type: "WorkspaceActivity", id: workspaceId },
@@ -376,7 +354,6 @@ export const workspaceApi = baseApi.injectEndpoints({
         handler: CHANNELS.workspace.createActivity,
         args: [payload],
       }),
-      transformResponse: (response: any) => response?.data,
       invalidatesTags: (_result, _error, { workspaceId }) => [
         { type: "WorkspaceActivity", id: workspaceId },
       ],
@@ -433,8 +410,6 @@ export const workspaceApi = baseApi.injectEndpoints({
         handler: CHANNELS.workspace.listDiffs,
         args: [workspaceId, limit],
       }),
-      transformResponse: (response: ServiceResponse<WorkspaceDiff[]>) =>
-        unwrap(response),
       keepUnusedDataFor: 15,
       providesTags: (_result, _error, { workspaceId }) => [
         { type: "WorkspaceDiffs", id: workspaceId },
@@ -449,9 +424,6 @@ export const workspaceApi = baseApi.injectEndpoints({
         handler: CHANNELS.workspace.resyncDiff,
         args: [workspaceId],
       }),
-      transformResponse: (
-        response: ServiceResponse<WorkspaceDiffSummary | null>,
-      ) => unwrap(response),
       invalidatesTags: (_result, _error, workspaceId) => [
         { type: "WorkspaceDiffs", id: workspaceId },
       ],
@@ -466,16 +438,14 @@ export const workspaceApi = baseApi.injectEndpoints({
         handler: CHANNELS.workspace.listReviews,
         args: [workspaceId, limit],
       }),
-      transformResponse: (response: any) => response?.data ?? [],
       providesTags: ["Reviews"],
     }),
 
-    getReview: builder.query<Review, string>({
+    getReview: builder.query<Review | null, string>({
       query: (id) => ({
         handler: CHANNELS.workspace.getReview,
         args: [id],
       }),
-      transformResponse: (response: any) => response?.data ?? null,
       providesTags: (_result, _err, id) => [{ type: "Reviews", id }],
     }),
 
@@ -484,7 +454,6 @@ export const workspaceApi = baseApi.injectEndpoints({
         handler: CHANNELS.workspace.createReview,
         args: [payload],
       }),
-      transformResponse: (response: any) => response?.data,
       invalidatesTags: ["Reviews"],
     }),
 
@@ -496,7 +465,6 @@ export const workspaceApi = baseApi.injectEndpoints({
         handler: CHANNELS.workspace.updateReview,
         args: [id, payload],
       }),
-      transformResponse: (response: any) => response?.data,
       invalidatesTags: (_result, _err, { id }) => [
         "Reviews",
         { type: "Reviews", id },
@@ -520,7 +488,6 @@ export const workspaceApi = baseApi.injectEndpoints({
         handler: CHANNELS.workspace.listFindingsByWorkspace,
         args: [workspaceId],
       }),
-      transformResponse: (response: any) => response?.data ?? [],
       providesTags: ["ReviewFindings"],
     }),
 
@@ -532,16 +499,14 @@ export const workspaceApi = baseApi.injectEndpoints({
         handler: CHANNELS.workspace.listFindings,
         args: [reviewId, limit],
       }),
-      transformResponse: (response: any) => response?.data ?? [],
       providesTags: ["ReviewFindings"],
     }),
 
-    getReviewFinding: builder.query<ReviewFinding, string>({
+    getReviewFinding: builder.query<ReviewFinding | null, string>({
       query: (id) => ({
         handler: CHANNELS.workspace.getFinding,
         args: [id],
       }),
-      transformResponse: (response: any) => response?.data ?? null,
       providesTags: (_result, _err, id) => [{ type: "ReviewFindings", id }],
     }),
 
@@ -550,7 +515,6 @@ export const workspaceApi = baseApi.injectEndpoints({
         handler: CHANNELS.workspace.createFinding,
         args: [payload],
       }),
-      transformResponse: (response: any) => response?.data,
       invalidatesTags: ["ReviewFindings"],
     }),
 
@@ -562,7 +526,6 @@ export const workspaceApi = baseApi.injectEndpoints({
         handler: CHANNELS.workspace.createManyFindings,
         args: [payloads],
       }),
-      transformResponse: (response: any) => response?.data,
       invalidatesTags: ["ReviewFindings"],
     }),
 
@@ -574,7 +537,6 @@ export const workspaceApi = baseApi.injectEndpoints({
         handler: CHANNELS.workspace.updateFinding,
         args: [id, payload],
       }),
-      transformResponse: (response: any) => response?.data,
       invalidatesTags: (_result, _err, { id }) => [
         "ReviewFindings",
         { type: "ReviewFindings", id },

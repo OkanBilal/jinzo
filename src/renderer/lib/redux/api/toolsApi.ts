@@ -1,4 +1,3 @@
-import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
 import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
@@ -49,7 +48,6 @@ export const toolsApi = baseApi.injectEndpoints({
         handler: CHANNELS.toolCalls.getByRun,
         args: [runId],
       }),
-      transformResponse: (response: ServiceResponse<ToolCall[]>) => unwrap(response),
       providesTags: (_result, _error, runId) => [
         { type: "ToolCalls", id: runId },
       ],
@@ -63,7 +61,6 @@ export const toolsApi = baseApi.injectEndpoints({
         handler: CHANNELS.toolCalls.getByAccount,
         args: [accountId, limit],
       }),
-      transformResponse: (response: ServiceResponse<ToolCall[]>) => unwrap(response),
       providesTags: ["ToolCalls"],
     }),
 
@@ -72,7 +69,6 @@ export const toolsApi = baseApi.injectEndpoints({
         handler: CHANNELS.toolCalls.create,
         args: [payload],
       }),
-      transformResponse: (response: ServiceResponse<number>) => unwrap(response),
       invalidatesTags: ["ToolCalls"],
     }),
 

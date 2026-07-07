@@ -4,11 +4,6 @@ import { request as httpRequest } from "http";
 import { readFile } from "fs/promises";
 import { homedir } from "os";
 import path from "path";
-import {
-  ok,
-  fail,
-  type ServiceResponse,
-} from "../../../shared/ipc-kit/service-response";
 import { generateToken } from "../../ipc-kit/ws-auth";
 
 /**
@@ -247,35 +242,27 @@ let tunnelCounter = 0;
 
 export const sshService = {
   /** Hosts from ~/.ssh/config + ~/.ssh/known_hosts (best-effort; deduped). */
-  async discoverHosts(): Promise<ServiceResponse<SshHost[]>> {
-    try {
-      const sshDir = path.join(homedir(), ".ssh");
-      const [configText, knownText] = await Promise.all([
-        readFile(path.join(sshDir, "config"), "utf-8").catch(() => ""),
-        readFile(path.join(sshDir, "known_hosts"), "utf-8").catch(() => ""),
-      ]);
-      const configHosts = parseSshConfig(configText);
-      const seen = new Set(configHosts.map((h) => h.alias));
-      const knownHosts: SshHost[] = parseKnownHosts(knownText)
-        .filter((h) => !seen.has(h))
-        .map((h) => ({ alias: h, hostName: h, user: null, port: null }));
-      return ok([...configHosts, ...knownHosts]);
-    } catch (error) {
-      return fail(
-        error instanceof Error ? error.message : "Failed to read SSH config",
-      );
-    }
+  async discoverHosts(): Promise<SshHost[]> {
+    const sshDir = path.join(homedir(), ".ssh");
+    const [configText, knownText] = await Promise.all([
+      readFile(path.join(sshDir, "config"), "utf-8").catch(() => ""),
+      readFile(path.join(sshDir, "known_hosts"), "utf-8").catch(() => ""),
+    ]);
+    const configHosts = parseSshConfig(configText);
+    const seen = new Set(configHosts.map((h) => h.alias));
+    const knownHosts: SshHost[] = parseKnownHosts(knownText)
+      .filter((h) => !seen.has(h))
+      .map((h) => ({ alias: h, hostName: h, user: null, port: null }));
+    return [...configHosts, ...knownHosts];
   },
 
   /** Open a tunnel and return the local ws URL the renderer should connect to. */
-  async openTunnel(
-    input: OpenTunnelInput,
-  ): Promise<ServiceResponse<TunnelHandle>> {
+  async openTunnel(input: OpenTunnelInput): Promise<TunnelHandle> {
     if (!input?.host || typeof input.host !== "string") {
-      return fail("SSH host is required");
+      throw new Error("SSH host is required");
     }
     if (!Number.isInteger(input.remotePort) || input.remotePort <= 0) {
-      return fail("A valid remote port is required");
+      throw new Error("A valid remote port is required");
     }
     let child: ChildProcess | null = null;
     try {
@@ -307,25 +294,23 @@ export const sshService = {
       // Launching the backend (Electron boot) takes longer than attaching to one
       // that's already running.
       await probeHttpReady(localPort, child, userCommand ? 45_000 : 15_000);
-      return ok({
+      return {
         id,
         localPort,
         localUrl: `ws://127.0.0.1:${localPort}`,
         token,
-      });
+      };
     } catch (error) {
+      // Kill the half-open tunnel before surfacing the failure.
       if (child && !child.killed) child.kill();
-      return fail(
-        error instanceof Error ? error.message : "Failed to open SSH tunnel",
-      );
+      throw error;
     }
   },
 
-  async closeTunnel(id: string): Promise<ServiceResponse<void>> {
+  async closeTunnel(id: string): Promise<void> {
     const child = tunnels.get(id);
     if (child && !child.killed) child.kill();
     tunnels.delete(id);
-    return ok(undefined);
   },
 
   /** Kill every tunnel (called on app shutdown). */

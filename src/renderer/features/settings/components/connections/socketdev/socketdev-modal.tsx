@@ -93,8 +93,7 @@ export default function SocketDevModal(props: SocketDevModalProps) {
   const [getOrgs] = useLazyGetSocketDevOrganizationsQuery();
   const fetchAllResources = useCallback(
     async (connectionId: string) => {
-      const result = await getOrgs(connectionId).unwrap();
-      return { success: result.success, items: result.organizations };
+      return getOrgs(connectionId).unwrap();
     },
     [getOrgs],
   );

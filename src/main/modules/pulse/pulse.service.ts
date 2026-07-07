@@ -1,4 +1,3 @@
-import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import { pulseRepo } from "./pulse.repo";
 import { validateCreate, validateUpdate } from "./pulse.validation";
 import { runsService } from "../runs/runs.service";
@@ -9,7 +8,6 @@ import type {
   CreatePulseInput,
   Pulse,
   PulseFrequency,
-  ServiceResponse,
   UpdatePulseInput,
 } from "./pulse.dto";
 
@@ -122,6 +120,10 @@ function scheduleNext() {
 
 // ─────────────────────────────────────────────────────────────
 // Service
+//
+// Throw-style: methods return plain values and throw on failure; the
+// ServiceResponse envelope is applied by handle() at the IPC seam.
+// See CONTEXT.md "handle" / "absence rule".
 // ─────────────────────────────────────────────────────────────
 
 export const pulseService = {
@@ -151,83 +153,62 @@ export const pulseService = {
 
   // ── CRUD ──
 
-  getAll(): ServiceResponse<Pulse[]> {
-    try {
-      return ok(pulseRepo.findAll());
-    } catch (err: any) {
-      return fail(err.message);
-    }
+  getAll(): Pulse[] {
+    return pulseRepo.findAll();
   },
 
-  getById(id: string): ServiceResponse<Pulse | null> {
-    try {
-      return ok(pulseRepo.findById(id) ?? null);
-    } catch (err: any) {
-      return fail(err.message);
-    }
+  getById(id: string): Pulse | null {
+    return pulseRepo.findById(id) ?? null;
   },
 
-  create(accountId: string, input: CreatePulseInput): ServiceResponse<Pulse> {
-    try {
-      const validationError = validateCreate(input);
-      if (validationError) return fail(validationError);
+  create(accountId: string, input: CreatePulseInput): Pulse {
+    const validationError = validateCreate(input);
+    if (validationError) throw new Error(validationError);
 
-      const nextRunAt = computeNextRunAt(input, new Date());
-      const pulse = pulseRepo.create(accountId, input, nextRunAt);
-      scheduleNext();
-      return ok(pulse);
-    } catch (err: any) {
-      return fail(err.message);
-    }
+    const nextRunAt = computeNextRunAt(input, new Date());
+    const pulse = pulseRepo.create(accountId, input, nextRunAt);
+    scheduleNext();
+    return pulse;
   },
 
-  update(id: string, input: UpdatePulseInput): ServiceResponse<Pulse | null> {
-    try {
-      const validationError = validateUpdate(input);
-      if (validationError) return fail(validationError);
+  update(id: string, input: UpdatePulseInput): Pulse | null {
+    const validationError = validateUpdate(input);
+    if (validationError) throw new Error(validationError);
 
-      const existing = pulseRepo.findById(id);
-      if (!existing) return fail("Pulse not found");
+    const existing = pulseRepo.findById(id);
+    if (!existing) throw new Error("Pulse not found");
 
-      // Recompute nextRunAt if any scheduling field changed
-      const scheduleChanged =
-        input.frequency !== undefined ||
-        input.hour !== undefined ||
-        input.minute !== undefined ||
-        input.dayOfWeek !== undefined;
+    // Recompute nextRunAt if any scheduling field changed
+    const scheduleChanged =
+      input.frequency !== undefined ||
+      input.hour !== undefined ||
+      input.minute !== undefined ||
+      input.dayOfWeek !== undefined;
 
-      const merged = { ...existing, ...input };
-      const nextRunAt = scheduleChanged
-        ? computeNextRunAt(merged, new Date())
-        : undefined;
+    const merged = { ...existing, ...input };
+    const nextRunAt = scheduleChanged
+      ? computeNextRunAt(merged, new Date())
+      : undefined;
 
-      const pulse = pulseRepo.update(id, input, nextRunAt);
-      scheduleNext();
-      return ok(pulse ?? null);
-    } catch (err: any) {
-      return fail(err.message);
-    }
+    const pulse = pulseRepo.update(id, input, nextRunAt);
+    scheduleNext();
+    return pulse ?? null;
   },
 
-  delete(id: string): ServiceResponse<null> {
-    try {
-      pulseRepo.delete(id);
-      scheduleNext();
-      return ok(null);
-    } catch (err: any) {
-      return fail(err.message);
-    }
+  delete(id: string): void {
+    pulseRepo.delete(id);
+    scheduleNext();
   },
 
-  toggle(id: string, isActive: boolean): ServiceResponse<Pulse | null> {
+  toggle(id: string, isActive: boolean): Pulse | null {
     return this.update(id, { isActive });
   },
 
   // ── Execution ──
 
-  async executePulse(id: string): Promise<ServiceResponse<Pulse | null>> {
+  async executePulse(id: string): Promise<Pulse | null> {
     const pulse = pulseRepo.findById(id);
-    if (!pulse) return fail("Pulse not found");
+    if (!pulse) throw new Error("Pulse not found");
 
     const now = new Date();
     const nextRunAt = computeNextRunAt(pulse, now);
@@ -251,37 +232,36 @@ export const pulseService = {
         configSnapshot,
       });
 
-      if (!result.success) {
-        const errMsg = result.error ?? "Run failed";
-        pulseRepo.markRun(id, { lastRunAt: now, nextRunAt, lastError: errMsg });
-        scheduleNext();
-        return fail(errMsg);
-      }
-
       pulseRepo.markRun(id, {
         lastRunAt: now,
         nextRunAt,
-        lastRunId: result.data!.runId,
+        lastRunId: result.runId,
         lastError: null,
       });
       scheduleNext();
-      return ok(pulseRepo.findById(id) ?? null);
+      return pulseRepo.findById(id) ?? null;
     } catch (err: any) {
       const message = err?.message ?? String(err);
       pulseRepo.markRun(id, { lastRunAt: now, nextRunAt, lastError: message });
       scheduleNext();
-      return fail(message);
+      throw err instanceof Error ? err : new Error(message);
     }
   },
 
-  async runNow(id: string): Promise<ServiceResponse<Pulse | null>> {
+  async runNow(id: string): Promise<Pulse | null> {
     return this.executePulse(id);
   },
 
   async tick(): Promise<void> {
     const due = pulseRepo.findDueActive(new Date());
     for (const pulse of due) {
-      await this.executePulse(pulse.id);
+      // One failing pulse must not starve the rest of the due list; the
+      // failure is already recorded on the row (lastError) by executePulse.
+      try {
+        await this.executePulse(pulse.id);
+      } catch (err) {
+        console.error(`[Pulse] execute failed for ${pulse.id}:`, err);
+      }
     }
     scheduleNext();
   },

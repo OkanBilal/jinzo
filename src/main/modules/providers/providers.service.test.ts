@@ -1,4 +1,3 @@
-import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import { createAccount, createProvider } from "../../../test/factories";
@@ -45,8 +44,7 @@ describe("providersService", () => {
   describe("getAll", () => {
     it("returns empty array when no providers", async () => {
       const result = await providersService.getAll();
-      assertOk(result);
-      expect(result.data).toEqual([]);
+      expect(result).toEqual([]);
     });
 
     it("returns all providers", async () => {
@@ -54,8 +52,7 @@ describe("providersService", () => {
       createProvider(db, { id: "p2", displayName: "P2" });
 
       const result = await providersService.getAll();
-      assertOk(result);
-      expect(result.data).toHaveLength(2);
+      expect(result).toHaveLength(2);
     });
   });
 
@@ -64,14 +61,11 @@ describe("providersService", () => {
       createProvider(db, { id: "p1", displayName: "Provider 1" });
 
       const result = await providersService.getById("p1");
-      assertOk(result);
-      expect(result.data!.displayName).toBe("Provider 1");
+      expect(result?.displayName).toBe("Provider 1");
     });
 
-    it("returns error when not found", async () => {
-      const result = await providersService.getById("nonexistent");
-      assertFail(result);
-      expect(result.error).toBe("Provider not found");
+    it("returns null when not found (absence rule)", async () => {
+      expect(await providersService.getById("nonexistent")).toBeNull();
     });
   });
 
@@ -81,9 +75,8 @@ describe("providersService", () => {
       createProvider(db, { id: "p2", kind: "llm_runtime" });
 
       const result = await providersService.getByKind("agent_runtime");
-      assertOk(result);
-      expect(result.data).toHaveLength(1);
-      expect(result.data![0].id).toBe("p1");
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe("p1");
     });
   });
 
@@ -93,9 +86,8 @@ describe("providersService", () => {
       createProvider(db, { id: "p2", isEnabled: false });
 
       const result = await providersService.getEnabled();
-      assertOk(result);
-      expect(result.data).toHaveLength(1);
-      expect(result.data![0].id).toBe("p1");
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe("p1");
     });
   });
 
@@ -106,20 +98,13 @@ describe("providersService", () => {
         kind: "agent_runtime",
         displayName: "New Provider",
       });
-      assertOk(result);
-      expect(result.data).toBe("new-provider");
+      expect(result).toBe("new-provider");
     });
 
     it("returns error if provider already exists", async () => {
       createProvider(db, { id: "p1" });
 
-      const result = await providersService.create({
-        id: "p1",
-        kind: "agent_runtime",
-        displayName: "Duplicate",
-      });
-      assertFail(result);
-      expect(result.error).toBe("Provider with this ID already exists");
+      await expect(providersService.create({ id: "p1", kind: "agent_runtime", displayName: "Duplicate", })).rejects.toThrow("Provider with this ID already exists");
     });
   });
 
@@ -128,14 +113,11 @@ describe("providersService", () => {
       createProvider(db, { id: "p1", displayName: "Old" });
 
       const result = await providersService.update("p1", { displayName: "New" });
-      assertOk(result);
-      expect(result.data!.displayName).toBe("New");
+      expect(result.displayName).toBe("New");
     });
 
     it("returns error for nonexistent provider", async () => {
-      const result = await providersService.update("nonexistent", { displayName: "X" });
-      assertFail(result);
-      expect(result.error).toBe("Provider not found");
+      await expect(providersService.update("nonexistent", { displayName: "X" })).rejects.toThrow("Provider not found");
     });
   });
 
@@ -143,11 +125,9 @@ describe("providersService", () => {
     it("deletes a provider", async () => {
       createProvider(db, { id: "p1" });
 
-      const result = await providersService.delete("p1");
-      assertOk(result);
+      await providersService.delete("p1");
 
-      const check = await providersService.getById("p1");
-      assertFail(check);
+      expect(await providersService.getById("p1")).toBeNull();
     });
   });
 
@@ -155,12 +135,10 @@ describe("providersService", () => {
     it("enables a provider", async () => {
       createProvider(db, { id: "p1", isEnabled: false });
 
-      const result = await providersService.enable("p1");
-      assertOk(result);
+      await providersService.enable("p1");
 
       const check = await providersService.getById("p1");
-      assertOk(check);
-      expect(check.data.isEnabled).toBe(true);
+      expect(check?.isEnabled).toBe(true);
     });
   });
 
@@ -168,12 +146,10 @@ describe("providersService", () => {
     it("disables a provider", async () => {
       createProvider(db, { id: "p1", isEnabled: true });
 
-      const result = await providersService.disable("p1");
-      assertOk(result);
+      await providersService.disable("p1");
 
       const check = await providersService.getById("p1");
-      assertOk(check);
-      expect(check.data.isEnabled).toBe(false);
+      expect(check?.isEnabled).toBe(false);
     });
   });
 
@@ -185,23 +161,18 @@ describe("providersService", () => {
       createProvider(db, { id: "p1", isEnabled: true });
 
       const result = await providersService.getModels("p1");
-      assertOk(result);
-      expect(result.data).toHaveLength(1);
-      expect(result.data![0].id).toBe("gpt-4");
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe("gpt-4");
     });
 
     it("returns error for nonexistent provider", async () => {
-      const result = await providersService.getModels("nonexistent");
-      assertFail(result);
-      expect(result.error).toBe("Provider not found");
+      await expect(providersService.getModels("nonexistent")).rejects.toThrow("Provider not found");
     });
 
     it("returns error for disabled provider", async () => {
       createProvider(db, { id: "p1", isEnabled: false });
 
-      const result = await providersService.getModels("p1");
-      assertFail(result);
-      expect(result.error).toBe("Provider is not enabled");
+      await expect(providersService.getModels("p1")).rejects.toThrow("Provider is not enabled");
     });
   });
 
@@ -210,16 +181,13 @@ describe("providersService", () => {
       createProvider(db, { id: "p1", isEnabled: true });
 
       const result = await providersService.getCommands("p1");
-      assertOk(result);
-      expect(result.data).toHaveLength(1);
+      expect(result).toHaveLength(1);
     });
 
     it("returns error for disabled provider", async () => {
       createProvider(db, { id: "p1", isEnabled: false });
 
-      const result = await providersService.getCommands("p1");
-      assertFail(result);
-      expect(result.error).toBe("Provider is not enabled");
+      await expect(providersService.getCommands("p1")).rejects.toThrow("Provider is not enabled");
     });
   });
 
@@ -228,22 +196,17 @@ describe("providersService", () => {
       createProvider(db, { id: "p1", isEnabled: true });
 
       const result = await providersService.getSkills("p1");
-      assertOk(result);
-      expect(result.data).toHaveLength(1);
+      expect(result).toHaveLength(1);
     });
 
     it("returns error for nonexistent provider", async () => {
-      const result = await providersService.getSkills("nonexistent");
-      assertFail(result);
-      expect(result.error).toBe("Provider not found");
+      await expect(providersService.getSkills("nonexistent")).rejects.toThrow("Provider not found");
     });
 
     it("returns error for disabled provider", async () => {
       createProvider(db, { id: "p1", isEnabled: false });
 
-      const result = await providersService.getSkills("p1");
-      assertFail(result);
-      expect(result.error).toBe("Provider is not enabled");
+      await expect(providersService.getSkills("p1")).rejects.toThrow("Provider is not enabled");
     });
   });
 
@@ -252,9 +215,7 @@ describe("providersService", () => {
   // ─────────────────────────────────────────────────────────────
   describe("getCommands (additional)", () => {
     it("returns error for nonexistent provider", async () => {
-      const result = await providersService.getCommands("nonexistent");
-      assertFail(result);
-      expect(result.error).toBe("Provider not found");
+      await expect(providersService.getCommands("nonexistent")).rejects.toThrow("Provider not found");
     });
   });
 
@@ -266,9 +227,7 @@ describe("providersService", () => {
       const { providersRepo } = await import("./providers.repo");
       const spy = vi.spyOn(providersRepo, "findAll").mockRejectedValueOnce(new Error("db error"));
 
-      const result = await providersService.getAll();
-      assertFail(result);
-      expect(result.error).toBe("Failed to get providers");
+      await expect(providersService.getAll()).rejects.toThrow("db error");
 
       spy.mockRestore();
     });
@@ -277,9 +236,7 @@ describe("providersService", () => {
       const { providersRepo } = await import("./providers.repo");
       const spy = vi.spyOn(providersRepo, "findById").mockRejectedValueOnce(new Error("db error"));
 
-      const result = await providersService.getById("p1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to get provider");
+      await expect(providersService.getById("p1")).rejects.toThrow("db error");
 
       spy.mockRestore();
     });
@@ -288,9 +245,7 @@ describe("providersService", () => {
       const { providersRepo } = await import("./providers.repo");
       const spy = vi.spyOn(providersRepo, "findByKind").mockRejectedValueOnce(new Error("db error"));
 
-      const result = await providersService.getByKind("agent_runtime");
-      assertFail(result);
-      expect(result.error).toBe("Failed to get providers");
+      await expect(providersService.getByKind("agent_runtime")).rejects.toThrow("db error");
 
       spy.mockRestore();
     });
@@ -299,9 +254,7 @@ describe("providersService", () => {
       const { providersRepo } = await import("./providers.repo");
       const spy = vi.spyOn(providersRepo, "findEnabled").mockRejectedValueOnce(new Error("db error"));
 
-      const result = await providersService.getEnabled();
-      assertFail(result);
-      expect(result.error).toBe("Failed to get providers");
+      await expect(providersService.getEnabled()).rejects.toThrow("db error");
 
       spy.mockRestore();
     });
@@ -310,13 +263,7 @@ describe("providersService", () => {
       const { providersRepo } = await import("./providers.repo");
       const spy = vi.spyOn(providersRepo, "findById").mockRejectedValueOnce(new Error("db error"));
 
-      const result = await providersService.create({
-        id: "fail-provider",
-        kind: "agent_runtime",
-        displayName: "Fail",
-      });
-      assertFail(result);
-      expect(result.error).toBe("Failed to create provider");
+      await expect(providersService.create({ id: "fail-provider", kind: "agent_runtime", displayName: "Fail", })).rejects.toThrow("db error");
 
       spy.mockRestore();
     });
@@ -325,9 +272,7 @@ describe("providersService", () => {
       const { providersRepo } = await import("./providers.repo");
       const spy = vi.spyOn(providersRepo, "update").mockRejectedValueOnce(new Error("db error"));
 
-      const result = await providersService.update("p1", { displayName: "X" });
-      assertFail(result);
-      expect(result.error).toBe("Failed to update provider");
+      await expect(providersService.update("p1", { displayName: "X" })).rejects.toThrow("db error");
 
       spy.mockRestore();
     });
@@ -336,9 +281,7 @@ describe("providersService", () => {
       const { providersRepo } = await import("./providers.repo");
       const spy = vi.spyOn(providersRepo, "delete").mockRejectedValueOnce(new Error("db error"));
 
-      const result = await providersService.delete("p1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to delete provider");
+      await expect(providersService.delete("p1")).rejects.toThrow("db error");
 
       spy.mockRestore();
     });
@@ -347,9 +290,7 @@ describe("providersService", () => {
       const { providersRepo } = await import("./providers.repo");
       const spy = vi.spyOn(providersRepo, "setEnabled").mockRejectedValueOnce(new Error("db error"));
 
-      const result = await providersService.enable("p1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to enable provider");
+      await expect(providersService.enable("p1")).rejects.toThrow("db error");
 
       spy.mockRestore();
     });
@@ -358,9 +299,7 @@ describe("providersService", () => {
       const { providersRepo } = await import("./providers.repo");
       const spy = vi.spyOn(providersRepo, "setEnabled").mockRejectedValueOnce(new Error("db error"));
 
-      const result = await providersService.disable("p1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to disable provider");
+      await expect(providersService.disable("p1")).rejects.toThrow("db error");
 
       spy.mockRestore();
     });
@@ -371,9 +310,7 @@ describe("providersService", () => {
       const mockFn = vi.mocked(listModelsForProvider);
       mockFn.mockRejectedValueOnce(new Error("Model fetch failed"));
 
-      const result = await providersService.getModels("p1");
-      assertFail(result);
-      expect(result.error).toBe("Model fetch failed");
+      await expect(providersService.getModels("p1")).rejects.toThrow("Model fetch failed");
     });
 
     it("getModels returns generic message when error is not an Error instance", async () => {
@@ -382,9 +319,7 @@ describe("providersService", () => {
       const mockFn = vi.mocked(listModelsForProvider);
       mockFn.mockRejectedValueOnce("string error");
 
-      const result = await providersService.getModels("p1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to get models");
+      await expect(providersService.getModels("p1")).rejects.toBe("string error");
     });
 
     it("getCommands returns error.message when error is an Error instance", async () => {
@@ -393,9 +328,7 @@ describe("providersService", () => {
       const mockFn = vi.mocked(listCommandsForProvider);
       mockFn.mockRejectedValueOnce(new Error("Command fetch failed"));
 
-      const result = await providersService.getCommands("p1");
-      assertFail(result);
-      expect(result.error).toBe("Command fetch failed");
+      await expect(providersService.getCommands("p1")).rejects.toThrow("Command fetch failed");
     });
 
     it("getCommands returns generic message when error is not an Error instance", async () => {
@@ -404,9 +337,7 @@ describe("providersService", () => {
       const mockFn = vi.mocked(listCommandsForProvider);
       mockFn.mockRejectedValueOnce("string error");
 
-      const result = await providersService.getCommands("p1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to get commands");
+      await expect(providersService.getCommands("p1")).rejects.toBe("string error");
     });
 
     it("getSkills returns error.message when error is an Error instance", async () => {
@@ -415,9 +346,7 @@ describe("providersService", () => {
       const mockFn = vi.mocked(listSkillsForProvider);
       mockFn.mockRejectedValueOnce(new Error("Skill fetch failed"));
 
-      const result = await providersService.getSkills("p1");
-      assertFail(result);
-      expect(result.error).toBe("Skill fetch failed");
+      await expect(providersService.getSkills("p1")).rejects.toThrow("Skill fetch failed");
     });
 
     it("getSkills returns generic message when error is not an Error instance", async () => {
@@ -426,9 +355,7 @@ describe("providersService", () => {
       const mockFn = vi.mocked(listSkillsForProvider);
       mockFn.mockRejectedValueOnce("string error");
 
-      const result = await providersService.getSkills("p1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to get skills");
+      await expect(providersService.getSkills("p1")).rejects.toBe("string error");
     });
   });
 });

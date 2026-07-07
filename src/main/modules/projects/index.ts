@@ -10,6 +10,5 @@ export type {
   ProjectResourceWithDetails,
   ProjectResponse,
   RemoveResourcePayload,
-  ServiceResponse,
   UpdateProjectPayload,
 } from "./projects.dto";

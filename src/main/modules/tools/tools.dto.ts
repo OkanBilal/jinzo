@@ -56,4 +56,3 @@ export interface ToolCallResponse {
   createdAt: Date;
 }
 
-export type { ServiceResponse } from "../../../shared/ipc-kit/service-response";

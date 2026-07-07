@@ -13,70 +13,50 @@ import { getActiveGuard, getActiveGuardInfo } from "./adapters/adapter.factory";
 import { parseInstallCommand } from "./guards.utils";
 import { logWorkspaceActivity } from "../workspace";
 
-import { ok, fail, type ServiceResponse } from "../../../shared/ipc-kit/service-response";
-export type { ServiceResponse };
-
+// Throw-style: methods return plain values and throw on failure; the
+// ServiceResponse envelope is applied by handle() at the IPC seam.
 export const guardsService = {
   /**
    * Get info about the active guard provider
    */
-  getActiveGuard(): ServiceResponse<{ id: string; displayName: string } | null> {
-    const info = getActiveGuardInfo();
-    return ok(info);
+  getActiveGuard(): { id: string; displayName: string } | null {
+    return getActiveGuardInfo();
   },
 
   /**
    * Check a single package
    */
-  async checkPackage(pkg: PackageIdentifier): Promise<ServiceResponse<PackageCheckResult>> {
-    try {
-      const adapter = await getActiveGuard();
-      if (!adapter) {
-        return fail("No guard service is connected");
-      }
-
-      const result = await adapter.checkPackage(pkg);
-      return ok(result);
-    } catch (error: any) {
-      console.error("[Guards] checkPackage failed:", error);
-      return fail(error?.message || "Failed to check package");
+  async checkPackage(pkg: PackageIdentifier): Promise<PackageCheckResult> {
+    const adapter = await getActiveGuard();
+    if (!adapter) {
+      throw new Error("No guard service is connected");
     }
+
+    return adapter.checkPackage(pkg);
   },
 
   /**
    * Batch check multiple packages
    */
-  async checkPackages(pkgs: PackageIdentifier[]): Promise<ServiceResponse<PackageCheckResult[]>> {
-    try {
-      const adapter = await getActiveGuard();
-      if (!adapter) {
-        return fail("No guard service is connected");
-      }
-
-      const results = await adapter.checkPackages(pkgs);
-      return ok(results);
-    } catch (error: any) {
-      console.error("[Guards] checkPackages failed:", error);
-      return fail(error?.message || "Failed to check packages");
+  async checkPackages(pkgs: PackageIdentifier[]): Promise<PackageCheckResult[]> {
+    const adapter = await getActiveGuard();
+    if (!adapter) {
+      throw new Error("No guard service is connected");
     }
+
+    return adapter.checkPackages(pkgs);
   },
 
   /**
    * Get detailed score for a package
    */
-  async getPackageScore(pkg: PackageIdentifier): Promise<ServiceResponse<PackageScore>> {
-    try {
-      const adapter = await getActiveGuard();
-      if (!adapter) {
-        return fail("No guard service is connected");
-      }
-
-      const score = await adapter.getPackageScore(pkg);
-      return ok(score);
-    } catch (error: any) {
-      console.error("[Guards] getPackageScore failed:", error);
-      return fail(error?.message || "Failed to get package score");
+  async getPackageScore(pkg: PackageIdentifier): Promise<PackageScore> {
+    const adapter = await getActiveGuard();
+    if (!adapter) {
+      throw new Error("No guard service is connected");
     }
+
+    return adapter.getPackageScore(pkg);
   },
 
   /**
@@ -120,47 +100,42 @@ export const guardsService = {
   async scanWorkspace(
     workspaceId: string,
     rootPath: string,
-  ): Promise<ServiceResponse<ManifestScanResult[]>> {
-    try {
-      const adapter = await getActiveGuard();
-      if (!adapter) {
-        return fail("No guard service is connected");
-      }
-
-      const results = await adapter.scanProject(rootPath);
-
-      // Log to workspace activity
-      if (results.length > 0) {
-        const totalSummary = results.reduce(
-          (acc, r) => ({
-            total: acc.total + r.summary.total,
-            critical: acc.critical + r.summary.critical,
-            high: acc.high + r.summary.high,
-            medium: acc.medium + r.summary.medium,
-            low: acc.low + r.summary.low,
-            safe: acc.safe + r.summary.safe,
-          }),
-          { total: 0, critical: 0, high: 0, medium: 0, low: 0, safe: 0 },
-        );
-
-        logWorkspaceActivity({
-          workspaceId,
-          type: "finding",
-          title: `Dependency scan: ${totalSummary.total} packages`,
-          summary: `${totalSummary.critical} critical, ${totalSummary.high} high, ${totalSummary.medium} medium risk`,
-          metadata: {
-            guard: adapter.id,
-            summary: totalSummary,
-            ecosystems: results.map((r) => r.ecosystem),
-          },
-        });
-      }
-
-      return ok(results);
-    } catch (error: any) {
-      console.error("[Guards] scanWorkspace failed:", error);
-      return fail(error?.message || "Failed to scan workspace");
+  ): Promise<ManifestScanResult[]> {
+    const adapter = await getActiveGuard();
+    if (!adapter) {
+      throw new Error("No guard service is connected");
     }
+
+    const results = await adapter.scanProject(rootPath);
+
+    // Log to workspace activity
+    if (results.length > 0) {
+      const totalSummary = results.reduce(
+        (acc, r) => ({
+          total: acc.total + r.summary.total,
+          critical: acc.critical + r.summary.critical,
+          high: acc.high + r.summary.high,
+          medium: acc.medium + r.summary.medium,
+          low: acc.low + r.summary.low,
+          safe: acc.safe + r.summary.safe,
+        }),
+        { total: 0, critical: 0, high: 0, medium: 0, low: 0, safe: 0 },
+      );
+
+      logWorkspaceActivity({
+        workspaceId,
+        type: "finding",
+        title: `Dependency scan: ${totalSummary.total} packages`,
+        summary: `${totalSummary.critical} critical, ${totalSummary.high} high, ${totalSummary.medium} medium risk`,
+        metadata: {
+          guard: adapter.id,
+          summary: totalSummary,
+          ecosystems: results.map((r) => r.ecosystem),
+        },
+      });
+    }
+
+    return results;
   },
 
   /**

@@ -1,4 +1,3 @@
-import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
 
 export interface DashboardSummary {
@@ -90,7 +89,6 @@ export const statsApi = baseApi.injectEndpoints({
         handler: CHANNELS.stats.getDashboard,
         args: [filter ?? "all"],
       }),
-      transformResponse: (response: ServiceResponse<DashboardData>) => unwrap(response),
       providesTags: ["Stats"],
     }),
   }),

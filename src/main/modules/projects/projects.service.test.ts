@@ -1,4 +1,3 @@
-import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import {
@@ -49,8 +48,7 @@ describe("projectsService", () => {
   describe("list", () => {
     it("returns empty list when no projects exist", async () => {
       const result = await projectsService.list();
-      assertOk(result);
-      expect(result.data).toEqual([]);
+      expect(result).toEqual([]);
     });
 
     it("returns all non-archived projects", async () => {
@@ -58,8 +56,7 @@ describe("projectsService", () => {
       createProject(db, { id: "p2", name: "Project B" });
 
       const result = await projectsService.list();
-      assertOk(result);
-      expect(result.data).toHaveLength(2);
+      expect(result).toHaveLength(2);
     });
   });
 
@@ -67,15 +64,12 @@ describe("projectsService", () => {
     it("returns the project when found", async () => {
       createProject(db, { id: "p1", name: "Found" });
 
-      const result = await projectsService.get("p1");
-      assertOk(result);
-      expect(result.data!.name).toBe("Found");
+      const result = (await projectsService.get("p1"))!;
+      expect(result.name).toBe("Found");
     });
 
     it("returns error when not found", async () => {
-      const result = await projectsService.get("nonexistent");
-      assertFail(result);
-      expect(result.error).toBe("Project not found");
+      expect(await projectsService.get("nonexistent")).toBeNull();
     });
   });
 
@@ -84,8 +78,7 @@ describe("projectsService", () => {
       createProject(db, { id: "p1", accountId: "default" });
 
       const result = await projectsService.listByAccount("default");
-      assertOk(result);
-      expect(result.data).toHaveLength(1);
+      expect(result).toHaveLength(1);
     });
   });
 
@@ -97,17 +90,17 @@ describe("projectsService", () => {
         remoteOrigin: "github.com/user/repo",
       });
 
-      const result = await projectsService.findByRemoteOrigin(
+      const result = (await projectsService.findByRemoteOrigin(
         "default",
         "https://github.com/user/repo.git",
-      );
-      assertOk(result);
-      expect(result.data!.id).toBe("p1");
+      ))!;
+      expect(result.id).toBe("p1");
     });
 
     it("returns error when not found", async () => {
-      const result = await projectsService.findByRemoteOrigin("default", "github.com/nope/nope");
-      assertFail(result);
+      expect(
+        await projectsService.findByRemoteOrigin("default", "github.com/nope/nope"),
+      ).toBeNull();
     });
   });
 
@@ -119,10 +112,8 @@ describe("projectsService", () => {
         rootPath: "/tmp/new",
         remoteOrigin: "https://github.com/test/new.git",
       });
-
-      assertOk(result);
-      expect(result.data!.name).toBe("New");
-      expect(result.data!.remoteOrigin).toBe("github.com/test/new");
+      expect(result.name).toBe("New");
+      expect(result.remoteOrigin).toBe("github.com/test/new");
     });
 
     it("returns existing project if same origin exists", async () => {
@@ -139,10 +130,8 @@ describe("projectsService", () => {
         rootPath: "/tmp/dup",
         remoteOrigin: "https://github.com/test/dup.git",
       });
-
-      assertOk(result);
-      expect(result.data!.id).toBe("existing");
-      expect(result.data!.name).toBe("Existing");
+      expect(result.id).toBe("existing");
+      expect(result.name).toBe("Existing");
     });
   });
 
@@ -154,9 +143,7 @@ describe("projectsService", () => {
         rootPath: "/tmp/created",
         remoteOrigin: "https://github.com/test/created.git",
       });
-
-      assertOk(result);
-      expect(result.data!.name).toBe("Created");
+      expect(result.name).toBe("Created");
     });
 
     it("rejects duplicate remote origin", async () => {
@@ -165,15 +152,14 @@ describe("projectsService", () => {
         remoteOrigin: "github.com/test/unique",
       });
 
-      const result = await projectsService.create({
-        accountId: "default",
-        name: "Dup",
-        rootPath: "/tmp/dup",
-        remoteOrigin: "https://github.com/test/unique.git",
-      });
-
-      assertFail(result);
-      expect(result.error).toBe("Project with this remote origin already exists");
+      await expect(
+        projectsService.create({
+          accountId: "default",
+          name: "Dup",
+          rootPath: "/tmp/dup",
+          remoteOrigin: "https://github.com/test/unique.git",
+        }),
+      ).rejects.toThrow("Project with this remote origin already exists");
     });
   });
 
@@ -182,8 +168,7 @@ describe("projectsService", () => {
       createProject(db, { id: "u1", name: "Old" });
 
       const result = await projectsService.update("u1", { name: "New" });
-      assertOk(result);
-      expect(result.data!.name).toBe("New");
+      expect(result.name).toBe("New");
     });
   });
 
@@ -191,11 +176,9 @@ describe("projectsService", () => {
     it("deletes a project", async () => {
       createProject(db, { id: "d1" });
 
-      const result = await projectsService.delete("d1");
-      assertOk(result);
+      await projectsService.delete("d1");
 
-      const check = await projectsService.get("d1");
-      assertFail(check);
+      expect(await projectsService.get("d1")).toBeNull();
     });
   });
 
@@ -204,21 +187,17 @@ describe("projectsService", () => {
       createProject(db, { id: "a1" });
 
       const result = await projectsService.archive("a1");
-      assertOk(result);
-      expect(result.data!.isArchived).toBe(true);
+      expect(result.isArchived).toBe(true);
     });
 
     it("returns error when project not found", async () => {
-      const result = await projectsService.archive("nonexistent");
-      assertFail(result);
+      await expect(projectsService.archive("nonexistent")).rejects.toThrow();
     });
   });
 
   describe("remove", () => {
     it("returns error when project not found", async () => {
-      const result = await projectsService.remove("nonexistent");
-      assertFail(result);
-      expect(result.error).toBe("Project not found");
+      await expect(projectsService.remove("nonexistent")).rejects.toThrow("Project not found");
     });
 
     it("removes project and associated workspaces/runs", async () => {
@@ -226,19 +205,15 @@ describe("projectsService", () => {
       createWorkspace(db, { id: "ws1", projectId: "p1", rootPath: "/tmp/ws1" });
       createRun(db, { id: "r1", workspaceId: "ws1" });
 
-      const result = await projectsService.remove("p1");
-      assertOk(result);
+      await projectsService.remove("p1");
 
-      const check = await projectsService.get("p1");
-      assertFail(check);
+      expect(await projectsService.get("p1")).toBeNull();
     });
   });
 
   describe("update - edge cases", () => {
     it("returns error when project not found", async () => {
-      const result = await projectsService.update("nonexistent", { name: "X" });
-      assertFail(result);
-      expect(result.error).toBe("Project not found");
+      await expect(projectsService.update("nonexistent", { name: "X" })).rejects.toThrow("Project not found");
     });
   });
 
@@ -260,14 +235,11 @@ describe("projectsService", () => {
       });
 
       const result = await projectsService.listResources("proj-1");
-      assertOk(result);
-      expect(result.data!.resources).toHaveLength(1);
+      expect(result.resources).toHaveLength(1);
     });
 
     it("returns error when projectId is empty", async () => {
-      const result = await projectsService.listResources("");
-      assertFail(result);
-      expect(result.error).toBe("projectId is required");
+      await expect(projectsService.listResources("")).rejects.toThrow("projectId is required");
     });
   });
 
@@ -283,13 +255,11 @@ describe("projectsService", () => {
       });
 
       const result = await projectsService.listAvailableResources("proj-1");
-      assertOk(result);
-      expect(result.data!.resources).toHaveLength(1);
+      expect(result.resources).toHaveLength(1);
     });
 
     it("returns error when projectId is empty", async () => {
-      const result = await projectsService.listAvailableResources("");
-      assertFail(result);
+      await expect(projectsService.listAvailableResources("")).rejects.toThrow();
     });
   });
 
@@ -300,8 +270,7 @@ describe("projectsService", () => {
       createConnectionResource(db, { id: "res-1", connectionId: conn.id });
 
       const result = await projectsService.addResource("proj-1", "res-1");
-      assertOk(result);
-      expect(result.data!.resource.projectId).toBe("proj-1");
+      expect(result.resource.projectId).toBe("proj-1");
     });
 
     it("rejects duplicate link", async () => {
@@ -313,19 +282,15 @@ describe("projectsService", () => {
         resourceId: "res-1",
       });
 
-      const result = await projectsService.addResource("proj-1", "res-1");
-      assertFail(result);
-      expect(result.error).toBe("Resource is already linked to this project");
+      await expect(projectsService.addResource("proj-1", "res-1")).rejects.toThrow("Resource is already linked to this project");
     });
 
     it("returns error when projectId is empty", async () => {
-      const result = await projectsService.addResource("", "res-1");
-      assertFail(result);
+      await expect(projectsService.addResource("", "res-1")).rejects.toThrow();
     });
 
     it("returns error when resourceId is empty", async () => {
-      const result = await projectsService.addResource("proj-1", "");
-      assertFail(result);
+      await expect(projectsService.addResource("proj-1", "")).rejects.toThrow();
     });
   });
 
@@ -336,27 +301,23 @@ describe("projectsService", () => {
       createConnectionResource(db, { id: "res-1", connectionId: conn.id });
       createProjectResource(db, { projectId: project.id, resourceId: "res-1" });
 
-      const result = await projectsService.removeResource("proj-1", "res-1");
-      assertOk(result);
+      await projectsService.removeResource("proj-1", "res-1");
     });
 
     it("returns error when params are empty", async () => {
-      const result = await projectsService.removeResource("", "");
-      assertFail(result);
+      await expect(projectsService.removeResource("", "")).rejects.toThrow();
     });
   });
 
   describe("listIssues", () => {
     it("returns error when projectId is empty", async () => {
-      const result = await projectsService.listIssues("");
-      assertFail(result);
+      await expect(projectsService.listIssues("")).rejects.toThrow();
     });
 
     it("returns empty issues when no linked resources", async () => {
       createProject(db, { id: "proj-1" });
       const result = await projectsService.listIssues("proj-1");
-      assertOk(result);
-      expect(result.data!.issues).toEqual([]);
+      expect(result.issues).toEqual([]);
     });
 
     it("orchestrates: linked resourceIds → entities barrel → serialized rows", async () => {
@@ -380,9 +341,8 @@ describe("projectsService", () => {
       });
 
       const result = await projectsService.listIssues("proj-1");
-      assertOk(result);
-      expect(result.data!.issues).toHaveLength(1);
-      const first = result.data!.issues[0] as { entity: { title: string } };
+      expect(result.issues).toHaveLength(1);
+      const first = result.issues[0] as { entity: { title: string } };
       expect(first.entity.title).toBe("Bug");
     });
   });
@@ -393,92 +353,63 @@ describe("projectsService", () => {
   describe("error handling", () => {
     it("list returns error on failure", async () => {
       vi.spyOn(projectsRepo, "findAll").mockRejectedValueOnce(new Error("db"));
-      const result = await projectsService.list();
-      assertFail(result);
-      expect(result.error).toBe("Failed to list projects");
+      await expect(projectsService.list()).rejects.toThrow("db");
     });
 
     it("get returns error on failure", async () => {
       vi.spyOn(projectsRepo, "findById").mockRejectedValueOnce(new Error("db"));
-      const result = await projectsService.get("p1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to get project");
+      await expect(projectsService.get("p1")).rejects.toThrow("db");
     });
 
     it("listByAccount returns error on failure", async () => {
       vi.spyOn(projectsRepo, "findByAccountId").mockRejectedValueOnce(new Error("db"));
-      const result = await projectsService.listByAccount("default");
-      assertFail(result);
-      expect(result.error).toBe("Failed to list projects");
+      await expect(projectsService.listByAccount("default")).rejects.toThrow("db");
     });
 
     it("findByRemoteOrigin returns error on failure", async () => {
       vi.spyOn(projectsRepo, "findByRemoteOrigin").mockRejectedValueOnce(new Error("db"));
-      const result = await projectsService.findByRemoteOrigin("default", "github.com/x/y");
-      assertFail(result);
-      expect(result.error).toBe("Failed to find project");
+      await expect(projectsService.findByRemoteOrigin("default", "github.com/x/y")).rejects.toThrow("db");
     });
 
     it("create returns error on failure", async () => {
       vi.spyOn(projectsRepo, "findByRemoteOrigin").mockResolvedValueOnce(null);
       vi.spyOn(projectsRepo, "insert").mockRejectedValueOnce(new Error("db"));
-      const result = await projectsService.create({
-        accountId: "default",
-        name: "Fail",
-        rootPath: "/fail",
-        remoteOrigin: "github.com/fail/fail",
-      });
-      assertFail(result);
-      expect(result.error).toBe("Failed to create project");
+      await expect(projectsService.create({ accountId: "default", name: "Fail", rootPath: "/fail", remoteOrigin: "github.com/fail/fail", })).rejects.toThrow("db");
     });
 
     it("delete returns error on failure", async () => {
       vi.spyOn(projectsRepo, "delete").mockRejectedValueOnce(new Error("db"));
-      const result = await projectsService.delete("p1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to delete project");
+      await expect(projectsService.delete("p1")).rejects.toThrow("db");
     });
 
     it("archive returns error on failure", async () => {
       vi.spyOn(projectsRepo, "archive").mockRejectedValueOnce(new Error("db"));
-      const result = await projectsService.archive("p1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to archive project");
+      await expect(projectsService.archive("p1")).rejects.toThrow("db");
     });
 
     it("listResources returns error on failure", async () => {
       vi.spyOn(projectsRepo, "listResourcesByProject").mockRejectedValueOnce(new Error("db"));
-      const result = await projectsService.listResources("p1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to list project resources");
+      await expect(projectsService.listResources("p1")).rejects.toThrow("db");
     });
 
     it("listAvailableResources returns error on failure", async () => {
       vi.spyOn(projectsRepo, "listAvailableResources").mockRejectedValueOnce(new Error("db"));
-      const result = await projectsService.listAvailableResources("p1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to list available resources");
+      await expect(projectsService.listAvailableResources("p1")).rejects.toThrow("db");
     });
 
     it("addResource returns error on failure", async () => {
       vi.spyOn(projectsRepo, "isResourceLinked").mockRejectedValueOnce(new Error("db"));
-      const result = await projectsService.addResource("p1", "r1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to add resource to project");
+      await expect(projectsService.addResource("p1", "r1")).rejects.toThrow("db");
     });
 
     it("removeResource returns error on failure", async () => {
       vi.spyOn(projectsRepo, "removeResource").mockRejectedValueOnce(new Error("db"));
-      const result = await projectsService.removeResource("p1", "r1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to remove resource from project");
+      await expect(projectsService.removeResource("p1", "r1")).rejects.toThrow("db");
     });
 
     it("listIssues returns error on failure", async () => {
       vi.spyOn(projectsRepo, "listLinkedResourceIds").mockRejectedValueOnce(new Error("db"));
-      const result = await projectsService.listIssues("p1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to list issues");
+      await expect(projectsService.listIssues("p1")).rejects.toThrow("db");
     });
   });
 });

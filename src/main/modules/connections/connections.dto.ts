@@ -173,4 +173,3 @@ export interface SaveResourcesPayload {
   sources?: string[];
 }
 
-export type { ServiceResponse } from "../../../shared/ipc-kit/service-response";

@@ -16,54 +16,65 @@ import type {
 } from "./workspace.dto";
 
 // ─────────────────────────────────────────────────────────────
-// Workspace aggregate IPC handlers
+// Workspace aggregate IPC handlers — throw-style service, envelope
+// applied by handle().
 // ─────────────────────────────────────────────────────────────
 export function registerWorkspaceIpc(): void {
   // ── lifecycle ──
-  ipcMain.handle(CHANNELS.workspace.list, async () => workspaceService.list());
+  ipcMain.handle(
+    CHANNELS.workspace.list,
+    handle(() => workspaceService.list()),
+  );
 
-  ipcMain.handle(CHANNELS.workspace.get, async (_, id: string) =>
-    workspaceService.get(id),
+  ipcMain.handle(
+    CHANNELS.workspace.get,
+    handle((id: string) => workspaceService.get(id)),
   );
 
   ipcMain.handle(
     CHANNELS.workspace.listByAccount,
-    async (_, accountId: string) => workspaceService.listByAccount(accountId),
+    handle((accountId: string) => workspaceService.listByAccount(accountId)),
   );
 
   ipcMain.handle(
     CHANNELS.workspace.getByRootPath,
-    async (_, accountId: string, rootPath: string) =>
+    handle((accountId: string, rootPath: string) =>
       workspaceService.getByRootPath(accountId, rootPath),
+    ),
   );
 
   ipcMain.handle(
     CHANNELS.workspace.create,
-    async (_, payload: CreateWorkspacePayload) =>
+    handle((payload: CreateWorkspacePayload) =>
       workspaceService.create(payload),
+    ),
   );
 
   ipcMain.handle(
     CHANNELS.workspace.createFromSource,
-    async (_, payload: WorkspaceIntakePayload) =>
+    handle((payload: WorkspaceIntakePayload) =>
       workspaceService.createFromSource(payload),
+    ),
   );
 
   ipcMain.handle(
     CHANNELS.workspace.update,
-    async (_, id: string, payload: UpdateWorkspacePayload) =>
+    handle((id: string, payload: UpdateWorkspacePayload) =>
       workspaceService.update(id, payload),
+    ),
   );
 
-  ipcMain.handle(CHANNELS.workspace.delete, async (_, id: string) =>
-    workspaceService.delete(id),
+  ipcMain.handle(
+    CHANNELS.workspace.delete,
+    handle((id: string) => workspaceService.delete(id)),
   );
 
-  ipcMain.handle(CHANNELS.workspace.archive, async (_, id: string) =>
-    workspaceService.archive(id),
+  ipcMain.handle(
+    CHANNELS.workspace.archive,
+    handle((id: string) => workspaceService.archive(id)),
   );
 
-  // ── git operations (throw-style services; envelope via handle()) ──
+  // ── git operations (see CONTEXT.md "Workspace git operations") ──
   ipcMain.handle(
     CHANNELS.workspace.renameBranch,
     handle((id: string, newBranchName: string) =>
@@ -76,6 +87,7 @@ export function registerWorkspaceIpc(): void {
     handle((id: string) => workspaceService.discardChanges(id)),
   );
 
+  // Native dialog — needs the focused window, so it stays hand-written.
   ipcMain.handle(CHANNELS.workspace.selectDirectory, async () => {
     const window = BrowserWindow.getFocusedWindow();
 
@@ -101,123 +113,145 @@ export function registerWorkspaceIpc(): void {
   // ── activity ──
   ipcMain.handle(
     CHANNELS.workspace.listActivity,
-    async (_, workspaceId: string, limit?: number) =>
+    handle((workspaceId: string, limit?: number) =>
       workspaceService.listActivity(workspaceId, limit),
+    ),
   );
 
   ipcMain.handle(
     CHANNELS.workspace.createActivity,
-    async (_, payload: CreateActivityPayload) =>
+    handle((payload: CreateActivityPayload) =>
       workspaceService.createActivity(payload),
+    ),
   );
 
   ipcMain.handle(
     CHANNELS.workspace.createManyActivity,
-    async (_, payloads: CreateActivityPayload[]) =>
+    handle((payloads: CreateActivityPayload[]) =>
       workspaceService.createManyActivity(payloads),
+    ),
   );
 
-  ipcMain.handle(CHANNELS.workspace.deleteActivity, async (_, id: string) =>
-    workspaceService.deleteActivity(id),
+  ipcMain.handle(
+    CHANNELS.workspace.deleteActivity,
+    handle((id: string) => workspaceService.deleteActivity(id)),
   );
 
   // ── diffs ──
   ipcMain.handle(
     CHANNELS.workspace.listDiffs,
-    async (_, workspaceId: string, limit?: number) =>
+    handle((workspaceId: string, limit?: number) =>
       workspaceService.listDiffs(workspaceId, limit),
+    ),
   );
 
   ipcMain.handle(
     CHANNELS.workspace.getLatestDiff,
-    async (_, workspaceId: string) => workspaceService.getLatestDiff(workspaceId),
+    handle((workspaceId: string) =>
+      workspaceService.getLatestDiff(workspaceId),
+    ),
   );
 
   ipcMain.handle(
     CHANNELS.workspace.getLatestDiffSummary,
-    async (_, workspaceId: string) =>
+    handle((workspaceId: string) =>
       workspaceService.getLatestDiffSummary(workspaceId),
+    ),
   );
 
-  ipcMain.handle(CHANNELS.workspace.getDiffByRun, async (_, runId: string) =>
-    workspaceService.getDiffByRun(runId),
+  ipcMain.handle(
+    CHANNELS.workspace.getDiffByRun,
+    handle((runId: string) => workspaceService.getDiffByRun(runId)),
   );
 
   ipcMain.handle(
     CHANNELS.workspace.deleteLatestDiff,
-    async (_, workspaceId: string) =>
+    handle((workspaceId: string) =>
       workspaceService.deleteLatestDiff(workspaceId),
+    ),
   );
 
   ipcMain.handle(
     CHANNELS.workspace.resyncDiff,
-    async (_, workspaceId: string) => workspaceService.resyncDiff(workspaceId),
+    handle((workspaceId: string) => workspaceService.resyncDiff(workspaceId)),
   );
 
   // ── reviews ──
   ipcMain.handle(
     CHANNELS.workspace.listReviews,
-    async (_, workspaceId: string, limit?: number) =>
+    handle((workspaceId: string, limit?: number) =>
       workspaceService.listReviews(workspaceId, limit),
+    ),
   );
 
-  ipcMain.handle(CHANNELS.workspace.getReview, async (_, id: string) =>
-    workspaceService.getReview(id),
+  ipcMain.handle(
+    CHANNELS.workspace.getReview,
+    handle((id: string) => workspaceService.getReview(id)),
   );
 
   ipcMain.handle(
     CHANNELS.workspace.createReview,
-    async (_, payload: CreateReviewPayload) =>
+    handle((payload: CreateReviewPayload) =>
       workspaceService.createReview(payload),
+    ),
   );
 
   ipcMain.handle(
     CHANNELS.workspace.updateReview,
-    async (_, id: string, payload: UpdateReviewPayload) =>
+    handle((id: string, payload: UpdateReviewPayload) =>
       workspaceService.updateReview(id, payload),
+    ),
   );
 
-  ipcMain.handle(CHANNELS.workspace.deleteReview, async (_, id: string) =>
-    workspaceService.deleteReview(id),
+  ipcMain.handle(
+    CHANNELS.workspace.deleteReview,
+    handle((id: string) => workspaceService.deleteReview(id)),
   );
 
   // ── findings ──
   ipcMain.handle(
     CHANNELS.workspace.listFindings,
-    async (_, reviewId: string, limit?: number) =>
+    handle((reviewId: string, limit?: number) =>
       workspaceService.listFindings(reviewId, limit),
+    ),
   );
 
   ipcMain.handle(
     CHANNELS.workspace.listFindingsByWorkspace,
-    async (_, workspaceId: string) =>
+    handle((workspaceId: string) =>
       workspaceService.listFindingsByWorkspace(workspaceId),
+    ),
   );
 
-  ipcMain.handle(CHANNELS.workspace.getFinding, async (_, id: string) =>
-    workspaceService.getFinding(id),
+  ipcMain.handle(
+    CHANNELS.workspace.getFinding,
+    handle((id: string) => workspaceService.getFinding(id)),
   );
 
   ipcMain.handle(
     CHANNELS.workspace.createFinding,
-    async (_, payload: CreateReviewFindingPayload) =>
+    handle((payload: CreateReviewFindingPayload) =>
       workspaceService.createFinding(payload),
+    ),
   );
 
   ipcMain.handle(
     CHANNELS.workspace.createManyFindings,
-    async (_, payloads: CreateReviewFindingPayload[]) =>
+    handle((payloads: CreateReviewFindingPayload[]) =>
       workspaceService.createManyFindings(payloads),
+    ),
   );
 
   ipcMain.handle(
     CHANNELS.workspace.updateFinding,
-    async (_, id: string, payload: UpdateReviewFindingPayload) =>
+    handle((id: string, payload: UpdateReviewFindingPayload) =>
       workspaceService.updateFinding(id, payload),
+    ),
   );
 
-  ipcMain.handle(CHANNELS.workspace.deleteFinding, async (_, id: string) =>
-    workspaceService.deleteFinding(id),
+  ipcMain.handle(
+    CHANNELS.workspace.deleteFinding,
+    handle((id: string) => workspaceService.deleteFinding(id)),
   );
 }
 

@@ -62,66 +62,50 @@ describe("smoke", () => {
     });
 
     it("seeds two providers (copilot_cli, claude_code)", async () => {
-      const result = await providersService.getAll();
-      expect(result.success).toBe(true);
-      if (!result.success) return;
-
-      const ids = result.data!.map((p) => p.id);
+      const providers = await providersService.getAll();
+      const ids = providers.map((p) => p.id);
       expect(ids).toContain("copilot_cli");
       expect(ids).toContain("claude_code");
-      expect(result.data!.length).toBeGreaterThanOrEqual(2);
+      expect(providers.length).toBeGreaterThanOrEqual(2);
 
       // Both should be agent_runtime and enabled
-      for (const p of result.data!) {
+      for (const p of providers) {
         expect(p.kind).toBe("agent_runtime");
         expect(p.isEnabled).toBe(true);
       }
     });
 
     it("seeds two spaces (claude, copilot)", async () => {
-      const result = await spaceService.getAll();
-      expect(result.success).toBe(true);
-      if (!result.success) return;
-
-      const slugs = result.data.map((s) => s.slug);
+      const spaces = await spaceService.getAll();
+      const slugs = spaces.map((s) => s.slug);
       expect(slugs).toContain("claude");
       expect(slugs).toContain("copilot");
     });
 
     it("seeds app settings with activeSpaceId=claude", async () => {
-      const result = await appSettingsService.getSettings();
-      expect(result.success).toBe(true);
-      if (!result.success) return;
-
-      expect(result.data.id).toBe("default");
-      expect(result.data.accountId).toBe("default");
-      expect(result.data.activeSpaceId).toBe("claude");
+      const settings = await appSettingsService.getSettings();
+      expect(settings.id).toBe("default");
+      expect(settings.accountId).toBe("default");
+      expect(settings.activeSpaceId).toBe("claude");
     });
 
     it("sets seedVersion to current version", async () => {
-      const result = await appSettingsService.getSettings();
-      expect(result.success).toBe(true);
-      if (!result.success) return;
-
-      expect(result.data.seedVersion).toBe(CURRENT_SEED_VERSION);
+      const settings = await appSettingsService.getSettings();
+      expect(settings.seedVersion).toBe(CURRENT_SEED_VERSION);
     });
 
     it("runSeeds is idempotent (no-op on second call)", async () => {
       // Should not throw or duplicate data
       await runSeeds(db);
 
-      const result = await providersService.getAll();
-      expect(result.success).toBe(true);
-      if (!result.success) return;
-      expect(result.data!.length).toBe(4);
+      const providers = await providersService.getAll();
+      expect(providers.length).toBe(4);
     });
 
     it("seeds connection states for all integrations", async () => {
-      const result = await connectionsService.listStates();
-      expect(result.success).toBe(true);
-      if (!result.success) return;
+      const states = await connectionsService.listStates();
 
-      const ids = result.data.map((a) => a.id);
+      const ids = states.map((a) => a.id);
       expect(ids).toContain("github");
       expect(ids).toContain("linear");
       expect(ids).toContain("jira");
@@ -130,7 +114,7 @@ describe("smoke", () => {
       expect(ids).toContain("trello");
 
       // All should be disconnected by default
-      for (const app of result.data) {
+      for (const app of states) {
         expect(app.isConnected).toBe(false);
       }
     });
@@ -160,33 +144,24 @@ describe("smoke", () => {
   // ───────────────────────────────────────────────────────────
   describe("service round-trip", () => {
     it("accountService.getAccount returns formatted account", async () => {
-      const result = await accountService.getAccount();
-      expect(result.success).toBe(true);
-      if (!result.success) return;
-
-      expect(result.data.id).toBe("default");
-      expect(result.data.timezone).toBe("UTC");
-      expect(result.data.locale).toBe("en-US");
+      const account = await accountService.getAccount();
+      expect(account.id).toBe("default");
+      expect(account.timezone).toBe("UTC");
+      expect(account.locale).toBe("en-US");
     });
 
     it("appSettingsService.getSettings returns settings", async () => {
-      const result = await appSettingsService.getSettings();
-      expect(result.success).toBe(true);
-      if (!result.success) return;
-
-      expect(result.data).toHaveProperty("id");
-      expect(result.data).toHaveProperty("accountId");
-      expect(result.data).toHaveProperty("activeSpaceId");
+      const settings = await appSettingsService.getSettings();
+      expect(settings).toHaveProperty("id");
+      expect(settings).toHaveProperty("accountId");
+      expect(settings).toHaveProperty("activeSpaceId");
     });
 
     it("spaceService.getAll returns seeded spaces", async () => {
-      const result = await spaceService.getAll();
-      expect(result.success).toBe(true);
-      if (!result.success) return;
-
-      expect(result.data.length).toBeGreaterThanOrEqual(2);
+      const spaces = await spaceService.getAll();
+      expect(spaces.length).toBeGreaterThanOrEqual(2);
       // Each space should have required fields
-      for (const space of result.data) {
+      for (const space of spaces) {
         expect(space).toHaveProperty("id");
         expect(space).toHaveProperty("name");
         expect(space).toHaveProperty("slug");
@@ -195,11 +170,7 @@ describe("smoke", () => {
     });
 
     it("providersService.getAll returns enabled agent runtimes", async () => {
-      const result = await providersService.getAll();
-      expect(result.success).toBe(true);
-      if (!result.success) return;
-
-      for (const p of result.data!) {
+      for (const p of await providersService.getAll()) {
         expect(p).toHaveProperty("id");
         expect(p).toHaveProperty("displayName");
         expect(p).toHaveProperty("kind");
@@ -208,70 +179,42 @@ describe("smoke", () => {
     });
 
     it("projectsService.list returns empty list (no projects seeded)", async () => {
-      const result = await projectsService.list();
-      expect(result.success).toBe(true);
-      if (!result.success) return;
-
-      expect(result.data).toEqual([]);
+      expect(await projectsService.list()).toEqual([]);
     });
 
     it("workspaceService.list returns empty list (no workspaces seeded)", async () => {
-      const result = await workspaceService.list();
-      expect(result.success).toBe(true);
-      if (!result.success) return;
-
-      expect(result.data).toEqual([]);
+      expect(await workspaceService.list()).toEqual([]);
     });
 
     it("entitiesService.getAll returns empty list (no entities seeded)", async () => {
-      const result = await entitiesService.getAll();
-      expect(result.success).toBe(true);
-      if (!result.success) return;
-
-      expect(result.data).toEqual([]);
+      expect(await entitiesService.getAll()).toEqual([]);
     });
 
     it("accountService.updateAccount round-trips correctly", async () => {
-      const updateResult = await accountService.updateAccount({
-        displayName: "Smoke Test User",
-      });
-      expect(updateResult.success).toBe(true);
+      await accountService.updateAccount({ displayName: "Smoke Test User" });
 
-      const getResult = await accountService.getAccount();
-      expect(getResult.success).toBe(true);
-      if (!getResult.success) return;
-
-      expect(getResult.data.displayName).toBe("Smoke Test User");
+      const account = await accountService.getAccount();
+      expect(account.displayName).toBe("Smoke Test User");
     });
 
     it("appSettingsService.updateSettings changes activeSpaceId", async () => {
-      const result = await appSettingsService.updateSettings({
-        activeSpaceId: "copilot",
-      });
-      expect(result.success).toBe(true);
+      await appSettingsService.updateSettings({ activeSpaceId: "copilot" });
 
       const settings = await appSettingsService.getSettings();
-      expect(settings.success).toBe(true);
-      if (!settings.success) return;
-
-      expect(settings.data.activeSpaceId).toBe("copilot");
+      expect(settings.activeSpaceId).toBe("copilot");
 
       // Restore
       await appSettingsService.updateSettings({ activeSpaceId: "claude" });
     });
 
     it("spaceService.getById returns specific space", async () => {
-      const result = await spaceService.getById("claude");
-      expect(result.success).toBe(true);
-      if (!result.success) return;
-
-      expect(result.data.id).toBe("claude");
-      expect(result.data.slug).toBe("claude");
+      const space = await spaceService.getById("claude");
+      expect(space?.id).toBe("claude");
+      expect(space?.slug).toBe("claude");
     });
 
-    it("spaceService.getById returns error for nonexistent", async () => {
-      const result = await spaceService.getById("nonexistent");
-      expect(result.success).toBe(false);
+    it("spaceService.getById returns null for nonexistent (absence rule)", async () => {
+      expect(await spaceService.getById("nonexistent")).toBeNull();
     });
   });
 });

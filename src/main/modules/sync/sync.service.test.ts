@@ -1,4 +1,3 @@
-import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { syncService } from "./sync.service";
 import * as syncFetchers from "./sync.fetchers";
@@ -73,17 +72,13 @@ describe("syncService", () => {
       mockFetchBatches([]);
 
       const result = await syncService.runEntitySync();
-
-      assertOk(result);
-      if (result.success) {
-        expect(result.data.total).toBe(0);
-        expect(result.data.inserted).toBe(0);
-        expect(result.data.updated).toBe(0);
-        expect(result.data.skipped).toBe(0);
-        expect(result.data.errors).toBe(0);
-        expect(result.data.stats.itemsPerSecond).toBe(0);
-        expect(result.data.duration).toBeGreaterThanOrEqual(0);
-      }
+      expect(result.total).toBe(0);
+      expect(result.inserted).toBe(0);
+      expect(result.updated).toBe(0);
+      expect(result.skipped).toBe(0);
+      expect(result.errors).toBe(0);
+      expect(result.stats.itemsPerSecond).toBe(0);
+      expect(result.duration).toBeGreaterThanOrEqual(0);
     });
 
     it("passes provider argument to fetchEntitiesByProvider", async () => {
@@ -102,13 +97,9 @@ describe("syncService", () => {
       vi.mocked(syncRepo.upsertEntities).mockReturnValueOnce(stats);
 
       const result = await syncService.runEntitySync();
-
-      assertOk(result);
-      if (result.success) {
-        expect(result.data.total).toBe(3);
-        expect(result.data.inserted).toBe(2);
-        expect(result.data.updated).toBe(1);
-      }
+      expect(result.total).toBe(3);
+      expect(result.inserted).toBe(2);
+      expect(result.updated).toBe(1);
     });
 
     it("aggregates stats from multiple provider batches", async () => {
@@ -124,13 +115,9 @@ describe("syncService", () => {
         .mockReturnValueOnce(makeStats({ updated: 1 }));
 
       const result = await syncService.runEntitySync();
-
-      assertOk(result);
-      if (result.success) {
-        expect(result.data.total).toBe(3);
-        expect(result.data.inserted).toBe(2);
-        expect(result.data.updated).toBe(1);
-      }
+      expect(result.total).toBe(3);
+      expect(result.inserted).toBe(2);
+      expect(result.updated).toBe(1);
       expect(syncRepo.upsertEntities).toHaveBeenCalledTimes(2);
       expect(syncRepo.upsertEntities).toHaveBeenNthCalledWith(1, batchA);
       expect(syncRepo.upsertEntities).toHaveBeenNthCalledWith(2, batchB);
@@ -144,25 +131,23 @@ describe("syncService", () => {
       expect(syncRepo.upsertEntities).not.toHaveBeenCalled();
     });
 
-    it("returns failure result when generator throws", async () => {
+    it("throws when the generator throws", async () => {
       mockFetchThrows(new Error("Network failure"));
 
-      const result = await syncService.runEntitySync();
-
-      assertFail(result);
-      expect(result.error).toBe("Sync job failed");
+      await expect(syncService.runEntitySync()).rejects.toThrow(
+        "Network failure",
+      );
     });
 
-    it("returns failure result when upsertEntities throws", async () => {
+    it("throws when upsertEntities throws", async () => {
       mockFetchBatches([{ entities: [makeEntity()] }]);
       vi.mocked(syncRepo.upsertEntities).mockImplementationOnce(() => {
         throw new Error("Database error");
       });
 
-      const result = await syncService.runEntitySync();
-
-      assertFail(result);
-      expect(result.error).toBe("Sync job failed");
+      await expect(syncService.runEntitySync()).rejects.toThrow(
+        "Database error",
+      );
     });
   });
 });

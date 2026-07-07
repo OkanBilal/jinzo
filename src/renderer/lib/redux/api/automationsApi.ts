@@ -40,8 +40,6 @@ export const automationsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getAutomations: builder.query<Automation[], void>({
       query: () => ({ handler: CHANNELS.automations.getAll }),
-      transformResponse: (response: any) =>
-        response.success ? response.data : [],
       providesTags: ['Automations'],
     }),
 
@@ -53,8 +51,6 @@ export const automationsApi = baseApi.injectEndpoints({
         handler: CHANNELS.automations.create,
         args: [accountId, input],
       }),
-      transformResponse: (response: any) =>
-        response.success ? response.data : null,
       invalidatesTags: ['Automations'],
     }),
 
@@ -66,8 +62,6 @@ export const automationsApi = baseApi.injectEndpoints({
         handler: CHANNELS.automations.update,
         args: [id, input],
       }),
-      transformResponse: (response: any) =>
-        response.success ? response.data : null,
       invalidatesTags: ['Automations'],
     }),
 

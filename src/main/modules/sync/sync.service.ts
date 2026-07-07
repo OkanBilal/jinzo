@@ -1,7 +1,6 @@
 import { fetchEntitiesByProvider } from "./sync.fetchers";
 import { syncRepo } from "./sync.repo";
-import { ok, fail } from "../../../shared/ipc-kit/service-response";
-import type { SyncJobResult, SyncJobStats, ServiceResponse } from "./sync.dto";
+import type { SyncJobResult, SyncJobStats } from "./sync.dto";
 
 // ─────────────────────────────────────────────────────────────
 // Result Builders
@@ -48,46 +47,41 @@ function createEmptyResult(duration: number): SyncJobResult {
 // ─────────────────────────────────────────────────────────────
 // Service - Business Logic
 //
-// "Success" = the orchestration completed. Per-item failures live in
-// `SyncJobResult.errors` (count). "Failure" = the orchestration itself
-// threw before producing a result.
+// `SyncJobResult.success` = the orchestration completed. Per-item failures
+// live in `SyncJobResult.errors` (count); an orchestration-level failure
+// throws (envelope applied by handle() at the IPC seam).
 // ─────────────────────────────────────────────────────────────
 export const syncService = {
-  async runEntitySync(provider?: string): Promise<ServiceResponse<SyncJobResult>> {
+  async runEntitySync(provider?: string): Promise<SyncJobResult> {
     const startTime = Date.now();
 
-    try {
-      const totalStats: SyncJobStats = {
-        inserted: 0,
-        updated: 0,
-        skipped: 0,
-        errors: 0,
-      };
-      let totalEntities = 0;
+    const totalStats: SyncJobStats = {
+      inserted: 0,
+      updated: 0,
+      skipped: 0,
+      errors: 0,
+    };
+    let totalEntities = 0;
 
-      // Fetch + upsert provider-by-provider so we never hold every provider's
-      // payload in memory simultaneously. Each batch is released as soon as
-      // the transaction finishes.
-      for await (const batch of fetchEntitiesByProvider(provider)) {
-        if (batch.entities.length === 0) continue;
-        const stats = syncRepo.upsertEntities(batch.entities);
-        totalStats.inserted += stats.inserted;
-        totalStats.updated += stats.updated;
-        totalStats.skipped += stats.skipped;
-        totalStats.errors += stats.errors;
-        totalEntities += batch.entities.length;
-      }
+    // Fetch + upsert provider-by-provider so we never hold every provider's
+    // payload in memory simultaneously. Each batch is released as soon as
+    // the transaction finishes.
+    for await (const batch of fetchEntitiesByProvider(provider)) {
+      if (batch.entities.length === 0) continue;
+      const stats = syncRepo.upsertEntities(batch.entities);
+      totalStats.inserted += stats.inserted;
+      totalStats.updated += stats.updated;
+      totalStats.skipped += stats.skipped;
+      totalStats.errors += stats.errors;
+      totalEntities += batch.entities.length;
+    }
 
       if (totalEntities === 0) {
         console.warn("⚠️  No entities fetched from sources");
-        return ok(createEmptyResult(Date.now() - startTime));
-      }
-
-      const duration = Date.now() - startTime;
-      return ok(createSuccessResult(totalStats, totalEntities, duration));
-    } catch (err) {
-      console.error("Sync job failed:", err);
-      return fail("Sync job failed");
+      return createEmptyResult(Date.now() - startTime);
     }
+
+    const duration = Date.now() - startTime;
+    return createSuccessResult(totalStats, totalEntities, duration);
   },
 };

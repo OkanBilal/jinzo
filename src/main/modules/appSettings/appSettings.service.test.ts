@@ -1,4 +1,3 @@
-import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import { createAccount, createSpace } from "../../../test/factories";
@@ -55,34 +54,19 @@ describe("appSettingsService", () => {
 
   describe("getSettings", () => {
     it("returns the default row", async () => {
-      const result = await appSettingsService.getSettings();
-      assertOk(result);
-      if (result.success) expect(result.data.id).toBe("default");
+      const settings = await appSettingsService.getSettings();
+      expect(settings.id).toBe("default");
     });
 
-    it("returns the Error message when ensureSettings throws an Error", async () => {
+    it("propagates the error when ensureSettings throws", async () => {
       const original = appSettingsRepo.findById;
       appSettingsRepo.findById = async () => {
         throw new Error("db connection lost");
       };
       try {
-        const result = await appSettingsService.getSettings();
-        assertFail(result);
-        if (!result.success) expect(result.error).toBe("db connection lost");
-      } finally {
-        appSettingsRepo.findById = original;
-      }
-    });
-
-    it("returns 'Unknown error' when ensureSettings throws a non-Error", async () => {
-      const original = appSettingsRepo.findById;
-      appSettingsRepo.findById = async () => {
-        throw "string error";
-      };
-      try {
-        const result = await appSettingsService.getSettings();
-        assertFail(result);
-        if (!result.success) expect(result.error).toBe("Unknown error");
+        await expect(appSettingsService.getSettings()).rejects.toThrow(
+          "db connection lost",
+        );
       } finally {
         appSettingsRepo.findById = original;
       }
@@ -91,123 +75,93 @@ describe("appSettingsService", () => {
 
   describe("updateSettings", () => {
     it("applies a single-field patch and returns the latest row", async () => {
-      const result = await appSettingsService.updateSettings({
+      const settings = await appSettingsService.updateSettings({
         enableWorktrees: false,
       });
-      assertOk(result);
-      if (result.success) expect(result.data.enableWorktrees).toBe(false);
+      expect(settings.enableWorktrees).toBe(false);
     });
 
     it("applies a multi-field patch atomically", async () => {
-      const result = await appSettingsService.updateSettings({
+      const settings = await appSettingsService.updateSettings({
         showToolCalls: false,
         notifyOnRunComplete: false,
         commitInstructions: "Use conventional commits",
       });
-      assertOk(result);
-      if (result.success) {
-        expect(result.data.showToolCalls).toBe(false);
-        expect(result.data.notifyOnRunComplete).toBe(false);
-        expect(result.data.commitInstructions).toBe("Use conventional commits");
-      }
+      expect(settings.showToolCalls).toBe(false);
+      expect(settings.notifyOnRunComplete).toBe(false);
+      expect(settings.commitInstructions).toBe("Use conventional commits");
     });
 
     it("accepts a valid spaceId for activeSpaceId", async () => {
       const space = createSpace(db, { accountId: "default" });
-      const result = await appSettingsService.updateSettings({
+      const settings = await appSettingsService.updateSettings({
         activeSpaceId: space.id,
       });
-      assertOk(result);
-      if (result.success) expect(result.data.activeSpaceId).toBe(space.id);
+      expect(settings.activeSpaceId).toBe(space.id);
     });
 
     it("accepts null for activeSpaceId", async () => {
-      const result = await appSettingsService.updateSettings({
+      const settings = await appSettingsService.updateSettings({
         activeSpaceId: null,
       });
-      assertOk(result);
-      if (result.success) expect(result.data.activeSpaceId).toBeNull();
+      expect(settings.activeSpaceId).toBeNull();
     });
 
     it("strips unknown keys silently", async () => {
-      const result = await appSettingsService.updateSettings({
+      const settings = await appSettingsService.updateSettings({
         enableWorktrees: false,
         somethingMadeUp: "ignored",
       } as unknown);
-      assertOk(result);
-      if (result.success) {
-        expect(result.data.enableWorktrees).toBe(false);
-        expect((result.data as unknown as Record<string, unknown>).somethingMadeUp).toBeUndefined();
-      }
+      expect(settings.enableWorktrees).toBe(false);
+      expect(
+        (settings as unknown as Record<string, unknown>).somethingMadeUp,
+      ).toBeUndefined();
     });
 
     it("strips immutable fields (id, accountId, createdAt, updatedAt)", async () => {
       const before = await appSettingsService.ensureSettings();
-      const result = await appSettingsService.updateSettings({
+      const settings = await appSettingsService.updateSettings({
         id: "hacked",
         accountId: "hacked",
         createdAt: 0,
         updatedAt: 0,
         enableWorktrees: false,
       } as unknown);
-      assertOk(result);
-      if (result.success) {
-        expect(result.data.id).toBe("default");
-        expect(result.data.accountId).toBe("default");
-        expect(result.data.createdAt).toEqual(before.createdAt);
-        expect(result.data.enableWorktrees).toBe(false);
-      }
+      expect(settings.id).toBe("default");
+      expect(settings.accountId).toBe("default");
+      expect(settings.createdAt).toEqual(before.createdAt);
+      expect(settings.enableWorktrees).toBe(false);
     });
 
     it("rejects non-object patches", async () => {
       for (const bad of [null, undefined, "string", 42, true]) {
-        const result = await appSettingsService.updateSettings(bad);
-        assertFail(result);
-        if (!result.success) expect(result.error).toBe("patch must be an object");
+        await expect(appSettingsService.updateSettings(bad)).rejects.toThrow(
+          "patch must be an object",
+        );
       }
     });
 
-    it("returns failure when repo.update returns null", async () => {
+    it("throws when repo.update returns null", async () => {
       const original = appSettingsRepo.update;
       appSettingsRepo.update = async () => null;
       try {
-        const result = await appSettingsService.updateSettings({
-          enableWorktrees: true,
-        });
-        assertFail(result);
-        if (!result.success) expect(result.error).toBe("Failed to update settings");
+        await expect(
+          appSettingsService.updateSettings({ enableWorktrees: true }),
+        ).rejects.toThrow("Failed to update settings");
       } finally {
         appSettingsRepo.update = original;
       }
     });
 
-    it("returns the Error message when repo.update throws an Error", async () => {
+    it("propagates the error when repo.update throws", async () => {
       const original = appSettingsRepo.update;
       appSettingsRepo.update = async () => {
         throw new Error("update failed");
       };
       try {
-        const result = await appSettingsService.updateSettings({
-          enableWorktrees: true,
-        });
-        assertFail(result);
-        if (!result.success) expect(result.error).toBe("update failed");
-      } finally {
-        appSettingsRepo.update = original;
-      }
-    });
-
-    it("returns 'Unknown error' when repo.update throws a non-Error", async () => {
-      const original = appSettingsRepo.update;
-      appSettingsRepo.update = async () => {
-        throw 42;
-      };
-      try {
-        const result = await appSettingsService.updateSettings({
-          enableWorktrees: true,
-        });
-        assertFail(result);
-        if (!result.success) expect(result.error).toBe("Unknown error");
+        await expect(
+          appSettingsService.updateSettings({ enableWorktrees: true }),
+        ).rejects.toThrow("update failed");
       } finally {
         appSettingsRepo.update = original;
       }

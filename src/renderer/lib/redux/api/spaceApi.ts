@@ -1,4 +1,3 @@
-import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
 import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
@@ -49,16 +48,15 @@ export const spaceApi = baseApi.injectEndpoints({
       query: () => ({
         handler: CHANNELS.space.getAll,
       }),
-      transformResponse: (response: ServiceResponse<Space[]>) => unwrap(response),
       providesTags: ["Spaces"],
     }),
 
-    getSpaceById: builder.query<Space, string>({
+    // Absence rule: a missing space arrives as null data, not an error.
+    getSpaceById: builder.query<Space | null, string>({
       query: (spaceId) => ({
         handler: CHANNELS.space.getById,
         args: [spaceId],
       }),
-      transformResponse: (response: ServiceResponse<Space>) => unwrap(response),
       providesTags: (_result, _error, id) => [{ type: "Spaces", id }],
     }),
 
@@ -67,7 +65,6 @@ export const spaceApi = baseApi.injectEndpoints({
         handler: CHANNELS.space.create,
         args: [payload],
       }),
-      transformResponse: (response: ServiceResponse<Space>) => unwrap(response),
       invalidatesTags: ["Spaces"],
     }),
 
@@ -79,7 +76,6 @@ export const spaceApi = baseApi.injectEndpoints({
         handler: CHANNELS.space.update,
         args: [id, payload],
       }),
-      transformResponse: (response: ServiceResponse<Space>) => unwrap(response),
       invalidatesTags: (_result, _error, { id }) => [
         { type: "Spaces", id },
         "Spaces",

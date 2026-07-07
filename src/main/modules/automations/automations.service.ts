@@ -1,4 +1,3 @@
-import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import { automationsRepo } from "./automations.repo";
 import { syncService } from "../sync/sync.service";
 import type {
@@ -6,7 +5,6 @@ import type {
   AutomationRun,
   CreateAutomationInput,
   UpdateAutomationInput,
-  ServiceResponse,
 } from "./automations.dto";
 
 // ─────────────────────────────────────────────────────────────
@@ -16,48 +14,39 @@ type ActionHandler = (config?: string | null) => Promise<string | null>;
 
 const actionHandlers: Record<string, ActionHandler> = {
   "sync:all": async () => {
-    const result = await syncService.runEntitySync();
-    return JSON.stringify(result.success ? result.data : { error: result.error });
+    return JSON.stringify(await syncService.runEntitySync());
   },
 
   "sync:github": async () => {
-    const result = await syncService.runEntitySync("github");
-    return JSON.stringify(result.success ? result.data : { error: result.error });
+    return JSON.stringify(await syncService.runEntitySync("github"));
   },
 
   "sync:gitlab": async () => {
-    const result = await syncService.runEntitySync("gitlab");
-    return JSON.stringify(result.success ? result.data : { error: result.error });
+    return JSON.stringify(await syncService.runEntitySync("gitlab"));
   },
 
   "sync:linear": async () => {
-    const result = await syncService.runEntitySync("linear");
-    return JSON.stringify(result.success ? result.data : { error: result.error });
+    return JSON.stringify(await syncService.runEntitySync("linear"));
   },
 
   "sync:jira": async () => {
-    const result = await syncService.runEntitySync("jira");
-    return JSON.stringify(result.success ? result.data : { error: result.error });
+    return JSON.stringify(await syncService.runEntitySync("jira"));
   },
 
   "sync:asana": async () => {
-    const result = await syncService.runEntitySync("asana");
-    return JSON.stringify(result.success ? result.data : { error: result.error });
+    return JSON.stringify(await syncService.runEntitySync("asana"));
   },
 
   "sync:trello": async () => {
-    const result = await syncService.runEntitySync("trello");
-    return JSON.stringify(result.success ? result.data : { error: result.error });
+    return JSON.stringify(await syncService.runEntitySync("trello"));
   },
 
   "sync:notion": async () => {
-    const result = await syncService.runEntitySync("notion");
-    return JSON.stringify(result.success ? result.data : { error: result.error });
+    return JSON.stringify(await syncService.runEntitySync("notion"));
   },
 
   "sync:sentry": async () => {
-    const result = await syncService.runEntitySync("sentry");
-    return JSON.stringify(result.success ? result.data : { error: result.error });
+    return JSON.stringify(await syncService.runEntitySync("sentry"));
   },
 };
 
@@ -99,6 +88,9 @@ function cancelTimer(automationId: string) {
 
 // ─────────────────────────────────────────────────────────────
 // Service — Business logic
+//
+// Throw-style: methods return plain values and throw on failure; the
+// ServiceResponse envelope is applied by handle() at the IPC seam.
 // ─────────────────────────────────────────────────────────────
 export const automationsService = {
   // ── Lifecycle ──
@@ -120,88 +112,67 @@ export const automationsService = {
 
   // ── CRUD ──
 
-  getAll(): ServiceResponse<Automation[]> {
-    try {
-      return ok(automationsRepo.findAll());
-    } catch (err: any) {
-      return fail(err.message);
-    }
+  getAll(): Automation[] {
+    return automationsRepo.findAll();
   },
 
-  getById(id: string): ServiceResponse<Automation | null> {
-    try {
-      return ok(automationsRepo.findById(id) ?? null);
-    } catch (err: any) {
-      return fail(err.message);
-    }
+  getById(id: string): Automation | null {
+    return automationsRepo.findById(id) ?? null;
   },
 
-  create(accountId: string, input: CreateAutomationInput): ServiceResponse<Automation> {
-    try {
-      if (!actionHandlers[input.action]) {
-        return fail(`Unknown action: ${input.action}`);
-      }
-      if (input.intervalMinutes < 1) {
-        return fail("Interval must be at least 1 minute");
-      }
+  create(accountId: string, input: CreateAutomationInput): Automation {
+    if (!actionHandlers[input.action]) {
+      throw new Error(`Unknown action: ${input.action}`);
+    }
+    if (input.intervalMinutes < 1) {
+      throw new Error("Interval must be at least 1 minute");
+    }
 
-      const automation = automationsRepo.create(accountId, input);
+    const automation = automationsRepo.create(accountId, input);
+    scheduleNext(automation);
+
+    return automation;
+  },
+
+  update(id: string, input: UpdateAutomationInput): Automation {
+    if (input.action && !actionHandlers[input.action]) {
+      throw new Error(`Unknown action: ${input.action}`);
+    }
+    if (input.intervalMinutes !== undefined && input.intervalMinutes < 1) {
+      throw new Error("Interval must be at least 1 minute");
+    }
+
+    const automation = automationsRepo.update(id, input);
+    if (!automation) {
+      throw new Error("Automation not found");
+    }
+
+    // Reschedule or cancel
+    if (automation.isActive) {
       scheduleNext(automation);
-
-      return ok(automation);
-    } catch (err: any) {
-      return fail(err.message);
-    }
-  },
-
-  update(id: string, input: UpdateAutomationInput): ServiceResponse<Automation | null> {
-    try {
-      if (input.action && !actionHandlers[input.action]) {
-        return fail(`Unknown action: ${input.action}`);
-      }
-      if (input.intervalMinutes !== undefined && input.intervalMinutes < 1) {
-        return fail("Interval must be at least 1 minute");
-      }
-
-      const automation = automationsRepo.update(id, input);
-      if (!automation) {
-        return fail("Automation not found");
-      }
-
-      // Reschedule or cancel
-      if (automation.isActive) {
-        scheduleNext(automation);
-      } else {
-        cancelTimer(id);
-      }
-
-      return ok(automation);
-    } catch (err: any) {
-      return fail(err.message);
-    }
-  },
-
-  delete(id: string): ServiceResponse<null> {
-    try {
+    } else {
       cancelTimer(id);
-      automationsRepo.delete(id);
-      return ok(null);
-    } catch (err: any) {
-      return fail(err.message);
     }
+
+    return automation;
+  },
+
+  delete(id: string): void {
+    cancelTimer(id);
+    automationsRepo.delete(id);
   },
 
   // ── Execution ──
 
-  async executeAutomation(id: string): Promise<ServiceResponse<AutomationRun | null>> {
+  async executeAutomation(id: string): Promise<AutomationRun | null> {
     const automation = automationsRepo.findById(id);
     if (!automation) {
-      return fail("Automation not found");
+      throw new Error("Automation not found");
     }
 
     const handler = actionHandlers[automation.action];
     if (!handler) {
-      return fail(`No handler for action: ${automation.action}`);
+      throw new Error(`No handler for action: ${automation.action}`);
     }
 
     const runId = automationsRepo.createRun(id);
@@ -216,7 +187,7 @@ export const automationsService = {
       if (updated) scheduleNext(updated);
 
       const runs = automationsRepo.getRunsByAutomation(id, 1);
-      return ok(runs[0] ?? null);
+      return runs[0] ?? null;
     } catch (err: any) {
       const errorMsg = err.message || "Unknown error";
       automationsRepo.completeRun(runId, "error", undefined, errorMsg);
@@ -227,24 +198,20 @@ export const automationsService = {
       if (updated) scheduleNext(updated);
 
       const runs = automationsRepo.getRunsByAutomation(id, 1);
-      return ok(runs[0] ?? null);
+      return runs[0] ?? null;
     }
   },
 
   // ── Run History ──
 
-  getRunHistory(automationId: string, limit = 20): ServiceResponse<AutomationRun[]> {
-    try {
-      return ok(automationsRepo.getRunsByAutomation(automationId, limit));
-    } catch (err: any) {
-      return fail(err.message);
-    }
+  getRunHistory(automationId: string, limit = 20): AutomationRun[] {
+    return automationsRepo.getRunsByAutomation(automationId, limit);
   },
 
   // ── Helpers ──
 
-  getAvailableActions(): ServiceResponse<string[]> {
-    return ok(Object.keys(actionHandlers));
+  getAvailableActions(): string[] {
+    return Object.keys(actionHandlers);
   },
 
   registerAction(action: string, handler: ActionHandler) {

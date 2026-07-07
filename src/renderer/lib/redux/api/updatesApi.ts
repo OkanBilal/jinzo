@@ -34,20 +34,14 @@ export const updatesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getUpdateStatus: builder.query<UpdateState, void>({
       query: () => ({ handler: CHANNELS.updates.getStatus }),
-      transformResponse: (response: any) =>
-        response?.success ? response.data : { status: "idle", info: null, progress: null, error: null },
       providesTags: ["Updates"],
     }),
     checkForUpdates: builder.mutation<UpdateState, void>({
       query: () => ({ handler: CHANNELS.updates.check }),
-      transformResponse: (response: any) =>
-        response?.success ? response.data : { status: "error", info: null, progress: null, error: response?.error },
       invalidatesTags: ["Updates"],
     }),
     downloadUpdate: builder.mutation<UpdateState, void>({
       query: () => ({ handler: CHANNELS.updates.download }),
-      transformResponse: (response: any) =>
-        response?.success ? response.data : { status: "error", info: null, progress: null, error: response?.error },
       invalidatesTags: ["Updates"],
     }),
     installUpdate: builder.mutation<null, void>({

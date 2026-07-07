@@ -14,75 +14,87 @@ import { CHANNELS } from "../../../shared/ipc-kit/channels";
 // ─────────────────────────────────────────────────────────────
 export function registerProjectsIpc(): void {
   // ── lifecycle ──
-  ipcMain.handle(CHANNELS.projects.list, async () => {
-    return projectsService.list();
-  });
+  ipcMain.handle(
+    CHANNELS.projects.list,
+    handle(() => projectsService.list()),
+  );
 
-  ipcMain.handle(CHANNELS.projects.get, async (_, id: string) => {
-    return projectsService.get(id);
-  });
+  ipcMain.handle(
+    CHANNELS.projects.get,
+    handle((id: string) => projectsService.get(id)),
+  );
 
-  ipcMain.handle(CHANNELS.projects.listByAccount, async (_, accountId: string) => {
-    return projectsService.listByAccount(accountId);
-  });
+  ipcMain.handle(
+    CHANNELS.projects.listByAccount,
+    handle((accountId: string) => projectsService.listByAccount(accountId)),
+  );
 
   ipcMain.handle(
     CHANNELS.projects.findByRemoteOrigin,
-    async (_, accountId: string, remoteOrigin: string) => {
-      return projectsService.findByRemoteOrigin(accountId, remoteOrigin);
-    },
+    handle((accountId: string, remoteOrigin: string) => projectsService.findByRemoteOrigin(accountId, remoteOrigin)),
   );
 
-  ipcMain.handle(CHANNELS.projects.findOrCreate, async (_, payload: CreateProjectPayload) => {
-    return projectsService.findOrCreate(payload);
-  });
+  ipcMain.handle(
+    CHANNELS.projects.findOrCreate,
+    handle((payload: CreateProjectPayload) => projectsService.findOrCreate(payload)),
+  );
 
-  ipcMain.handle(CHANNELS.projects.create, async (_, payload: CreateProjectPayload) => {
-    return projectsService.create(payload);
-  });
+  ipcMain.handle(
+    CHANNELS.projects.create,
+    handle((payload: CreateProjectPayload) => projectsService.create(payload)),
+  );
 
-  ipcMain.handle(CHANNELS.projects.update, async (_, id: string, payload: UpdateProjectPayload) => {
-    return projectsService.update(id, payload);
-  });
+  ipcMain.handle(
+    CHANNELS.projects.update,
+    handle((id: string, payload: UpdateProjectPayload) => projectsService.update(id, payload)),
+  );
 
-  ipcMain.handle(CHANNELS.projects.remove, async (_, id: string) => {
-    return projectsService.remove(id);
-  });
+  ipcMain.handle(
+    CHANNELS.projects.remove,
+    handle((id: string) => projectsService.remove(id)),
+  );
 
-  ipcMain.handle(CHANNELS.projects.delete, async (_, id: string) => {
-    return projectsService.delete(id);
-  });
+  ipcMain.handle(
+    CHANNELS.projects.delete,
+    handle((id: string) => projectsService.delete(id)),
+  );
 
   ipcMain.handle(
     CHANNELS.projects.listBranches,
     handle((id: string) => projectsService.listBranchNames(id)),
   );
 
-  ipcMain.handle(CHANNELS.projects.archive, async (_, id: string) => {
-    return projectsService.archive(id);
-  });
+  ipcMain.handle(
+    CHANNELS.projects.archive,
+    handle((id: string) => projectsService.archive(id)),
+  );
 
   // ── resources ──
-  ipcMain.handle(CHANNELS.projects.listResources, async (_, projectId: string) => {
-    return projectsService.listResources(projectId);
-  });
+  ipcMain.handle(
+    CHANNELS.projects.listResources,
+    handle((projectId: string) => projectsService.listResources(projectId)),
+  );
 
-  ipcMain.handle(CHANNELS.projects.listAvailableResources, async (_, projectId: string) => {
-    return projectsService.listAvailableResources(projectId);
-  });
+  ipcMain.handle(
+    CHANNELS.projects.listAvailableResources,
+    handle((projectId: string) => projectsService.listAvailableResources(projectId)),
+  );
 
-  ipcMain.handle(CHANNELS.projects.addResource, async (_, payload: AddResourcePayload) => {
-    return projectsService.addResource(payload.projectId, payload.resourceId);
-  });
+  ipcMain.handle(
+    CHANNELS.projects.addResource,
+    handle((payload: AddResourcePayload) => projectsService.addResource(payload.projectId, payload.resourceId)),
+  );
 
-  ipcMain.handle(CHANNELS.projects.removeResource, async (_, payload: RemoveResourcePayload) => {
-    return projectsService.removeResource(payload.projectId, payload.resourceId);
-  });
+  ipcMain.handle(
+    CHANNELS.projects.removeResource,
+    handle((payload: RemoveResourcePayload) => projectsService.removeResource(payload.projectId, payload.resourceId)),
+  );
 
   // ── issues (via linked resources) ──
-  ipcMain.handle(CHANNELS.projects.listIssues, async (_, projectId: string) => {
-    return projectsService.listIssues(projectId);
-  });
+  ipcMain.handle(
+    CHANNELS.projects.listIssues,
+    handle((projectId: string) => projectsService.listIssues(projectId)),
+  );
 }
 
 export function unregisterProjectsIpc(): void {

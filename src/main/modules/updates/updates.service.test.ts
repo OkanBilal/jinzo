@@ -33,19 +33,18 @@ describe("updatesService", () => {
   // ───────────────────────────────────────────────
   describe("getStatus", () => {
     it("returns current state", () => {
-      const result = updatesService.getStatus();
-      expect(result).toEqual({
-        success: true,
-        data: { status: "idle", info: null, progress: null, error: null },
+      expect(updatesService.getStatus()).toEqual({
+        status: "idle",
+        info: null,
+        progress: null,
+        error: null,
       });
     });
 
     it("returns a copy of state (not reference)", () => {
-      const result = updatesService.getStatus();
-      if (result.success) {
-        result.data.status = "checking";
-        expect(updatesService._state.status).toBe("idle");
-      }
+      const state = updatesService.getStatus();
+      state.status = "checking";
+      expect(updatesService._state.status).toBe("idle");
     });
   });
 
@@ -75,10 +74,11 @@ describe("updatesService", () => {
   // ───────────────────────────────────────────────
   describe("checkForUpdates", () => {
     it("returns not-available in dev mode", async () => {
-      const result = await updatesService.checkForUpdates();
-      expect(result).toEqual({
-        success: true,
-        data: { status: "not-available", info: null, progress: null, error: null },
+      expect(await updatesService.checkForUpdates()).toEqual({
+        status: "not-available",
+        info: null,
+        progress: null,
+        error: null,
       });
     });
   });
@@ -88,8 +88,9 @@ describe("updatesService", () => {
   // ───────────────────────────────────────────────
   describe("downloadUpdate", () => {
     it("returns current state", async () => {
-      const result = await updatesService.downloadUpdate();
-      expect(result).toEqual({ success: true, data: updatesService._state });
+      expect(await updatesService.downloadUpdate()).toEqual(
+        updatesService._state,
+      );
     });
   });
 
@@ -97,9 +98,10 @@ describe("updatesService", () => {
   // quitAndInstall (dev mode)
   // ───────────────────────────────────────────────
   describe("quitAndInstall", () => {
-    it("returns error in dev mode", () => {
-      const result = updatesService.quitAndInstall();
-      expect(result).toEqual({ success: false, error: "Cannot install updates in development mode" });
+    it("throws in dev mode", () => {
+      expect(() => updatesService.quitAndInstall()).toThrow(
+        "Cannot install updates in development mode",
+      );
     });
   });
 });

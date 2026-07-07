@@ -1,4 +1,3 @@
-import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
 import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
@@ -29,7 +28,6 @@ export const syncApi = baseApi.injectEndpoints({
         handler: CHANNELS.sync.runEntitySync,
         args: provider ? [provider] : [],
       }),
-      transformResponse: (response: ServiceResponse<SyncResult>) => unwrap(response),
       invalidatesTags: ["Entity", "ProjectIssues"],
     }),
   }),

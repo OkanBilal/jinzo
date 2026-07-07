@@ -107,8 +107,7 @@ export default function TrelloModal(props: TrelloModalProps) {
   const [getBoards] = useLazyGetTrelloBoardsQuery();
   const fetchAllResources = useCallback(
     async (connectionId: string) => {
-      const result = await getBoards(connectionId).unwrap();
-      return { success: result.success, items: result.boards };
+      return getBoards(connectionId).unwrap();
     },
     [getBoards],
   );

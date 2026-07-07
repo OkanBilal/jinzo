@@ -14,7 +14,6 @@ export { sanitizeAppSettingsPatch } from "./appSettings.validation";
 export type {
   AppSettingsRecord,
   AppSettingsPatch,
-  ServiceResponse,
 } from "./appSettings.dto";
 
 // Constants

@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { createTestDb } from "../../../test/setup-db";
 import {
   createAccount,
@@ -42,9 +41,7 @@ describe("statsService", () => {
   // ─────────────────────────────────────────────────────────────
   describe("getDashboard", () => {
     it("returns full dashboard with empty data", async () => {
-      const result = await statsService.getDashboard();
-      assertOk(result);
-      const data = result.data;
+      const data = await statsService.getDashboard();
 
       expect(data).toHaveProperty("summary");
       expect(data).toHaveProperty("dailyActivity");
@@ -69,9 +66,8 @@ describe("statsService", () => {
     });
 
     it("accepts a provider filter", async () => {
-      const result = await statsService.getDashboard("claude_code");
-      assertOk(result);
-      expect(result.data.summary).toBeDefined();
+      const data = await statsService.getDashboard("claude_code");
+      expect(data.summary).toBeDefined();
     });
 
     it("returns populated dashboard when data exists", async () => {
@@ -85,11 +81,10 @@ describe("statsService", () => {
         createdAt: new Date(),
       });
 
-      const result = await statsService.getDashboard();
-      assertOk(result);
-      expect(result.data.summary.totalProjects).toBe(1);
-      expect(result.data.summary.totalSessions).toBe(1);
-      expect(result.data.recentSessions).toHaveLength(1);
+      const data = await statsService.getDashboard();
+      expect(data.summary.totalProjects).toBe(1);
+      expect(data.summary.totalSessions).toBe(1);
+      expect(data.recentSessions).toHaveLength(1);
     });
   });
 
@@ -520,63 +515,12 @@ describe("statsService", () => {
   });
 
   // ─────────────────────────────────────────────────────────────
-  // Error handling (coverage for catch blocks via spyOn)
+  // Error handling
   // ─────────────────────────────────────────────────────────────
   describe("error handling", () => {
-    it("getDashboard returns fail when getSummary fails", async () => {
+    it("getDashboard propagates repo failures", async () => {
       vi.spyOn(statsRepo, "getSummary").mockRejectedValueOnce(new Error("db error"));
-      const result = await statsService.getDashboard();
-      assertFail(result);
-      expect(result.error).toBe("db error");
-    });
-
-    it("getDashboard returns fail when getDailyActivity fails", async () => {
-      vi.spyOn(statsRepo, "getDailyActivity").mockRejectedValueOnce(new Error("daily fail"));
-      const result = await statsService.getDashboard();
-      assertFail(result);
-      expect(result.error).toBe("daily fail");
-    });
-
-    it("getDashboard returns fail when getHourDistribution fails", async () => {
-      vi.spyOn(statsRepo, "getHourDistribution").mockRejectedValueOnce(new Error("hour fail"));
-      const result = await statsService.getDashboard();
-      assertFail(result);
-      expect(result.error).toBe("hour fail");
-    });
-
-    it("getDashboard returns fail when getCostByModel fails", async () => {
-      vi.spyOn(statsRepo, "getCostByModel").mockRejectedValueOnce(new Error("cost fail"));
-      const result = await statsService.getDashboard();
-      assertFail(result);
-      expect(result.error).toBe("cost fail");
-    });
-
-    it("getDashboard returns fail when getToolUsage fails", async () => {
-      vi.spyOn(statsRepo, "getToolUsage").mockRejectedValueOnce(new Error("tool fail"));
-      const result = await statsService.getDashboard();
-      assertFail(result);
-      expect(result.error).toBe("tool fail");
-    });
-
-    it("getDashboard returns fail when getStatusBreakdown fails", async () => {
-      vi.spyOn(statsRepo, "getStatusBreakdown").mockRejectedValueOnce(new Error("status fail"));
-      const result = await statsService.getDashboard();
-      assertFail(result);
-      expect(result.error).toBe("status fail");
-    });
-
-    it("getDashboard returns fail when getRecentSessions fails", async () => {
-      vi.spyOn(statsRepo, "getRecentSessions").mockRejectedValueOnce(new Error("session fail"));
-      const result = await statsService.getDashboard();
-      assertFail(result);
-      expect(result.error).toBe("session fail");
-    });
-
-    it("getDashboard returns fail when getCodeActivity fails", async () => {
-      vi.spyOn(statsRepo, "getCodeActivity").mockRejectedValueOnce(new Error("code fail"));
-      const result = await statsService.getDashboard();
-      assertFail(result);
-      expect(result.error).toBe("code fail");
+      await expect(statsService.getDashboard()).rejects.toThrow("db error");
     });
   });
 });

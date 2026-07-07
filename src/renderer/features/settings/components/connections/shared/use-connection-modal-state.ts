@@ -69,11 +69,9 @@ export function useConnectionModalState<TData>({
             finalData = { ...baseDataRef.current, ...selectedData };
             finalStep = "manage";
           } else {
-            const connResult = await getConnection(provider).unwrap();
-            if (connResult.success) {
-              finalData = { ...baseDataRef.current, connectionId: connResult.connection.id };
-              finalStep = "manage";
-            }
+            const connection = await getConnection(provider).unwrap();
+            finalData = { ...baseDataRef.current, connectionId: connection.id };
+            finalStep = "manage";
           }
 
           const elapsed = Date.now() - startTime;
@@ -81,11 +79,9 @@ export function useConnectionModalState<TData>({
         } catch (err) {
           console.error(`[${provider}:loadInitialData]`, err);
           try {
-            const connResult = await getConnection(provider).unwrap();
-            if (connResult.success) {
-              finalData = { ...baseDataRef.current, connectionId: connResult.connection.id };
-              finalStep = "manage";
-            }
+            const connection = await getConnection(provider).unwrap();
+            finalData = { ...baseDataRef.current, connectionId: connection.id };
+            finalStep = "manage";
           } catch { /* keep defaults */ }
         }
       }

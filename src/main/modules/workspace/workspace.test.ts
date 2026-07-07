@@ -14,7 +14,6 @@
 //   See ADR-0001 for the consolidation decision.
 // ════════════════════════════════════════════════════════════════
 
-import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import {
@@ -323,29 +322,24 @@ describe("workspaceService — workspace lifecycle", () => {
     it("returns success with workspaces", async () => {
       createWorkspace(db, { id: "ws1", name: "WS1" });
       const result = await workspaceService.list();
-      assertOk(result);
-      expect(result.data).toHaveLength(1);
+      expect(result).toHaveLength(1);
     });
 
     it("returns empty array when none", async () => {
       const result = await workspaceService.list();
-      assertOk(result);
-      expect(result.data).toEqual([]);
+      expect(result).toEqual([]);
     });
   });
 
   describe("get", () => {
     it("returns workspace by id", async () => {
       createWorkspace(db, { id: "ws1", name: "My Workspace" });
-      const result = await workspaceService.get("ws1");
-      assertOk(result);
-      expect(result.data!.name).toBe("My Workspace");
+      const result = (await workspaceService.get("ws1"))!;
+      expect(result.name).toBe("My Workspace");
     });
 
     it("returns error for non-existent", async () => {
-      const result = await workspaceService.get("missing");
-      assertFail(result);
-      expect(result.error).toBe("Workspace not found");
+      expect(await workspaceService.get("missing")).toBeNull();
     });
   });
 
@@ -353,28 +347,24 @@ describe("workspaceService — workspace lifecycle", () => {
     it("returns workspaces for account", async () => {
       createWorkspace(db, { id: "ws1", accountId: "default" });
       const result = await workspaceService.listByAccount("default");
-      assertOk(result);
-      expect(result.data).toHaveLength(1);
+      expect(result).toHaveLength(1);
     });
   });
 
   describe("getByRootPath", () => {
     it("returns workspace by root path", async () => {
       createWorkspace(db, { id: "ws1", rootPath: "/projects/my-app" });
-      const result = await workspaceService.getByRootPath(
+      const result = (await workspaceService.getByRootPath(
         "default",
         "/projects/my-app",
-      );
-      assertOk(result);
-      expect(result.data!.id).toBe("ws1");
+      ))!;
+      expect(result.id).toBe("ws1");
     });
 
     it("returns error when not found", async () => {
-      const result = await workspaceService.getByRootPath(
-        "default",
-        "/missing/path",
-      );
-      assertFail(result);
+      expect(
+        await workspaceService.getByRootPath("default", "/missing/path"),
+      ).toBeNull();
     });
   });
 
@@ -385,23 +375,20 @@ describe("workspaceService — workspace lifecycle", () => {
         name: "New Workspace",
         rootPath: "/projects/new-ws",
       });
-
-      assertOk(result);
-      expect(result.data!.name).toBe("New Workspace");
-      expect(result.data!.id).toBeTruthy();
+      expect(result.name).toBe("New Workspace");
+      expect(result.id).toBeTruthy();
     });
 
     it("rejects duplicate root path", async () => {
       createWorkspace(db, { id: "ws1", rootPath: "/projects/existing" });
 
-      const result = await workspaceService.create({
-        accountId: "default",
-        name: "Duplicate",
-        rootPath: "/projects/existing",
-      });
-
-      assertFail(result);
-      expect(result.error).toBe("Workspace with this path already exists");
+      await expect(
+        workspaceService.create({
+          accountId: "default",
+          name: "Duplicate",
+          rootPath: "/projects/existing",
+        }),
+      ).rejects.toThrow("Workspace with this path already exists");
     });
 
     it("generates ID if not provided", async () => {
@@ -410,9 +397,7 @@ describe("workspaceService — workspace lifecycle", () => {
         name: "Auto ID",
         rootPath: "/projects/auto-id",
       });
-
-      assertOk(result);
-      expect(result.data!.id).toBeTruthy();
+      expect(result.id).toBeTruthy();
     });
   });
 
@@ -420,25 +405,20 @@ describe("workspaceService — workspace lifecycle", () => {
     it("updates workspace fields", async () => {
       createWorkspace(db, { id: "ws1", name: "Old Name" });
       const result = await workspaceService.update("ws1", { name: "New Name" });
-
-      assertOk(result);
-      expect(result.data!.name).toBe("New Name");
+      expect(result.name).toBe("New Name");
     });
 
     it("returns error for non-existent", async () => {
-      const result = await workspaceService.update("missing", { name: "Test" });
-      assertFail(result);
+      await expect(workspaceService.update("missing", { name: "Test" })).rejects.toThrow();
     });
   });
 
   describe("delete", () => {
     it("deletes workspace", async () => {
       createWorkspace(db, { id: "ws1" });
-      const result = await workspaceService.delete("ws1");
-      assertOk(result);
+      await workspaceService.delete("ws1");
 
-      const check = await workspaceService.get("ws1");
-      assertFail(check);
+      expect(await workspaceService.get("ws1")).toBeNull();
     });
   });
 
@@ -446,8 +426,7 @@ describe("workspaceService — workspace lifecycle", () => {
     it("updates workspace status", async () => {
       createWorkspace(db, { id: "ws1" });
       const result = await workspaceService.updateStatus("ws1", "in_progress");
-      assertOk(result);
-      expect(result.data!.status).toBe("in_progress");
+      expect(result.status).toBe("in_progress");
     });
   });
 
@@ -455,14 +434,11 @@ describe("workspaceService — workspace lifecycle", () => {
     it("archives a workspace", async () => {
       createWorkspace(db, { id: "ws1" });
       const result = await workspaceService.archive("ws1");
-      assertOk(result);
-      expect(result.data!.isArchived).toBe(true);
+      expect(result.isArchived).toBe(true);
     });
 
     it("returns error for non-existent workspace", async () => {
-      const result = await workspaceService.archive("missing");
-      assertFail(result);
-      expect(result.error).toBe("Workspace not found");
+      await expect(workspaceService.archive("missing")).rejects.toThrow("Workspace not found");
     });
 
     it("runs archive script when project has one", async () => {
@@ -473,8 +449,7 @@ describe("workspaceService — workspace lifecycle", () => {
       });
       createWorkspace(db, { id: "ws1", projectId: project.id });
 
-      const result = await workspaceService.archive("ws1");
-      assertOk(result);
+      await workspaceService.archive("ws1");
     });
   });
 
@@ -492,9 +467,7 @@ describe("workspaceService — workspace lifecycle", () => {
         rootPath: "/projects/with-project",
         projectId: project.id,
       });
-
-      assertOk(result);
-      expect(result.data!.projectId).toBe("p1");
+      expect(result.projectId).toBe("p1");
     });
 
     it("uses provided id when given", async () => {
@@ -504,76 +477,54 @@ describe("workspaceService — workspace lifecycle", () => {
         name: "Custom ID",
         rootPath: "/projects/custom-id",
       });
-
-      assertOk(result);
-      expect(result.data!.id).toBe("custom-id");
+      expect(result.id).toBe("custom-id");
     });
   });
 
   describe("workspace error handling", () => {
     it("list returns error on failure", async () => {
       vi.spyOn(workspaceRepo, "findAll").mockRejectedValueOnce(new Error("db"));
-      const result = await workspaceService.list();
-      assertFail(result);
-      expect(result.error).toBe("Failed to get workspaces");
+      await expect(workspaceService.list()).rejects.toThrow("db");
     });
 
     it("get returns error on failure", async () => {
       vi.spyOn(workspaceRepo, "findById").mockRejectedValueOnce(new Error("db"));
-      const result = await workspaceService.get("ws1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to get workspace");
+      await expect(workspaceService.get("ws1")).rejects.toThrow("db");
     });
 
     it("listByAccount returns error on failure", async () => {
       vi.spyOn(workspaceRepo, "findByAccountId").mockRejectedValueOnce(
         new Error("db"),
       );
-      const result = await workspaceService.listByAccount("default");
-      assertFail(result);
-      expect(result.error).toBe("Failed to get workspaces");
+      await expect(workspaceService.listByAccount("default")).rejects.toThrow("db");
     });
 
     it("getByRootPath returns error on failure", async () => {
       vi.spyOn(workspaceRepo, "findByRootPath").mockRejectedValueOnce(
         new Error("db"),
       );
-      const result = await workspaceService.getByRootPath("default", "/x");
-      assertFail(result);
-      expect(result.error).toBe("Failed to get workspace");
+      await expect(workspaceService.getByRootPath("default", "/x")).rejects.toThrow("db");
     });
 
     it("create returns error on failure", async () => {
       vi.spyOn(workspaceRepo, "findByRootPath").mockResolvedValueOnce(null);
       vi.spyOn(workspaceRepo, "insert").mockRejectedValueOnce(new Error("db"));
-      const result = await workspaceService.create({
-        accountId: "default",
-        name: "Fail",
-        rootPath: "/fail",
-      });
-      assertFail(result);
-      expect(result.error).toBe("Failed to create workspace");
+      await expect(workspaceService.create({ accountId: "default", name: "Fail", rootPath: "/fail", })).rejects.toThrow("db");
     });
 
     it("update returns error on failure", async () => {
       vi.spyOn(workspaceRepo, "update").mockRejectedValueOnce(new Error("db"));
-      const result = await workspaceService.update("ws1", { name: "X" });
-      assertFail(result);
-      expect(result.error).toBe("Failed to update workspace");
+      await expect(workspaceService.update("ws1", { name: "X" })).rejects.toThrow("db");
     });
 
     it("delete returns error on failure", async () => {
       vi.spyOn(workspaceRepo, "delete").mockRejectedValueOnce(new Error("db"));
-      const result = await workspaceService.delete("ws1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to delete workspace");
+      await expect(workspaceService.delete("ws1")).rejects.toThrow("db");
     });
 
     it("archive returns error on failure", async () => {
       vi.spyOn(workspaceRepo, "findById").mockRejectedValueOnce(new Error("db"));
-      const result = await workspaceService.archive("ws1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to archive workspace");
+      await expect(workspaceService.archive("ws1")).rejects.toThrow("db");
     });
   });
 
@@ -583,14 +534,13 @@ describe("workspaceService — workspace lifecycle", () => {
       vi.spyOn(workspaceRepo, "insert").mockResolvedValueOnce("new-id");
       vi.spyOn(workspaceRepo, "findById").mockResolvedValueOnce(null);
 
-      const result = await workspaceService.create({
-        accountId: "default",
-        name: "Ghost",
-        rootPath: "/projects/ghost",
-      });
-
-      assertFail(result);
-      expect(result.error).toBe("Failed to retrieve created workspace");
+      await expect(
+        workspaceService.create({
+          accountId: "default",
+          name: "Ghost",
+          rootPath: "/projects/ghost",
+        }),
+      ).rejects.toThrow("Failed to retrieve created workspace");
     });
   });
 
@@ -599,9 +549,7 @@ describe("workspaceService — workspace lifecycle", () => {
       createWorkspace(db, { id: "ws-arch", name: "To Archive" });
       vi.spyOn(workspaceRepo, "archive").mockResolvedValueOnce(null);
 
-      const result = await workspaceService.archive("ws-arch");
-      assertFail(result);
-      expect(result.error).toBe("Failed to archive workspace");
+      await expect(workspaceService.archive("ws-arch")).rejects.toThrow("Failed to archive workspace");
     });
   });
 
@@ -612,14 +560,12 @@ describe("workspaceService — workspace lifecycle", () => {
         name: "NoSetup",
         setupScript: null,
       });
-      const result = await workspaceService.create({
+      await workspaceService.create({
         accountId: "default",
         name: "WS no setup",
         rootPath: "/projects/no-setup",
         projectId: project.id,
       });
-
-      assertOk(result);
       await new Promise((r) => setTimeout(r, 50));
     });
 
@@ -635,14 +581,12 @@ describe("workspaceService — workspace lifecycle", () => {
         setupScript: "echo hello",
       });
 
-      const result = await workspaceService.create({
+      await workspaceService.create({
         accountId: "default",
         name: "WS setup ok",
         rootPath: "/projects/setup-ok",
         projectId: project.id,
       });
-
-      assertOk(result);
       await new Promise((r) => setTimeout(r, 50));
 
       expect(mockSend).toHaveBeenCalledWith(
@@ -673,14 +617,12 @@ describe("workspaceService — workspace lifecycle", () => {
         setupScript: "exit 1",
       });
 
-      const result = await workspaceService.create({
+      await workspaceService.create({
         accountId: "default",
         name: "WS setup fail",
         rootPath: "/projects/setup-fail",
         projectId: project.id,
       });
-
-      assertOk(result);
       await new Promise((r) => setTimeout(r, 50));
 
       expect(mockSend).toHaveBeenCalledWith(
@@ -702,14 +644,12 @@ describe("workspaceService — workspace lifecycle", () => {
         new Error("db fail"),
       );
 
-      const result = await workspaceService.create({
+      await workspaceService.create({
         accountId: "default",
         name: "WS project fail",
         rootPath: "/projects/project-fail",
         projectId: project.id,
       });
-
-      assertOk(result);
       await new Promise((r) => setTimeout(r, 50));
     });
   });
@@ -723,8 +663,7 @@ describe("workspaceService — workspace lifecycle", () => {
       });
       createWorkspace(db, { id: "ws-no-arch", projectId: project.id });
 
-      const result = await workspaceService.archive("ws-no-arch");
-      assertOk(result);
+      await workspaceService.archive("ws-no-arch");
       await new Promise((r) => setTimeout(r, 50));
     });
 
@@ -741,8 +680,7 @@ describe("workspaceService — workspace lifecycle", () => {
       });
       createWorkspace(db, { id: "ws-arch-ok", projectId: project.id });
 
-      const result = await workspaceService.archive("ws-arch-ok");
-      assertOk(result);
+      await workspaceService.archive("ws-arch-ok");
       await new Promise((r) => setTimeout(r, 50));
 
       expect(mockSend).toHaveBeenCalledWith(
@@ -774,8 +712,7 @@ describe("workspaceService — workspace lifecycle", () => {
       });
       createWorkspace(db, { id: "ws-arch-fail", projectId: project.id });
 
-      const result = await workspaceService.archive("ws-arch-fail");
-      assertOk(result);
+      await workspaceService.archive("ws-arch-fail");
       await new Promise((r) => setTimeout(r, 50));
 
       expect(mockSend).toHaveBeenCalledWith(
@@ -798,8 +735,7 @@ describe("workspaceService — workspace lifecycle", () => {
         new Error("db fail"),
       );
 
-      const result = await workspaceService.archive("ws-arch-proj-fail");
-      assertOk(result);
+      await workspaceService.archive("ws-arch-proj-fail");
       await new Promise((r) => setTimeout(r, 50));
     });
   });
@@ -819,14 +755,12 @@ describe("workspaceService — workspace lifecycle", () => {
         setupScript: "echo hi",
       });
 
-      const result = await workspaceService.create({
+      await workspaceService.create({
         accountId: "default",
         name: "WS multi win",
         rootPath: "/projects/multi-win",
         projectId: project.id,
       });
-
-      assertOk(result);
       await new Promise((r) => setTimeout(r, 50));
 
       expect(mockSend1).toHaveBeenCalledWith(
@@ -1015,8 +949,7 @@ describe("workspaceService — activity", () => {
   describe("listActivity", () => {
     it("returns empty list", async () => {
       const result = await workspaceService.listActivity(wsId);
-      assertOk(result);
-      expect(result.data).toEqual([]);
+      expect(result).toEqual([]);
     });
 
     it("returns activities", async () => {
@@ -1024,8 +957,7 @@ describe("workspaceService — activity", () => {
       createWorkspaceActivity(db, { workspaceId: wsId, title: "A2" });
 
       const result = await workspaceService.listActivity(wsId);
-      assertOk(result);
-      expect(result.data).toHaveLength(2);
+      expect(result).toHaveLength(2);
     });
   });
 
@@ -1036,9 +968,7 @@ describe("workspaceService — activity", () => {
         type: "commit",
         title: "Initial commit",
       });
-
-      assertOk(result);
-      expect(typeof result.data).toBe("string");
+      expect(typeof result).toBe("string");
     });
   });
 
@@ -1048,9 +978,7 @@ describe("workspaceService — activity", () => {
         { workspaceId: wsId, type: "commit", title: "C1" },
         { workspaceId: wsId, type: "commit", title: "C2" },
       ]);
-
-      assertOk(result);
-      expect(result.data).toHaveLength(2);
+      expect(result).toHaveLength(2);
     });
   });
 
@@ -1058,12 +986,10 @@ describe("workspaceService — activity", () => {
     it("deletes an activity", async () => {
       createWorkspaceActivity(db, { id: "del-1", workspaceId: wsId });
 
-      const result = await workspaceService.deleteActivity("del-1");
-      assertOk(result);
+      await workspaceService.deleteActivity("del-1");
 
       const check = await workspaceService.listActivity(wsId);
-      assertOk(check);
-      expect(check.data).toHaveLength(0);
+      expect(check).toHaveLength(0);
     });
   });
 
@@ -1078,9 +1004,8 @@ describe("workspaceService — activity", () => {
       await new Promise((r) => setTimeout(r, 50));
 
       const result = await workspaceService.listActivity(wsId);
-      assertOk(result);
-      expect(result.data).toHaveLength(1);
-      expect(result.data[0].title).toBe("Auto-logged diff");
+      expect(result).toHaveLength(1);
+      expect(result[0].title).toBe("Auto-logged diff");
     });
   });
 
@@ -1089,42 +1014,28 @@ describe("workspaceService — activity", () => {
       vi.spyOn(workspaceRepo, "findActivityByWorkspace").mockRejectedValueOnce(
         new Error("db"),
       );
-      const result = await workspaceService.listActivity("ws-1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to get workspace activity");
+      await expect(workspaceService.listActivity("ws-1")).rejects.toThrow("db");
     });
 
     it("createActivity returns error on failure", async () => {
       vi.spyOn(workspaceRepo, "insertActivity").mockRejectedValueOnce(
         new Error("db"),
       );
-      const result = await workspaceService.createActivity({
-        workspaceId: wsId,
-        type: "commit",
-        title: "fail",
-      });
-      assertFail(result);
-      expect(result.error).toBe("Failed to create activity");
+      await expect(workspaceService.createActivity({ workspaceId: wsId, type: "commit", title: "fail", })).rejects.toThrow("db");
     });
 
     it("createManyActivity returns error on failure", async () => {
       vi.spyOn(workspaceRepo, "insertManyActivity").mockRejectedValueOnce(
         new Error("db"),
       );
-      const result = await workspaceService.createManyActivity([
-        { workspaceId: wsId, type: "commit", title: "fail" },
-      ]);
-      assertFail(result);
-      expect(result.error).toBe("Failed to create activities");
+      await expect(workspaceService.createManyActivity([ { workspaceId: wsId, type: "commit", title: "fail" }, ])).rejects.toThrow("db");
     });
 
     it("deleteActivity returns error on failure", async () => {
       vi.spyOn(workspaceRepo, "deleteActivity").mockRejectedValueOnce(
         new Error("db"),
       );
-      const result = await workspaceService.deleteActivity("some-id");
-      assertFail(result);
-      expect(result.error).toBe("Failed to delete activity");
+      await expect(workspaceService.deleteActivity("some-id")).rejects.toThrow("db");
     });
   });
 });
@@ -1302,8 +1213,7 @@ describe("workspaceService — diffs", () => {
   describe("listDiffs", () => {
     it("returns empty list", async () => {
       const result = await workspaceService.listDiffs(wsId);
-      assertOk(result);
-      expect(result.data).toEqual([]);
+      expect(result).toEqual([]);
     });
 
     it("returns diffs for workspace", async () => {
@@ -1311,32 +1221,26 @@ describe("workspaceService — diffs", () => {
       createWorkspaceDiff(db, { workspaceId: wsId });
 
       const result = await workspaceService.listDiffs(wsId);
-      assertOk(result);
-      expect(result.data).toHaveLength(2);
+      expect(result).toHaveLength(2);
     });
   });
 
   describe("getLatestDiff", () => {
     it("returns error when no diffs", async () => {
-      const result = await workspaceService.getLatestDiff(wsId);
-      assertFail(result);
-      expect(result.error).toBe("No diff found for this workspace");
+      expect(await workspaceService.getLatestDiff(wsId)).toBeNull();
     });
 
     it("returns latest diff", async () => {
       createWorkspaceDiff(db, { workspaceId: wsId, diffText: "latest" });
 
-      const result = await workspaceService.getLatestDiff(wsId);
-      assertOk(result);
-      expect(result.data!.diffText).toBe("latest");
+      const result = (await workspaceService.getLatestDiff(wsId))!;
+      expect(result.diffText).toBe("latest");
     });
   });
 
   describe("getDiffByRun", () => {
     it("returns error when no diff for run", async () => {
-      const result = await workspaceService.getDiffByRun("nonexistent");
-      assertFail(result);
-      expect(result.error).toBe("No diff found for this run");
+      expect(await workspaceService.getDiffByRun("nonexistent")).toBeNull();
     });
 
     it("returns diff linked to run", async () => {
@@ -1347,9 +1251,8 @@ describe("workspaceService — diffs", () => {
         diffText: "run-diff",
       });
 
-      const result = await workspaceService.getDiffByRun(run.id);
-      assertOk(result);
-      expect(result.data!.diffText).toBe("run-diff");
+      const result = (await workspaceService.getDiffByRun(run.id))!;
+      expect(result.diffText).toBe("run-diff");
     });
   });
 
@@ -1360,14 +1263,12 @@ describe("workspaceService — diffs", () => {
         workspaceId: wsId,
         diffText: "new diff content",
       });
-
-      assertOk(result);
-      expect(result.data).toBe("new-diff");
+      expect(result).toBe("new-diff");
     });
 
     it("creates a diff with all optional fields", async () => {
       const run = createRun(db, { workspaceId: wsId });
-      const result = await workspaceService.createDiff({
+      await workspaceService.createDiff({
         id: "full-diff",
         workspaceId: wsId,
         runId: run.id,
@@ -1376,7 +1277,6 @@ describe("workspaceService — diffs", () => {
         filesJson: '["file.ts"]',
         statsJson: '{"insertions":5}',
       });
-      assertOk(result);
     });
   });
 
@@ -1385,40 +1285,28 @@ describe("workspaceService — diffs", () => {
       vi.spyOn(workspaceRepo, "findDiffsByWorkspace").mockRejectedValueOnce(
         new Error("db"),
       );
-      const result = await workspaceService.listDiffs("ws-1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to get workspace diffs");
+      await expect(workspaceService.listDiffs("ws-1")).rejects.toThrow("db");
     });
 
     it("getLatestDiff returns error on failure", async () => {
       vi.spyOn(workspaceRepo, "findLatestDiffByWorkspace").mockRejectedValueOnce(
         new Error("db"),
       );
-      const result = await workspaceService.getLatestDiff("ws-1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to get latest workspace diff");
+      await expect(workspaceService.getLatestDiff("ws-1")).rejects.toThrow("db");
     });
 
     it("getDiffByRun returns error on failure", async () => {
       vi.spyOn(workspaceRepo, "findDiffByRun").mockRejectedValueOnce(
         new Error("db"),
       );
-      const result = await workspaceService.getDiffByRun("r1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to get run diff");
+      await expect(workspaceService.getDiffByRun("r1")).rejects.toThrow("db");
     });
 
     it("createDiff returns error on failure", async () => {
       vi.spyOn(workspaceRepo, "insertDiff").mockRejectedValueOnce(
         new Error("db"),
       );
-      const result = await workspaceService.createDiff({
-        id: "x",
-        workspaceId: "ws-1",
-        diffText: "x",
-      });
-      assertFail(result);
-      expect(result.error).toBe("Failed to create workspace diff");
+      await expect(workspaceService.createDiff({ id: "x", workspaceId: "ws-1", diffText: "x", })).rejects.toThrow("db");
     });
   });
 });
@@ -1611,14 +1499,12 @@ describe("workspaceService — reviews", () => {
       createReview(db, { workspaceId: ws.id, title: "R2" });
 
       const result = await workspaceService.listReviews("ws-1");
-      assertOk(result);
-      expect(result.data!).toHaveLength(2);
+      expect(result).toHaveLength(2);
     });
 
     it("returns empty for workspace with no reviews", async () => {
       const result = await workspaceService.listReviews("ws-empty");
-      assertOk(result);
-      expect(result.data!).toEqual([]);
+      expect(result).toEqual([]);
     });
 
     it("does not return reviews from other workspaces", async () => {
@@ -1628,9 +1514,8 @@ describe("workspaceService — reviews", () => {
       createReview(db, { workspaceId: ws2.id, title: "R2" });
 
       const result = await workspaceService.listReviews("ws-1");
-      assertOk(result);
-      expect(result.data!).toHaveLength(1);
-      expect(result.data![0].title).toBe("R1");
+      expect(result).toHaveLength(1);
+      expect(result[0].title).toBe("R1");
     });
 
     it("respects the limit parameter", async () => {
@@ -1640,8 +1525,7 @@ describe("workspaceService — reviews", () => {
       createReview(db, { workspaceId: ws.id, title: "R3" });
 
       const result = await workspaceService.listReviews("ws-1", 2);
-      assertOk(result);
-      expect(result.data!).toHaveLength(2);
+      expect(result).toHaveLength(2);
     });
 
     it("returns error on repo failure", async () => {
@@ -1649,9 +1533,7 @@ describe("workspaceService — reviews", () => {
         new Error("DB error"),
       );
 
-      const result = await workspaceService.listReviews("ws-1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to get reviews");
+      await expect(workspaceService.listReviews("ws-1")).rejects.toThrow("DB error");
     });
   });
 
@@ -1659,10 +1541,9 @@ describe("workspaceService — reviews", () => {
     it("returns review when found", async () => {
       createReview(db, { id: "r-1", title: "Test" });
 
-      const result = await workspaceService.getReview("r-1");
-      assertOk(result);
-      expect(result.data!.title).toBe("Test");
-      expect(result.data!.id).toBe("r-1");
+      const result = (await workspaceService.getReview("r-1"))!;
+      expect(result.title).toBe("Test");
+      expect(result.id).toBe("r-1");
     });
 
     it("returns all fields correctly", async () => {
@@ -1678,22 +1559,19 @@ describe("workspaceService — reviews", () => {
         metadata: JSON.stringify({ key: "value" }),
       });
 
-      const result = await workspaceService.getReview("r-1");
-      assertOk(result);
-      expect(result.data!.workspaceId).toBe("ws-1");
-      expect(result.data!.title).toBe("Full Review");
-      expect(result.data!.summary).toBe("A summary");
-      expect(result.data!.status).toBe("in_review");
-      expect(result.data!.runId).toBe("run-1");
-      expect(result.data!.metadata).toEqual({ key: "value" });
-      expect(result.data!.createdAt).toBeInstanceOf(Date);
-      expect(result.data!.updatedAt).toBeInstanceOf(Date);
+      const result = (await workspaceService.getReview("r-1"))!;
+      expect(result.workspaceId).toBe("ws-1");
+      expect(result.title).toBe("Full Review");
+      expect(result.summary).toBe("A summary");
+      expect(result.status).toBe("in_review");
+      expect(result.runId).toBe("run-1");
+      expect(result.metadata).toEqual({ key: "value" });
+      expect(result.createdAt).toBeInstanceOf(Date);
+      expect(result.updatedAt).toBeInstanceOf(Date);
     });
 
     it("returns error when not found", async () => {
-      const result = await workspaceService.getReview("nonexistent");
-      assertFail(result);
-      expect(result.error).toBe("Review not found");
+      expect(await workspaceService.getReview("nonexistent")).toBeNull();
     });
 
     it("returns error on repo failure", async () => {
@@ -1701,9 +1579,7 @@ describe("workspaceService — reviews", () => {
         new Error("DB error"),
       );
 
-      const result = await workspaceService.getReview("r-1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to get review");
+      await expect(workspaceService.getReview("r-1")).rejects.toThrow("DB error");
     });
   });
 
@@ -1712,8 +1588,7 @@ describe("workspaceService — reviews", () => {
       const result = await workspaceService.createReview({
         title: "New Review",
       });
-      assertOk(result);
-      expect(typeof result.data!).toBe("string");
+      expect(typeof result).toBe("string");
     });
 
     it("creates review with all fields", async () => {
@@ -1727,16 +1602,14 @@ describe("workspaceService — reviews", () => {
         workspaceId: ws.id,
         metadata: { key: "value" },
       });
-      assertOk(result);
 
-      const fetched = await workspaceService.getReview(result.data!);
-      assertOk(fetched);
-      expect(fetched.data!.title).toBe("Full Review");
-      expect(fetched.data!.summary).toBe("A summary");
-      expect(fetched.data!.status).toBe("in_review");
-      expect(fetched.data!.runId).toBe("run-1");
-      expect(fetched.data!.workspaceId).toBe("ws-1");
-      expect(fetched.data!.metadata).toEqual({ key: "value" });
+      const fetched = (await workspaceService.getReview(result))!;
+      expect(fetched.title).toBe("Full Review");
+      expect(fetched.summary).toBe("A summary");
+      expect(fetched.status).toBe("in_review");
+      expect(fetched.runId).toBe("run-1");
+      expect(fetched.workspaceId).toBe("ws-1");
+      expect(fetched.metadata).toEqual({ key: "value" });
     });
 
     it("creates review with custom id", async () => {
@@ -1744,19 +1617,16 @@ describe("workspaceService — reviews", () => {
         id: "custom-id",
         title: "Custom ID Review",
       });
-      assertOk(result);
-      expect(result.data!).toBe("custom-id");
+      expect(result).toBe("custom-id");
     });
 
     it("defaults status to open", async () => {
       const result = await workspaceService.createReview({
         title: "Default Status",
       });
-      assertOk(result);
 
-      const fetched = await workspaceService.getReview(result.data);
-      assertOk(fetched);
-      expect(fetched.data.status).toBe("open");
+      const fetched = (await workspaceService.getReview(result))!;
+      expect(fetched.status).toBe("open");
     });
 
     it("returns error on repo failure", async () => {
@@ -1764,9 +1634,7 @@ describe("workspaceService — reviews", () => {
         new Error("DB error"),
       );
 
-      const result = await workspaceService.createReview({ title: "Fail" });
-      assertFail(result);
-      expect(result.error).toBe("Failed to create review");
+      await expect(workspaceService.createReview({ title: "Fail" })).rejects.toThrow("DB error");
     });
   });
 
@@ -1777,8 +1645,7 @@ describe("workspaceService — reviews", () => {
       const result = await workspaceService.updateReview("r-1", {
         title: "New",
       });
-      assertOk(result);
-      expect(result.data!.title).toBe("New");
+      expect(result.title).toBe("New");
     });
 
     it("updates review status", async () => {
@@ -1787,8 +1654,7 @@ describe("workspaceService — reviews", () => {
       const result = await workspaceService.updateReview("r-1", {
         status: "approved",
       });
-      assertOk(result);
-      expect(result.data!.status).toBe("approved");
+      expect(result.status).toBe("approved");
     });
 
     it("updates review summary", async () => {
@@ -1797,8 +1663,7 @@ describe("workspaceService — reviews", () => {
       const result = await workspaceService.updateReview("r-1", {
         summary: "New summary",
       });
-      assertOk(result);
-      expect(result.data!.summary).toBe("New summary");
+      expect(result.summary).toBe("New summary");
     });
 
     it("updates review metadata", async () => {
@@ -1807,8 +1672,7 @@ describe("workspaceService — reviews", () => {
       const result = await workspaceService.updateReview("r-1", {
         metadata: { score: 42 },
       });
-      assertOk(result);
-      expect(result.data!.metadata).toEqual({ score: 42 });
+      expect(result.metadata).toEqual({ score: 42 });
     });
 
     it("updates review runId", async () => {
@@ -1818,8 +1682,7 @@ describe("workspaceService — reviews", () => {
       const result = await workspaceService.updateReview("r-1", {
         runId: run.id,
       });
-      assertOk(result);
-      expect(result.data!.runId).toBe("run-1");
+      expect(result.runId).toBe("run-1");
     });
 
     it("updates multiple fields at once", async () => {
@@ -1830,18 +1693,13 @@ describe("workspaceService — reviews", () => {
         status: "rejected",
         summary: "Updated summary",
       });
-      assertOk(result);
-      expect(result.data!.title).toBe("New");
-      expect(result.data!.status).toBe("rejected");
-      expect(result.data!.summary).toBe("Updated summary");
+      expect(result.title).toBe("New");
+      expect(result.status).toBe("rejected");
+      expect(result.summary).toBe("Updated summary");
     });
 
     it("returns error when review not found", async () => {
-      const result = await workspaceService.updateReview("nonexistent", {
-        title: "X",
-      });
-      assertFail(result);
-      expect(result.error).toBe("Review not found");
+      await expect(workspaceService.updateReview("nonexistent", { title: "X", })).rejects.toThrow("Review not found");
     });
 
     it("returns error on repo failure", async () => {
@@ -1849,11 +1707,7 @@ describe("workspaceService — reviews", () => {
         new Error("DB error"),
       );
 
-      const result = await workspaceService.updateReview("r-1", {
-        title: "Fail",
-      });
-      assertFail(result);
-      expect(result.error).toBe("Failed to update review");
+      await expect(workspaceService.updateReview("r-1", { title: "Fail", })).rejects.toThrow("DB error");
     });
   });
 
@@ -1861,17 +1715,13 @@ describe("workspaceService — reviews", () => {
     it("deletes a review", async () => {
       createReview(db, { id: "r-1" });
 
-      const result = await workspaceService.deleteReview("r-1");
-      assertOk(result);
+      await workspaceService.deleteReview("r-1");
 
-      const fetched = await workspaceService.getReview("r-1");
-      assertFail(fetched);
-      expect(fetched.error).toBe("Review not found");
+      expect(await workspaceService.getReview("r-1")).toBeNull();
     });
 
     it("succeeds even when review does not exist", async () => {
-      const result = await workspaceService.deleteReview("nonexistent");
-      assertOk(result);
+      await workspaceService.deleteReview("nonexistent");
     });
 
     it("returns error on repo failure", async () => {
@@ -1879,9 +1729,7 @@ describe("workspaceService — reviews", () => {
         new Error("DB error"),
       );
 
-      const result = await workspaceService.deleteReview("r-1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to delete review");
+      await expect(workspaceService.deleteReview("r-1")).rejects.toThrow("DB error");
     });
   });
 });
@@ -2105,9 +1953,8 @@ describe("workspaceService — findings", () => {
       createReviewFinding(db, { reviewId: review.id, file: "a.ts" });
 
       const result = await workspaceService.listFindingsByWorkspace("ws-1");
-      assertOk(result);
-      expect(result.data!).toHaveLength(1);
-      expect(result.data![0].file).toBe("a.ts");
+      expect(result).toHaveLength(1);
+      expect(result[0].file).toBe("a.ts");
     });
 
     it("returns findings from multiple files across same review", async () => {
@@ -2118,8 +1965,7 @@ describe("workspaceService — findings", () => {
       createReviewFinding(db, { reviewId: review.id, file: "c.ts" });
 
       const result = await workspaceService.listFindingsByWorkspace("ws-1");
-      assertOk(result);
-      expect(result.data!).toHaveLength(3);
+      expect(result).toHaveLength(3);
     });
 
     it("keeps only findings from most recent review per file", async () => {
@@ -2140,8 +1986,7 @@ describe("workspaceService — findings", () => {
       });
 
       const result = await workspaceService.listFindingsByWorkspace("ws-1");
-      assertOk(result);
-      expect(result.data!.length).toBeGreaterThanOrEqual(1);
+      expect(result.length).toBeGreaterThanOrEqual(1);
     });
 
     it("keeps findings from different files across reviews", async () => {
@@ -2153,15 +1998,13 @@ describe("workspaceService — findings", () => {
       createReviewFinding(db, { reviewId: review2.id, file: "b.ts" });
 
       const result = await workspaceService.listFindingsByWorkspace("ws-1");
-      assertOk(result);
-      expect(result.data!).toHaveLength(2);
+      expect(result).toHaveLength(2);
     });
 
     it("returns empty for workspace with no findings", async () => {
       const result =
         await workspaceService.listFindingsByWorkspace("ws-empty");
-      assertOk(result);
-      expect(result.data!).toEqual([]);
+      expect(result).toEqual([]);
     });
 
     it("strips reviewCreatedAt from response", async () => {
@@ -2170,8 +2013,7 @@ describe("workspaceService — findings", () => {
       createReviewFinding(db, { reviewId: review.id, file: "a.ts" });
 
       const result = await workspaceService.listFindingsByWorkspace("ws-1");
-      assertOk(result);
-      const finding = result.data![0];
+      const finding = result[0];
       expect(finding).not.toHaveProperty("reviewCreatedAt");
       expect(finding).toHaveProperty("id");
       expect(finding).toHaveProperty("reviewId");
@@ -2187,9 +2029,8 @@ describe("workspaceService — findings", () => {
       createReviewFinding(db, { reviewId: review2.id, file: "b.ts" });
 
       const result = await workspaceService.listFindingsByWorkspace("ws-1");
-      assertOk(result);
-      expect(result.data!).toHaveLength(1);
-      expect(result.data![0].file).toBe("a.ts");
+      expect(result).toHaveLength(1);
+      expect(result[0].file).toBe("a.ts");
     });
   });
 
@@ -2199,8 +2040,7 @@ describe("workspaceService — findings", () => {
       createReviewFinding(db, { reviewId: review.id });
 
       const result = await workspaceService.listFindings("r-1");
-      assertOk(result);
-      expect(result.data!).toHaveLength(1);
+      expect(result).toHaveLength(1);
     });
 
     it("returns multiple findings for a review", async () => {
@@ -2210,8 +2050,7 @@ describe("workspaceService — findings", () => {
       createReviewFinding(db, { reviewId: review.id, file: "c.ts" });
 
       const result = await workspaceService.listFindings("r-1");
-      assertOk(result);
-      expect(result.data!).toHaveLength(3);
+      expect(result).toHaveLength(3);
     });
 
     it("respects the limit parameter", async () => {
@@ -2221,14 +2060,12 @@ describe("workspaceService — findings", () => {
       createReviewFinding(db, { reviewId: review.id, file: "c.ts" });
 
       const result = await workspaceService.listFindings("r-1", 2);
-      assertOk(result);
-      expect(result.data!).toHaveLength(2);
+      expect(result).toHaveLength(2);
     });
 
     it("returns empty for review with no findings", async () => {
       const result = await workspaceService.listFindings("r-empty");
-      assertOk(result);
-      expect(result.data!).toEqual([]);
+      expect(result).toEqual([]);
     });
   });
 
@@ -2241,9 +2078,8 @@ describe("workspaceService — findings", () => {
         message: "Test",
       });
 
-      const result = await workspaceService.getFinding("f-1");
-      assertOk(result);
-      expect(result.data!.message).toBe("Test");
+      const result = (await workspaceService.getFinding("f-1"))!;
+      expect(result.message).toBe("Test");
     });
 
     it("returns all finding fields correctly", async () => {
@@ -2262,9 +2098,8 @@ describe("workspaceService — findings", () => {
         metadata: JSON.stringify({ category: "security" }),
       });
 
-      const result = await workspaceService.getFinding("f-full");
-      assertOk(result);
-      const finding = result.data!;
+      const result = (await workspaceService.getFinding("f-full"))!;
+      const finding = result;
       expect(finding.id).toBe("f-full");
       expect(finding.reviewId).toBe("r-1");
       expect(finding.severity).toBe("critical");
@@ -2280,9 +2115,7 @@ describe("workspaceService — findings", () => {
     });
 
     it("returns error when not found", async () => {
-      const result = await workspaceService.getFinding("nonexistent");
-      assertFail(result);
-      expect(result.error).toBe("Review finding not found");
+      expect(await workspaceService.getFinding("nonexistent")).toBeNull();
     });
   });
 
@@ -2296,13 +2129,11 @@ describe("workspaceService — findings", () => {
         message: "Issue",
         reason: "Bug",
       });
-      assertOk(result);
-      expect(typeof result.data!).toBe("string");
+      expect(typeof result).toBe("string");
 
-      const fetched = await workspaceService.getFinding(result.data!);
-      assertOk(fetched);
-      expect(fetched.data!.file).toBe("app.ts");
-      expect(fetched.data!.severity).toBe("warning");
+      const fetched = (await workspaceService.getFinding(result))!;
+      expect(fetched.file).toBe("app.ts");
+      expect(fetched.severity).toBe("warning");
     });
 
     it("creates a finding with all optional fields", async () => {
@@ -2320,16 +2151,14 @@ describe("workspaceService — findings", () => {
         validated: true,
         metadata: { tool: "linter" },
       });
-      assertOk(result);
-      expect(result.data!).toBe("custom-id");
+      expect(result).toBe("custom-id");
 
-      const fetched = await workspaceService.getFinding("custom-id");
-      assertOk(fetched);
-      expect(fetched.data!.lineStart).toBe(5);
-      expect(fetched.data!.lineEnd).toBe(15);
-      expect(fetched.data!.suggestion).toBe("Fix the condition");
-      expect(fetched.data!.validated).toBe(true);
-      expect(fetched.data!.metadata).toEqual({ tool: "linter" });
+      const fetched = (await workspaceService.getFinding("custom-id"))!;
+      expect(fetched.lineStart).toBe(5);
+      expect(fetched.lineEnd).toBe(15);
+      expect(fetched.suggestion).toBe("Fix the condition");
+      expect(fetched.validated).toBe(true);
+      expect(fetched.metadata).toEqual({ tool: "linter" });
     });
 
     it("creates a finding with defaults for optional fields", async () => {
@@ -2341,15 +2170,13 @@ describe("workspaceService — findings", () => {
         message: "Minor note",
         reason: "Style",
       });
-      assertOk(result);
 
-      const fetched = await workspaceService.getFinding(result.data!);
-      assertOk(fetched);
-      expect(fetched.data!.validated).toBe(false);
-      expect(fetched.data!.lineStart).toBeNull();
-      expect(fetched.data!.lineEnd).toBeNull();
-      expect(fetched.data!.suggestion).toBeNull();
-      expect(fetched.data!.metadata).toBeNull();
+      const fetched = (await workspaceService.getFinding(result))!;
+      expect(fetched.validated).toBe(false);
+      expect(fetched.lineStart).toBeNull();
+      expect(fetched.lineEnd).toBeNull();
+      expect(fetched.suggestion).toBeNull();
+      expect(fetched.metadata).toBeNull();
     });
   });
 
@@ -2372,8 +2199,7 @@ describe("workspaceService — findings", () => {
           reason: "R2",
         },
       ]);
-      assertOk(result);
-      expect(result.data!).toHaveLength(2);
+      expect(result).toHaveLength(2);
     });
 
     it("returns the correct ids for created findings", async () => {
@@ -2396,20 +2222,17 @@ describe("workspaceService — findings", () => {
           reason: "R2",
         },
       ]);
-      assertOk(result);
-      expect(result.data!).toEqual(["id-a", "id-b"]);
+      expect(result).toEqual(["id-a", "id-b"]);
 
       const a = await workspaceService.getFinding("id-a");
       const b = await workspaceService.getFinding("id-b");
-      assertOk(a);
-      assertOk(b);
-      expect(a.data!.file).toBe("a.ts");
-      expect(b.data!.file).toBe("b.ts");
+      expect(a?.file).toBe("a.ts");
+      expect(b?.file).toBe("b.ts");
     });
 
     it("creates findings with metadata", async () => {
       const review = createReview(db, { id: "r-1" });
-      const result = await workspaceService.createManyFindings([
+      await workspaceService.createManyFindings([
         {
           id: "id-meta",
           reviewId: review.id,
@@ -2420,11 +2243,9 @@ describe("workspaceService — findings", () => {
           metadata: { source: "ai" },
         },
       ]);
-      assertOk(result);
 
-      const fetched = await workspaceService.getFinding("id-meta");
-      assertOk(fetched);
-      expect(fetched.data.metadata).toEqual({ source: "ai" });
+      const fetched = (await workspaceService.getFinding("id-meta"))!;
+      expect(fetched.metadata).toEqual({ source: "ai" });
     });
   });
 
@@ -2440,8 +2261,7 @@ describe("workspaceService — findings", () => {
       const result = await workspaceService.updateFinding("f-1", {
         severity: "critical",
       });
-      assertOk(result);
-      expect(result.data!.severity).toBe("critical");
+      expect(result.severity).toBe("critical");
     });
 
     it("updates multiple fields at once", async () => {
@@ -2463,14 +2283,13 @@ describe("workspaceService — findings", () => {
         suggestion: "Try this instead",
         validated: true,
       });
-      assertOk(result);
-      expect(result.data!.severity).toBe("warning");
-      expect(result.data!.file).toBe("new.ts");
-      expect(result.data!.message).toBe("new message");
-      expect(result.data!.lineStart).toBe(42);
-      expect(result.data!.lineEnd).toBe(50);
-      expect(result.data!.suggestion).toBe("Try this instead");
-      expect(result.data!.validated).toBe(true);
+      expect(result.severity).toBe("warning");
+      expect(result.file).toBe("new.ts");
+      expect(result.message).toBe("new message");
+      expect(result.lineStart).toBe(42);
+      expect(result.lineEnd).toBe(50);
+      expect(result.suggestion).toBe("Try this instead");
+      expect(result.validated).toBe(true);
     });
 
     it("updates metadata", async () => {
@@ -2483,8 +2302,7 @@ describe("workspaceService — findings", () => {
       const result = await workspaceService.updateFinding("f-1", {
         metadata: { reviewed: true, score: 95 },
       });
-      assertOk(result);
-      expect(result.data!.metadata).toEqual({ reviewed: true, score: 95 });
+      expect(result.metadata).toEqual({ reviewed: true, score: 95 });
     });
 
     it("clears metadata when set to null", async () => {
@@ -2498,8 +2316,7 @@ describe("workspaceService — findings", () => {
       const result = await workspaceService.updateFinding("f-1", {
         metadata: null,
       });
-      assertOk(result);
-      expect(result.data!.metadata).toBeNull();
+      expect(result.metadata).toBeNull();
     });
 
     it("returns finding unchanged when payload is empty", async () => {
@@ -2512,17 +2329,12 @@ describe("workspaceService — findings", () => {
       });
 
       const result = await workspaceService.updateFinding("f-1", {});
-      assertOk(result);
-      expect(result.data!.severity).toBe("warning");
-      expect(result.data!.message).toBe("unchanged");
+      expect(result.severity).toBe("warning");
+      expect(result.message).toBe("unchanged");
     });
 
     it("returns error when not found", async () => {
-      const result = await workspaceService.updateFinding("nonexistent", {
-        severity: "info",
-      });
-      assertFail(result);
-      expect(result.error).toBe("Review finding not found");
+      await expect(workspaceService.updateFinding("nonexistent", { severity: "info", })).rejects.toThrow("Review finding not found");
     });
   });
 
@@ -2531,17 +2343,13 @@ describe("workspaceService — findings", () => {
       const review = createReview(db, { id: "r-1" });
       createReviewFinding(db, { id: "f-1", reviewId: review.id });
 
-      const result = await workspaceService.deleteFinding("f-1");
-      assertOk(result);
+      await workspaceService.deleteFinding("f-1");
 
-      const fetched = await workspaceService.getFinding("f-1");
-      assertFail(fetched);
-      expect(fetched.error).toBe("Review finding not found");
+      expect(await workspaceService.getFinding("f-1")).toBeNull();
     });
 
     it("succeeds even when finding does not exist", async () => {
-      const result = await workspaceService.deleteFinding("nonexistent");
-      assertOk(result);
+      await workspaceService.deleteFinding("nonexistent");
     });
   });
 
@@ -2550,79 +2358,49 @@ describe("workspaceService — findings", () => {
       vi.spyOn(workspaceRepo, "findFindingsByWorkspace").mockRejectedValueOnce(
         new Error("db"),
       );
-      const result = await workspaceService.listFindingsByWorkspace("ws-1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to get workspace findings");
+      await expect(workspaceService.listFindingsByWorkspace("ws-1")).rejects.toThrow("db");
     });
 
     it("listFindings returns error on failure", async () => {
       vi.spyOn(workspaceRepo, "findFindingsByReview").mockRejectedValueOnce(
         new Error("db"),
       );
-      const result = await workspaceService.listFindings("r-1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to get review findings");
+      await expect(workspaceService.listFindings("r-1")).rejects.toThrow("db");
     });
 
     it("getFinding returns error on failure", async () => {
       vi.spyOn(workspaceRepo, "findFindingById").mockRejectedValueOnce(
         new Error("db"),
       );
-      const result = await workspaceService.getFinding("f-1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to get review finding");
+      await expect(workspaceService.getFinding("f-1")).rejects.toThrow("db");
     });
 
     it("createFinding returns error on failure", async () => {
       vi.spyOn(workspaceRepo, "insertFinding").mockRejectedValueOnce(
         new Error("db"),
       );
-      const result = await workspaceService.createFinding({
-        reviewId: "r-1",
-        severity: "info",
-        file: "a.ts",
-        message: "m",
-        reason: "r",
-      });
-      assertFail(result);
-      expect(result.error).toBe("Failed to create review finding");
+      await expect(workspaceService.createFinding({ reviewId: "r-1", severity: "info", file: "a.ts", message: "m", reason: "r", })).rejects.toThrow("db");
     });
 
     it("createManyFindings returns error on failure", async () => {
       vi.spyOn(workspaceRepo, "insertManyFindings").mockRejectedValueOnce(
         new Error("db"),
       );
-      const result = await workspaceService.createManyFindings([
-        {
-          reviewId: "r-1",
-          severity: "info",
-          file: "a.ts",
-          message: "m",
-          reason: "r",
-        },
-      ]);
-      assertFail(result);
-      expect(result.error).toBe("Failed to create review findings");
+      await expect(workspaceService.createManyFindings([ { reviewId: "r-1", severity: "info", file: "a.ts", message: "m", reason: "r", }, ])).rejects.toThrow("db");
     });
 
     it("updateFinding returns error on failure", async () => {
       vi.spyOn(workspaceRepo, "updateFinding").mockRejectedValueOnce(
         new Error("db"),
       );
-      const result = await workspaceService.updateFinding("f-1", {
-        severity: "info",
-      });
-      assertFail(result);
-      expect(result.error).toBe("Failed to update review finding");
+      await expect(workspaceService.updateFinding("f-1", { severity: "info", })).rejects.toThrow("db");
     });
 
     it("deleteFinding returns error on failure", async () => {
       vi.spyOn(workspaceRepo, "deleteFinding").mockRejectedValueOnce(
         new Error("db"),
       );
-      const result = await workspaceService.deleteFinding("f-1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to delete review finding");
+      await expect(workspaceService.deleteFinding("f-1")).rejects.toThrow("db");
     });
   });
 });
@@ -2681,16 +2459,14 @@ describe("workspaceService — createFromSource (workspace intake)", () => {
       accountId: "default",
       source: { kind: "folder", path: "/repos/bar" },
     });
-
-    assertOk(result);
     // Ordering: project resolved first, so the worktree could be named after it.
     expect(gitMock.importLocalRepo).toHaveBeenCalledWith("/repos/bar", "bar");
     const projects = await projectsRepo.findAll();
     expect(projects).toHaveLength(1);
     expect(projects[0].workspacesPath).toBe("/work/worktrees/bar");
-    expect(result.data.rootPath).toBe("/work/worktrees/bar/apple");
-    expect(result.data.projectId).toBe(projects[0].id);
-    expect(result.data.metadata?.worktree).toEqual({
+    expect(result.rootPath).toBe("/work/worktrees/bar/apple");
+    expect(result.projectId).toBe(projects[0].id);
+    expect(result.metadata?.worktree).toEqual({
       enabled: true,
       name: "apple",
       path: "/work/worktrees/bar/apple",
@@ -2715,11 +2491,9 @@ describe("workspaceService — createFromSource (workspace intake)", () => {
       accountId: "default",
       source: { kind: "folder", path: "/repos/baz" },
     });
-
-    assertOk(result);
     expect(gitMock.importLocalRepo).not.toHaveBeenCalled();
-    expect(result.data.rootPath).toBe("/repos/baz");
-    expect(result.data.metadata?.worktree).toEqual({ enabled: false });
+    expect(result.rootPath).toBe("/repos/baz");
+    expect(result.metadata?.worktree).toEqual({ enabled: false });
     const projects = await projectsRepo.findAll();
     expect(projects[0].workspacesPath).toBeNull();
   });
@@ -2749,15 +2523,13 @@ describe("workspaceService — createFromSource (workspace intake)", () => {
         targetPath: "/clones",
       },
     });
-
-    assertOk(result);
     expect(gitMock.cloneRepo).toHaveBeenCalledWith(
       "https://github.com/foo/qux.git",
       "/clones",
     );
     expect(gitMock.importLocalRepoDirect).toHaveBeenCalledWith("/clones/qux");
-    expect(result.data.name).toBe("qux");
-    expect(result.data.rootPath).toBe("/clones/qux");
+    expect(result.name).toBe("qux");
+    expect(result.rootPath).toBe("/clones/qux");
   });
 
   it("init: fresh repo — always direct, no import, no origin", async () => {
@@ -2771,14 +2543,12 @@ describe("workspaceService — createFromSource (workspace intake)", () => {
       accountId: "default",
       source: { kind: "init", name: "newproj" },
     });
-
-    assertOk(result);
     expect(gitMock.importLocalRepo).not.toHaveBeenCalled();
     expect(gitMock.importLocalRepoDirect).not.toHaveBeenCalled();
-    expect(result.data.rootPath).toBe("/desktop/newproj");
-    expect(result.data.defaultBranch).toBe("main");
-    expect(result.data.metadata?.worktree).toEqual({ enabled: false });
-    expect(result.data.metadata?.origin).toBeUndefined();
+    expect(result.rootPath).toBe("/desktop/newproj");
+    expect(result.defaultBranch).toBe("main");
+    expect(result.metadata?.worktree).toEqual({ enabled: false });
+    expect(result.metadata?.origin).toBeUndefined();
     const projects = await projectsRepo.findAll();
     expect(projects[0].branches).toEqual(["main"]);
   });
@@ -2803,12 +2573,9 @@ describe("workspaceService — createFromSource (workspace intake)", () => {
       accountId: "default",
       source: { kind: "folder", path: "/repos/dup-2" },
     });
-
-    assertOk(a);
-    assertOk(b);
     const projects = await projectsRepo.findAll();
     expect(projects).toHaveLength(1); // same normalized origin → one project
-    expect(a.data.projectId).toBe(b.data.projectId);
+    expect(a.projectId).toBe(b.projectId);
   });
 
   it("surfaces the git error message when the import fails", async () => {
@@ -2817,13 +2584,12 @@ describe("workspaceService — createFromSource (workspace intake)", () => {
       new Error("Not a git repository"),
     );
 
-    const result = await workspaceService.createFromSource({
-      accountId: "default",
-      source: { kind: "folder", path: "/repos/nope" },
-    });
-
-    assertFail(result);
-    expect(result.error).toBe("Not a git repository");
+    await expect(
+      workspaceService.createFromSource({
+        accountId: "default",
+        source: { kind: "folder", path: "/repos/nope" },
+      }),
+    ).rejects.toThrow("Not a git repository");
   });
 
   it("worktree: an additional worktree workspace for an existing project", async () => {
@@ -2849,12 +2615,10 @@ describe("workspaceService — createFromSource (workspace intake)", () => {
       accountId: "default",
       source: { kind: "worktree", projectId: project.id },
     });
-
-    assertOk(result);
     expect(gitMock.importLocalRepo).toHaveBeenCalledWith("/repos/bar", "bar");
-    expect(result.data.projectId).toBe("p-wt");
-    expect(result.data.rootPath).toBe("/work/worktrees/bar/cherry-ab12");
-    expect(result.data.metadata?.worktree).toEqual({
+    expect(result.projectId).toBe("p-wt");
+    expect(result.rootPath).toBe("/work/worktrees/bar/cherry-ab12");
+    expect(result.metadata?.worktree).toEqual({
       enabled: true,
       name: "cherry-ab12",
       path: "/work/worktrees/bar/cherry-ab12",
@@ -2867,12 +2631,7 @@ describe("workspaceService — createFromSource (workspace intake)", () => {
   });
 
   it("worktree: fails when the project does not exist", async () => {
-    const result = await workspaceService.createFromSource({
-      accountId: "default",
-      source: { kind: "worktree", projectId: "missing" },
-    });
-    assertFail(result);
-    expect(result.error).toBe("Project not found");
+    await expect(workspaceService.createFromSource({ accountId: "default", source: { kind: "worktree", projectId: "missing" }, })).rejects.toThrow("Project not found");
   });
 });
 

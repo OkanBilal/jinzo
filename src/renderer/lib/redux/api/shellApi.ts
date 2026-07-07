@@ -23,7 +23,6 @@ export const shellApi = baseApi.injectEndpoints({
       query: () => ({
         handler: CHANNELS.shell.getInstalledApps,
       }),
-      transformResponse: (response: any) => response.success ? response.data : [],
       providesTags: ['InstalledApps'],
       keepUnusedDataFor: 3600,
     }),
@@ -32,8 +31,6 @@ export const shellApi = baseApi.injectEndpoints({
         handler: CHANNELS.shell.getAppsForFile,
         args: [filePath],
       }),
-      transformResponse: (response: any) =>
-        response?.success && Array.isArray(response.data) ? response.data : [],
       providesTags: (_result, _err, filePath) => [{ type: 'AppsForFile' as const, id: filePath }],
       keepUnusedDataFor: 300,
     }),

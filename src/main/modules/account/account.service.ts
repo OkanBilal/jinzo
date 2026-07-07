@@ -1,4 +1,3 @@
-import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import { ACCOUNT_ID } from "./account.constants";
 import { accountRepo } from "./account.repo";
 import { validateUpdatePayload } from "./account.validation";
@@ -6,11 +5,14 @@ import {
   formatAccountResponse,
   type AccountRecord,
   type AccountResponse,
-  type ServiceResponse,
 } from "./account.dto";
 
 // ─────────────────────────────────────────────────────────────
 // Service - Business Logic
+//
+// Throw-style: methods return plain values and throw on failure; the
+// ServiceResponse envelope is applied by handle() at the IPC seam.
+// See CONTEXT.md "handle".
 // ─────────────────────────────────────────────────────────────
 export const accountService = {
   /**
@@ -37,42 +39,32 @@ export const accountService = {
   /**
    * Gets the current account
    */
-  async getAccount(): Promise<ServiceResponse<AccountResponse>> {
-    try {
-      const account = await this.ensureAccount();
-      return ok(formatAccountResponse(account));
-    } catch (error) {
-      console.error("Failed to fetch account:", error);
-      return fail("Failed to fetch account");
-    }
+  async getAccount(): Promise<AccountResponse> {
+    return formatAccountResponse(await this.ensureAccount());
   },
 
   /**
    * Updates the current account
    */
-  async updateAccount(payload: unknown): Promise<ServiceResponse<AccountResponse>> {
-    try {
-      const { data, errors } = validateUpdatePayload(payload);
+  async updateAccount(payload: unknown): Promise<AccountResponse> {
+    const { data, errors } = validateUpdatePayload(payload);
 
-      if (Object.keys(errors).length > 0) {
-        const message = Object.entries(errors)
+    if (Object.keys(errors).length > 0) {
+      throw new Error(
+        Object.entries(errors)
           .map(([field, msg]) => `${field}: ${msg}`)
-          .join("; ");
-        return fail(message);
-      }
-
-      if (Object.keys(data).length === 0) {
-        return fail("No fields to update");
-      }
-
-      await this.ensureAccount();
-
-      const updated = await accountRepo.update(ACCOUNT_ID, data);
-
-      return ok(formatAccountResponse(updated));
-    } catch (error) {
-      console.error("Failed to update account:", error);
-      return fail("Failed to update account");
+          .join("; "),
+      );
     }
+
+    if (Object.keys(data).length === 0) {
+      throw new Error("No fields to update");
+    }
+
+    await this.ensureAccount();
+
+    const updated = await accountRepo.update(ACCOUNT_ID, data);
+
+    return formatAccountResponse(updated);
   },
 };

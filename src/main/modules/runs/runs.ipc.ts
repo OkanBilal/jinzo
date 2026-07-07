@@ -1,4 +1,5 @@
 import { ipcMain } from "../../ipc-kit/ipc-main";
+import { handle } from "../../ipc-kit/handle";
 import { ok } from "../../../shared/ipc-kit/service-response";
 import { runsService } from "./runs.service";
 import type {
@@ -23,132 +24,155 @@ import { CHANNELS } from "../../../shared/ipc-kit/channels";
 // ─────────────────────────────────────────────────────────────
 export function registerRunsIpc(): void {
   // Runs
-  ipcMain.handle(CHANNELS.runs.getAll, async (_, limit?: number) => {
-    return runsService.getAllRuns(limit);
-  });
+  ipcMain.handle(
+    CHANNELS.runs.getAll,
+    handle((limit?: number) => runsService.getAllRuns(limit)),
+  );
 
-  ipcMain.handle(CHANNELS.runs.getById, async (_, id: string) => {
-    return runsService.getRunById(id);
-  });
+  ipcMain.handle(
+    CHANNELS.runs.getById,
+    handle((id: string) => runsService.getRunById(id)),
+  );
 
-  ipcMain.handle(CHANNELS.runs.getByAccount, async (_, accountId: string, limit?: number) => {
-    return runsService.getRunsByAccount(accountId, limit);
-  });
+  ipcMain.handle(
+    CHANNELS.runs.getByAccount,
+    handle((accountId: string, limit?: number) => runsService.getRunsByAccount(accountId, limit)),
+  );
 
-  ipcMain.handle(CHANNELS.runs.getByWorkspace, async (_, workspaceId: string, limit?: number) => {
-    return runsService.getRunsByWorkspace(workspaceId, limit);
-  });
+  ipcMain.handle(
+    CHANNELS.runs.getByWorkspace,
+    handle((workspaceId: string, limit?: number) => runsService.getRunsByWorkspace(workspaceId, limit)),
+  );
 
-  ipcMain.handle(CHANNELS.runs.getByStatus, async (_, accountId: string, status: RunStatus) => {
-    return runsService.getRunsByStatus(accountId, status);
-  });
+  ipcMain.handle(
+    CHANNELS.runs.getByStatus,
+    handle((accountId: string, status: RunStatus) => runsService.getRunsByStatus(accountId, status)),
+  );
 
-  ipcMain.handle(CHANNELS.runs.create, async (_, payload: CreateRunPayload) => {
-    return runsService.createRun(payload);
-  });
+  ipcMain.handle(
+    CHANNELS.runs.create,
+    handle((payload: CreateRunPayload) => runsService.createRun(payload)),
+  );
 
-  ipcMain.handle(CHANNELS.runs.update, async (_, id: string, payload: UpdateRunPayload) => {
-    return runsService.updateRun(id, payload);
-  });
+  ipcMain.handle(
+    CHANNELS.runs.update,
+    handle((id: string, payload: UpdateRunPayload) => runsService.updateRun(id, payload)),
+  );
 
-  ipcMain.handle(CHANNELS.runs.start, async (_, id: string) => {
-    return runsService.startRun(id);
-  });
+  ipcMain.handle(
+    CHANNELS.runs.start,
+    handle((id: string) => runsService.startRun(id)),
+  );
 
-  ipcMain.handle(CHANNELS.runs.complete, async (_, id: string) => {
-    return runsService.completeRun(id);
-  });
+  ipcMain.handle(
+    CHANNELS.runs.complete,
+    handle((id: string) => runsService.completeRun(id)),
+  );
 
-  ipcMain.handle(CHANNELS.runs.fail, async (_, id: string, error: string) => {
-    return runsService.failRun(id, error);
-  });
+  ipcMain.handle(
+    CHANNELS.runs.fail,
+    handle((id: string, error: string) => runsService.failRun(id, error)),
+  );
 
-  ipcMain.handle(CHANNELS.runs.cancel, async (_, id: string) => {
-    return runsService.cancelRun(id);
-  });
+  ipcMain.handle(
+    CHANNELS.runs.cancel,
+    handle((id: string) => runsService.cancelRun(id)),
+  );
 
-  ipcMain.handle(CHANNELS.runs.delete, async (_, id: string) => {
-    return runsService.deleteRun(id);
-  });
+  ipcMain.handle(
+    CHANNELS.runs.delete,
+    handle((id: string) => runsService.deleteRun(id)),
+  );
 
-  ipcMain.handle(CHANNELS.runs.archive, async (_, id: string) => {
-    return runsService.archiveRun(id);
-  });
+  ipcMain.handle(
+    CHANNELS.runs.archive,
+    handle((id: string) => runsService.archiveRun(id)),
+  );
 
-  ipcMain.handle(CHANNELS.runs.getDetails, async (_, runId: string) => {
-    return runsService.getRunDetails(runId);
-  });
+  ipcMain.handle(
+    CHANNELS.runs.getDetails,
+    handle((runId: string) => runsService.getRunDetails(runId)),
+  );
 
-  ipcMain.handle(CHANNELS.runs.execute, async (_, payload: StartRunPayload) => {
-    return runsService.executeRun(payload);
-  });
+  ipcMain.handle(
+    CHANNELS.runs.execute,
+    handle((payload: StartRunPayload) => runsService.executeRun(payload)),
+  );
 
-  ipcMain.handle(CHANNELS.runs.abort, async (_, runId: string) => {
-    return runsService.abortRun(runId);
-  });
+  ipcMain.handle(
+    CHANNELS.runs.abort,
+    handle((runId: string) => runsService.abortRun(runId)),
+  );
 
-  ipcMain.handle(CHANNELS.runs.continue, async (_, payload: ContinueRunPayload) => {
-    return runsService.continueRun(payload);
-  });
+  ipcMain.handle(
+    CHANNELS.runs.continue,
+    handle((payload: ContinueRunPayload) => runsService.continueRun(payload)),
+  );
 
-  ipcMain.handle(CHANNELS.runs.fork, async (_, payload: ForkRunPayload) => {
-    return runsService.forkRun(payload);
-  });
+  ipcMain.handle(
+    CHANNELS.runs.fork,
+    handle((payload: ForkRunPayload) => runsService.forkRun(payload)),
+  );
 
-  ipcMain.handle(CHANNELS.runs.executeReview, async (_, payload: ReviewRunPayload) => {
-    return runsService.executeReview(payload);
-  });
+  ipcMain.handle(
+    CHANNELS.runs.executeReview,
+    handle((payload: ReviewRunPayload) => runsService.executeReview(payload)),
+  );
 
-  ipcMain.handle(CHANNELS.runs.canResume, async (_, runId: string) => {
-    return runsService.canResumeRun(runId);
-  });
+  ipcMain.handle(
+    CHANNELS.runs.canResume,
+    handle((runId: string) => runsService.canResumeRun(runId)),
+  );
 
-  ipcMain.handle(CHANNELS.runs.deleteSession, async (_, runId: string) => {
-    return runsService.deleteRunSession(runId);
-  });
+  ipcMain.handle(
+    CHANNELS.runs.deleteSession,
+    handle((runId: string) => runsService.deleteRunSession(runId)),
+  );
 
   // Run Context
-  ipcMain.handle(CHANNELS.runContext.getByRun, async (_, runId: string) => {
-    return runsService.getContextByRun(runId);
-  });
+  ipcMain.handle(
+    CHANNELS.runContext.getByRun,
+    handle((runId: string) => runsService.getContextByRun(runId)),
+  );
 
-  ipcMain.handle(CHANNELS.runContext.add, async (_, payload: CreateRunContextPayload) => {
-    return runsService.addContext(payload);
-  });
+  ipcMain.handle(
+    CHANNELS.runContext.add,
+    handle((payload: CreateRunContextPayload) => runsService.addContext(payload)),
+  );
 
-  ipcMain.handle(CHANNELS.runContext.remove, async (_, id: number) => {
-    return runsService.removeContext(id);
-  });
+  ipcMain.handle(
+    CHANNELS.runContext.remove,
+    handle((id: number) => runsService.removeContext(id)),
+  );
 
   // Run Artifacts
   ipcMain.handle(
     CHANNELS.runArtifacts.getByRun,
-    async (_, runId: string, sinceId?: number) => {
-      return runsService.getArtifactsByRun(runId, sinceId);
-    },
+    handle((runId: string, sinceId?: number) => runsService.getArtifactsByRun(runId, sinceId)),
   );
 
-  ipcMain.handle(CHANNELS.runArtifacts.add, async (_, payload: CreateRunArtifactPayload) => {
-    return runsService.addArtifact(payload);
-  });
+  ipcMain.handle(
+    CHANNELS.runArtifacts.add,
+    handle((payload: CreateRunArtifactPayload) => runsService.addArtifact(payload)),
+  );
 
-  ipcMain.handle(CHANNELS.runArtifacts.remove, async (_, id: number) => {
-    return runsService.removeArtifact(id);
-  });
+  ipcMain.handle(
+    CHANNELS.runArtifacts.remove,
+    handle((id: number) => runsService.removeArtifact(id)),
+  );
 
 
   // Tool Calls
   ipcMain.handle(
     CHANNELS.runToolCalls.getByRun,
-    async (_, runId: string, sinceUpdatedAt?: Date) => {
-      return runsService.getToolCallsByRun(runId, sinceUpdatedAt);
-    },
+    handle((runId: string, sinceUpdatedAt?: Date) => runsService.getToolCallsByRun(runId, sinceUpdatedAt)),
   );
 
   // Run Turns
-  ipcMain.handle(CHANNELS.runTurns.getByRun, async (_, runId: string) => {
-    return runsService.getTurnsByRun(runId);
-  });
+  ipcMain.handle(
+    CHANNELS.runTurns.getByRun,
+    handle((runId: string) => runsService.getTurnsByRun(runId)),
+  );
 
   // Tool Approval (interactive)
   ipcMain.handle(

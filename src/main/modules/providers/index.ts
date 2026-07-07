@@ -9,7 +9,6 @@ export type {
   UpdateProviderPayload,
   ProviderResponse,
   ProviderListResponse,
-  ServiceResponse,
 } from "./providers.dto";
 
 // Adapters

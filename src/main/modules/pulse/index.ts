@@ -6,5 +6,4 @@ export type {
   PulseFrequency,
   CreatePulseInput,
   UpdatePulseInput,
-  ServiceResponse,
 } from "./pulse.dto";

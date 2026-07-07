@@ -1,4 +1,3 @@
-import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import {
@@ -21,6 +20,9 @@ vi.mock("../../db/client", () => ({
 import { toolsService } from "./tools.service";
 import { toolsRepo } from "./tools.repo";
 
+// Throw-style service: tests assert plain values and rejections — the
+// ServiceResponse envelope only exists at the IPC seam (handle()).
+
 describe("toolsService", () => {
   beforeEach(() => {
     ({ db, sqlite: _sqlite, cleanup } = createTestDb());
@@ -37,15 +39,13 @@ describe("toolsService", () => {
       const run = createRun(db, { id: "run-1" });
       createToolCall(db, { runId: run.id, toolName: "Bash" });
 
-      const result = await toolsService.getToolCallsByRun("run-1");
-      assertOk(result);
-      expect(result.data!).toHaveLength(1);
+      const calls = await toolsService.getToolCallsByRun("run-1");
+      expect(calls).toHaveLength(1);
     });
 
     it("returns empty for run with no tool calls", async () => {
-      const result = await toolsService.getToolCallsByRun("run-empty");
-      assertOk(result);
-      expect(result.data!).toEqual([]);
+      const calls = await toolsService.getToolCallsByRun("run-empty");
+      expect(calls).toEqual([]);
     });
   });
 
@@ -54,21 +54,19 @@ describe("toolsService", () => {
       const run = createRun(db, { id: "run-1" });
       createToolCall(db, { accountId: "default", runId: run.id, toolName: "Read" });
 
-      const result = await toolsService.getToolCallsByAccount("default");
-      assertOk(result);
-      expect(result.data!).toHaveLength(1);
+      const calls = await toolsService.getToolCallsByAccount("default");
+      expect(calls).toHaveLength(1);
     });
   });
 
   describe("createToolCall", () => {
     it("creates a tool call and returns id", async () => {
-      const result = await toolsService.createToolCall({
+      const id = await toolsService.createToolCall({
         accountId: "default",
         toolName: "Bash",
       });
-      assertOk(result);
-      expect(typeof result.data!).toBe("number");
-      expect(result.data!).toBeGreaterThan(0);
+      expect(typeof id).toBe("number");
+      expect(id).toBeGreaterThan(0);
     });
   });
 
@@ -77,10 +75,10 @@ describe("toolsService", () => {
       const run = createRun(db, { id: "run-1" });
       const tc = createToolCall(db, { runId: run.id, toolName: "Bash" });
 
-      const result = await toolsService.updateToolCall(tc.id, {
-        status: "running",
-      });
-      assertOk(result);
+      await toolsService.updateToolCall(tc.id, { status: "running" });
+
+      const calls = await toolsRepo.findToolCallsByRun("run-1");
+      expect(calls[0].status).toBe("running");
     });
   });
 
@@ -89,8 +87,7 @@ describe("toolsService", () => {
       const run = createRun(db, { id: "run-1" });
       const tc = createToolCall(db, { runId: run.id, toolName: "Bash" });
 
-      const result = await toolsService.startToolCall(tc.id);
-      assertOk(result);
+      await toolsService.startToolCall(tc.id);
 
       const calls = await toolsRepo.findToolCallsByRun("run-1");
       expect(calls[0].status).toBe("running");
@@ -103,12 +100,7 @@ describe("toolsService", () => {
       const run = createRun(db, { id: "run-1" });
       const tc = createToolCall(db, { runId: run.id, toolName: "Bash" });
 
-      const result = await toolsService.completeToolCall(
-        tc.id,
-        { stdout: "hello" },
-        120,
-      );
-      assertOk(result);
+      await toolsService.completeToolCall(tc.id, { stdout: "hello" }, 120);
 
       const calls = await toolsRepo.findToolCallsByRun("run-1");
       expect(calls[0].status).toBe("done");
@@ -123,8 +115,7 @@ describe("toolsService", () => {
       const run = createRun(db, { id: "run-1" });
       const tc = createToolCall(db, { runId: run.id, toolName: "Bash" });
 
-      const result = await toolsService.failToolCall(tc.id, "Command failed");
-      assertOk(result);
+      await toolsService.failToolCall(tc.id, "Command failed");
 
       const calls = await toolsRepo.findToolCallsByRun("run-1");
       expect(calls[0].status).toBe("error");
@@ -134,35 +125,16 @@ describe("toolsService", () => {
   });
 
   // ─────────────────────────────────────────────────────────────
-  // Error paths (coverage for catch blocks)
+  // Error paths
   // ─────────────────────────────────────────────────────────────
   describe("error handling", () => {
-    it("getToolCallsByRun returns error on failure", async () => {
-      vi.spyOn(toolsRepo, "findToolCallsByRun").mockRejectedValueOnce(new Error("db error"));
-      const result = await toolsService.getToolCallsByRun("r1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to get tool calls");
-    });
-
-    it("getToolCallsByAccount returns error on failure", async () => {
-      vi.spyOn(toolsRepo, "findToolCallsByAccount").mockRejectedValueOnce(new Error("db error"));
-      const result = await toolsService.getToolCallsByAccount("a1");
-      assertFail(result);
-      expect(result.error).toBe("Failed to get tool calls");
-    });
-
-    it("createToolCall returns error on failure", async () => {
-      vi.spyOn(toolsRepo, "insertToolCall").mockRejectedValueOnce(new Error("db error"));
-      const result = await toolsService.createToolCall({ accountId: "default", toolName: "X" });
-      assertFail(result);
-      expect(result.error).toBe("Failed to create tool call");
-    });
-
-    it("updateToolCall returns error on failure", async () => {
-      vi.spyOn(toolsRepo, "updateToolCall").mockRejectedValueOnce(new Error("db error"));
-      const result = await toolsService.updateToolCall(999, { status: "running" });
-      assertFail(result);
-      expect(result.error).toBe("Failed to update tool call");
+    it("propagates repo failures", async () => {
+      vi.spyOn(toolsRepo, "findToolCallsByRun").mockRejectedValueOnce(
+        new Error("db error"),
+      );
+      await expect(toolsService.getToolCallsByRun("r1")).rejects.toThrow(
+        "db error",
+      );
     });
   });
 });

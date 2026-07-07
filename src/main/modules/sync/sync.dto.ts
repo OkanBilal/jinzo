@@ -97,4 +97,3 @@ export interface ResourceFetcher {
   fetchAll?(args: FetchAllArgs): Promise<EntityInput[]>;
 }
 
-export type { ServiceResponse } from "../../../shared/ipc-kit/service-response";

@@ -7,25 +7,35 @@ Shared domain vocabulary for the Mains codebase. Add terms as decisions crystall
 ### IPC seam
 
 **ServiceResponse**:
-The discriminated-union envelope returned by every IPC handler in the main process and unwrapped by the renderer. Either `{ success: true; data: T }` or `{ success: false; error: string }`. The single canonical shape lives in `src/shared/ipc-kit/`; per-module re-exports are temporary during migration.
-_Avoid_: response, result, envelope, ServiceResult.
+The discriminated-union envelope returned by every IPC handler in the main process and unwrapped once by the renderer's base query. Either `{ success: true; data: T }` or `{ success: false; error: string }`. The single canonical shape lives in `src/shared/ipc-kit/`. It is a **wire format, not a service return type**: services return plain `T` (or `T | null`) and throw; the envelope is constructed only at the IPC seam by **handle** (or by the few hand-written handlers that need the Electron event). No `dto.ts` re-exports it.
+_Avoid_: response, result, envelope, ServiceResult; returning ServiceResponse from a service method; re-exporting it from a module `dto.ts`.
 
 **CHANNELS**:
 The single source of truth for IPC channel names, in `src/shared/ipc-kit/channels.ts`. Main, preload, and renderer all reference values from this map (e.g. `CHANNELS.account.get`) instead of typing the channel string literally. A typo at any site is a compile-time error and a renamed channel is a single edit. The map is grouped by namespace (the part before the colon) so adding a channel means adding one field to one object.
 _Avoid_: channel string literals, magic strings, per-module CHANNELS consts.
 
 **ok / fail**:
-The two constructors for a **ServiceResponse**. Handlers should build envelopes via `ok(data)` and `fail(message)` rather than literal objects, so the envelope shape stays in one place. (Migrating handlers from literals to constructors is deferred to a follow-up — current handlers still construct `{ success: true, data }` literally.)
-_Avoid_: success(), error(), wrap().
+The two constructors for a **ServiceResponse**, called almost exclusively by **handle**; the few hand-written handlers (native dialog, terminal streaming, imageProxy signing, localBackend) use them rather than literal objects, so the envelope shape stays in one place.
+_Avoid_: success(), error(), wrap(); inline `{ success: false, error }` literals.
 
-**assertOk / assertFail / unwrap**:
-Test- and consumer-side companions to **ServiceResponse**. `assertOk(r)` and `assertFail(r)` are TypeScript assertion functions that narrow the union and throw on the wrong branch — used at test boundaries to replace `expect(r.success).toBe(...)` patterns. `unwrap(r)` returns `r.data` on success and throws on failure — used inside renderer `transformResponse` calls where baseApi has already short-circuited the failure case.
-_Avoid_: expect-success, ok-or-throw, getData.
+**handle**:
+The wrapper at the IPC seam (`src/main/ipc-kit/handle.ts`) that turns a throw-style service function into an `ipcMain.handle` handler: resolved value → `ok(data)`, throw → log + `fail(error.message)`. Every `*.ipc.ts` handler uses it except the handful that need the Electron event/invoke context (native dialog, terminal streaming, imageProxy, localBackend), which stay hand-written. **Raw-message policy**: the thrown error's message travels to the renderer as-is (local desktop app — debuggability beats leak risk); services throw explicit `Error("Workspace not found")`-style messages where the user should read them.
+_Avoid_: try/catch-to-envelope inside service methods; mapping error messages to generic strings inside services.
+
+**absence rule**:
+Single-item *reads* return `T | null` — absence is a legitimate state, not an error (a workspace with no diff is not a failure). *Mutations* whose target is missing throw (`"Workspace not found"`). This removes the renderer's "swallow the error into null" transformResponse pattern: null arrives as data.
+_Avoid_: `fail("X not found")` from a read; returning null from a mutation that couldn't find its target.
+
+**assertOk / assertFail**:
+Generic narrowers for `{ success }` discriminated unions. Service tests no longer need them (throw-style services are asserted with plain values / rejections); their one remaining home is utils-internal result unions such as `parseProviderCredentials` in `connections.utils.ts`. The former `unwrap(r)` helper is **deleted**: `ipcBaseQuery` unwraps the envelope itself, so endpoints write `transformResponse` only to *reshape* data (e.g. project the `resources` key), never to unwrap it.
+_Avoid_: expect-success, ok-or-throw, getData; re-introducing an unwrap helper or unwrap-style `transformResponse` (the base query owns unwrapping).
 
 ## Relationships
 
-- Every IPC handler returns exactly one **ServiceResponse**.
-- A **ServiceResponse** is constructed only via **ok** or **fail**.
+- Every IPC handler returns exactly one **ServiceResponse** (the wire format never changes during the migration).
+- A **ServiceResponse** is constructed only via **ok** or **fail**, almost always inside **handle**.
+- The renderer unwraps a **ServiceResponse** exactly once, in `ipcBaseQuery` — never in `transformResponse`.
+- Services return plain `T` / `T | null` and throw; the **absence rule** decides null-vs-throw.
 
 ## Module layout
 

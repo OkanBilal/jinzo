@@ -1,11 +1,6 @@
 import { app, safeStorage } from "electron";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import path from "path";
-import {
-  ok,
-  fail,
-  type ServiceResponse,
-} from "../../../shared/ipc-kit/service-response";
 
 /**
  * Encrypted at-rest storage for direct-mode backend pairing tokens, keyed by
@@ -58,42 +53,24 @@ function decrypt(stored: string): string {
   return buffer.toString("utf-8");
 }
 
+// Throw-style: plain values out, throws on failure; envelope applied by
+// handle() at the IPC seam.
 export const backendAuthService = {
-  async setToken(id: string, token: string): Promise<ServiceResponse<void>> {
-    try {
-      const map = await readMap();
-      map[id] = encrypt(token);
-      await writeMap(map);
-      return ok(undefined);
-    } catch (error) {
-      return fail(
-        error instanceof Error ? error.message : "Failed to store token",
-      );
-    }
+  async setToken(id: string, token: string): Promise<void> {
+    const map = await readMap();
+    map[id] = encrypt(token);
+    await writeMap(map);
   },
 
-  async getToken(id: string): Promise<ServiceResponse<string | null>> {
-    try {
-      const map = await readMap();
-      const stored = map[id];
-      return ok(stored ? decrypt(stored) : null);
-    } catch (error) {
-      return fail(
-        error instanceof Error ? error.message : "Failed to read token",
-      );
-    }
+  async getToken(id: string): Promise<string | null> {
+    const map = await readMap();
+    const stored = map[id];
+    return stored ? decrypt(stored) : null;
   },
 
-  async deleteToken(id: string): Promise<ServiceResponse<void>> {
-    try {
-      const map = await readMap();
-      delete map[id];
-      await writeMap(map);
-      return ok(undefined);
-    } catch (error) {
-      return fail(
-        error instanceof Error ? error.message : "Failed to delete token",
-      );
-    }
+  async deleteToken(id: string): Promise<void> {
+    const map = await readMap();
+    delete map[id];
+    await writeMap(map);
   },
 };

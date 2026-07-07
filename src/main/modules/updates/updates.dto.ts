@@ -31,4 +31,3 @@ export type UpdateState = {
   error: string | null;
 };
 
-export type { ServiceResponse } from "../../../shared/ipc-kit/service-response";

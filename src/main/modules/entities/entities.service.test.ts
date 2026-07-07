@@ -1,4 +1,3 @@
-import { assertOk } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import { createAccount, createEntity, createTask, createIssue } from "../../../test/factories";
@@ -32,8 +31,7 @@ describe("entitiesService", () => {
     it("returns success with entities", async () => {
       createEntity(db, { id: "e1" });
       const result = await entitiesService.getAll();
-      assertOk(result);
-      expect(result.data).toHaveLength(1);
+      expect(result).toHaveLength(1);
     });
 
     it("passes options through", async () => {
@@ -41,8 +39,7 @@ describe("entitiesService", () => {
       createEntity(db, { id: "e2", kind: "issue" });
 
       const result = await entitiesService.getAll({ kind: "task" });
-      assertOk(result);
-      expect(result.data).toHaveLength(1);
+      expect(result).toHaveLength(1);
     });
   });
 
@@ -50,14 +47,12 @@ describe("entitiesService", () => {
     it("returns entity by id", async () => {
       createEntity(db, { id: "e1", title: "Test" });
       const result = await entitiesService.getById("e1");
-      assertOk(result);
-      expect((result.data as any)?.title).toBe("Test");
+      expect((result as any)?.title).toBe("Test");
     });
 
     it("returns null data for non-existent", async () => {
       const result = await entitiesService.getById("missing");
-      assertOk(result);
-      expect(result.data).toBeNull();
+      expect(result).toBeNull();
     });
   });
 
@@ -68,9 +63,8 @@ describe("entitiesService", () => {
         kind: "task",
         title: "Created Entity",
       });
-      assertOk(result);
-      expect((result.data as any)?.title).toBe("Created Entity");
-      expect((result.data as any)?.id).toBeTruthy();
+      expect((result as any)?.title).toBe("Created Entity");
+      expect((result as any)?.id).toBeTruthy();
     });
   });
 
@@ -78,20 +72,17 @@ describe("entitiesService", () => {
     it("updates entity", async () => {
       createEntity(db, { id: "e1", title: "Old" });
       const result = await entitiesService.update("e1", { title: "New" });
-      assertOk(result);
-      expect((result.data as any)?.title).toBe("New");
+      expect((result as any)?.title).toBe("New");
     });
   });
 
   describe("delete", () => {
     it("soft-deletes entity", async () => {
       createEntity(db, { id: "e1" });
-      const result = await entitiesService.delete("e1");
-      assertOk(result);
+      await entitiesService.delete("e1");
 
       const check = await entitiesService.getAll();
-      assertOk(check);
-      expect(check.data).toHaveLength(0);
+      expect(check).toHaveLength(0);
     });
   });
 
@@ -101,8 +92,7 @@ describe("entitiesService", () => {
       createEntity(db, { id: "e2", title: "Add feature" });
 
       const result = await entitiesService.search("login");
-      assertOk(result);
-      expect(result.data).toHaveLength(1);
+      expect(result).toHaveLength(1);
     });
   });
 
@@ -113,8 +103,7 @@ describe("entitiesService", () => {
     it("returns tasks", async () => {
       createTask(db, { entity: { id: "t1", title: "Task" } });
       const result = await entitiesService.getAllTasks();
-      assertOk(result);
-      expect(result.data).toHaveLength(1);
+      expect(result).toHaveLength(1);
     });
   });
 
@@ -122,8 +111,7 @@ describe("entitiesService", () => {
     it("returns task by entity id", async () => {
       createTask(db, { entity: { id: "t1", title: "My Task" } });
       const result = await entitiesService.getTaskById("t1");
-      assertOk(result);
-      expect((result.data as any)?.entity.title).toBe("My Task");
+      expect((result as any)?.entity.title).toBe("My Task");
     });
   });
 
@@ -134,8 +122,7 @@ describe("entitiesService", () => {
         status: "doing",
         priority: 2,
       });
-      assertOk(result);
-      expect((result.data as any)?.task.status).toBe("doing");
+      expect((result as any)?.task.status).toBe("doing");
     });
   });
 
@@ -143,20 +130,17 @@ describe("entitiesService", () => {
     it("updates task", async () => {
       createTask(db, { entity: { id: "t1" }, task: { status: "todo" } });
       const result = await entitiesService.updateTask("t1", { status: "done" });
-      assertOk(result);
-      expect((result.data as any)?.task.status).toBe("done");
+      expect((result as any)?.task.status).toBe("done");
     });
   });
 
   describe("deleteTask", () => {
     it("soft-deletes task entity", async () => {
       createTask(db, { entity: { id: "t1" } });
-      const result = await entitiesService.deleteTask("t1");
-      assertOk(result);
+      await entitiesService.deleteTask("t1");
 
       const check = await entitiesService.getAllTasks();
-      assertOk(check);
-      expect(check.data).toHaveLength(0);
+      expect(check).toHaveLength(0);
     });
   });
 
@@ -167,8 +151,7 @@ describe("entitiesService", () => {
     it("returns issues", async () => {
       createIssue(db, { entity: { id: "i1" }, issue: { provider: "github", state: "open" } });
       const result = await entitiesService.getAllIssues();
-      assertOk(result);
-      expect(result.data).toHaveLength(1);
+      expect(result).toHaveLength(1);
     });
   });
 
@@ -179,8 +162,7 @@ describe("entitiesService", () => {
         issue: { provider: "github", state: "open" },
       });
       const result = await entitiesService.getIssueById("i1");
-      assertOk(result);
-      expect((result.data as any)?.entity.title).toBe("Bug");
+      expect((result as any)?.entity.title).toBe("Bug");
     });
   });
 
@@ -192,8 +174,7 @@ describe("entitiesService", () => {
         state: "open",
         number: 42,
       });
-      assertOk(result);
-      expect((result.data as any)?.issue.number).toBe(42);
+      expect((result as any)?.issue.number).toBe(42);
     });
   });
 
@@ -204,8 +185,7 @@ describe("entitiesService", () => {
         issue: { provider: "github", state: "open" },
       });
       const result = await entitiesService.updateIssue("i1", { state: "closed" });
-      assertOk(result);
-      expect((result.data as any)?.issue.state).toBe("closed");
+      expect((result as any)?.issue.state).toBe("closed");
     });
   });
 
@@ -215,12 +195,10 @@ describe("entitiesService", () => {
         entity: { id: "i1" },
         issue: { provider: "github", state: "open" },
       });
-      const result = await entitiesService.deleteIssue("i1");
-      assertOk(result);
+      await entitiesService.deleteIssue("i1");
 
       const check = await entitiesService.getAllIssues();
-      assertOk(check);
-      expect(check.data).toHaveLength(0);
+      expect(check).toHaveLength(0);
     });
   });
 });

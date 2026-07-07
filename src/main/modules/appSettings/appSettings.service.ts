@@ -1,11 +1,14 @@
-import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import { ACCOUNT_ID, SETTINGS_ID } from "./appSettings.constants";
 import { appSettingsRepo } from "./appSettings.repo";
 import { sanitizeAppSettingsPatch } from "./appSettings.validation";
-import type { AppSettingsRecord, ServiceResponse } from "./appSettings.dto";
+import type { AppSettingsRecord } from "./appSettings.dto";
 
 // ─────────────────────────────────────────────────────────────
 // Service - Business Logic
+//
+// Throw-style: methods return plain values and throw on failure; the
+// ServiceResponse envelope is applied by handle() at the IPC seam.
+// See CONTEXT.md "handle".
 // ─────────────────────────────────────────────────────────────
 export const appSettingsService = {
   async ensureSettings(): Promise<AppSettingsRecord> {
@@ -22,40 +25,21 @@ export const appSettingsService = {
     return created;
   },
 
-  async getSettings(): Promise<ServiceResponse<AppSettingsRecord>> {
-    try {
-      const settings = await this.ensureSettings();
-      return ok(settings);
-    } catch (error) {
-      console.error("Error fetching app settings:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
+  async getSettings(): Promise<AppSettingsRecord> {
+    return this.ensureSettings();
   },
 
-  async updateSettings(
-    patch: unknown,
-  ): Promise<ServiceResponse<AppSettingsRecord>> {
-    try {
-      const sanitized = sanitizeAppSettingsPatch(patch);
-      if (!sanitized) {
-        return fail("patch must be an object");
-      }
-
-      await this.ensureSettings();
-      const updated = await appSettingsRepo.update(SETTINGS_ID, sanitized);
-      if (!updated) {
-        return fail("Failed to update settings");
-      }
-      return ok(updated);
-    } catch (error) {
-      console.error("Error updating app settings:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
+  async updateSettings(patch: unknown): Promise<AppSettingsRecord> {
+    const sanitized = sanitizeAppSettingsPatch(patch);
+    if (!sanitized) {
+      throw new Error("patch must be an object");
     }
+
+    await this.ensureSettings();
+    const updated = await appSettingsRepo.update(SETTINGS_ID, sanitized);
+    if (!updated) {
+      throw new Error("Failed to update settings");
+    }
+    return updated;
   },
 };

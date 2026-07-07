@@ -214,12 +214,11 @@ export const connectionsApi = baseApi.injectEndpoints({
       query: () => ({
         handler: CHANNELS.connections.listStates,
       }),
-      transformResponse: (response: any) => response.success ? response.data : [],
       providesTags: ['ConnectionState'],
     }),
 
     updateConnectionState: builder.mutation<
-      { success: boolean },
+      void,
       { id: string } & UpdateConnectionStatePayload
     >({
       query: ({ id, ...body }) => ({
@@ -230,98 +229,97 @@ export const connectionsApi = baseApi.injectEndpoints({
     }),
 
     // ── identity ──
-    getConnection: builder.query<{ success: boolean; connection: Connection }, string>({
+    getConnection: builder.query<Connection, string>({
       query: (provider) => ({
         handler: CHANNELS.connections.getByProvider,
         args: [provider],
       }),
-      transformResponse: (response: any) => response.success ? { success: true, connection: response.data.connection } : { success: false, connection: null as any },
+      transformResponse: (response: { connection: Connection }) =>
+        response.connection,
       providesTags: ['Connection'],
     }),
 
-    saveCredentials: builder.mutation<{ success: boolean }, SaveCredentialsPayload>({
+    saveCredentials: builder.mutation<void, SaveCredentialsPayload>({
       query: (body) => ({
         handler: CHANNELS.connections.saveCredentials,
         args: [body],
       }),
-      transformResponse: (response: any) => ({ success: response.success }),
       // Saving credentials flips `isConnected` in connection_states AND mints
       // a new connection row, so both tag families must refresh.
       invalidatesTags: ['Connection', 'ConnectionState'],
     }),
 
-    revokeConnection: builder.mutation<{ success: boolean }, string>({
+    revokeConnection: builder.mutation<void, string>({
       query: (provider) => ({
         handler: CHANNELS.connections.revoke,
         args: [provider],
       }),
-      transformResponse: (response: any) => ({ success: response.success }),
       invalidatesTags: ['Connection', 'ConnectionState'],
     }),
 
     // ── per-provider resource discovery ──
-    getGitHubRepos: builder.query<{ success: boolean; repos: GitHubRepo[] }, string>({
+    getGitHubRepos: builder.query<GitHubRepo[], string>({
       query: (connectionId) => ({
         handler: CHANNELS.connections.getGithubRepos,
         args: [connectionId],
       }),
-      transformResponse: (response: any) => response.success ? { success: true, repos: response.data.repos } : { success: false, repos: [] },
+      transformResponse: (response: { repos: GitHubRepo[] }) => response.repos,
     }),
 
-    getLinearTeams: builder.query<{ success: boolean; teams: LinearTeam[] }, string>({
+    getLinearTeams: builder.query<LinearTeam[], string>({
       query: (connectionId) => ({
         handler: CHANNELS.connections.getLinearTeams,
         args: [connectionId],
       }),
-      transformResponse: (response: any) => response.success ? { success: true, teams: response.data.teams } : { success: false, teams: [] },
+      transformResponse: (response: { teams: LinearTeam[] }) => response.teams,
     }),
 
-    getJiraProjects: builder.query<{ success: boolean; projects: JiraProject[] }, string>({
+    getJiraProjects: builder.query<JiraProject[], string>({
       query: (connectionId) => ({
         handler: CHANNELS.connections.getJiraProjects,
         args: [connectionId],
       }),
-      transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects } : { success: false, projects: [] },
+      transformResponse: (response: { projects: JiraProject[] }) => response.projects,
     }),
 
-    getAsanaProjects: builder.query<{ success: boolean; projects: AsanaProject[] }, string>({
+    getAsanaProjects: builder.query<AsanaProject[], string>({
       query: (connectionId) => ({
         handler: CHANNELS.connections.getAsanaProjects,
         args: [connectionId],
       }),
-      transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects } : { success: false, projects: [] },
+      transformResponse: (response: { projects: AsanaProject[] }) => response.projects,
     }),
 
-    getGitLabProjects: builder.query<{ success: boolean; projects: GitLabProject[] }, string>({
+    getGitLabProjects: builder.query<GitLabProject[], string>({
       query: (connectionId) => ({
         handler: CHANNELS.connections.getGitlabProjects,
         args: [connectionId],
       }),
-      transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects } : { success: false, projects: [] },
+      transformResponse: (response: { projects: GitLabProject[] }) => response.projects,
     }),
 
-    getTrelloBoards: builder.query<{ success: boolean; boards: TrelloBoard[] }, string>({
+    getTrelloBoards: builder.query<TrelloBoard[], string>({
       query: (connectionId) => ({
         handler: CHANNELS.connections.getTrelloBoards,
         args: [connectionId],
       }),
-      transformResponse: (response: any) => response.success ? { success: true, boards: response.data.boards } : { success: false, boards: [] },
+      transformResponse: (response: { boards: TrelloBoard[] }) => response.boards,
     }),
 
-    getSentryProjects: builder.query<{ success: boolean; projects: SentryProject[] }, string>({
+    getSentryProjects: builder.query<SentryProject[], string>({
       query: (connectionId) => ({
         handler: CHANNELS.connections.getSentryProjects,
         args: [connectionId],
       }),
-      transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects } : { success: false, projects: [] },
+      transformResponse: (response: { projects: SentryProject[] }) => response.projects,
     }),
 
-    getSocketDevOrganizations: builder.query<{ success: boolean; organizations: SocketDevOrganization[] }, string>({
+    getSocketDevOrganizations: builder.query<SocketDevOrganization[], string>({
       query: (connectionId) => ({
         handler: CHANNELS.connections.getSocketDevOrganizations,
         args: [connectionId],
       }),
-      transformResponse: (response: any) => response.success ? { success: true, organizations: response.data.organizations } : { success: false, organizations: [] },
+      transformResponse: (response: { organizations: SocketDevOrganization[] }) => response.organizations,
     }),
 
     /**
@@ -331,7 +329,7 @@ export const connectionsApi = baseApi.injectEndpoints({
      * here so the renderer always sees `{ items, connectionId }`.
      */
     getSelectedResources: builder.query<
-      { success: boolean; items: any[]; connectionId: string },
+      { items: any[]; connectionId: string },
       string
     >({
       query: (provider) => ({
@@ -339,20 +337,18 @@ export const connectionsApi = baseApi.injectEndpoints({
         args: [provider],
       }),
       transformResponse: (response: any) => {
-        if (!response.success) return { success: false, items: [], connectionId: '' };
-        const { connectionId = '', ...rest } = response.data ?? {};
+        const { connectionId = '', ...rest } = response ?? {};
         const items = (Object.values(rest)[0] as any[]) ?? [];
-        return { success: true, items, connectionId };
+        return { items, connectionId };
       },
       providesTags: ['Connection'],
     }),
 
-    saveResources: builder.mutation<{ success: boolean }, SaveResourcesPayload>({
+    saveResources: builder.mutation<void, SaveResourcesPayload>({
       query: (body) => ({
         handler: CHANNELS.connections.saveResources,
         args: [body],
       }),
-      transformResponse: (response: any) => ({ success: response.success }),
       invalidatesTags: ['Connection'],
       async onQueryStarted(arg, { dispatch, queryFulfilled }) {
         try {
@@ -369,12 +365,11 @@ export const connectionsApi = baseApi.injectEndpoints({
       },
     }),
 
-    deleteResource: builder.mutation<{ success: boolean }, string>({
+    deleteResource: builder.mutation<void, string>({
       query: (resourceId) => ({
         handler: CHANNELS.connections.deleteResource,
         args: [resourceId],
       }),
-      transformResponse: (response: any) => ({ success: response.success }),
       invalidatesTags: ['Connection'],
     }),
   }),
