@@ -43,6 +43,9 @@ Each `src/main/modules/{name}/` follows a 6-file layout: `ipc.ts → service.ts 
 
 A module folder may own **more than one table**. The 6-file layout is per module, not per table. When several tables form one conceptual aggregate (see **workspace** below), they live in one folder under the flat 6-file shape, with each layer's file containing all tables' code.
 
+**Repos are module-internal.** `{name}.repo.ts` is not exported from the module barrel; cross-module access goes through service methods (throw-style, so callers get plain rows) or named barrel functions (`logWorkspaceActivity`, `getConnectionWithSecrets`, `getIssuesByResourceIds`, `recordWorkspaceDiff`). Two exceptions, both deliberate: `workspace.service` imports `projectsRepo` via its file path (not the barrel) to keep the workspace → projects edge acyclic (see **Workspace intake**), and the provider drivers still import `runsRepo`/`workspaceRepo` directly — a known egress-seam leak, to be closed when driver run-I/O is unified behind the run-session seam rather than papered over here.
+_Avoid_: re-exporting a repo from `index.ts`; importing another module's repo when a service method or named barrel function exists.
+
 **Seed runner**:
 Initial data seeding is *not* a domain module. It lives in `src/main/db/seeds/` as a versioned, idempotent runner: each `v{N}.ts` exports `run(db)`, the runner tracks `appSettings.seedVersion`, and `db/client.ts` invokes `runSeeds(db)` automatically at database init. The renderer plays no part. There is intentionally no `src/main/modules/seed/` — an earlier IPC-driven seed module was vestigial and was removed. Fixtures live in `src/main/db/data/`; v1.ts imports them.
 _Avoid_: re-introducing an `api.seed.*` IPC surface, putting seed code under `db/queries/` (the directory no longer exists), or routing seeding through a domain module. See ADR-0003.
@@ -55,8 +58,8 @@ The `workspace` module owns five tables: `workspaces`, `workspace_activity`, `wo
 
 IPC channels live under one namespace: `workspace:get*`, `workspace:getActivity`, `workspace:logActivity`, `workspace:getLatestDiff`, `workspace:listReviews`, `workspace:listFindings`, etc. The renderer has one `workspaceApi.ts` with split RTK Query tag types (`Workspace`, `WorkspaceActivity`, `WorkspaceDiff`, `WorkspaceReview`, `WorkspaceFinding`) so UI sections still refresh independently.
 
-Cross-module writers (drivers, run-session, guards, mains-tools) import a single named function — `logWorkspaceActivity` — from the module's barrel, not the full service surface.
-_Avoid_: re-splitting into `workspaces` + `workspaceActivity` + `workspaceDiffs` + `reviews` + `reviewFindings`. See ADR-0001.
+Cross-module writers (drivers, run-session, guards, mains-tools) import named functions — `logWorkspaceActivity`, and for diff rows `recordWorkspaceDiff` / `clearWorkspaceDiff` — from the module's barrel, not the full service surface. `recordWorkspaceDiff(workspaceId, runId, snapshot)` owns the `filesJson`/`statsJson` packing and the update-or-insert decision for the latest diff row; it exists because run-session, gitFlow's post-commit recapture, and `resyncDiff` were each hand-rolling the same packing.
+_Avoid_: re-splitting into `workspaces` + `workspaceActivity` + `workspaceDiffs` + `reviews` + `reviewFindings` (see ADR-0001); hand-building `statsJson`/`filesJson` outside `recordWorkspaceDiff`.
 
 ### connections
 

@@ -7,7 +7,7 @@ import { emit } from "../../ipc-kit";
 import { workspaceRepo } from "./workspace.repo";
 import { projectsRepo } from "../projects/projects.repo";
 import { normalizeRemoteOrigin } from "../projects/projects.utils";
-import { gitService } from "../git";
+import { gitService, type DiffSnapshot } from "../git";
 import { appSettingsService } from "../appSettings/appSettings.service";
 import type { CreateProjectPayload, ProjectResponse } from "../projects/projects.dto";
 import type {
@@ -97,6 +97,57 @@ export function logWorkspaceActivity(payload: CreateActivityPayload): void {
 export function emitFindingsChanged(workspaceId: string | undefined): void {
   if (!workspaceId) return;
   emit(CHANNELS.workspace.findingsChanged, { workspaceId });
+}
+
+/**
+ * Make `snapshot` the workspace's current diff row — the single writer for
+ * diff rows, used by run-session, gitFlow's post-commit recapture, and
+ * resyncDiff. Owns the filesJson/statsJson packing and the update-or-insert
+ * decision: an existing row (matched by runId when given, else the
+ * workspace's latest) is updated in place; otherwise the stale latest row is
+ * dropped and a fresh one inserted.
+ */
+export async function recordWorkspaceDiff(
+  workspaceId: string,
+  runId: string | null,
+  snapshot: DiffSnapshot,
+): Promise<void> {
+  const filesJson = JSON.stringify(snapshot.files);
+  const statsJson = JSON.stringify({
+    shortstat: snapshot.shortstat,
+    files: snapshot.files.length,
+    newFiles: snapshot.untrackedFiles.length,
+  });
+  const existing = runId
+    ? await workspaceRepo.findDiffByRun(runId)
+    : await workspaceRepo.findLatestDiffByWorkspace(workspaceId);
+  if (existing) {
+    await workspaceRepo.updateDiff(existing.id, {
+      diffText: snapshot.diffText,
+      filesJson,
+      statsJson,
+      baseRef: snapshot.baseRef,
+    });
+  } else {
+    await workspaceRepo.deleteLatestDiffByWorkspace(workspaceId);
+    await workspaceRepo.insertDiff({
+      id: randomUUID(),
+      workspaceId,
+      runId: runId ?? undefined,
+      baseRef: snapshot.baseRef,
+      diffText: snapshot.diffText,
+      filesJson,
+      statsJson,
+    });
+  }
+}
+
+/** Drop the workspace's latest diff row. Returns true when a row existed. */
+export async function clearWorkspaceDiff(workspaceId: string): Promise<boolean> {
+  const latest = await workspaceRepo.findLatestDiffByWorkspace(workspaceId);
+  if (!latest) return false;
+  await workspaceRepo.deleteLatestDiffByWorkspace(workspaceId);
+  return true;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -231,6 +282,18 @@ export const workspaceService = {
     rootPath: string,
   ): Promise<WorkspaceResponse | null> {
     return workspaceRepo.findByRootPath(accountId, rootPath);
+  },
+
+  async listByProject(projectId: string): Promise<WorkspaceResponse[]> {
+    return workspaceRepo.findByProjectId(projectId);
+  },
+
+  async deleteByProject(projectId: string): Promise<void> {
+    await workspaceRepo.deleteByProjectId(projectId);
+  },
+
+  async deleteReviewsByWorkspace(workspaceId: string): Promise<void> {
+    await workspaceRepo.deleteReviewsByWorkspace(workspaceId);
   },
 
   async create(
@@ -636,6 +699,11 @@ export const workspaceService = {
     await workspaceRepo.deleteLatestDiffByWorkspace(workspaceId);
   },
 
+  /** Wipe every diff row of a workspace (post-commit history reset). */
+  async deleteDiffs(workspaceId: string): Promise<void> {
+    await workspaceRepo.deleteDiffsByWorkspace(workspaceId);
+  },
+
   async createDiff(payload: CreateDiffPayload): Promise<string> {
     return workspaceRepo.insertDiff(payload);
   },
@@ -685,36 +753,11 @@ export const workspaceService = {
     );
 
     if (snapshot.files.length === 0) {
-      if (existing) {
-        await workspaceRepo.deleteLatestDiffByWorkspace(workspaceId);
-      }
+      await clearWorkspaceDiff(workspaceId);
       return null;
     }
 
-    const filesJson = JSON.stringify(snapshot.files);
-    const statsJson = JSON.stringify({
-      shortstat: snapshot.shortstat,
-      files: snapshot.files.length,
-      newFiles: snapshot.untrackedFiles.length,
-    });
-
-    if (existing) {
-      await workspaceRepo.updateDiff(existing.id, {
-        diffText: snapshot.diffText,
-        filesJson,
-        statsJson,
-        baseRef: snapshot.baseRef,
-      });
-    } else {
-      await workspaceRepo.insertDiff({
-        id: randomUUID(),
-        workspaceId,
-        baseRef: snapshot.baseRef,
-        diffText: snapshot.diffText,
-        filesJson,
-        statsJson,
-      });
-    }
+    await recordWorkspaceDiff(workspaceId, null, snapshot);
 
     return workspaceRepo.findLatestDiffSummaryByWorkspace(workspaceId);
   },
@@ -818,5 +861,10 @@ export const workspaceService = {
 
   async deleteFinding(id: string): Promise<void> {
     await workspaceRepo.deleteFinding(id);
+  },
+
+  /** Drop every finding of a workspace (committed code is accepted). */
+  async deleteFindingsByWorkspace(workspaceId: string): Promise<void> {
+    await workspaceRepo.deleteFindingsByWorkspace(workspaceId);
   },
 };

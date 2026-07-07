@@ -3,8 +3,9 @@ export {
   workspaceService,
   logWorkspaceActivity,
   emitFindingsChanged,
+  recordWorkspaceDiff,
+  clearWorkspaceDiff,
 } from "./workspace.service";
-export { workspaceRepo } from "./workspace.repo";
 export type {
   // workspace
   WorkspaceMetadata,

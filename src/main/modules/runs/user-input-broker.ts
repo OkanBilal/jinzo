@@ -1,6 +1,6 @@
 import { BrowserWindow, Notification } from "electron";
 import type { ToolApprovalRequest, ToolApprovalResponse } from "./runs.dto";
-import { appSettingsRepo } from "../appSettings/appSettings.repo";
+import { appSettingsService } from "../appSettings";
 import { emit } from "../../ipc-kit";
 
 /**
@@ -51,7 +51,7 @@ export function requestToolApproval(
     emit(PUSH_CHANNEL, req, { runId: req.runId });
 
     // Send desktop notification if enabled
-    appSettingsRepo.findById("default").then((settings) => {
+    appSettingsService.getSettings().then((settings) => {
       if (settings?.notifyOnToolApproval) {
         const notification = new Notification({
           title: "Tool Approval Needed",

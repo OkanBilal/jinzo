@@ -6,15 +6,20 @@ import {
 } from "../providers/adapters";
 import type { WorkRunUsage, StopReason } from "../../../shared/adapter.types";
 import { runsRepo } from "./runs.repo";
-import { providersRepo } from "../providers/providers.repo";
-import { appSettingsRepo } from "../appSettings/appSettings.repo";
+import { providersService } from "../providers";
+import { appSettingsService } from "../appSettings";
 import {
   gitService,
   hashContent,
   buildPerFileDiffHashes,
   type DiffSnapshot,
 } from "../git";
-import { workspaceService, workspaceRepo, logWorkspaceActivity } from "../workspace";
+import {
+  workspaceService,
+  logWorkspaceActivity,
+  recordWorkspaceDiff,
+  clearWorkspaceDiff,
+} from "../workspace";
 import { createWorkAdapter } from "../providers/adapters";
 import { runSessionRegistry } from "./run-session-registry";
 import { emit } from "../../ipc-kit";
@@ -29,14 +34,6 @@ const FORCE_FINALIZE_TIMEOUT_MS = 30_000;
 // ─────────────────────────────────────────────────────────────
 // File-level utilities (pure)
 // ─────────────────────────────────────────────────────────────
-
-function generateUuid(): string {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
 
 // Push a run event to all clients via the outbound event bus. The bus fans out
 // to the local renderer today and to remote clients under `mains serve`.
@@ -149,8 +146,8 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   // ─── OS notification ───
   async function sendNotification(status: string): Promise<void> {
     try {
-      const settings = await appSettingsRepo.findById("default");
-      if (!settings?.notifyOnRunComplete) return;
+      const settings = await appSettingsService.getSettings();
+      if (!settings.notifyOnRunComplete) return;
       const title = status === "succeeded" ? "Run Completed" : "Run Failed";
       const body = status === "succeeded" ? "Run finished successfully" : "Run failed";
       const notification = new Notification({ title, body });
@@ -171,8 +168,8 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   // ─── Sleep blocker ───
   async function acquireSleepBlocker(): Promise<void> {
     try {
-      const settings = await appSettingsRepo.findById("default");
-      if (!settings?.preventSleepDuringRuns) return;
+      const settings = await appSettingsService.getSettings();
+      if (!settings.preventSleepDuringRuns) return;
       if (sleepBlockerId === null) {
         sleepBlockerId = powerSaveBlocker.start("prevent-app-suspension");
       }
@@ -303,36 +300,6 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
       .catch(() => null);
   }
 
-  async function upsertDiff(snapshot: DiffSnapshot): Promise<void> {
-    const existing = await workspaceRepo.findDiffByRun(runId);
-    const filesJson = JSON.stringify(snapshot.files);
-    const statsJson = JSON.stringify({
-      shortstat: snapshot.shortstat,
-      files: snapshot.files.length,
-      newFiles: snapshot.untrackedFiles.length,
-    });
-    if (existing) {
-      await workspaceRepo.updateDiff(existing.id, {
-        diffText: snapshot.diffText,
-        filesJson,
-        statsJson,
-        baseRef: snapshot.baseRef,
-      });
-    } else {
-      // First persisted diff for this run — wipe the workspace's prior (stale) row.
-      await workspaceRepo.deleteLatestDiffByWorkspace(workspace.id);
-      await workspaceService.createDiff({
-        id: generateUuid(),
-        workspaceId: workspace.id,
-        runId,
-        baseRef: snapshot.baseRef,
-        diffText: snapshot.diffText,
-        filesJson,
-        statsJson,
-      });
-    }
-  }
-
   /**
    * Drop the workspace's latest diff row when the working tree is clean against
    * the current baseRef. Covers the case where the user committed externally
@@ -340,10 +307,9 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
    * pointing at a now-merged baseRef.
    */
   async function clearStaleWorkspaceDiff(): Promise<void> {
-    const latest = await workspaceRepo.findLatestDiffByWorkspace(workspace.id);
-    if (!latest) return;
-    await workspaceRepo.deleteLatestDiffByWorkspace(workspace.id);
-    broadcastDiffUpdated();
+    if (await clearWorkspaceDiff(workspace.id)) {
+      broadcastDiffUpdated();
+    }
   }
 
   // ─── Live diff scheduler ───
@@ -358,12 +324,12 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
       }
       return;
     }
-    const existing = await workspaceRepo.findDiffByRun(runId);
+    const existing = await workspaceService.getDiffByRun(runId);
     if (existing && hashContent(existing.diffText) === hashContent(snapshot.diffText)) {
       return;
     }
     try {
-      await upsertDiff(snapshot);
+      await recordWorkspaceDiff(workspace.id, runId, snapshot);
       broadcastDiffUpdated();
     } catch (err) {
       console.error(`[RunSession ${runId}] recomputeLiveDiff failed:`, err);
@@ -429,7 +395,7 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
     }
 
     try {
-      await upsertDiff(snapshot);
+      await recordWorkspaceDiff(workspace.id, runId, snapshot);
       broadcastDiffUpdated();
 
       // No reliable run-start baseline: null means "baseline unknown" (the git
@@ -634,7 +600,7 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
     if (finalized || aborting) return;
     aborting = true;
     try {
-      const provider = await providersRepo.findById(providerId);
+      const provider = await providersService.getById(providerId);
       if (provider) {
         const adapter = createWorkAdapter(provider);
         if (adapter.abortRun) await adapter.abortRun(runId);

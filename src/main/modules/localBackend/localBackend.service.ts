@@ -5,8 +5,7 @@ import { resolveWebRoot } from "../../web-root";
 import { imageProxyService } from "../imageProxy/imageProxy.service";
 import { serveLocalImage, serveLocalDocument } from "../imageProxy";
 import { tailscaleService } from "../tailscale";
-import { appSettingsRepo } from "../appSettings/appSettings.repo";
-import { SETTINGS_ID } from "../appSettings/appSettings.constants";
+import { appSettingsService } from "../appSettings";
 
 /**
  * "This machine" exposure — turns the RUNNING desktop app into a backend other
@@ -131,8 +130,8 @@ function buildStatus(): LocalBackendStatus {
 
 /** Persist the toggle state so it's restored on the next launch (best-effort). */
 function persist(): void {
-  void appSettingsRepo
-    .update(SETTINGS_ID, {
+  void appSettingsService
+    .updateBackendAccess({
       backendRemoteAccess: remoteAccess,
       backendLanAccess: lanAccess,
       backendTailscaleHttps: tailscale !== null,
@@ -252,7 +251,7 @@ export const localBackendService = {
    */
   async restore(): Promise<void> {
     try {
-      const row = await appSettingsRepo.findById(SETTINGS_ID);
+      const row = await appSettingsService.getSettings();
       if (!row) return;
       remoteAccess = !!row.backendRemoteAccess;
       lanAccess = !!row.backendLanAccess && remoteAccess;

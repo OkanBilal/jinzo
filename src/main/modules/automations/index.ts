@@ -5,7 +5,6 @@ export { registerAutomationsIpc, unregisterAutomationsIpc } from "./automations.
 export { automationsService } from "./automations.service";
 
 // Repository
-export { automationsRepo } from "./automations.repo";
 
 // DTOs
 export type {

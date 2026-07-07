@@ -10,7 +10,6 @@ export { registerSyncIpc, unregisterSyncIpc } from "./sync.ipc";
 export { syncService } from "./sync.service";
 
 // Repository
-export { syncRepo } from "./sync.repo";
 
 // Fetchers
 export { fetchAllEntities } from "./sync.fetchers";

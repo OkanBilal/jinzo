@@ -2,15 +2,15 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ── Mocks ────────────────────────────────────────────────────
 
-vi.mock("../../modules/providers/providers.repo", () => ({
-  providersRepo: {
-    findById: vi.fn(),
+vi.mock("../../modules/providers", () => ({
+  providersService: {
+    getById: vi.fn(),
   },
 }));
 
 vi.mock("../../modules/workspace", () => ({
-  workspaceRepo: {
-    findById: vi.fn(),
+  workspaceService: {
+    get: vi.fn(),
   },
 }));
 
@@ -35,8 +35,8 @@ vi.mock("../writeback/runWriteback", () => ({
 }));
 
 import { dispatchRun, dispatchRunAsync } from "./runDispatcher";
-import { providersRepo } from "../../modules/providers/providers.repo";
-import { workspaceRepo } from "../../modules/workspace";
+import { providersService } from "../../modules/providers";
+import { workspaceService } from "../../modules/workspace";
 import { runsService } from "../../modules/runs";
 import { createWorkAdapter, isSupportedWorkProvider } from "../../modules/providers/adapters";
 import { createRunWriteback } from "../writeback/runWriteback";
@@ -63,8 +63,8 @@ const BASE_REQUEST = {
 };
 
 function setupHappyPath(resultOverride?: Partial<{ status: string; summary: string }>) {
-  vi.mocked(providersRepo.findById).mockResolvedValue(VALID_PROVIDER as never);
-  vi.mocked(workspaceRepo.findById).mockResolvedValue(VALID_WORKSPACE as never);
+  vi.mocked(providersService.getById).mockResolvedValue(VALID_PROVIDER as never);
+  vi.mocked(workspaceService.get).mockResolvedValue(VALID_WORKSPACE as never);
   vi.mocked(isSupportedWorkProvider).mockReturnValue(true);
 
   const mockStartRun = vi.fn().mockImplementation(async (_req, onEvent) => {
@@ -89,7 +89,7 @@ describe("runDispatcher", () => {
   // ─────────────────────────────────────────────────────────
   describe("provider validation", () => {
     it("throws when provider not found", async () => {
-      vi.mocked(providersRepo.findById).mockResolvedValue(null);
+      vi.mocked(providersService.getById).mockResolvedValue(null);
 
       await expect(dispatchRun(BASE_REQUEST)).rejects.toThrow(
         'Provider "copilot_cli" not found',
@@ -97,7 +97,7 @@ describe("runDispatcher", () => {
     });
 
     it("throws when provider is disabled", async () => {
-      vi.mocked(providersRepo.findById).mockResolvedValue({
+      vi.mocked(providersService.getById).mockResolvedValue({
         ...VALID_PROVIDER,
         isEnabled: false,
       } as never);
@@ -106,7 +106,7 @@ describe("runDispatcher", () => {
     });
 
     it("throws when provider kind is not agent_runtime", async () => {
-      vi.mocked(providersRepo.findById).mockResolvedValue({
+      vi.mocked(providersService.getById).mockResolvedValue({
         ...VALID_PROVIDER,
         kind: "llm",
       } as never);
@@ -115,7 +115,7 @@ describe("runDispatcher", () => {
     });
 
     it("throws when provider is not a supported work provider", async () => {
-      vi.mocked(providersRepo.findById).mockResolvedValue(VALID_PROVIDER as never);
+      vi.mocked(providersService.getById).mockResolvedValue(VALID_PROVIDER as never);
       vi.mocked(isSupportedWorkProvider).mockReturnValue(false);
 
       await expect(dispatchRun(BASE_REQUEST)).rejects.toThrow("is not a supported work provider");
@@ -127,9 +127,9 @@ describe("runDispatcher", () => {
   // ─────────────────────────────────────────────────────────
   describe("workspace validation", () => {
     it("throws when workspace not found", async () => {
-      vi.mocked(providersRepo.findById).mockResolvedValue(VALID_PROVIDER as never);
+      vi.mocked(providersService.getById).mockResolvedValue(VALID_PROVIDER as never);
       vi.mocked(isSupportedWorkProvider).mockReturnValue(true);
-      vi.mocked(workspaceRepo.findById).mockResolvedValue(null);
+      vi.mocked(workspaceService.get).mockResolvedValue(null);
 
       await expect(dispatchRun(BASE_REQUEST)).rejects.toThrow('Workspace "ws-1" not found');
     });
@@ -140,9 +140,9 @@ describe("runDispatcher", () => {
   // ─────────────────────────────────────────────────────────
   describe("run creation", () => {
     it("throws when createRun fails", async () => {
-      vi.mocked(providersRepo.findById).mockResolvedValue(VALID_PROVIDER as never);
+      vi.mocked(providersService.getById).mockResolvedValue(VALID_PROVIDER as never);
       vi.mocked(isSupportedWorkProvider).mockReturnValue(true);
-      vi.mocked(workspaceRepo.findById).mockResolvedValue(VALID_WORKSPACE as never);
+      vi.mocked(workspaceService.get).mockResolvedValue(VALID_WORKSPACE as never);
       vi.mocked(runsService.createRun).mockRejectedValueOnce(
         new Error("db error"),
       );
@@ -280,8 +280,8 @@ describe("runDispatcher", () => {
   // ─────────────────────────────────────────────────────────
   describe("adapter error handling", () => {
     it("catches adapter errors and marks run as failed", async () => {
-      vi.mocked(providersRepo.findById).mockResolvedValue(VALID_PROVIDER as never);
-      vi.mocked(workspaceRepo.findById).mockResolvedValue(VALID_WORKSPACE as never);
+      vi.mocked(providersService.getById).mockResolvedValue(VALID_PROVIDER as never);
+      vi.mocked(workspaceService.get).mockResolvedValue(VALID_WORKSPACE as never);
       vi.mocked(isSupportedWorkProvider).mockReturnValue(true);
 
       vi.mocked(createWorkAdapter).mockReturnValue({
@@ -303,8 +303,8 @@ describe("runDispatcher", () => {
     });
 
     it("handles non-Error throws", async () => {
-      vi.mocked(providersRepo.findById).mockResolvedValue(VALID_PROVIDER as never);
-      vi.mocked(workspaceRepo.findById).mockResolvedValue(VALID_WORKSPACE as never);
+      vi.mocked(providersService.getById).mockResolvedValue(VALID_PROVIDER as never);
+      vi.mocked(workspaceService.get).mockResolvedValue(VALID_WORKSPACE as never);
       vi.mocked(isSupportedWorkProvider).mockReturnValue(true);
 
       vi.mocked(createWorkAdapter).mockReturnValue({
@@ -324,8 +324,8 @@ describe("runDispatcher", () => {
   describe("dispatchRunAsync", () => {
     it("returns runId immediately", () => {
       // Mock enough to not throw synchronously
-      vi.mocked(providersRepo.findById).mockResolvedValue(VALID_PROVIDER as never);
-      vi.mocked(workspaceRepo.findById).mockResolvedValue(VALID_WORKSPACE as never);
+      vi.mocked(providersService.getById).mockResolvedValue(VALID_PROVIDER as never);
+      vi.mocked(workspaceService.get).mockResolvedValue(VALID_WORKSPACE as never);
       vi.mocked(isSupportedWorkProvider).mockReturnValue(true);
       vi.mocked(createWorkAdapter).mockReturnValue({
         startRun: vi.fn().mockResolvedValue({ status: "succeeded" }),

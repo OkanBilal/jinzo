@@ -5,7 +5,6 @@ export { registerAppSettingsIpc, unregisterAppSettingsIpc } from "./appSettings.
 export { appSettingsService } from "./appSettings.service";
 
 // Repository
-export { appSettingsRepo } from "./appSettings.repo";
 
 // Validation
 export { sanitizeAppSettingsPatch } from "./appSettings.validation";

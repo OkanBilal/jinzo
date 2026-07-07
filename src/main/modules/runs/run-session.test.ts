@@ -61,14 +61,10 @@ vi.mock("../git/git.service", () => ({
 
 vi.mock("../workspace", () => ({
   workspaceService: {
-    createDiff: vi.fn().mockResolvedValue({ success: true, data: "diff-id" }),
+    getDiffByRun: vi.fn().mockResolvedValue(null),
   },
-  workspaceRepo: {
-    findDiffsByWorkspace: vi.fn().mockResolvedValue([]),
-    findDiffByRun: vi.fn().mockResolvedValue(null),
-    updateDiff: vi.fn(),
-    deleteLatestDiffByWorkspace: vi.fn(),
-  },
+  recordWorkspaceDiff: vi.fn().mockResolvedValue(undefined),
+  clearWorkspaceDiff: vi.fn().mockResolvedValue(false),
   logWorkspaceActivity: vi.fn(),
 }));
 
