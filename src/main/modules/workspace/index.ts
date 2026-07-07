@@ -38,6 +38,4 @@ export type {
   ReviewFindingResponse,
   CreateReviewFindingPayload,
   UpdateReviewFindingPayload,
-  // shared envelope
-  ServiceResponse,
 } from "./workspace.dto";

@@ -1,42 +1,42 @@
 // ─────────────────────────────────────────────────────────────
-// Git Flow IPC Handlers
+// Git Flow IPC Handlers — throw-style service, envelope applied
+// by handle().
 // ─────────────────────────────────────────────────────────────
 
 import { ipcMain } from "../../ipc-kit/ipc-main";
+import { handle } from "../../ipc-kit/handle";
 import { gitFlowService } from "./gitFlow.service";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
 
 export function registerGitFlowIpc(): void {
-  ipcMain.handle(CHANNELS.gitFlow.getStatus, async (_, workspaceId: string) => {
-    return gitFlowService.getStatus(workspaceId);
-  });
+  ipcMain.handle(
+    CHANNELS.gitFlow.getStatus,
+    handle((workspaceId: string) => gitFlowService.getStatus(workspaceId)),
+  );
 
   ipcMain.handle(
     CHANNELS.gitFlow.commit,
-    async (
-      _,
-      payload: {
+    handle(
+      (payload: {
         workspaceId: string;
         message?: string;
         includeUnstaged?: boolean;
         providerId?: string;
         model?: string;
         push?: boolean;
-      },
-    ) => {
-      return gitFlowService.commit(payload);
-    },
+      }) => gitFlowService.commit(payload),
+    ),
   );
 
-  ipcMain.handle(CHANNELS.gitFlow.push, async (_, workspaceId: string) => {
-    return gitFlowService.push(workspaceId);
-  });
+  ipcMain.handle(
+    CHANNELS.gitFlow.push,
+    handle((workspaceId: string) => gitFlowService.push(workspaceId)),
+  );
 
   ipcMain.handle(
     CHANNELS.gitFlow.createPr,
-    async (
-      _,
-      payload: {
+    handle(
+      (payload: {
         workspaceId: string;
         title?: string;
         body?: string;
@@ -44,58 +44,48 @@ export function registerGitFlowIpc(): void {
         draft?: boolean;
         providerId?: string;
         model?: string;
-      },
-    ) => {
-      return gitFlowService.createPr(payload);
-    },
+      }) => gitFlowService.createPr(payload),
+    ),
   );
 
   ipcMain.handle(
     CHANNELS.gitFlow.generateCommitMessage,
-    async (
-      _,
-      payload: {
+    handle(
+      (payload: {
         workspaceId: string;
         providerId: string;
         model?: string;
         includeUnstaged?: boolean;
-      },
-    ) => {
-      return gitFlowService.generateCommitMessage(payload);
-    },
+      }) => gitFlowService.generateCommitMessage(payload),
+    ),
   );
 
   ipcMain.handle(
     CHANNELS.gitFlow.generatePrBody,
-    async (
-      _,
-      payload: { workspaceId: string; providerId: string; model?: string },
-    ) => {
-      return gitFlowService.generatePrBody(payload);
-    },
+    handle(
+      (payload: { workspaceId: string; providerId: string; model?: string }) =>
+        gitFlowService.generatePrBody(payload),
+    ),
   );
 
   ipcMain.handle(
     CHANNELS.gitFlow.getPublishPreflight,
-    async (_, workspaceId: string) => {
-      return gitFlowService.getPublishPreflight(workspaceId);
-    },
+    handle((workspaceId: string) =>
+      gitFlowService.getPublishPreflight(workspaceId),
+    ),
   );
 
   ipcMain.handle(
     CHANNELS.gitFlow.publish,
-    async (
-      _,
-      payload: {
+    handle(
+      (payload: {
         workspaceId: string;
         ownerRepo: string;
         visibility: "private" | "public";
         remoteName?: string;
         protocol: "ssh" | "https";
-      },
-    ) => {
-      return gitFlowService.publish(payload);
-    },
+      }) => gitFlowService.publish(payload),
+    ),
   );
 }
 

@@ -1,10 +1,8 @@
-import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import { promises as fs } from "fs";
 import * as path from "path";
 import type {
   FileNode,
   ReadDirectoryOptions,
-  ServiceResponse,
   FileTreeResponse,
   FileContentResponse,
   ReadFileTextOptions,
@@ -23,7 +21,25 @@ import {
 
 // ─────────────────────────────────────────────────────────────
 // File Explorer Service
+//
+// Throw-style: methods return plain values and throw on failure; the
+// ServiceResponse envelope is applied by handle() at the IPC seam.
+// fs errno codes are mapped to the user-facing messages this module
+// has always surfaced.
 // ─────────────────────────────────────────────────────────────
+
+/** Map fs errno codes onto user-facing messages, then throw. */
+function throwFsError(
+  error: unknown,
+  notFoundMessage: string,
+  fallbackMessage: string,
+): never {
+  const code = (error as NodeJS.ErrnoException).code;
+  if (code === "ENOENT") throw new Error(notFoundMessage);
+  if (code === "EACCES") throw new Error("Permission denied");
+  if (code === "EISDIR") throw new Error("Cannot read directory as file");
+  throw new Error(fallbackMessage);
+}
 
 function shouldExclude(
   name: string,
@@ -158,7 +174,7 @@ export const fileExplorerService = {
    */
   async readDirectory(
     options: ReadDirectoryOptions
-  ): Promise<ServiceResponse<FileTreeResponse>> {
+  ): Promise<FileTreeResponse> {
     const {
       rootPath,
       // Undefined in callers => apply safe default depth cap.
@@ -171,55 +187,48 @@ export const fileExplorerService = {
       // Validate root path exists and is a directory
       const rootStat = await fs.stat(rootPath);
       if (!rootStat.isDirectory()) {
-        return fail("Path is not a directory");
+        throw new Error("Path is not a directory");
       }
-
-      const stats = { files: 0, directories: 0, truncated: false };
-      const rootName = path.basename(rootPath);
-
-      const children = await readDirectoryRecursive(
-        rootPath,
-        {
-          depth,
-          currentDepth: 0,
-          includeHidden,
-          excludePatterns,
-          maxNodes: MAX_READ_DIRECTORY_NODES,
-        },
-        stats
-      );
-
-      if (stats.truncated) {
-        console.warn(
-          `[FileExplorer] readDirectory truncated at ${MAX_READ_DIRECTORY_NODES} nodes for ${rootPath}`,
-        );
-      }
-
-      const root: FileNode = {
-        name: rootName,
-        fullPath: rootPath,
-        type: "directory",
-        children,
-      };
-
-      return {
-        success: true,
-        data: {
-          root,
-          totalFiles: stats.files,
-          totalDirectories: stats.directories,
-        },
-      };
     } catch (error) {
-      console.error("[FileExplorer] Failed to read directory:", error);
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-        return fail("Directory does not exist");
+      if (error instanceof Error && error.message === "Path is not a directory") {
+        throw error;
       }
-      if ((error as NodeJS.ErrnoException).code === "EACCES") {
-        return fail("Permission denied");
-      }
-      return fail("Failed to read directory");
+      throwFsError(error, "Directory does not exist", "Failed to read directory");
     }
+
+    const stats = { files: 0, directories: 0, truncated: false };
+    const rootName = path.basename(rootPath);
+
+    const children = await readDirectoryRecursive(
+      rootPath,
+      {
+        depth,
+        currentDepth: 0,
+        includeHidden,
+        excludePatterns,
+        maxNodes: MAX_READ_DIRECTORY_NODES,
+      },
+      stats
+    );
+
+    if (stats.truncated) {
+      console.warn(
+        `[FileExplorer] readDirectory truncated at ${MAX_READ_DIRECTORY_NODES} nodes for ${rootPath}`,
+      );
+    }
+
+    const root: FileNode = {
+      name: rootName,
+      fullPath: rootPath,
+      type: "directory",
+      children,
+    };
+
+    return {
+      root,
+      totalFiles: stats.files,
+      totalDirectories: stats.directories,
+    };
   },
 
   /**
@@ -228,7 +237,7 @@ export const fileExplorerService = {
   async readDirectoryShallow(
     dirPath: string,
     options?: { includeHidden?: boolean; excludePatterns?: string[] }
-  ): Promise<ServiceResponse<FileNode[]>> {
+  ): Promise<FileNode[]> {
     const {
       includeHidden = false,
       excludePatterns = DEFAULT_EXCLUDE_PATTERNS,
@@ -237,7 +246,7 @@ export const fileExplorerService = {
     try {
       const dirStat = await fs.stat(dirPath);
       if (!dirStat.isDirectory()) {
-        return fail("Path is not a directory");
+        throw new Error("Path is not a directory");
       }
 
       const entries = await fs.readdir(dirPath, { withFileTypes: true });
@@ -300,16 +309,13 @@ export const fileExplorerService = {
         }
       }
 
-      return ok(children);
+      return children;
     } catch (error) {
+      if (error instanceof Error && error.message === "Path is not a directory") {
+        throw error;
+      }
       console.error("[FileExplorer] Failed to read directory shallow:", error);
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-        return fail("Directory does not exist");
-      }
-      if ((error as NodeJS.ErrnoException).code === "EACCES") {
-        return fail("Permission denied");
-      }
-      return fail("Failed to read directory");
+      throwFsError(error, "Directory does not exist", "Failed to read directory");
     }
   },
 
@@ -318,44 +324,30 @@ export const fileExplorerService = {
    */
   async getPathInfo(
     targetPath: string
-  ): Promise<ServiceResponse<{ exists: boolean; isDirectory: boolean; isFile: boolean }>> {
+  ): Promise<{ exists: boolean; isDirectory: boolean; isFile: boolean }> {
     try {
       const stat = await fs.stat(targetPath);
       return {
-        success: true,
-        data: {
-          exists: true,
-          isDirectory: stat.isDirectory(),
-          isFile: stat.isFile(),
-        },
+        exists: true,
+        isDirectory: stat.isDirectory(),
+        isFile: stat.isFile(),
       };
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-        return {
-          success: true,
-          data: { exists: false, isDirectory: false, isFile: false },
-        };
+        return { exists: false, isDirectory: false, isFile: false };
       }
-      return fail("Failed to get path info");
+      throw new Error("Failed to get path info");
     }
   },
 
   /**
    * Read file content (basic, no security checks - use readFileText for secure reads)
    */
-  async readFile(filePath: string): Promise<ServiceResponse<string>> {
+  async readFile(filePath: string): Promise<string> {
     try {
-      const content = await fs.readFile(filePath, "utf-8");
-      return ok(content);
+      return await fs.readFile(filePath, "utf-8");
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-        return fail("File does not exist");
-      }
-      console.error("[FileExplorer] Failed to read file:", error);
-      if ((error as NodeJS.ErrnoException).code === "EACCES") {
-        return fail("Permission denied");
-      }
-      return fail("Failed to read file");
+      throwFsError(error, "File does not exist", "Failed to read file");
     }
   },
 
@@ -366,47 +358,43 @@ export const fileExplorerService = {
    */
   async readFileText(
     options: ReadFileTextOptions
-  ): Promise<ServiceResponse<FileContentResponse>> {
+  ): Promise<FileContentResponse> {
     const {
       filePath,
       maxSizeBytes = MAX_FILE_SIZE_BYTES,
     } = options;
 
+    const normalizedPath = path.resolve(filePath);
+
+    let realPath: string;
     try {
-      const normalizedPath = path.resolve(filePath);
+      realPath = await fs.realpath(normalizedPath);
+    } catch (error) {
+      throwFsError(error, "File does not exist", "Failed to read file");
+    }
 
-      let realPath: string;
-      try {
-        realPath = await fs.realpath(normalizedPath);
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-          return fail("File does not exist");
-        }
-        throw error;
-      }
-
+    try {
       // Get file stats and validate it's a regular file
       const stats = await fs.lstat(realPath);
 
       if (!stats.isFile()) {
         if (stats.isDirectory()) {
-          return fail("Cannot read directory as file");
+          throw new Error("Cannot read directory as file");
         }
         if (stats.isSymbolicLink()) {
           // Should not reach here after realpath, but safety check
-          return fail("Cannot read symbolic link");
+          throw new Error("Cannot read symbolic link");
         }
-        return fail("Cannot read non-regular file");
+        throw new Error("Cannot read non-regular file");
       }
 
       // Check file size
       if (stats.size > maxSizeBytes) {
         const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
         const limitMB = (maxSizeBytes / (1024 * 1024)).toFixed(0);
-        return {
-          success: false,
-          error: `File too large (${sizeMB}MB). Maximum size is ${limitMB}MB`,
-        };
+        throw new Error(
+          `File too large (${sizeMB}MB). Maximum size is ${limitMB}MB`,
+        );
       }
 
       // Read file content
@@ -424,74 +412,48 @@ export const fileExplorerService = {
 
       if (isBinary) {
         return {
-          success: true,
-          data: {
-            content: "[Binary file - content cannot be displayed]",
-            size: stats.size,
-            isBinary: true,
-            encoding: "binary",
-          },
+          content: "[Binary file - content cannot be displayed]",
+          size: stats.size,
+          isBinary: true,
+          encoding: "binary",
         };
       }
 
       // Decode as UTF-8 and validate
-      let content: string;
-      try {
-        content = buffer.toString("utf-8");
-        // Check for replacement character which indicates invalid UTF-8
-        if (content.includes("\uFFFD")) {
-          // Try to determine if it's truly binary or just has some bad chars
-          const replacementCount = (content.match(/\uFFFD/g) || []).length;
-          const ratio = replacementCount / content.length;
-          if (ratio > 0.01) {
-            // More than 1% replacement chars suggests binary
-            return {
-              success: true,
-              data: {
-                content: "[Binary file - content cannot be displayed]",
-                size: stats.size,
-                isBinary: true,
-                encoding: "binary",
-              },
-            };
-          }
-        }
-      } catch {
-        return {
-          success: true,
-          data: {
+      const content = buffer.toString("utf-8");
+      // Check for replacement character which indicates invalid UTF-8
+      if (content.includes("�")) {
+        // Try to determine if it's truly binary or just has some bad chars
+        const replacementCount = (content.match(/�/g) || []).length;
+        const ratio = replacementCount / content.length;
+        if (ratio > 0.01) {
+          // More than 1% replacement chars suggests binary
+          return {
             content: "[Binary file - content cannot be displayed]",
             size: stats.size,
             isBinary: true,
             encoding: "binary",
-          },
-        };
+          };
+        }
       }
 
       return {
-        success: true,
-        data: {
-          content,
-          size: stats.size,
-          isBinary: false,
-          encoding: "utf-8",
-        },
+        content,
+        size: stats.size,
+        isBinary: false,
+        encoding: "utf-8",
       };
     } catch (error) {
+      // Domain messages pass through; raw fs errors get mapped.
+      if (
+        error instanceof Error &&
+        !(error as NodeJS.ErrnoException).code &&
+        error.message
+      ) {
+        throw error;
+      }
       console.error("[FileExplorer] Failed to read file text:", error);
-      const errCode = (error as NodeJS.ErrnoException).code;
-
-      if (errCode === "ENOENT") {
-        return fail("File does not exist");
-      }
-      if (errCode === "EACCES") {
-        return fail("Permission denied");
-      }
-      if (errCode === "EISDIR") {
-        return fail("Cannot read directory as file");
-      }
-
-      return fail("Failed to read file");
+      throwFsError(error, "File does not exist", "Failed to read file");
     }
   },
 
@@ -500,9 +462,7 @@ export const fileExplorerService = {
    * filename and the workspace-relative path; stops as soon as `max` matches
    * are collected. No `fs.stat` per match — keeps the hot keystroke path cheap.
    */
-  async searchFiles(
-    options: SearchFilesOptions,
-  ): Promise<ServiceResponse<DirEntry[]>> {
+  async searchFiles(options: SearchFilesOptions): Promise<DirEntry[]> {
     const {
       rootPath,
       query,
@@ -512,7 +472,7 @@ export const fileExplorerService = {
     } = options;
 
     const needle = query.toLowerCase();
-    if (!needle) return ok([]);
+    if (!needle) return [];
 
     const normalizedRoot = rootPath.replace(/\/$/, "");
     const rootPrefix = normalizedRoot + path.sep;
@@ -558,25 +518,20 @@ export const fileExplorerService = {
     try {
       const rootStat = await fs.stat(rootPath);
       if (!rootStat.isDirectory()) {
-        return fail("Path is not a directory");
+        throw new Error("Path is not a directory");
       }
-      await walk(rootPath);
-      return ok(results);
     } catch (error) {
-      const errCode = (error as NodeJS.ErrnoException).code;
-      if (errCode === "ENOENT") {
-        return fail("Directory does not exist");
+      if (error instanceof Error && error.message === "Path is not a directory") {
+        throw error;
       }
-      if (errCode === "EACCES") {
-        return fail("Permission denied");
-      }
-      console.error("[FileExplorer] searchFiles failed:", error);
-      return fail("Failed to search files");
+      throwFsError(error, "Directory does not exist", "Failed to search files");
     }
+    await walk(rootPath);
+    return results;
   },
 
   // Immediate children only — no recursion. Used for lazy tree expansion.
-  async listDir(options: ListDirOptions): Promise<ServiceResponse<DirEntry[]>> {
+  async listDir(options: ListDirOptions): Promise<DirEntry[]> {
     const {
       dirPath,
       includeHidden = false,
@@ -589,7 +544,7 @@ export const fileExplorerService = {
       // Verify it's a directory
       const dirStat = await fs.stat(resolvedPath);
       if (!dirStat.isDirectory()) {
-        return fail("Path is not a directory");
+        throw new Error("Path is not a directory");
       }
 
       // Read directory entries
@@ -657,18 +612,18 @@ export const fileExplorerService = {
         }
       }
 
-      return ok(results);
+      return results;
     } catch (error) {
+      if (error instanceof Error && error.message === "Path is not a directory") {
+        throw error;
+      }
       const errCode = (error as NodeJS.ErrnoException).code;
       console.error(`[FileExplorer] listDir failed for ${resolvedPath}:`, error);
-
-      if (errCode === "ENOENT") {
-        return fail("Directory does not exist");
-      }
-      if (errCode === "EACCES") {
-        return fail("Permission denied");
-      }
-      return fail(`Failed to list directory: ${errCode || "unknown"}`);
+      throwFsError(
+        error,
+        "Directory does not exist",
+        `Failed to list directory: ${errCode || "unknown"}`,
+      );
     }
   },
 };

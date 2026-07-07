@@ -1,4 +1,3 @@
-import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import { createAccount } from "../../../test/factories";
@@ -15,6 +14,9 @@ vi.mock("../../db/client", () => ({
 
 import { accountService } from "./account.service";
 import { accountRepo } from "./account.repo";
+
+// Throw-style service: tests assert plain values and rejections — the
+// ServiceResponse envelope only exists at the IPC seam (handle()).
 
 describe("accountService", () => {
   beforeEach(() => {
@@ -42,61 +44,47 @@ describe("accountService", () => {
   });
 
   describe("getAccount", () => {
-    it("returns success response with formatted account", async () => {
-      const result = await accountService.getAccount();
-      assertOk(result);
-      if (result.success) {
-        expect(result.data.id).toBe("default");
-        // formatAccountResponse defaults
-        expect(result.data.timezone).toBe("UTC");
-        expect(result.data.locale).toBe("en-US");
-      }
+    it("returns the formatted account", async () => {
+      const account = await accountService.getAccount();
+      expect(account.id).toBe("default");
+      // formatAccountResponse defaults
+      expect(account.timezone).toBe("UTC");
+      expect(account.locale).toBe("en-US");
     });
   });
 
   describe("updateAccount", () => {
     it("updates with valid payload", async () => {
-      const result = await accountService.updateAccount({
+      const account = await accountService.updateAccount({
         displayName: "Updated Name",
       });
-      assertOk(result);
-      if (result.success) {
-        expect(result.data.displayName).toBe("Updated Name");
-      }
+      expect(account.displayName).toBe("Updated Name");
     });
 
-    it("returns errors for invalid payload", async () => {
-      const result = await accountService.updateAccount(null);
-      assertFail(result);
+    it("throws for invalid payload", async () => {
+      await expect(accountService.updateAccount(null)).rejects.toThrow();
     });
 
-    it("returns error for empty update", async () => {
-      const result = await accountService.updateAccount({});
-      assertFail(result);
-      if (!result.success) {
-        expect(result.error).toBe("No fields to update");
-      }
+    it("throws for empty update", async () => {
+      await expect(accountService.updateAccount({})).rejects.toThrow(
+        "No fields to update",
+      );
     });
 
-    it("returns validation errors for invalid email", async () => {
-      const result = await accountService.updateAccount({
-        email: "not-an-email",
-      });
-      assertFail(result);
-      expect(result.error).toContain("email: Invalid email");
+    it("throws validation errors for invalid email", async () => {
+      await expect(
+        accountService.updateAccount({ email: "not-an-email" }),
+      ).rejects.toThrow(/email: Invalid email/);
     });
 
     it("updates multiple fields", async () => {
-      const result = await accountService.updateAccount({
+      const account = await accountService.updateAccount({
         displayName: "New Name",
         email: "valid@test.com",
         bio: "Hello world",
       });
-      assertOk(result);
-      if (result.success) {
-        expect(result.data.displayName).toBe("New Name");
-        expect(result.data.email).toBe("valid@test.com");
-      }
+      expect(account.displayName).toBe("New Name");
+      expect(account.email).toBe("valid@test.com");
     });
   });
 
@@ -104,22 +92,16 @@ describe("accountService", () => {
   // Error paths
   // ─────────────────────────────────────────────────────────────
   describe("error handling", () => {
-    it("getAccount returns error on failure", async () => {
+    it("getAccount propagates repo failures", async () => {
       vi.spyOn(accountRepo, "findById").mockRejectedValueOnce(new Error("db"));
-      const result = await accountService.getAccount();
-      assertFail(result);
-      if (!result.success) {
-        expect(result.error).toBe("Failed to fetch account");
-      }
+      await expect(accountService.getAccount()).rejects.toThrow("db");
     });
 
-    it("updateAccount returns error on failure", async () => {
+    it("updateAccount propagates repo failures", async () => {
       vi.spyOn(accountRepo, "update").mockRejectedValueOnce(new Error("db"));
-      const result = await accountService.updateAccount({ displayName: "X" });
-      assertFail(result);
-      if (!result.success) {
-        expect(result.error).toBe("Failed to update account");
-      }
+      await expect(
+        accountService.updateAccount({ displayName: "X" }),
+      ).rejects.toThrow("db");
     });
   });
 });

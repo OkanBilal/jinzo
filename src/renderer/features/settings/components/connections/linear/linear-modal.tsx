@@ -89,8 +89,7 @@ export default function LinearModal(props: LinearModalProps) {
   const [getTeams] = useLazyGetLinearTeamsQuery();
   const fetchAllResources = useCallback(
     async (connectionId: string) => {
-      const result = await getTeams(connectionId).unwrap();
-      return { success: result.success, items: result.teams };
+      return getTeams(connectionId).unwrap();
     },
     [getTeams],
   );

@@ -1,4 +1,3 @@
-import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
 import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
@@ -159,16 +158,15 @@ export const runsApi = baseApi.injectEndpoints({
         handler: CHANNELS.runs.getAll,
         args: limit ? [limit] : [],
       }),
-      transformResponse: (response: ServiceResponse<Run[]>) => unwrap(response),
       providesTags: ["Runs"],
     }),
 
-    getRunById: builder.query<Run, string>({
+    // Absence rule: a missing run arrives as null data, not an error.
+    getRunById: builder.query<Run | null, string>({
       query: (id) => ({
         handler: CHANNELS.runs.getById,
         args: [id],
       }),
-      transformResponse: (response: ServiceResponse<Run>) => unwrap(response),
       providesTags: (_result, _error, id) => [{ type: "Runs", id }],
     }),
 
@@ -180,7 +178,6 @@ export const runsApi = baseApi.injectEndpoints({
         handler: CHANNELS.runs.getByAccount,
         args: [accountId, limit],
       }),
-      transformResponse: (response: ServiceResponse<Run[]>) => unwrap(response),
       providesTags: ["Runs"],
     }),
 
@@ -192,7 +189,6 @@ export const runsApi = baseApi.injectEndpoints({
         handler: CHANNELS.runs.getByWorkspace,
         args: [workspaceId, limit],
       }),
-      transformResponse: (response: ServiceResponse<Run[]>) => unwrap(response),
       providesTags: ["Runs"],
     }),
 
@@ -204,7 +200,6 @@ export const runsApi = baseApi.injectEndpoints({
         handler: CHANNELS.runs.getByStatus,
         args: [accountId, status],
       }),
-      transformResponse: (response: ServiceResponse<Run[]>) => unwrap(response),
       providesTags: ["Runs"],
     }),
 
@@ -213,7 +208,6 @@ export const runsApi = baseApi.injectEndpoints({
         handler: CHANNELS.runs.create,
         args: [payload],
       }),
-      transformResponse: (response: ServiceResponse<string>) => unwrap(response),
       invalidatesTags: ["Runs"],
     }),
 
@@ -223,7 +217,6 @@ export const runsApi = baseApi.injectEndpoints({
           handler: CHANNELS.runs.update,
           args: [id, payload],
         }),
-        transformResponse: (response: ServiceResponse<Run>) => unwrap(response),
         invalidatesTags: (_result, _error, { id }) => [
           "Runs",
           { type: "Runs", id },
@@ -236,7 +229,6 @@ export const runsApi = baseApi.injectEndpoints({
         handler: CHANNELS.runs.start,
         args: [id],
       }),
-      transformResponse: (response: ServiceResponse<Run>) => unwrap(response),
       invalidatesTags: (_result, _error, id) => ["Runs", { type: "Runs", id }],
     }),
 
@@ -245,7 +237,6 @@ export const runsApi = baseApi.injectEndpoints({
         handler: CHANNELS.runs.complete,
         args: [id],
       }),
-      transformResponse: (response: ServiceResponse<Run>) => unwrap(response),
       invalidatesTags: (_result, _error, id) => ["Runs", { type: "Runs", id }],
     }),
 
@@ -254,7 +245,6 @@ export const runsApi = baseApi.injectEndpoints({
         handler: CHANNELS.runs.fail,
         args: [id, error],
       }),
-      transformResponse: (response: ServiceResponse<Run>) => unwrap(response),
       invalidatesTags: (_result, _error, { id }) => [
         "Runs",
         { type: "Runs", id },
@@ -266,7 +256,6 @@ export const runsApi = baseApi.injectEndpoints({
         handler: CHANNELS.runs.cancel,
         args: [id],
       }),
-      transformResponse: (response: ServiceResponse<Run>) => unwrap(response),
       invalidatesTags: (_result, _error, id) => ["Runs", { type: "Runs", id }],
     }),
 
@@ -291,7 +280,6 @@ export const runsApi = baseApi.injectEndpoints({
         handler: CHANNELS.runs.archive,
         args: [id],
       }),
-      transformResponse: (response: ServiceResponse<Run>) => unwrap(response),
       invalidatesTags: (_result, _error, id) => ["Runs", { type: "Runs", id }],
     }),
 
@@ -300,7 +288,6 @@ export const runsApi = baseApi.injectEndpoints({
         handler: CHANNELS.runContext.getByRun,
         args: [runId],
       }),
-      transformResponse: (response: ServiceResponse<RunContext[]>) => unwrap(response),
       providesTags: (_result, _error, runId) => [
         { type: "RunContext", id: runId },
       ],
@@ -311,7 +298,6 @@ export const runsApi = baseApi.injectEndpoints({
         handler: CHANNELS.runContext.add,
         args: [payload],
       }),
-      transformResponse: (response: ServiceResponse<number>) => unwrap(response),
       invalidatesTags: (_result, _error, { runId }) => [
         "RunContext",
         { type: "RunContext", id: runId },
@@ -334,7 +320,6 @@ export const runsApi = baseApi.injectEndpoints({
         handler: CHANNELS.runArtifacts.getByRun,
         args: [runId],
       }),
-      transformResponse: (response: ServiceResponse<RunArtifact[]>) => unwrap(response),
       providesTags: (_result, _error, runId) => [
         { type: "RunArtifacts", id: runId },
       ],
@@ -345,7 +330,6 @@ export const runsApi = baseApi.injectEndpoints({
         handler: CHANNELS.runArtifacts.add,
         args: [payload],
       }),
-      transformResponse: (response: ServiceResponse<number>) => unwrap(response),
       invalidatesTags: (_result, _error, { runId }) => [
         "RunArtifacts",
         { type: "RunArtifacts", id: runId },
@@ -389,7 +373,6 @@ export const runsApi = baseApi.injectEndpoints({
         handler: CHANNELS.runs.executeReview,
         args: [payload],
       }),
-      transformResponse: (response: ServiceResponse<{ runId: string }>) => unwrap(response),
       invalidatesTags: ["Runs"],
     }),
 
@@ -398,7 +381,6 @@ export const runsApi = baseApi.injectEndpoints({
         handler: CHANNELS.runTurns.getByRun,
         args: [runId],
       }),
-      transformResponse: (response: ServiceResponse<RunTurn[]>) => unwrap(response),
       providesTags: (_result, _error, runId) => [
         { type: "RunTurns", id: runId },
       ],

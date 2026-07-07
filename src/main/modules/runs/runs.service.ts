@@ -1,4 +1,3 @@
-import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import { createHash } from "crypto";
 
 import { runsRepo } from "./runs.repo";
@@ -25,7 +24,6 @@ import type {
   CreateToolCallPayload,
   UpdateToolCallPayload,
   ToolCallResponse,
-  ServiceResponse,
   RunStatus,
   StartRunPayload,
   StartRunResponse,
@@ -142,102 +140,62 @@ async function handlePreSessionFailure(runId: string, error: unknown): Promise<v
 
 // ─────────────────────────────────────────────────────────────
 // Runs Service
+//
+// Throw-style: methods return plain values and throw on failure; the
+// ServiceResponse envelope is applied by handle() at the IPC seam.
+// Single-item reads return null for absence; mutations on a missing
+// target throw (see CONTEXT.md "absence rule").
 // ─────────────────────────────────────────────────────────────
 export const runsService = {
   // ─── Run Operations ───
-  async getAllRuns(limit?: number): Promise<ServiceResponse<RunResponse[]>> {
-    try {
-      const runs = await runsRepo.findAllRuns(limit);
-      return ok(runs);
-    } catch (error) {
-      console.error("[RunsService] Failed to get all runs:", error);
-      return fail("Failed to get runs");
-    }
+  async getAllRuns(limit?: number): Promise<RunResponse[]> {
+    return runsRepo.findAllRuns(limit);
   },
 
-  async getRunById(id: string): Promise<ServiceResponse<RunResponse>> {
-    try {
-      const run = await runsRepo.findRunById(id);
-      if (!run) return fail("Run not found");
-      return ok(run);
-    } catch (error) {
-      console.error(`[RunsService] Failed to get run ${id}:`, error);
-      return fail("Failed to get run");
-    }
+  async getRunById(id: string): Promise<RunResponse | null> {
+    return runsRepo.findRunById(id);
   },
 
   async getRunsByAccount(
     accountId: string,
     limit?: number,
-  ): Promise<ServiceResponse<RunResponse[]>> {
-    try {
-      const runs = await runsRepo.findRunsByAccount(accountId, limit);
-      return ok(runs);
-    } catch (error) {
-      console.error(`[RunsService] Failed to get runs for account ${accountId}:`, error);
-      return fail("Failed to get runs");
-    }
+  ): Promise<RunResponse[]> {
+    return runsRepo.findRunsByAccount(accountId, limit);
   },
 
   async getRunsByWorkspace(
     workspaceId: string,
     limit?: number,
-  ): Promise<ServiceResponse<RunResponse[]>> {
-    try {
-      const runs = await runsRepo.findRunsByWorkspace(workspaceId, limit);
-      return ok(runs);
-    } catch (error) {
-      console.error(`[RunsService] Failed to get runs for workspace ${workspaceId}:`, error);
-      return fail("Failed to get runs");
-    }
+  ): Promise<RunResponse[]> {
+    return runsRepo.findRunsByWorkspace(workspaceId, limit);
   },
 
   async getRunsByStatus(
     accountId: string,
     status: RunStatus,
-  ): Promise<ServiceResponse<RunResponse[]>> {
-    try {
-      const runs = await runsRepo.findRunsByStatus(accountId, status);
-      return ok(runs);
-    } catch (error) {
-      console.error(`[RunsService] Failed to get runs by status:`, error);
-      return fail("Failed to get runs");
-    }
+  ): Promise<RunResponse[]> {
+    return runsRepo.findRunsByStatus(accountId, status);
   },
 
-  async createRun(payload: CreateRunPayload): Promise<ServiceResponse<string>> {
-    try {
-      const id = await runsRepo.insertRun(payload);
-      return ok(id);
-    } catch (error) {
-      console.error("[RunsService] Failed to create run:", error);
-      return fail("Failed to create run");
-    }
+  async createRun(payload: CreateRunPayload): Promise<string> {
+    return runsRepo.insertRun(payload);
   },
 
-  async updateRun(
-    id: string,
-    payload: UpdateRunPayload,
-  ): Promise<ServiceResponse<RunResponse>> {
-    try {
-      const updated = await runsRepo.updateRun(id, payload);
-      if (!updated) return fail("Run not found");
-      return ok(updated);
-    } catch (error) {
-      console.error(`[RunsService] Failed to update run ${id}:`, error);
-      return fail("Failed to update run");
-    }
+  async updateRun(id: string, payload: UpdateRunPayload): Promise<RunResponse> {
+    const updated = await runsRepo.updateRun(id, payload);
+    if (!updated) throw new Error("Run not found");
+    return updated;
   },
 
-  async startRun(id: string): Promise<ServiceResponse<RunResponse>> {
+  async startRun(id: string): Promise<RunResponse> {
     return this.updateRun(id, { status: "running", startedAt: new Date() });
   },
 
-  async completeRun(id: string): Promise<ServiceResponse<RunResponse>> {
+  async completeRun(id: string): Promise<RunResponse> {
     return this.updateRun(id, { status: "succeeded", endedAt: new Date() });
   },
 
-  async failRun(id: string, error: string): Promise<ServiceResponse<RunResponse>> {
+  async failRun(id: string, error: string): Promise<RunResponse> {
     return this.updateRun(id, {
       status: "failed",
       endedAt: new Date(),
@@ -245,152 +203,79 @@ export const runsService = {
     });
   },
 
-  async cancelRun(id: string): Promise<ServiceResponse<RunResponse>> {
+  async cancelRun(id: string): Promise<RunResponse> {
     return this.updateRun(id, { status: "canceled", endedAt: new Date() });
   },
 
-  async deleteRun(id: string): Promise<ServiceResponse<void>> {
-    try {
-      await runsRepo.deleteRun(id);
-      return ok(undefined);
-    } catch (error) {
-      console.error(`[RunsService] Failed to delete run ${id}:`, error);
-      return fail("Failed to delete run");
-    }
+  async deleteRun(id: string): Promise<void> {
+    await runsRepo.deleteRun(id);
   },
 
-  async archiveRun(id: string): Promise<ServiceResponse<RunResponse>> {
-    try {
-      const archived = await runsRepo.archiveRun(id);
-      if (!archived) return fail("Run not found");
-      return ok(archived);
-    } catch (error) {
-      console.error(`[RunsService] Failed to archive run ${id}:`, error);
-      return fail("Failed to archive run");
-    }
+  async archiveRun(id: string): Promise<RunResponse> {
+    const archived = await runsRepo.archiveRun(id);
+    if (!archived) throw new Error("Run not found");
+    return archived;
   },
 
   // ─── Run Context Operations ───
-  async getContextByRun(runId: string): Promise<ServiceResponse<RunContextResponse[]>> {
-    try {
-      const contexts = await runsRepo.findContextByRun(runId);
-      return ok(contexts);
-    } catch (error) {
-      console.error(`[RunsService] Failed to get context for run ${runId}:`, error);
-      return fail("Failed to get context");
-    }
+  async getContextByRun(runId: string): Promise<RunContextResponse[]> {
+    return runsRepo.findContextByRun(runId);
   },
 
-  async addContext(payload: CreateRunContextPayload): Promise<ServiceResponse<number>> {
-    try {
-      const id = await runsRepo.insertContext(payload);
-      return ok(id);
-    } catch (error) {
-      console.error("[RunsService] Failed to add context:", error);
-      return fail("Failed to add context");
-    }
+  async addContext(payload: CreateRunContextPayload): Promise<number> {
+    return runsRepo.insertContext(payload);
   },
 
-  async removeContext(id: number): Promise<ServiceResponse<void>> {
-    try {
-      await runsRepo.deleteContext(id);
-      return ok(undefined);
-    } catch (error) {
-      console.error(`[RunsService] Failed to remove context ${id}:`, error);
-      return fail("Failed to remove context");
-    }
+  async removeContext(id: number): Promise<void> {
+    await runsRepo.deleteContext(id);
   },
 
   // ─── Run Artifact Operations ───
   async getArtifactsByRun(
     runId: string,
     sinceId?: number,
-  ): Promise<ServiceResponse<RunArtifactResponse[]>> {
-    try {
-      const artifacts = await runsRepo.findArtifactsByRun(runId, sinceId);
-      return ok(artifacts);
-    } catch (error) {
-      console.error(`[RunsService] Failed to get artifacts for run ${runId}:`, error);
-      return fail("Failed to get artifacts");
-    }
+  ): Promise<RunArtifactResponse[]> {
+    return runsRepo.findArtifactsByRun(runId, sinceId);
   },
 
-  async addArtifact(payload: CreateRunArtifactPayload): Promise<ServiceResponse<number>> {
-    try {
-      const id = await runsRepo.insertArtifact(payload);
-      return ok(id);
-    } catch (error) {
-      console.error("[RunsService] Failed to add artifact:", error);
-      return fail("Failed to add artifact");
-    }
+  async addArtifact(payload: CreateRunArtifactPayload): Promise<number> {
+    return runsRepo.insertArtifact(payload);
   },
 
-  async removeArtifact(id: number): Promise<ServiceResponse<void>> {
-    try {
-      await runsRepo.deleteArtifact(id);
-      return ok(undefined);
-    } catch (error) {
-      console.error(`[RunsService] Failed to remove artifact ${id}:`, error);
-      return fail("Failed to remove artifact");
-    }
+  async removeArtifact(id: number): Promise<void> {
+    await runsRepo.deleteArtifact(id);
   },
 
   // ─── Tool Call Operations ───
   async getToolCallsByRun(
     runId: string,
     sinceUpdatedAt?: Date,
-  ): Promise<ServiceResponse<ToolCallResponse[]>> {
-    try {
-      const toolCalls = await runsRepo.findToolCallsByRun(runId, sinceUpdatedAt);
-      return ok(toolCalls);
-    } catch (error) {
-      console.error(`[RunsService] Failed to get tool calls for run ${runId}:`, error);
-      return fail("Failed to get tool calls");
-    }
+  ): Promise<ToolCallResponse[]> {
+    return runsRepo.findToolCallsByRun(runId, sinceUpdatedAt);
   },
 
-  async addToolCall(payload: CreateToolCallPayload): Promise<ServiceResponse<number>> {
-    try {
-      const id = await runsRepo.insertToolCall(payload);
-      return ok(id);
-    } catch (error) {
-      console.error("[RunsService] Failed to add tool call:", error);
-      return fail("Failed to add tool call");
-    }
+  async addToolCall(payload: CreateToolCallPayload): Promise<number> {
+    return runsRepo.insertToolCall(payload);
   },
 
   async updateToolCall(
     id: number,
     payload: UpdateToolCallPayload,
-  ): Promise<ServiceResponse<void>> {
-    try {
-      await runsRepo.updateToolCall(id, payload);
-      return ok(undefined);
-    } catch (error) {
-      console.error(`[RunsService] Failed to update tool call ${id}:`, error);
-      return fail("Failed to update tool call");
-    }
+  ): Promise<void> {
+    await runsRepo.updateToolCall(id, payload);
   },
 
   // ─── Composite Read ───
-  async getRunDetails(runId: string): Promise<ServiceResponse<RunDetailsResponse>> {
-    try {
-      const run = await runsRepo.findRunById(runId);
-      if (!run) return fail("Run not found");
-      const [context, artifacts, toolCalls, turns] = await Promise.all([
-        runsRepo.findContextByRun(runId),
-        runsRepo.findArtifactsByRun(runId),
-        runsRepo.findToolCallsByRun(runId),
-        runsRepo.findTurnsByRun(runId),
-      ]);
-      return {
-        success: true,
-        data: { run, context, artifacts, toolCalls, turns },
-      };
-    } catch (error) {
-      console.error(`[RunsService] Failed to get run details ${runId}:`, error);
-      return fail("Failed to get run details");
-    }
+  async getRunDetails(runId: string): Promise<RunDetailsResponse | null> {
+    const run = await runsRepo.findRunById(runId);
+    if (!run) return null;
+    const [context, artifacts, toolCalls, turns] = await Promise.all([
+      runsRepo.findContextByRun(runId),
+      runsRepo.findArtifactsByRun(runId),
+      runsRepo.findToolCallsByRun(runId),
+      runsRepo.findTurnsByRun(runId),
+    ]);
+    return { run, context, artifacts, toolCalls, turns };
   },
 
   // ─── Orchestrators ───
@@ -400,26 +285,25 @@ export const runsService = {
    * persists initial context, then spawns a RunSession wired to the adapter.
    * The session owns the lifecycle from here on; this method returns immediately.
    */
-  async executeRun(payload: StartRunPayload): Promise<ServiceResponse<StartRunResponse>> {
+  async executeRun(payload: StartRunPayload): Promise<StartRunResponse> {
     const runId = generateRunId();
     try {
       const provider = await providersRepo.findById(payload.providerId);
       if (!provider) {
-        return fail(`Provider "${payload.providerId}" not found`);
+        throw new Error(`Provider "${payload.providerId}" not found`);
       }
       if (!provider.isEnabled) {
-        return fail(`Provider "${provider.displayName}" is not enabled`);
+        throw new Error(`Provider "${provider.displayName}" is not enabled`);
       }
       if (provider.kind !== "agent_runtime") {
-        return {
-          success: false,
-          error: `Provider "${provider.displayName}" is not an agent runtime`,
-        };
+        throw new Error(
+          `Provider "${provider.displayName}" is not an agent runtime`,
+        );
       }
 
       const workspace = await workspaceRepo.findById(payload.workspaceId);
       if (!workspace) {
-        return fail(`Workspace "${payload.workspaceId}" not found`);
+        throw new Error(`Workspace "${payload.workspaceId}" not found`);
       }
 
       await workspaceRepo.update(payload.workspaceId, { status: "in_progress" });
@@ -490,13 +374,10 @@ export const runsService = {
 
       wireSessionCompletion(runPromise, session);
 
-      return ok({ runId });
+      return { runId };
     } catch (error) {
       await handlePreSessionFailure(runId, error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      };
+      throw error;
     }
   },
 
@@ -504,28 +385,25 @@ export const runsService = {
    * Run a code review. Same shape as executeRun, but uses adapter.reviewRun
    * (with adapter.startRun as fallback). Workspace status transitions to in_review.
    */
-  async executeReview(
-    payload: ReviewRunPayload,
-  ): Promise<ServiceResponse<StartRunResponse>> {
+  async executeReview(payload: ReviewRunPayload): Promise<StartRunResponse> {
     const runId = generateRunId();
     try {
       const provider = await providersRepo.findById(payload.providerId);
       if (!provider) {
-        return fail(`Provider "${payload.providerId}" not found`);
+        throw new Error(`Provider "${payload.providerId}" not found`);
       }
       if (!provider.isEnabled) {
-        return fail(`Provider "${provider.displayName}" is not enabled`);
+        throw new Error(`Provider "${provider.displayName}" is not enabled`);
       }
       if (provider.kind !== "agent_runtime") {
-        return {
-          success: false,
-          error: `Provider "${provider.displayName}" is not an agent runtime`,
-        };
+        throw new Error(
+          `Provider "${provider.displayName}" is not an agent runtime`,
+        );
       }
 
       const workspace = await workspaceRepo.findById(payload.workspaceId);
       if (!workspace) {
-        return fail(`Workspace "${payload.workspaceId}" not found`);
+        throw new Error(`Workspace "${payload.workspaceId}" not found`);
       }
 
       await workspaceRepo.update(payload.workspaceId, { status: "in_review" });
@@ -600,13 +478,10 @@ export const runsService = {
 
       wireSessionCompletion(runPromise, session);
 
-      return ok({ runId });
+      return { runId };
     } catch (error) {
       await handlePreSessionFailure(runId, error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      };
+      throw error;
     }
   },
 
@@ -615,23 +490,21 @@ export const runsService = {
    * Un-finalizes the run row, recovers the turn counter from existing turns,
    * spawns a new RunSession (with seedTurnIndex so turns continue from the right index).
    */
-  async continueRun(
-    payload: ContinueRunPayload,
-  ): Promise<ServiceResponse<ContinueRunResponse>> {
+  async continueRun(payload: ContinueRunPayload): Promise<ContinueRunResponse> {
     const { runId, accountId, message, additionalContext } = payload;
     try {
       const run = await runsRepo.findRunById(runId);
-      if (!run) return fail("Run not found");
+      if (!run) throw new Error("Run not found");
       if (run.accountId !== accountId) {
-        return fail("Run does not belong to this account");
+        throw new Error("Run does not belong to this account");
       }
 
       const provider = await providersRepo.findById(run.providerId);
       if (!provider) {
-        return fail(`Provider "${run.providerId}" not found`);
+        throw new Error(`Provider "${run.providerId}" not found`);
       }
       if (!provider.isEnabled) {
-        return fail(`Provider "${provider.displayName}" is not enabled`);
+        throw new Error(`Provider "${provider.displayName}" is not enabled`);
       }
 
       const workspace = run.workspaceId
@@ -640,15 +513,12 @@ export const runsService = {
 
       const adapter = createWorkAdapter(provider);
       if (!adapter.continueRun) {
-        return fail("Provider does not support session resumption");
+        throw new Error("Provider does not support session resumption");
       }
       if (adapter.canResumeSession) {
         const canResume = await adapter.canResumeSession(runId);
         if (!canResume) {
-          return {
-            success: false,
-            error: "Session cannot be resumed (not found or expired)",
-          };
+          throw new Error("Session cannot be resumed (not found or expired)");
         }
       }
 
@@ -717,13 +587,10 @@ export const runsService = {
 
       wireSessionCompletion(runPromise, session);
 
-      return ok({ runId, resumed: true });
+      return { runId, resumed: true };
     } catch (error) {
       await handlePreSessionFailure(runId, error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      };
+      throw error;
     }
   },
 
@@ -731,22 +598,22 @@ export const runsService = {
    * Fork a completed run's session into a new run that branches from the source.
    * Creates a new run row, then spawns a RunSession wired to adapter.forkRun.
    */
-  async forkRun(payload: ForkRunPayload): Promise<ServiceResponse<ForkRunResponse>> {
+  async forkRun(payload: ForkRunPayload): Promise<ForkRunResponse> {
     const { sourceRunId, accountId, message } = payload;
     const newRunId = generateRunId();
     try {
       const sourceRun = await runsRepo.findRunById(sourceRunId);
-      if (!sourceRun) return fail("Source run not found");
+      if (!sourceRun) throw new Error("Source run not found");
       if (sourceRun.accountId !== accountId) {
-        return fail("Source run does not belong to this account");
+        throw new Error("Source run does not belong to this account");
       }
 
       const provider = await providersRepo.findById(sourceRun.providerId);
       if (!provider) {
-        return fail(`Provider "${sourceRun.providerId}" not found`);
+        throw new Error(`Provider "${sourceRun.providerId}" not found`);
       }
       if (!provider.isEnabled) {
-        return fail(`Provider "${provider.displayName}" is not enabled`);
+        throw new Error(`Provider "${provider.displayName}" is not enabled`);
       }
 
       const workspace = sourceRun.workspaceId
@@ -755,15 +622,14 @@ export const runsService = {
 
       const adapter = createWorkAdapter(provider);
       if (!adapter.forkRun) {
-        return fail("Provider does not support session forking");
+        throw new Error("Provider does not support session forking");
       }
       if (adapter.canResumeSession) {
         const canResume = await adapter.canResumeSession(sourceRunId);
         if (!canResume) {
-          return {
-            success: false,
-            error: "Source session cannot be forked (not found or expired)",
-          };
+          throw new Error(
+            "Source session cannot be forked (not found or expired)",
+          );
         }
       }
 
@@ -817,13 +683,10 @@ export const runsService = {
 
       wireSessionCompletion(runPromise, session);
 
-      return ok({ runId: newRunId, sourceRunId });
+      return { runId: newRunId, sourceRunId };
     } catch (error) {
       await handlePreSessionFailure(newRunId, error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      };
+      throw error;
     }
   },
 
@@ -833,88 +696,61 @@ export const runsService = {
    * running but no live session is registered (process restart), write
    * status="canceled" directly.
    */
-  async abortRun(runId: string): Promise<ServiceResponse<void>> {
-    try {
-      const run = await runsRepo.findRunById(runId);
-      if (!run) return fail("Run not found");
-      if (run.status !== "running") {
-        return {
-          success: false,
-          error: `Run is not running (status: ${run.status})`,
-        };
-      }
-
-      const session = runSessionRegistry.get(runId);
-      if (session) {
-        await session.abort();
-        return ok(undefined);
-      }
-
-      // DB says running but no live session — process restart edge case.
-      await runsRepo.updateRun(runId, {
-        status: "canceled",
-        endedAt: new Date(),
-        lastError: "Run had no live session (likely process restart mid-run)",
-      });
-      broadcastStatusChangedPreSession(runId, "canceled");
-      return ok(undefined);
-    } catch (error) {
-      console.error(`[RunsService] Failed to abort run ${runId}:`, error);
-      return fail("Failed to abort run");
+  async abortRun(runId: string): Promise<void> {
+    const run = await runsRepo.findRunById(runId);
+    if (!run) throw new Error("Run not found");
+    if (run.status !== "running") {
+      throw new Error(`Run is not running (status: ${run.status})`);
     }
+
+    const session = runSessionRegistry.get(runId);
+    if (session) {
+      await session.abort();
+      return;
+    }
+
+    // DB says running but no live session — process restart edge case.
+    await runsRepo.updateRun(runId, {
+      status: "canceled",
+      endedAt: new Date(),
+      lastError: "Run had no live session (likely process restart mid-run)",
+    });
+    broadcastStatusChangedPreSession(runId, "canceled");
   },
 
   // ─── Session inspection / deletion ───
-  async canResumeRun(runId: string): Promise<ServiceResponse<boolean>> {
-    try {
-      const run = await runsRepo.findRunById(runId);
-      if (!run) return fail("Run not found");
+  async canResumeRun(runId: string): Promise<boolean> {
+    const run = await runsRepo.findRunById(runId);
+    if (!run) return false;
 
-      // Can only resume runs that completed (succeeded, failed, or canceled)
-      if (run.status === "running" || run.status === "queued") {
-        return ok(false);
-      }
-
-      const provider = await providersRepo.findById(run.providerId);
-      if (!provider) return ok(false);
-
-      const adapter = createWorkAdapter(provider);
-      if (!adapter.canResumeSession) return ok(false);
-
-      const canResume = await adapter.canResumeSession(runId);
-      return ok(canResume);
-    } catch (error) {
-      console.error(`[RunsService] Failed to check resume for run ${runId}:`, error);
-      return fail("Failed to check resume capability");
+    // Can only resume runs that completed (succeeded, failed, or canceled)
+    if (run.status === "running" || run.status === "queued") {
+      return false;
     }
+
+    const provider = await providersRepo.findById(run.providerId);
+    if (!provider) return false;
+
+    const adapter = createWorkAdapter(provider);
+    if (!adapter.canResumeSession) return false;
+
+    return adapter.canResumeSession(runId);
   },
 
-  async getTurnsByRun(runId: string): Promise<ServiceResponse<RunTurnResponse[]>> {
-    try {
-      const turns = await runsRepo.findTurnsByRun(runId);
-      return ok(turns);
-    } catch (error) {
-      console.error(`[RunsService] Failed to get turns for run ${runId}:`, error);
-      return fail("Failed to get run turns");
-    }
+  async getTurnsByRun(runId: string): Promise<RunTurnResponse[]> {
+    return runsRepo.findTurnsByRun(runId);
   },
 
-  async deleteRunSession(runId: string): Promise<ServiceResponse<void>> {
-    try {
-      const run = await runsRepo.findRunById(runId);
-      if (!run) return fail("Run not found");
+  async deleteRunSession(runId: string): Promise<void> {
+    const run = await runsRepo.findRunById(runId);
+    if (!run) throw new Error("Run not found");
 
-      const provider = await providersRepo.findById(run.providerId);
-      if (!provider) return ok(undefined);
+    const provider = await providersRepo.findById(run.providerId);
+    if (!provider) return;
 
-      const adapter = createWorkAdapter(provider);
-      if (adapter.deleteSession) {
-        await adapter.deleteSession(runId);
-      }
-      return ok(undefined);
-    } catch (error) {
-      console.error(`[RunsService] Failed to delete session for run ${runId}:`, error);
-      return fail("Failed to delete session");
+    const adapter = createWorkAdapter(provider);
+    if (adapter.deleteSession) {
+      await adapter.deleteSession(runId);
     }
   },
 };

@@ -1,4 +1,5 @@
 import { ipcMain } from "../../ipc-kit/ipc-main";
+import { handle } from "../../ipc-kit/handle";
 import { appSettingsService } from "./appSettings.service";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
 
@@ -8,9 +9,13 @@ import { CHANNELS } from "../../../shared/ipc-kit/channels";
 // the service (see CONTEXT.md "App settings").
 // ─────────────────────────────────────────────────────────────
 export function registerAppSettingsIpc() {
-  ipcMain.handle(CHANNELS.appSettings.get, () => appSettingsService.getSettings());
-  ipcMain.handle(CHANNELS.appSettings.update, (_, patch) =>
-    appSettingsService.updateSettings(patch),
+  ipcMain.handle(
+    CHANNELS.appSettings.get,
+    handle(() => appSettingsService.getSettings()),
+  );
+  ipcMain.handle(
+    CHANNELS.appSettings.update,
+    handle((patch: unknown) => appSettingsService.updateSettings(patch)),
   );
 }
 

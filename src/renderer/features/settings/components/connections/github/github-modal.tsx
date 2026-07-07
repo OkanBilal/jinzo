@@ -91,8 +91,7 @@ export default function GitHubModal(props: GitHubModalProps) {
   const [getRepos] = useLazyGetGitHubReposQuery();
   const fetchAllResources = useCallback(
     async (connectionId: string) => {
-      const result = await getRepos(connectionId).unwrap();
-      return { success: result.success, items: result.repos };
+      return getRepos(connectionId).unwrap();
     },
     [getRepos],
   );

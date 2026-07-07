@@ -1,4 +1,5 @@
 import { ipcMain } from "../../ipc-kit/ipc-main";
+import { handle } from "../../ipc-kit/handle";
 import { updatesService } from "./updates.service";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
 
@@ -6,10 +7,22 @@ import { CHANNELS } from "../../../shared/ipc-kit/channels";
 // IPC Handlers - Thin layer, just registers handlers
 // ─────────────────────────────────────────────────────────────
 export function registerUpdatesIpc() {
-  ipcMain.handle(CHANNELS.updates.check, () => updatesService.checkForUpdates());
-  ipcMain.handle(CHANNELS.updates.download, () => updatesService.downloadUpdate());
-  ipcMain.handle(CHANNELS.updates.quitAndInstall, () => updatesService.quitAndInstall());
-  ipcMain.handle(CHANNELS.updates.getStatus, () => updatesService.getStatus());
+  ipcMain.handle(
+    CHANNELS.updates.check,
+    handle(() => updatesService.checkForUpdates()),
+  );
+  ipcMain.handle(
+    CHANNELS.updates.download,
+    handle(() => updatesService.downloadUpdate()),
+  );
+  ipcMain.handle(
+    CHANNELS.updates.quitAndInstall,
+    handle(() => updatesService.quitAndInstall()),
+  );
+  ipcMain.handle(
+    CHANNELS.updates.getStatus,
+    handle(() => updatesService.getStatus()),
+  );
 
 }
 

@@ -65,8 +65,6 @@ export const guardsApi = baseApi.injectEndpoints({
       query: () => ({
         handler: CHANNELS.guards.getActiveGuard,
       }),
-      transformResponse: (response: any) =>
-        response?.success ? response.data : null,
     }),
 
     checkPackage: builder.mutation<PackageCheckResult, PackageIdentifier>({
@@ -74,8 +72,6 @@ export const guardsApi = baseApi.injectEndpoints({
         handler: CHANNELS.guards.checkPackage,
         args: [pkg],
       }),
-      transformResponse: (response: any) =>
-        response?.success ? response.data : null,
     }),
 
     checkPackages: builder.mutation<PackageCheckResult[], PackageIdentifier[]>({
@@ -83,8 +79,6 @@ export const guardsApi = baseApi.injectEndpoints({
         handler: CHANNELS.guards.checkPackages,
         args: [pkgs],
       }),
-      transformResponse: (response: any) =>
-        response?.success ? response.data : [],
     }),
 
     getPackageScore: builder.query<PackageScore, PackageIdentifier>({
@@ -92,8 +86,6 @@ export const guardsApi = baseApi.injectEndpoints({
         handler: CHANNELS.guards.getPackageScore,
         args: [pkg],
       }),
-      transformResponse: (response: any) =>
-        response?.success ? response.data : null,
     }),
 
     scanWorkspace: builder.mutation<
@@ -104,8 +96,6 @@ export const guardsApi = baseApi.injectEndpoints({
         handler: CHANNELS.guards.scanWorkspace,
         args: [workspaceId, rootPath],
       }),
-      transformResponse: (response: any) =>
-        response?.success ? response.data : [],
     }),
   }),
 });

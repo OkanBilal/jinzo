@@ -5,6 +5,5 @@ export type {
   FileNodeType,
   FileTreeResponse,
   ReadDirectoryOptions,
-  ServiceResponse,
 } from "./fileExplorer.dto";
 export { DEFAULT_EXCLUDE_PATTERNS } from "./fileExplorer.dto";

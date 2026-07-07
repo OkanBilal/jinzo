@@ -9,8 +9,8 @@ vi.mock("../../modules/runs", () => ({
 
 vi.mock("../../modules/tools", () => ({
   toolsService: {
-    createToolCall: vi.fn().mockResolvedValue({ success: true, data: 1 }),
-    updateToolCall: vi.fn().mockResolvedValue({ success: true }),
+    createToolCall: vi.fn().mockResolvedValue(1),
+    updateToolCall: vi.fn().mockResolvedValue(undefined),
   },
   toolsRepo: {
     findToolCallRowIdByRunAndToolCallId: vi.fn().mockResolvedValue(null),
@@ -192,7 +192,7 @@ describe("runWriteback", () => {
 
     it("correlates by pending map when DB lookup fails", async () => {
       vi.mocked(toolsRepo.findToolCallRowIdByRunAndToolCallId).mockResolvedValue(null);
-      vi.mocked(toolsService.createToolCall).mockResolvedValueOnce({ success: true, data: 99 });
+      vi.mocked(toolsService.createToolCall).mockResolvedValueOnce(99);
 
       const wb = createRunWriteback(CONFIG);
 
@@ -220,7 +220,7 @@ describe("runWriteback", () => {
 
     it("correlates by toolName fallback when key not in pending map", async () => {
       vi.mocked(toolsRepo.findToolCallRowIdByRunAndToolCallId).mockResolvedValue(null);
-      vi.mocked(toolsService.createToolCall).mockResolvedValueOnce({ success: true, data: 77 });
+      vi.mocked(toolsService.createToolCall).mockResolvedValueOnce(77);
 
       const wb = createRunWriteback(CONFIG);
 
@@ -272,7 +272,7 @@ describe("runWriteback", () => {
     it("creates new record when no correlation found", async () => {
       vi.mocked(toolsRepo.findToolCallRowIdByRunAndToolCallId).mockResolvedValue(null);
       vi.mocked(toolsRepo.findOpenToolCallRowIdByRunAndToolName).mockResolvedValue(null);
-      vi.mocked(toolsService.createToolCall).mockResolvedValueOnce({ success: true, data: 88 });
+      vi.mocked(toolsService.createToolCall).mockResolvedValueOnce(88);
 
       const wb = createRunWriteback(CONFIG);
 
@@ -319,7 +319,7 @@ describe("runWriteback", () => {
   // ─────────────────────────────────────────────────────────────
   describe("tool_call no phase", () => {
     it("creates a complete tool call record", async () => {
-      vi.mocked(toolsService.createToolCall).mockResolvedValueOnce({ success: true, data: 33 });
+      vi.mocked(toolsService.createToolCall).mockResolvedValueOnce(33);
 
       const wb = createRunWriteback(CONFIG);
 
@@ -388,7 +388,7 @@ describe("runWriteback", () => {
   // ─────────────────────────────────────────────────────────────
   describe("toolCallId extraction", () => {
     it("extracts tool_call_id from snake_case metadata", async () => {
-      vi.mocked(toolsService.createToolCall).mockResolvedValueOnce({ success: true, data: 11 });
+      vi.mocked(toolsService.createToolCall).mockResolvedValueOnce(11);
 
       const wb = createRunWriteback(CONFIG);
 
@@ -406,7 +406,7 @@ describe("runWriteback", () => {
     });
 
     it("extracts parentToolCallId from metadata", async () => {
-      vi.mocked(toolsService.createToolCall).mockResolvedValueOnce({ success: true, data: 12 });
+      vi.mocked(toolsService.createToolCall).mockResolvedValueOnce(12);
 
       const wb = createRunWriteback(CONFIG);
 
@@ -425,7 +425,7 @@ describe("runWriteback", () => {
     });
 
     it("extracts id field as toolCallId fallback", async () => {
-      vi.mocked(toolsService.createToolCall).mockResolvedValueOnce({ success: true, data: 13 });
+      vi.mocked(toolsService.createToolCall).mockResolvedValueOnce(13);
 
       const wb = createRunWriteback(CONFIG);
 

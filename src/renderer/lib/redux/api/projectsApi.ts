@@ -1,4 +1,3 @@
-import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
 import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 import type { IssueWithEntity } from "./entitiesApi";
@@ -98,16 +97,15 @@ export const projectsApi = baseApi.injectEndpoints({
       query: () => ({
         handler: CHANNELS.projects.list,
       }),
-      transformResponse: (response: ServiceResponse<Project[]>) => unwrap(response),
       providesTags: ["Projects"],
     }),
 
-    getProject: builder.query<Project, string>({
+    // Absence rule: a missing project arrives as null data, not an error.
+    getProject: builder.query<Project | null, string>({
       query: (id) => ({
         handler: CHANNELS.projects.get,
         args: [id],
       }),
-      transformResponse: (response: ServiceResponse<Project>) => unwrap(response),
       providesTags: (_result, _error, id) => [{ type: "Projects", id }],
     }),
 
@@ -117,8 +115,6 @@ export const projectsApi = baseApi.injectEndpoints({
         handler: CHANNELS.projects.listBranches,
         args: [id],
       }),
-      transformResponse: (response: ServiceResponse<string[]>) =>
-        unwrap(response),
       providesTags: (_result, _error, id) => [{ type: "Projects", id }],
     }),
 
@@ -127,19 +123,17 @@ export const projectsApi = baseApi.injectEndpoints({
         handler: CHANNELS.projects.listByAccount,
         args: [accountId],
       }),
-      transformResponse: (response: ServiceResponse<Project[]>) => unwrap(response),
       providesTags: ["Projects"],
     }),
 
     findProjectByRemoteOrigin: builder.query<
-      Project,
+      Project | null,
       { accountId: string; remoteOrigin: string }
     >({
       query: ({ accountId, remoteOrigin }) => ({
         handler: CHANNELS.projects.findByRemoteOrigin,
         args: [accountId, remoteOrigin],
       }),
-      transformResponse: (response: ServiceResponse<Project>) => unwrap(response),
       providesTags: ["Projects"],
     }),
 
@@ -148,7 +142,6 @@ export const projectsApi = baseApi.injectEndpoints({
         handler: CHANNELS.projects.findOrCreate,
         args: [payload],
       }),
-      transformResponse: (response: ServiceResponse<Project>) => unwrap(response),
       invalidatesTags: ["Projects"],
     }),
 
@@ -157,7 +150,6 @@ export const projectsApi = baseApi.injectEndpoints({
         handler: CHANNELS.projects.create,
         args: [payload],
       }),
-      transformResponse: (response: ServiceResponse<Project>) => unwrap(response),
       invalidatesTags: ["Projects"],
     }),
 
@@ -169,7 +161,6 @@ export const projectsApi = baseApi.injectEndpoints({
         handler: CHANNELS.projects.update,
         args: [id, payload],
       }),
-      transformResponse: (response: ServiceResponse<Project>) => unwrap(response),
       invalidatesTags: (_result, _error, { id }) => [
         "Projects",
         { type: "Projects", id },
@@ -197,7 +188,6 @@ export const projectsApi = baseApi.injectEndpoints({
         handler: CHANNELS.projects.archive,
         args: [id],
       }),
-      transformResponse: (response: ServiceResponse<Project>) => unwrap(response),
       invalidatesTags: (_result, _error, id) => [
         "Projects",
         { type: "Projects", id },
@@ -210,8 +200,8 @@ export const projectsApi = baseApi.injectEndpoints({
         handler: CHANNELS.projects.listResources,
         args: [projectId],
       }),
-      transformResponse: (response: ServiceResponse<{ resources: ProjectResourceWithDetails[] }>) =>
-        response.success ? response.data.resources : [],
+      transformResponse: (response: { resources: ProjectResourceWithDetails[] }) =>
+        response.resources,
       providesTags: (_result, _error, projectId) => [
         { type: "ProjectResources", id: projectId },
       ],
@@ -222,13 +212,13 @@ export const projectsApi = baseApi.injectEndpoints({
         handler: CHANNELS.projects.listAvailableResources,
         args: [projectId],
       }),
-      transformResponse: (response: ServiceResponse<{ resources: AvailableResource[] }>) =>
-        response.success ? response.data.resources : [],
+      transformResponse: (response: { resources: AvailableResource[] }) =>
+        response.resources,
       providesTags: ["ProjectResources"],
     }),
 
     addProjectResource: builder.mutation<
-      { success: boolean },
+      { resource: ProjectResource },
       { projectId: string; resourceId: string }
     >({
       query: (payload) => ({
@@ -242,7 +232,7 @@ export const projectsApi = baseApi.injectEndpoints({
     }),
 
     removeProjectResource: builder.mutation<
-      { success: boolean },
+      void,
       { projectId: string; resourceId: string }
     >({
       query: (payload) => ({
@@ -261,8 +251,8 @@ export const projectsApi = baseApi.injectEndpoints({
         handler: CHANNELS.projects.listIssues,
         args: [projectId],
       }),
-      transformResponse: (response: ServiceResponse<{ issues: ProjectIssue[] }>) =>
-        response.success ? response.data.issues : [],
+      transformResponse: (response: { issues: ProjectIssue[] }) =>
+        response.issues,
       providesTags: (_result, _error, projectId) => [
         { type: "ProjectIssues", id: projectId },
       ],

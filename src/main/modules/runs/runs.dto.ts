@@ -403,4 +403,3 @@ export interface ToolApprovalResponse {
   answer?: string;
 }
 
-export type { ServiceResponse } from "../../../shared/ipc-kit/service-response";

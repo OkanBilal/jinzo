@@ -1,4 +1,3 @@
-import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
 import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
@@ -39,7 +38,6 @@ export const appSettingsApi = baseApi.injectEndpoints({
       query: () => ({
         handler: CHANNELS.appSettings.get,
       }),
-      transformResponse: (response: ServiceResponse<AppSettings>) => unwrap(response),
       providesTags: ["AppSettings"],
     }),
 
@@ -48,7 +46,6 @@ export const appSettingsApi = baseApi.injectEndpoints({
         handler: CHANNELS.appSettings.update,
         args: [patch],
       }),
-      transformResponse: (response: ServiceResponse<AppSettings>) => unwrap(response),
       invalidatesTags: ["AppSettings"],
     }),
   }),

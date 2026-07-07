@@ -24,4 +24,3 @@ export type AppSettingsPatch = Partial<{
   prInstructions: string;
 }>;
 
-export type { ServiceResponse } from "../../../shared/ipc-kit/service-response";

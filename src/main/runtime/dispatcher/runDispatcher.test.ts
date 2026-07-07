@@ -143,12 +143,11 @@ describe("runDispatcher", () => {
       vi.mocked(providersRepo.findById).mockResolvedValue(VALID_PROVIDER as never);
       vi.mocked(isSupportedWorkProvider).mockReturnValue(true);
       vi.mocked(workspaceRepo.findById).mockResolvedValue(VALID_WORKSPACE as never);
-      vi.mocked(runsService.createRun).mockResolvedValueOnce({
-        success: false,
-        error: "db error",
-      });
+      vi.mocked(runsService.createRun).mockRejectedValueOnce(
+        new Error("db error"),
+      );
 
-      await expect(dispatchRun(BASE_REQUEST)).rejects.toThrow("Failed to create run");
+      await expect(dispatchRun(BASE_REQUEST)).rejects.toThrow("db error");
     });
   });
 

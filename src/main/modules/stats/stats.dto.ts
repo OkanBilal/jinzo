@@ -4,7 +4,6 @@
 
 import type { ProviderId } from "../../../shared/provider-ids";
 
-export type { ServiceResponse } from "../../../shared/ipc-kit/service-response";
 
 export interface DashboardSummary {
   totalProjects: number;

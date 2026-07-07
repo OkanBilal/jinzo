@@ -1,4 +1,3 @@
-import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import { Octokit } from "@octokit/rest";
 import { LinearClient } from "@linear/sdk";
 import { connectionsRepo } from "./connections.repo";
@@ -28,7 +27,6 @@ import type {
   SaveCredentialsResult,
   CredentialsCheckResult,
   ConnectionStateResponse,
-  ServiceResponse,
 } from "./connections.dto";
 
 // ─────────────────────────────────────────────────────────────
@@ -74,18 +72,24 @@ export async function getConnectionWithSecrets(provider: string): Promise<{
 // Helpers
 // ─────────────────────────────────────────────────────────────
 
-type ConnectionAndSecrets =
-  | { ok: true; connection: NonNullable<Awaited<ReturnType<typeof connectionsRepo.findById>>>; secrets: Record<string, string> }
-  | { ok: false; error: string };
+interface ConnectionAndSecrets {
+  connection: NonNullable<Awaited<ReturnType<typeof connectionsRepo.findById>>>;
+  secrets: Record<string, string>;
+}
 
-async function getConnectionAndSecrets(connectionId: string): Promise<ConnectionAndSecrets> {
+/** Resolve a connection + decrypted secrets, or throw. */
+async function getConnectionAndSecrets(
+  connectionId: string,
+): Promise<ConnectionAndSecrets> {
+  if (!connectionId) throw new Error("connectionId is required");
+
   const connection = await connectionsRepo.findById(connectionId);
-  if (!connection) return { ok: false, error: "Connection not found" };
+  if (!connection) throw new Error("Connection not found");
 
   const token = await connectionsRepo.findCurrentToken(connectionId);
-  if (!token?.accessTokenEnc) return { ok: false, error: "Token not found" };
+  if (!token?.accessTokenEnc) throw new Error("Token not found");
 
-  return { ok: true, connection, secrets: decryptSecrets(token.accessTokenEnc as Buffer) };
+  return { connection, secrets: decryptSecrets(token.accessTokenEnc as Buffer) };
 }
 
 async function upsertConnectionResource(params: {
@@ -237,15 +241,15 @@ const SELECTED_RESOURCE_CONFIGS: Record<string, {
 
 // ─────────────────────────────────────────────────────────────
 // Connections Service
+//
+// Throw-style: methods return plain values and throw on failure; the
+// ServiceResponse envelope is applied by handle() at the IPC seam.
 // ─────────────────────────────────────────────────────────────
 export const connectionsService = {
   // GitHub
-  async getGithubRepos(connectionId: string): Promise<ServiceResponse<{ repos: GithubRepo[] }>> {
+  async getGithubRepos(connectionId: string): Promise<{ repos: GithubRepo[] }> {
     try {
-      if (!connectionId) return fail("connectionId is required");
-
       const result = await getConnectionAndSecrets(connectionId);
-      if (!result.ok) return fail(result.error);
 
       const octokit = new Octokit({ auth: result.secrets.token });
       const { data: repos } = await octokit.repos.listForAuthenticatedUser({
@@ -269,20 +273,17 @@ export const connectionsService = {
         updatedAt: repo.updated_at,
       }));
 
-      return ok({ repos: formattedRepos });
+      return { repos: formattedRepos };
     } catch (error) {
-      console.error("Error fetching GitHub repos:", error);
-      return fail("Failed to fetch repositories");
+      console.error(error);
+      throw error;
     }
   },
 
   // Linear
-  async getLinearTeams(connectionId: string): Promise<ServiceResponse<{ teams: LinearTeam[] }>> {
+  async getLinearTeams(connectionId: string): Promise<{ teams: LinearTeam[] }> {
     try {
-      if (!connectionId) return fail("connectionId is required");
-
       const result = await getConnectionAndSecrets(connectionId);
-      if (!result.ok) return fail(result.error);
 
       const linearClient = new LinearClient({ apiKey: result.secrets.apiKey });
       const [teamsConnection, organization] = await Promise.all([linearClient.teams(), linearClient.organization]);
@@ -300,28 +301,24 @@ export const connectionsService = {
         url: `https://linear.app/${orgUrlKey}/team/${team.key}`,
       }));
 
-      return ok({ teams: formattedTeams });
-    } catch (error: any) {
-      console.error("Error fetching Linear teams:", error);
-      console.error("Linear error details:", { message: error?.message, type: error?.type, errors: error?.errors });
-      return fail(error?.message || "Failed to fetch teams");
+      return { teams: formattedTeams };
+    } catch (error) {
+      console.error(error);
+      throw error;
     }
   },
 
   // Jira
-  async getJiraProjects(connectionId: string): Promise<ServiceResponse<{ projects: JiraProject[] }>> {
+  async getJiraProjects(connectionId: string): Promise<{ projects: JiraProject[] }> {
     try {
-      if (!connectionId) return fail("connectionId is required");
-
       const result = await getConnectionAndSecrets(connectionId);
-      if (!result.ok) return fail(result.error);
 
       const metadata = result.connection.metadata ? JSON.parse(result.connection.metadata) : {};
       const domain = metadata.domain as string;
       const email = metadata.email as string;
 
       if (!domain || !email) {
-        return fail("Jira domain and email are required in connection metadata");
+        throw new Error("Jira domain and email are required in connection metadata");
       }
 
       const credentials = Buffer.from(`${email}:${result.secrets.apiToken}`).toString("base64");
@@ -334,7 +331,7 @@ export const connectionsService = {
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`Jira API error (${response.status}):`, errorText);
-        return fail(`Jira API error: ${response.status}`);
+        throw new Error(`Jira API error: ${response.status}`);
       }
 
       const data: any = await response.json();
@@ -352,20 +349,17 @@ export const connectionsService = {
         })
       );
 
-      return ok({ projects: formattedProjects });
-    } catch (error: any) {
-      console.error("Error fetching Jira projects:", error);
-      return fail(error?.message || "Failed to fetch projects");
+      return { projects: formattedProjects };
+    } catch (error) {
+      console.error(error);
+      throw error;
     }
   },
 
   // Asana
-  async getAsanaProjects(connectionId: string): Promise<ServiceResponse<{ projects: AsanaProject[] }>> {
+  async getAsanaProjects(connectionId: string): Promise<{ projects: AsanaProject[] }> {
     try {
-      if (!connectionId) return fail("connectionId is required");
-
       const result = await getConnectionAndSecrets(connectionId);
-      if (!result.ok) return fail(result.error);
 
       const headers = { Authorization: `Bearer ${result.secrets.accessToken}`, Accept: "application/json" };
 
@@ -374,13 +368,13 @@ export const connectionsService = {
       if (!workspacesResponse.ok) {
         const errorText = await workspacesResponse.text();
         console.error(`Asana API error fetching workspaces (${workspacesResponse.status}):`, errorText);
-        return fail(`Asana API error: ${workspacesResponse.status}`);
+        throw new Error(`Asana API error: ${workspacesResponse.status}`);
       }
 
       const workspacesData: any = await workspacesResponse.json();
       const workspaces = workspacesData.data || [];
 
-      if (workspaces.length === 0) return ok({ projects: [] });
+      if (workspaces.length === 0) return { projects: [] };
 
       const allProjects: AsanaProject[] = [];
 
@@ -419,20 +413,17 @@ export const connectionsService = {
         allProjects.push(...projects);
       }
 
-      return ok({ projects: allProjects });
-    } catch (error: any) {
-      console.error("Error fetching Asana projects:", error);
-      return fail(error?.message || "Failed to fetch projects");
+      return { projects: allProjects };
+    } catch (error) {
+      console.error(error);
+      throw error;
     }
   },
 
   // GitLab
-  async getGitlabProjects(connectionId: string): Promise<ServiceResponse<{ projects: GitlabProject[] }>> {
+  async getGitlabProjects(connectionId: string): Promise<{ projects: GitlabProject[] }> {
     try {
-      if (!connectionId) return fail("connectionId is required");
-
       const result = await getConnectionAndSecrets(connectionId);
-      if (!result.ok) return fail(result.error);
 
       const metadata = result.connection.metadata ? JSON.parse(result.connection.metadata) : {};
       const domain = (metadata.domain as string) || "gitlab.com";
@@ -447,7 +438,7 @@ export const connectionsService = {
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`GitLab API error (${response.status}):`, errorText);
-        return fail(`GitLab API error: ${response.status}`);
+        throw new Error(`GitLab API error: ${response.status}`);
       }
 
       const data: any = await response.json();
@@ -467,25 +458,22 @@ export const connectionsService = {
         })
       );
 
-      return ok({ projects: formattedProjects });
-    } catch (error: any) {
-      console.error("Error fetching GitLab projects:", error);
-      return fail(error?.message || "Failed to fetch projects");
+      return { projects: formattedProjects };
+    } catch (error) {
+      console.error(error);
+      throw error;
     }
   },
 
   // Trello
-  async getTrelloBoards(connectionId: string): Promise<ServiceResponse<{ boards: TrelloBoard[] }>> {
+  async getTrelloBoards(connectionId: string): Promise<{ boards: TrelloBoard[] }> {
     try {
-      if (!connectionId) return fail("connectionId is required");
-
       const result = await getConnectionAndSecrets(connectionId);
-      if (!result.ok) return fail(result.error);
 
       const { apiKey, token } = result.secrets;
 
       if (!apiKey || !token) {
-        return fail("Trello API key and token are required");
+        throw new Error("Trello API key and token are required");
       }
 
       const authParams = `key=${encodeURIComponent(apiKey)}&token=${encodeURIComponent(token)}`;
@@ -497,7 +485,7 @@ export const connectionsService = {
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`Trello API error (${response.status}):`, errorText);
-        return fail(`Trello API error: ${response.status}`);
+        throw new Error(`Trello API error: ${response.status}`);
       }
 
       const data: any = await response.json();
@@ -514,26 +502,23 @@ export const connectionsService = {
           url: board.shortUrl as string,
         }));
 
-      return ok({ boards: formattedBoards });
-    } catch (error: any) {
-      console.error("Error fetching Trello boards:", error);
-      return fail(error?.message || "Failed to fetch boards");
+      return { boards: formattedBoards };
+    } catch (error) {
+      console.error(error);
+      throw error;
     }
   },
 
   // Sentry
-  async getSentryProjects(connectionId: string): Promise<ServiceResponse<{ projects: SentryProject[] }>> {
+  async getSentryProjects(connectionId: string): Promise<{ projects: SentryProject[] }> {
     try {
-      if (!connectionId) return fail("connectionId is required");
-
       const result = await getConnectionAndSecrets(connectionId);
-      if (!result.ok) return fail(result.error);
 
       const metadata = result.connection.metadata ? JSON.parse(result.connection.metadata) : {};
       const organization = metadata.organization as string;
 
       if (!organization) {
-        return fail("Sentry organization slug is required");
+        throw new Error("Sentry organization slug is required");
       }
 
       const response = await fetch(
@@ -544,7 +529,7 @@ export const connectionsService = {
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`Sentry API error (${response.status}):`, errorText);
-        return fail(`Sentry API error: ${response.status}`);
+        throw new Error(`Sentry API error: ${response.status}`);
       }
 
       const data: any = await response.json();
@@ -560,20 +545,17 @@ export const connectionsService = {
         })
       );
 
-      return ok({ projects: formattedProjects });
-    } catch (error: any) {
-      console.error("Error fetching Sentry projects:", error);
-      return fail(error?.message || "Failed to fetch Sentry projects");
+      return { projects: formattedProjects };
+    } catch (error) {
+      console.error(error);
+      throw error;
     }
   },
 
   // Socket.dev
-  async getSocketDevOrganizations(connectionId: string): Promise<ServiceResponse<{ organizations: SocketDevOrganization[] }>> {
+  async getSocketDevOrganizations(connectionId: string): Promise<{ organizations: SocketDevOrganization[] }> {
     try {
-      if (!connectionId) return fail("connectionId is required");
-
       const result = await getConnectionAndSecrets(connectionId);
-      if (!result.ok) return fail(result.error);
 
       const response = await fetch(
         "https://api.socket.dev/v0/organizations",
@@ -583,7 +565,7 @@ export const connectionsService = {
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`Socket.dev API error (${response.status}):`, errorText);
-        return fail(`Socket.dev API error: ${response.status}`);
+        throw new Error(`Socket.dev API error: ${response.status}`);
       }
 
       const data: any = await response.json();
@@ -597,139 +579,134 @@ export const connectionsService = {
         })
       );
 
-      return ok({ organizations: formattedOrgs });
-    } catch (error: any) {
-      console.error("Error fetching Socket.dev organizations:", error);
-      return fail(error?.message || "Failed to fetch Socket.dev organizations");
+      return { organizations: formattedOrgs };
+    } catch (error) {
+      console.error(error);
+      throw error;
     }
   },
 
   // Save resources
   async saveResources(
     payload: SaveResourcesPayload
-  ): Promise<ServiceResponse<{ message: string; count: number }>> {
+  ): Promise<{ message: string; count: number }> {
     try {
       const { provider, connectionId, resources } = payload;
 
       if (!provider || !connectionId) {
-        return fail("Provider and connectionId are required");
+        throw new Error("Provider and connectionId are required");
       }
 
       const mapper = RESOURCE_MAPPERS[provider];
-      if (!mapper) return fail(`Unsupported provider: ${provider}`);
+      if (!mapper) throw new Error(`Unsupported provider: ${provider}`);
 
-      if (!resources?.length) return fail("Resources are required");
+      if (!resources?.length) throw new Error("Resources are required");
 
       for (const resource of resources) {
         await upsertConnectionResource({ connectionId, ...mapper(resource) });
       }
 
       return {
-        success: true,
-        data: { message: `${resources.length} resource(s) saved successfully`, count: resources.length },
+        message: `${resources.length} resource(s) saved successfully`,
+        count: resources.length,
       };
     } catch (error) {
-      console.error("Error saving resources:", error);
-      return fail("Failed to save resources");
+      console.error(error);
+      throw error;
     }
   },
 
   // Remove resource
-  async removeResource(resourceId: string): Promise<ServiceResponse<{ message: string }>> {
+  async removeResource(resourceId: string): Promise<{ message: string }> {
     try {
-      if (!resourceId) return fail("Resource ID is required");
+      if (!resourceId) throw new Error("Resource ID is required");
 
       const decodedResourceId = decodeURIComponent(resourceId);
       const rows = await connectionsRepo.deleteResource(decodedResourceId);
 
-      if (rows.length === 0) return fail("Resource not found");
+      if (rows.length === 0) throw new Error("Resource not found");
 
-      return ok({ message: "Resource removed successfully" });
+      return { message: "Resource removed successfully" };
     } catch (error) {
-      console.error("Error removing resource:", error);
-      return fail("Failed to remove resource");
+      console.error(error);
+      throw error;
     }
   },
 
   // Get connection by provider
-  async getByProvider(provider: string): Promise<
-    ServiceResponse<{
-      connection: {
-        id: string;
-        provider: string;
-        displayName: string | null;
-        status: string;
-        metadata: Record<string, unknown>;
-      };
-    }>
-  > {
+  async getByProvider(provider: string): Promise<{
+    connection: {
+      id: string;
+      provider: string;
+      displayName: string | null;
+      status: string;
+      metadata: Record<string, unknown>;
+    };
+  }> {
     try {
-      if (!provider) return fail("Provider is required");
+      if (!provider) throw new Error("Provider is required");
 
       const connection = await connectionsRepo.findByProvider(provider);
-      if (!connection) return fail(`${provider} connection not found`);
+      if (!connection) throw new Error(`${provider} connection not found`);
 
       return {
-        success: true,
-        data: {
-          connection: {
-            id: connection.id,
-            provider: connection.provider,
-            displayName: connection.displayName,
-            status: connection.status,
-            metadata: parseConnectionMetadata(connection.metadata),
-          },
+        connection: {
+          id: connection.id,
+          provider: connection.provider,
+          displayName: connection.displayName,
+          status: connection.status,
+          metadata: parseConnectionMetadata(connection.metadata),
         },
       };
     } catch (error) {
-      console.error("Error fetching connection:", error);
-      return fail("Failed to fetch connection");
+      console.error(error);
+      throw error;
     }
   },
 
   // Get selected resources
-  async getSelectedResources(provider: string): Promise<ServiceResponse<unknown>> {
+  async getSelectedResources(provider: string): Promise<unknown> {
     try {
-      if (!provider) return fail("Provider is required");
+      if (!provider) throw new Error("Provider is required");
 
       const config = SELECTED_RESOURCE_CONFIGS[provider];
-      if (!config) return fail(`Unsupported provider: ${provider}`);
+      if (!config) throw new Error(`Unsupported provider: ${provider}`);
 
       const connection = await connectionsRepo.findByProvider(provider);
-      if (!connection) return fail(`${provider} connection not found`);
+      if (!connection) throw new Error(`${provider} connection not found`);
 
       const resources = await connectionsRepo.findResourcesByConnectionAndKind(connection.id, config.kind, true);
 
       return {
-        success: true,
-        data: { [config.responseKey]: resources.map(config.formatItem), connectionId: connection.id },
+        [config.responseKey]: resources.map(config.formatItem),
+        connectionId: connection.id,
       };
     } catch (error) {
-      console.error("Error fetching selected resources:", error);
-      return fail("Failed to fetch selected resources");
+      console.error(error);
+      throw error;
     }
   },
 
   // Delete resource
-  async deleteResource(resourceId: string): Promise<ServiceResponse<void>> {
+  async deleteResource(resourceId: string): Promise<void> {
     try {
-      if (!resourceId) return fail("Resource ID is required");
+      if (!resourceId) throw new Error("Resource ID is required");
 
       await connectionsRepo.deleteResource(resourceId);
-      return ok(undefined);
+      return;
     } catch (error) {
-      console.error("Error deleting resource:", error);
-      return fail("Failed to delete resource");
+      console.error(error);
+      throw error;
     }
   },
 
   // Revoke connection
-  async revoke(provider: string): Promise<ServiceResponse<void>> {
+  async revoke(provider: string): Promise<void> {
     try {
-      if (!provider) return fail("Provider is required");
+      if (!provider) throw new Error("Provider is required");
 
       const connection = await connectionsRepo.findByProvider(provider);
-      if (!connection) return fail(`${provider} connection not found`);
+      if (!connection) throw new Error(`${provider} connection not found`);
 
       await connectionsRepo.updateStatus(connection.id, "revoked", connection.metadata || "{}");
       await connectionsRepo.markTokensNotCurrent(connection.id);
@@ -737,10 +714,10 @@ export const connectionsService = {
       await connectionsRepo.deleteResourcesByConnectionId(connection.id);
       await connectionsRepo.updateConnectionState(provider, false, null);
 
-      return ok(undefined);
+      return;
     } catch (error) {
-      console.error("Error revoking connection:", error);
-      return fail("Failed to revoke connection");
+      console.error(error);
+      throw error;
     }
   },
 
@@ -748,29 +725,29 @@ export const connectionsService = {
   // Connection states (the integration metadata table that powers
   // the Settings page list of supported providers).
   // ─────────────────────────────────────────────────────────────
-  async listStates(): Promise<ServiceResponse<ConnectionStateResponse[]>> {
+  async listStates(): Promise<ConnectionStateResponse[]> {
     try {
       const states = await connectionsRepo.findAllStates();
-      return ok(states);
+      return states;
     } catch (error) {
-      console.error("Error fetching connection states:", error);
-      return fail("Failed to fetch connection states");
+      console.error(error);
+      throw error;
     }
   },
 
-  async updateState(id: unknown, payload: unknown): Promise<ServiceResponse<null>> {
+  async updateState(id: unknown, payload: unknown): Promise<null> {
     try {
       const idError = validateConnectionStateId(id);
-      if (idError) return fail(idError);
+      if (idError) throw new Error(idError);
 
       const { data, error } = validateUpdateStatePayload(payload);
-      if (error || !data) return fail(error ?? "Invalid payload");
+      if (error || !data) throw new Error(error ?? "Invalid payload");
 
       await connectionsRepo.updateStateById(id as string, data);
-      return ok(null);
+      return null;
     } catch (error) {
-      console.error("Error updating connection state:", error);
-      return fail("Failed to update connection state");
+      console.error(error);
+      throw error;
     }
   },
 
@@ -779,23 +756,23 @@ export const connectionsService = {
   // ─────────────────────────────────────────────────────────────
   async saveCredentials(
     payload: SaveCredentialsPayload
-  ): Promise<ServiceResponse<SaveCredentialsResult>> {
+  ): Promise<SaveCredentialsResult> {
     try {
       const { provider, connectionId, ...credentials } = payload;
 
       if (!provider || !connectionId) {
-        return fail("Provider and connectionId are required");
+        throw new Error("Provider and connectionId are required");
       }
 
       const parseResult = parseProviderCredentials(provider, credentials);
       if (!parseResult.success) {
-        return fail(parseResult.error);
+        throw new Error(parseResult.error);
       }
 
       const { secrets, tokensForHash } = parseResult.data;
 
       const connection = await connectionsRepo.findById(connectionId);
-      if (!connection) return fail("Connection not found");
+      if (!connection) throw new Error("Connection not found");
 
       const tokenHash = createTokenHash(tokensForHash);
       const encryptedSecrets = encryptSecrets(secrets);
@@ -834,33 +811,33 @@ export const connectionsService = {
 
       await connectionsRepo.updateConnectionState(provider, true, connectionId);
 
-      return ok({ message: "Credentials saved successfully" });
+      return { message: "Credentials saved successfully" };
     } catch (error) {
-      console.error("Error saving credentials:", error);
-      return fail("Failed to save credentials");
+      console.error(error);
+      throw error;
     }
   },
 
   async checkCredentials(
     provider: string
-  ): Promise<ServiceResponse<CredentialsCheckResult>> {
+  ): Promise<CredentialsCheckResult> {
     try {
-      if (!provider) return fail("Provider is required");
+      if (!provider) throw new Error("Provider is required");
 
       const connection = await connectionsRepo.findByProvider(provider);
-      if (!connection) return fail("Connection not found");
+      if (!connection) throw new Error("Connection not found");
 
       const tokens = await connectionsRepo.findTokensByConnectionId(connection.id);
       const hasCredentials = tokens && tokens.length > 0;
 
-      return ok({
+      return {
         hasCredentials,
         status: connection.status,
         connectionId: connection.id,
-      });
+      };
     } catch (error) {
-      console.error("Error checking credentials:", error);
-      return fail("Failed to check credentials");
+      console.error(error);
+      throw error;
     }
   },
 };

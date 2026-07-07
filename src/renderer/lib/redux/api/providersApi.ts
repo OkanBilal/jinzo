@@ -1,4 +1,3 @@
-import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
 import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
@@ -259,7 +258,6 @@ export const providersApi = baseApi.injectEndpoints({
       query: () => ({
         handler: CHANNELS.providers.getAll,
       }),
-      transformResponse: (response: ServiceResponse<Provider[]>) => unwrap(response),
       providesTags: ["Providers"],
     }),
 
@@ -268,7 +266,6 @@ export const providersApi = baseApi.injectEndpoints({
         handler: CHANNELS.providers.getById,
         args: [id],
       }),
-      transformResponse: (response: ServiceResponse<Provider>) => unwrap(response),
       providesTags: (_result, _error, id) => [{ type: "Providers", id }],
     }),
 
@@ -277,7 +274,6 @@ export const providersApi = baseApi.injectEndpoints({
         handler: CHANNELS.providers.getByKind,
         args: [kind],
       }),
-      transformResponse: (response: ServiceResponse<Provider[]>) => unwrap(response),
       providesTags: ["Providers"],
     }),
 
@@ -285,7 +281,6 @@ export const providersApi = baseApi.injectEndpoints({
       query: () => ({
         handler: CHANNELS.providers.getEnabled,
       }),
-      transformResponse: (response: ServiceResponse<Provider[]>) => unwrap(response),
       providesTags: ["Providers"],
     }),
 
@@ -294,7 +289,6 @@ export const providersApi = baseApi.injectEndpoints({
         handler: CHANNELS.providers.create,
         args: [payload],
       }),
-      transformResponse: (response: ServiceResponse<string>) => unwrap(response),
       invalidatesTags: ["Providers"],
     }),
 
@@ -306,7 +300,6 @@ export const providersApi = baseApi.injectEndpoints({
         handler: CHANNELS.providers.update,
         args: [id, payload],
       }),
-      transformResponse: (response: ServiceResponse<Provider>) => unwrap(response),
       invalidatesTags: (_result, _error, { id }) => [
         "Providers",
         { type: "Providers", id },
@@ -348,7 +341,6 @@ export const providersApi = baseApi.injectEndpoints({
         handler: CHANNELS.providers.getModels,
         args: [id],
       }),
-      transformResponse: (response: ServiceResponse<ModelInfo[]>) => unwrap(response),
       providesTags: (_result, _error, id) => [{ type: "ProviderModels", id }],
     }),
 
@@ -360,7 +352,6 @@ export const providersApi = baseApi.injectEndpoints({
         handler: CHANNELS.providers.getCommands,
         args: [id, workspacePath],
       }),
-      transformResponse: (response: ServiceResponse<CommandInfo[]>) => unwrap(response),
       providesTags: (_result, _error, { id, workspacePath }) => [
         { type: "ProviderCommands", id: `${id}:${workspacePath ?? ""}` },
       ],
@@ -374,7 +365,6 @@ export const providersApi = baseApi.injectEndpoints({
         handler: CHANNELS.providers.getSkills,
         args: [id, workspacePath],
       }),
-      transformResponse: (response: ServiceResponse<SkillInfo[]>) => unwrap(response),
       providesTags: (_result, _error, { id, workspacePath }) => [
         { type: "ProviderSkills", id: `${id}:${workspacePath ?? ""}` },
       ],
@@ -385,8 +375,6 @@ export const providersApi = baseApi.injectEndpoints({
         handler: CHANNELS.providers.getAccountInfo,
         args: [id],
       }),
-      transformResponse: (response: ServiceResponse<AccountInfo>) =>
-        response.success ? response.data : { account: null, requiresOpenaiAuth: false },
       providesTags: (_result, _error, id) => [{ type: "ProviderAccountInfo", id }],
     }),
 
@@ -395,7 +383,6 @@ export const providersApi = baseApi.injectEndpoints({
         handler: CHANNELS.providers.updateCli,
         args: [id],
       }),
-      transformResponse: (response: ServiceResponse<CliUpdateResult>) => unwrap(response),
       // After updating, the version/account info may change — refetch it.
       invalidatesTags: (_result, _error, id) => [{ type: "ProviderAccountInfo", id }],
     }),
@@ -405,7 +392,6 @@ export const providersApi = baseApi.injectEndpoints({
         handler: CHANNELS.providers.getPlugins,
         args: [id],
       }),
-      transformResponse: (response: ServiceResponse<PluginListResponse>) => unwrap(response),
       providesTags: (_result, _error, id) => [{ type: "ProviderPlugins", id }],
     }),
 
@@ -417,7 +403,6 @@ export const providersApi = baseApi.injectEndpoints({
         handler: CHANNELS.providers.readPlugin,
         args: [providerId, pluginName, marketplacePath],
       }),
-      transformResponse: (response: ServiceResponse<PluginDetailResponse>) => unwrap(response),
     }),
 
     installProviderPlugin: builder.mutation<
@@ -428,9 +413,6 @@ export const providersApi = baseApi.injectEndpoints({
         handler: CHANNELS.providers.installPlugin,
         args: [providerId, pluginId, scope],
       }),
-      transformResponse: (response: ServiceResponse<unknown>) => {
-        unwrap(response);
-      },
       invalidatesTags: (_r, _e, { providerId }) => [
         { type: "ProviderPlugins", id: providerId },
         "ProviderSkills",
@@ -442,9 +424,6 @@ export const providersApi = baseApi.injectEndpoints({
         handler: CHANNELS.providers.uninstallPlugin,
         args: [providerId, pluginId],
       }),
-      transformResponse: (response: ServiceResponse<unknown>) => {
-        unwrap(response);
-      },
       invalidatesTags: (_r, _e, { providerId }) => [
         { type: "ProviderPlugins", id: providerId },
         "ProviderSkills",
@@ -459,9 +438,6 @@ export const providersApi = baseApi.injectEndpoints({
         handler: CHANNELS.providers.setPluginEnabled,
         args: [providerId, pluginId, enabled],
       }),
-      transformResponse: (response: ServiceResponse<unknown>) => {
-        unwrap(response);
-      },
       invalidatesTags: (_r, _e, { providerId }) => [
         { type: "ProviderPlugins", id: providerId },
         "ProviderSkills",
@@ -473,9 +449,6 @@ export const providersApi = baseApi.injectEndpoints({
         handler: CHANNELS.providers.updatePlugin,
         args: [providerId, pluginId],
       }),
-      transformResponse: (response: ServiceResponse<unknown>) => {
-        unwrap(response);
-      },
       invalidatesTags: (_r, _e, { providerId }) => [
         { type: "ProviderPlugins", id: providerId },
         "ProviderSkills",
@@ -487,8 +460,6 @@ export const providersApi = baseApi.injectEndpoints({
         handler: CHANNELS.providers.getRateLimits,
         args: [id],
       }),
-      transformResponse: (response: ServiceResponse<RateLimitInfo | null>) =>
-        response.success ? response.data : null,
     }),
 
     getProviderGoal: builder.query<GoalInfo | null, { providerId: string; runId: string }>({
@@ -496,8 +467,6 @@ export const providersApi = baseApi.injectEndpoints({
         handler: CHANNELS.providers.getGoal,
         args: [providerId, runId],
       }),
-      transformResponse: (response: ServiceResponse<GoalInfo | null>) =>
-        response.success ? response.data : null,
     }),
 
     setProviderGoal: builder.mutation<
@@ -508,8 +477,6 @@ export const providersApi = baseApi.injectEndpoints({
         handler: CHANNELS.providers.setGoal,
         args: [providerId, runId, params],
       }),
-      transformResponse: (response: ServiceResponse<GoalInfo | null>) =>
-        response.success ? response.data : null,
     }),
 
     clearProviderGoal: builder.mutation<boolean, { providerId: string; runId: string }>({
@@ -517,18 +484,12 @@ export const providersApi = baseApi.injectEndpoints({
         handler: CHANNELS.providers.clearGoal,
         args: [providerId, runId],
       }),
-      transformResponse: (response: ServiceResponse<boolean>) =>
-        response.success ? response.data : false,
     }),
 
     detectInstalledClis: builder.query<DetectedClis, void>({
       query: () => ({
         handler: CHANNELS.providers.detectInstalled,
       }),
-      transformResponse: (response: ServiceResponse<DetectedClis>) =>
-        response.success
-          ? response.data
-          : { claude: false, copilot: false, codex: false, cursor: false },
     }),
   }),
 });

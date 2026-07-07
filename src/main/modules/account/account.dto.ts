@@ -38,8 +38,6 @@ export interface AccountResponse {
   updatedAt: Date | null;
 }
 
-export type { ServiceResponse } from "../../../shared/ipc-kit/service-response";
-
 // ─────────────────────────────────────────────────────────────
 // Formatters
 // ─────────────────────────────────────────────────────────────

@@ -13,8 +13,3 @@ export function assertOk<T>(r: ServiceResponse<T>): asserts r is { success: true
 export function assertFail<T>(r: ServiceResponse<T>): asserts r is { success: false; error: string } {
   if (r.success) throw new Error("Expected failure, got ok");
 }
-
-export function unwrap<T>(r: ServiceResponse<T>): T {
-  if (!r.success) throw new Error(r.error);
-  return r.data;
-}

@@ -75,7 +75,7 @@ interface PersonalizationFormProps {
   lastSavedAt: Date | string | null;
   saving: boolean;
   loading: boolean;
-  onSubmit: (form: PersonalizationFormValues) => { unwrap: () => Promise<{ success: boolean; data?: unknown }> };
+  onSubmit: (form: PersonalizationFormValues) => { unwrap: () => Promise<unknown> };
   onRefresh: () => void;
 }
 
@@ -96,12 +96,9 @@ function PersonalizationForm({ initialValues, lastSavedAt, saving, loading, onSu
     if (saving) return;
 
     try {
-      const result = await onSubmit(form).unwrap();
-
-      if (result.success && result.data) {
-        setIsDirty(false);
-        toast.success("Personalization updated");
-      }
+      await onSubmit(form).unwrap();
+      setIsDirty(false);
+      toast.success("Personalization updated");
     } catch (err) {
       toast.error(extractErrorMessage(err, "A problem occurred while saving"));
     }

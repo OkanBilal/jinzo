@@ -6,5 +6,4 @@ export type {
   CreateToolCallPayload,
   UpdateToolCallPayload,
   ToolCallResponse,
-  ServiceResponse,
 } from "./tools.dto";

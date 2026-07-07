@@ -100,7 +100,7 @@ interface ResourceWizardModalProps {
   /** Provider-specific "fetch all" trigger; caller invokes the lazy hook. */
   fetchAllResources: (
     connectionId: string,
-  ) => Promise<{ success: boolean; items: any[] }>;
+  ) => Promise<any[]>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -115,7 +115,7 @@ function CredentialsStep({
   config: ResourceWizardConfig;
   fetchAllResources: (
     connectionId: string,
-  ) => Promise<{ success: boolean; items: any[] }>;
+  ) => Promise<any[]>;
   onSuccess?: () => void;
 }) {
   const { data, setData, goTo } = useWizard<WizardData>();
@@ -141,11 +141,8 @@ function CredentialsStep({
 
     try {
       const work = (async () => {
-        const connectionResult = await getConnection(config.provider).unwrap();
-        if (!connectionResult.success) {
-          throw new Error("Failed to get connection");
-        }
-        const connId = connectionResult.connection.id;
+        const connection = await getConnection(config.provider).unwrap();
+        const connId = connection.id;
 
         const formValues: Record<string, string> = {};
         for (const field of config.credentialFields) {
@@ -161,11 +158,8 @@ function CredentialsStep({
 
         onSuccess?.();
 
-        const resourcesResult = await fetchAllResources(connId);
-        if (!resourcesResult.success) {
-          throw new Error(`Failed to fetch ${config.resourceLabelPlural}`);
-        }
-        return { connId, items: resourcesResult.items };
+        const items = await fetchAllResources(connId);
+        return { connId, items };
       })();
 
       const { connId, items } = await withMinDelay(work, CRED_MIN_LOADING_MS);
@@ -263,7 +257,7 @@ function SelectStep({
 
         if (data.fromManage) {
           const result = await getSelected(config.provider).unwrap();
-          return result.success ? result.items : null;
+          return result.items;
         }
         return null;
       })();
@@ -326,7 +320,7 @@ function ManageStep({
   config: ResourceWizardConfig;
   fetchAllResources: (
     connectionId: string,
-  ) => Promise<{ success: boolean; items: any[] }>;
+  ) => Promise<any[]>;
   onRevoke: () => void;
 }) {
   const { data, setData, goTo } = useWizard<WizardData>();
@@ -339,9 +333,7 @@ function ManageStep({
     try {
       await deleteResource(resourceId).unwrap();
       const result = await getSelected(config.provider).unwrap();
-      if (result.success) {
-        setData({ current: result.items });
-      }
+      setData({ current: result.items });
     } catch (err) {
       setData({ errorMessage: extractErrorMessage(err) });
     }
@@ -351,12 +343,9 @@ function ManageStep({
     setLoading(true);
     setData({ errorMessage: "" });
     try {
-      const result = await fetchAllResources(data.connectionId);
-      if (!result.success) {
-        throw new Error(`Failed to fetch ${config.resourceLabelPlural}`);
-      }
+      const items = await fetchAllResources(data.connectionId);
       const currentIds = new Set(data.current.map(config.identityForCurrent));
-      const available = result.items.filter(
+      const available = items.filter(
         (item) => !currentIds.has(config.identityForItem(item)),
       );
       if (available.length === 0) {
@@ -459,7 +448,6 @@ export function ResourceWizardModal({
     baseData,
     fetchSelected: async () => {
       const result = await getSelected(config.provider).unwrap();
-      if (!result.success) return null;
       return {
         connectionId: result.connectionId,
         current: result.items,

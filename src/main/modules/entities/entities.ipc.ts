@@ -1,4 +1,5 @@
 import { ipcMain } from "../../ipc-kit/ipc-main";
+import { handle } from "../../ipc-kit/handle";
 import { entitiesService } from "./entities.service";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
 import type {
@@ -26,152 +27,110 @@ export function registerEntitiesHandlers(): void {
   // Entity handlers
   ipcMain.handle(
     CHANNELS.entities.getAll,
-    async (_event, options: EntityQueryOptions = {}) => {
-      return entitiesService.getAll(options);
-    }
+    handle((options: EntityQueryOptions = {}) => entitiesService.getAll(options)),
   );
 
   ipcMain.handle(
     CHANNELS.entities.getById,
-    async (_event, id: string) => {
-      return entitiesService.getById(id);
-    }
+    handle((id: string) => entitiesService.getById(id)),
   );
 
   ipcMain.handle(
     CHANNELS.entities.create,
-    async (_event, payload: CreateEntityPayload) => {
-      return entitiesService.create(payload);
-    }
+    handle((payload: CreateEntityPayload) => entitiesService.create(payload)),
   );
 
   ipcMain.handle(
     CHANNELS.entities.update,
-    async (_event, id: string, payload: UpdateEntityPayload) => {
-      return entitiesService.update(id, payload);
-    }
+    handle((id: string, payload: UpdateEntityPayload) => entitiesService.update(id, payload)),
   );
 
   ipcMain.handle(
     CHANNELS.entities.delete,
-    async (_event, id: string) => {
-      return entitiesService.delete(id);
-    }
+    handle((id: string) => entitiesService.delete(id)),
   );
 
   ipcMain.handle(
     CHANNELS.entities.search,
-    async (_event, query: string, options: SearchOptions = {}) => {
-      return entitiesService.search(query, options);
-    }
+    handle((query: string, options: SearchOptions = {}) => entitiesService.search(query, options)),
   );
 
   // Task handlers
   ipcMain.handle(
     CHANNELS.tasks.getAll,
-    async (_event, options: TaskQueryOptions = {}) => {
-      return entitiesService.getAllTasks(options);
-    }
+    handle((options: TaskQueryOptions = {}) => entitiesService.getAllTasks(options)),
   );
 
   ipcMain.handle(
     CHANNELS.tasks.getById,
-    async (_event, entityId: string) => {
-      return entitiesService.getTaskById(entityId);
-    }
+    handle((entityId: string) => entitiesService.getTaskById(entityId)),
   );
 
   ipcMain.handle(
     CHANNELS.tasks.create,
-    async (_event, payload: CreateTaskPayload) => {
-      return entitiesService.createTask(payload);
-    }
+    handle((payload: CreateTaskPayload) => entitiesService.createTask(payload)),
   );
 
   ipcMain.handle(
     CHANNELS.tasks.update,
-    async (_event, entityId: string, payload: UpdateTaskPayload) => {
-      return entitiesService.updateTask(entityId, payload);
-    }
+    handle((entityId: string, payload: UpdateTaskPayload) => entitiesService.updateTask(entityId, payload)),
   );
 
   ipcMain.handle(
     CHANNELS.tasks.delete,
-    async (_event, entityId: string) => {
-      return entitiesService.deleteTask(entityId);
-    }
+    handle((entityId: string) => entitiesService.deleteTask(entityId)),
   );
 
   // Issue handlers
   ipcMain.handle(
     CHANNELS.issues.getAll,
-    async (_event, options: IssueQueryOptions = {}) => {
-      return entitiesService.getAllIssues(options);
-    }
+    handle((options: IssueQueryOptions = {}) => entitiesService.getAllIssues(options)),
   );
 
   ipcMain.handle(
     CHANNELS.issues.getById,
-    async (_event, entityId: string) => {
-      return entitiesService.getIssueById(entityId);
-    }
+    handle((entityId: string) => entitiesService.getIssueById(entityId)),
   );
 
   ipcMain.handle(
     CHANNELS.issues.create,
-    async (_event, payload: CreateIssuePayload) => {
-      return entitiesService.createIssue(payload);
-    }
+    handle((payload: CreateIssuePayload) => entitiesService.createIssue(payload)),
   );
 
   ipcMain.handle(
     CHANNELS.issues.update,
-    async (_event, entityId: string, payload: UpdateIssuePayload) => {
-      return entitiesService.updateIssue(entityId, payload);
-    }
+    handle((entityId: string, payload: UpdateIssuePayload) => entitiesService.updateIssue(entityId, payload)),
   );
 
   ipcMain.handle(
     CHANNELS.issues.delete,
-    async (_event, entityId: string) => {
-      return entitiesService.deleteIssue(entityId);
-    }
+    handle((entityId: string) => entitiesService.deleteIssue(entityId)),
   );
 
   // Signal handlers
   ipcMain.handle(
     CHANNELS.signals.getAll,
-    async (_event, options: SignalQueryOptions = {}) => {
-      return entitiesService.getAllSignals(options);
-    }
+    handle((options: SignalQueryOptions = {}) => entitiesService.getAllSignals(options)),
   );
 
   ipcMain.handle(
     CHANNELS.signals.getById,
-    async (_event, entityId: string) => {
-      return entitiesService.getSignalById(entityId);
-    }
+    handle((entityId: string) => entitiesService.getSignalById(entityId)),
   );
 
   ipcMain.handle(
     CHANNELS.signals.create,
-    async (_event, payload: CreateSignalPayload) => {
-      return entitiesService.createSignal(payload);
-    }
+    handle((payload: CreateSignalPayload) => entitiesService.createSignal(payload)),
   );
 
   ipcMain.handle(
     CHANNELS.signals.update,
-    async (_event, entityId: string, payload: UpdateSignalPayload) => {
-      return entitiesService.updateSignal(entityId, payload);
-    }
+    handle((entityId: string, payload: UpdateSignalPayload) => entitiesService.updateSignal(entityId, payload)),
   );
 
   ipcMain.handle(
     CHANNELS.signals.delete,
-    async (_event, entityId: string) => {
-      return entitiesService.deleteSignal(entityId);
-    }
+    handle((entityId: string) => entitiesService.deleteSignal(entityId)),
   );
 
 }

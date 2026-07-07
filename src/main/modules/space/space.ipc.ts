@@ -1,4 +1,5 @@
 import { ipcMain } from "../../ipc-kit/ipc-main";
+import { handle } from "../../ipc-kit/handle";
 import { spaceService } from "./space.service";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
 
@@ -6,44 +7,42 @@ import { CHANNELS } from "../../../shared/ipc-kit/channels";
 // Space IPC Handlers
 // ─────────────────────────────────────────────────────────────
 export function registerSpaceIpc() {
-  // Get all spaces
-  ipcMain.handle(CHANNELS.space.getAll, async () => {
-    return spaceService.getAll();
-  });
-
-  // Get space by ID
-  ipcMain.handle(CHANNELS.space.getById, async (_event, spaceId: string) => {
-    return spaceService.getById(spaceId);
-  });
-
-  // Create space
-  ipcMain.handle(CHANNELS.space.create, async (_event, payload: unknown) => {
-    return spaceService.create(payload);
-  });
-
-  // Update space
   ipcMain.handle(
-    CHANNELS.space.update,
-    async (_event, spaceId: string, payload: unknown) => {
-      return spaceService.update(spaceId, payload);
-    }
+    CHANNELS.space.getAll,
+    handle(() => spaceService.getAll()),
   );
 
-  // Delete space
-  ipcMain.handle(CHANNELS.space.delete, async (_event, spaceId: string) => {
-    return spaceService.delete(spaceId);
-  });
+  ipcMain.handle(
+    CHANNELS.space.getById,
+    handle((spaceId: string) => spaceService.getById(spaceId)),
+  );
 
-  // Archive space
-  ipcMain.handle(CHANNELS.space.archive, async (_event, spaceId: string) => {
-    return spaceService.archive(spaceId);
-  });
+  ipcMain.handle(
+    CHANNELS.space.create,
+    handle((payload: unknown) => spaceService.create(payload)),
+  );
 
-  // Unarchive space
-  ipcMain.handle(CHANNELS.space.unarchive, async (_event, spaceId: string) => {
-    return spaceService.unarchive(spaceId);
-  });
+  ipcMain.handle(
+    CHANNELS.space.update,
+    handle((spaceId: string, payload: unknown) =>
+      spaceService.update(spaceId, payload),
+    ),
+  );
 
+  ipcMain.handle(
+    CHANNELS.space.delete,
+    handle((spaceId: string) => spaceService.delete(spaceId)),
+  );
+
+  ipcMain.handle(
+    CHANNELS.space.archive,
+    handle((spaceId: string) => spaceService.archive(spaceId)),
+  );
+
+  ipcMain.handle(
+    CHANNELS.space.unarchive,
+    handle((spaceId: string) => spaceService.unarchive(spaceId)),
+  );
 }
 
 export function unregisterSpaceIpc() {

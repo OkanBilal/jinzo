@@ -10,16 +10,14 @@
 // it stages with simple-git, optionally generates a message/body via a
 // one-shot headless model call (adapter.generateText), commits/pushes,
 // and creates the PR with `gh` directly.
+//
+// Throw-style: methods return plain values and throw on failure; the
+// ServiceResponse envelope is applied by handle() at the IPC seam.
 // ─────────────────────────────────────────────────────────────
 
 import { execFile } from "node:child_process";
 import { basename } from "node:path";
 import { promisify } from "node:util";
-import {
-  ok,
-  fail,
-  type ServiceResponse,
-} from "../../../shared/ipc-kit/service-response";
 import {
   workspaceRepo,
   logWorkspaceActivity,
@@ -153,17 +151,17 @@ export const gitFlowService = {
   // Internal helpers
   // ───────────────────────────────────────────────────────────
 
-  /** Resolve a workspace's on-disk root, or an error response. */
+  /** Resolve a workspace's on-disk root; throws when it has none. */
   async resolveRoot(
     workspaceId: string,
-  ): Promise<ServiceResponse<{ rootPath: string; projectId: string | null }>> {
+  ): Promise<{ rootPath: string; projectId: string | null }> {
     const workspace = await workspaceRepo.findById(workspaceId);
-    if (!workspace) return fail("Workspace not found");
-    if (!workspace.rootPath) return fail("Workspace has no root path");
-    return ok({
+    if (!workspace) throw new Error("Workspace not found");
+    if (!workspace.rootPath) throw new Error("Workspace has no root path");
+    return {
       rootPath: workspace.rootPath,
       projectId: workspace.projectId ?? null,
-    });
+    };
   },
 
   /** Commit instructions, project-level first then app-level. */
@@ -395,62 +393,54 @@ export const gitFlowService = {
     model?: string;
     includeUnstaged?: boolean;
     stagedDiff?: string;
-  }): Promise<ServiceResponse<string>> {
-    try {
-      let rootPath = params.rootPath;
-      if (!rootPath) {
-        const root = await this.resolveRoot(params.workspaceId);
-        if (!root.success) return root;
-        rootPath = root.data.rootPath;
-      }
+  }): Promise<string> {
+    let rootPath = params.rootPath;
+    if (!rootPath) {
+      ({ rootPath } = await this.resolveRoot(params.workspaceId));
+    }
 
-      let diff = params.stagedDiff;
-      if (diff === undefined) {
-        await this.stage(
-          rootPath,
-          params.includeUnstaged === false ? "none" : "all",
-        );
-        diff = await gitService.getStagedDiff(rootPath);
-      }
-      if (!diff.trim()) return fail("No staged changes to summarize");
-
-      const provider = await providersRepo.findById(params.providerId);
-      if (!provider) return fail("Provider not found");
-      const { createWorkAdapter } = await import(
-        "../providers/adapters/adapter.factory"
+    let diff = params.stagedDiff;
+    if (diff === undefined) {
+      await this.stage(
+        rootPath,
+        params.includeUnstaged === false ? "none" : "all",
       );
-      const adapter = createWorkAdapter(provider);
-      if (!adapter.generateText) {
-        return fail(
-          `Provider "${provider.displayName}" does not support message generation`,
-        );
-      }
+      diff = await gitService.getStagedDiff(rootPath);
+    }
+    if (!diff.trim()) throw new Error("No staged changes to summarize");
 
-      const instructions = await this.getCommitInstructions(params.workspaceId);
-      const system = [
-        "You are a senior engineer writing a git commit message for a staged diff.",
-        "Output ONLY the commit message — nothing else.",
-        "Format: a concise summary line (imperative mood, <= 72 chars), then optionally a blank line and a short body.",
-        "No surrounding quotes, no code fences, no preamble like 'Here is'.",
-        instructions ? `\nProject commit instructions:\n${instructions}` : "",
-      ]
-        .filter(Boolean)
-        .join("\n");
-
-      const prompt = `Write a commit message for these staged changes:\n\n${diff.slice(0, MAX_DIFF_CHARS)}`;
-
-      const text = await adapter.generateText(prompt, {
-        system,
-        model: params.model ?? provider.defaultModel ?? undefined,
-      });
-      const message = cleanGenerated(text);
-      if (!message) return fail("Empty commit message generated");
-      return ok(message);
-    } catch (error) {
-      return fail(
-        error instanceof Error ? error.message : "Failed to generate message",
+    const provider = await providersRepo.findById(params.providerId);
+    if (!provider) throw new Error("Provider not found");
+    const { createWorkAdapter } = await import(
+      "../providers/adapters/adapter.factory"
+    );
+    const adapter = createWorkAdapter(provider);
+    if (!adapter.generateText) {
+      throw new Error(
+        `Provider "${provider.displayName}" does not support message generation`,
       );
     }
+
+    const instructions = await this.getCommitInstructions(params.workspaceId);
+    const system = [
+      "You are a senior engineer writing a git commit message for a staged diff.",
+      "Output ONLY the commit message — nothing else.",
+      "Format: a concise summary line (imperative mood, <= 72 chars), then optionally a blank line and a short body.",
+      "No surrounding quotes, no code fences, no preamble like 'Here is'.",
+      instructions ? `\nProject commit instructions:\n${instructions}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const prompt = `Write a commit message for these staged changes:\n\n${diff.slice(0, MAX_DIFF_CHARS)}`;
+
+    const text = await adapter.generateText(prompt, {
+      system,
+      model: params.model ?? provider.defaultModel ?? undefined,
+    });
+    const message = cleanGenerated(text);
+    if (!message) throw new Error("Empty commit message generated");
+    return message;
   },
 
   /**
@@ -461,103 +451,95 @@ export const gitFlowService = {
     workspaceId: string;
     providerId: string;
     model?: string;
-  }): Promise<ServiceResponse<{ title: string; body: string }>> {
-    try {
-      const root = await this.resolveRoot(params.workspaceId);
-      if (!root.success) return root;
-      const rootPath = root.data.rootPath;
+  }): Promise<{ title: string; body: string }> {
+    const { rootPath } = await this.resolveRoot(params.workspaceId);
 
-      // Prefer the branch diff vs its base — that's what the PR will actually
-      // contain, and unlike the working-tree/staged diffs it's still populated
-      // after the branch is committed and the tree is clean. Try the remote
-      // base first (the PR target), then the local base. Fall back to the
-      // working-tree + staged diff only when no base is known.
-      const baseBranch = await this.resolveBaseBranch(params.workspaceId);
-      let diff = "";
-      let baseRef: string | null = null;
-      if (baseBranch) {
-        for (const ref of [`origin/${baseBranch}`, baseBranch]) {
-          const r = await gitService
-            .getBranchDiff(rootPath, ref)
-            .catch(() => "");
-          if (r.trim()) {
-            diff = r;
-            baseRef = ref;
-            break;
-          }
+    // Prefer the branch diff vs its base — that's what the PR will actually
+    // contain, and unlike the working-tree/staged diffs it's still populated
+    // after the branch is committed and the tree is clean. Try the remote
+    // base first (the PR target), then the local base. Fall back to the
+    // working-tree + staged diff only when no base is known.
+    const baseBranch = await this.resolveBaseBranch(params.workspaceId);
+    let diff = "";
+    let baseRef: string | null = null;
+    if (baseBranch) {
+      for (const ref of [`origin/${baseBranch}`, baseBranch]) {
+        const r = await gitService
+          .getBranchDiff(rootPath, ref)
+          .catch(() => "");
+        if (r.trim()) {
+          diff = r;
+          baseRef = ref;
+          break;
         }
       }
-      if (!diff.trim()) {
-        const staged = await gitService.getStagedDiff(rootPath).catch(() => "");
-        const working = await gitService.getDiff(rootPath).catch(() => "");
-        diff = [staged, working].filter(Boolean).join("\n");
-      }
+    }
+    if (!diff.trim()) {
+      const staged = await gitService.getStagedDiff(rootPath).catch(() => "");
+      const working = await gitService.getDiff(rootPath).catch(() => "");
+      diff = [staged, working].filter(Boolean).join("\n");
+    }
 
-      const provider = await providersRepo.findById(params.providerId);
-      if (!provider) return fail("Provider not found");
-      const { createWorkAdapter } = await import(
-        "../providers/adapters/adapter.factory"
+    const provider = await providersRepo.findById(params.providerId);
+    if (!provider) throw new Error("Provider not found");
+    const { createWorkAdapter } = await import(
+      "../providers/adapters/adapter.factory"
+    );
+    const adapter = createWorkAdapter(provider);
+    if (!adapter.generateText) {
+      throw new Error(
+        `Provider "${provider.displayName}" does not support generation`,
       );
-      const adapter = createWorkAdapter(provider);
-      if (!adapter.generateText) {
-        return fail(
-          `Provider "${provider.displayName}" does not support generation`,
-        );
-      }
+    }
 
-      const instructions = await this.getPrInstructions(params.workspaceId);
-      const system = [
-        "You write GitHub pull request descriptions.",
-        "Output the PR title on the FIRST line, then a blank line, then the PR body in Markdown.",
-        "No code fences around the whole thing, no 'Title:' prefix.",
-        instructions ? `\nProject PR instructions:\n${instructions}` : "",
-      ]
-        .filter(Boolean)
-        .join("\n");
+    const instructions = await this.getPrInstructions(params.workspaceId);
+    const system = [
+      "You write GitHub pull request descriptions.",
+      "Output the PR title on the FIRST line, then a blank line, then the PR body in Markdown.",
+      "No code fences around the whole thing, no 'Title:' prefix.",
+      instructions ? `\nProject PR instructions:\n${instructions}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
 
-      // Prefer commits unique to this branch (base..HEAD) when the base is
-      // known, so the summary isn't polluted by the base branch's own history;
-      // fall back to recent repo commits only when there's no base ref.
-      let commits = "";
-      if (baseRef) {
-        const messages = await gitService
-          .getBranchLog(rootPath, baseRef, 20)
-          .catch(() => [] as string[]);
-        commits = messages.map((m) => `- ${m}`).join("\n");
-      } else {
-        const log = await gitService.getLog(rootPath, 20).catch(() => []);
-        commits = log.map((c) => `- ${c.message}`).join("\n");
-      }
+    // Prefer commits unique to this branch (base..HEAD) when the base is
+    // known, so the summary isn't polluted by the base branch's own history;
+    // fall back to recent repo commits only when there's no base ref.
+    let commits = "";
+    if (baseRef) {
+      const messages = await gitService
+        .getBranchLog(rootPath, baseRef, 20)
+        .catch(() => [] as string[]);
+      commits = messages.map((m) => `- ${m}`).join("\n");
+    } else {
+      const log = await gitService.getLog(rootPath, 20).catch(() => []);
+      commits = log.map((c) => `- ${c.message}`).join("\n");
+    }
 
-      const prompt = [
-        "Write a pull request title and body for this branch.",
-        commits ? `\nRecent commits:\n${commits}` : "",
-        diff ? `\nDiff:\n${diff.slice(0, MAX_DIFF_CHARS)}` : "",
-      ]
-        .filter(Boolean)
-        .join("\n");
+    const prompt = [
+      "Write a pull request title and body for this branch.",
+      commits ? `\nRecent commits:\n${commits}` : "",
+      diff ? `\nDiff:\n${diff.slice(0, MAX_DIFF_CHARS)}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
 
-      const text = cleanGenerated(
-        await adapter.generateText(prompt, {
-          system,
-          model: params.model ?? provider.defaultModel ?? undefined,
-        }),
-      );
+    const text = cleanGenerated(
+      await adapter.generateText(prompt, {
+        system,
+        model: params.model ?? provider.defaultModel ?? undefined,
+      }),
+    );
 
       const lines = text.split("\n");
       const titleIdx = lines.findIndex((l) => l.trim().length > 0);
-      if (titleIdx === -1) return fail("Empty PR description generated");
-      const title = lines[titleIdx].trim().replace(/^#+\s*/, "");
-      const body = lines
-        .slice(titleIdx + 1)
-        .join("\n")
-        .trim();
-      return ok({ title, body });
-    } catch (error) {
-      return fail(
-        error instanceof Error ? error.message : "Failed to generate PR description",
-      );
-    }
+      if (titleIdx === -1) throw new Error("Empty PR description generated");
+    const title = lines[titleIdx].trim().replace(/^#+\s*/, "");
+    const body = lines
+      .slice(titleIdx + 1)
+      .join("\n")
+      .trim();
+    return { title, body };
   },
 
   // ───────────────────────────────────────────────────────────
@@ -565,12 +547,10 @@ export const gitFlowService = {
   // ───────────────────────────────────────────────────────────
 
   /** Live status for the commit panel header + button enablement. */
-  async getStatus(
-    workspaceId: string,
-  ): Promise<ServiceResponse<GitFlowStatus>> {
+  async getStatus(workspaceId: string): Promise<GitFlowStatus> {
     const workspace = await workspaceRepo.findById(workspaceId);
-    if (!workspace) return fail("Workspace not found");
-    if (!workspace.rootPath) return fail("Workspace has no root path");
+    if (!workspace) throw new Error("Workspace not found");
+    if (!workspace.rootPath) throw new Error("Workspace has no root path");
     const rootPath = workspace.rootPath;
 
     const [branchName, status, headSha, remotes] = await Promise.all([
@@ -580,7 +560,7 @@ export const gitFlowService = {
       gitService.getRemotes(rootPath).catch(() => []),
     ]);
 
-    if (!status) return fail("Failed to get git status");
+    if (!status) throw new Error("Failed to get git status");
     const hasRemote = remotes.some((r) => r.name === "origin");
     const branch = branchName ?? status.current ?? "";
 
@@ -616,7 +596,7 @@ export const gitFlowService = {
       }
     }
 
-    return ok({
+    return {
       branch,
       ahead: status.ahead,
       behind: status.behind,
@@ -626,7 +606,7 @@ export const gitFlowService = {
       deletions,
       changedFiles,
       isDefaultBranch,
-    });
+    };
   },
 
   /**
@@ -640,67 +620,54 @@ export const gitFlowService = {
     providerId?: string;
     model?: string;
     push?: boolean;
-  }): Promise<ServiceResponse<CommitResult>> {
-    try {
-      const root = await this.resolveRoot(params.workspaceId);
-      if (!root.success) return root;
-      const rootPath = root.data.rootPath;
+  }): Promise<CommitResult> {
+    const { rootPath } = await this.resolveRoot(params.workspaceId);
 
-      const stageMode: StageMode =
-        params.includeUnstaged === false ? "none" : "all";
-      await this.stage(rootPath, stageMode);
+    const stageMode: StageMode =
+      params.includeUnstaged === false ? "none" : "all";
+    await this.stage(rootPath, stageMode);
 
-      const staged = await gitService.getStagedDiff(rootPath);
-      if (!staged.trim()) return fail("No staged changes to commit");
+    const staged = await gitService.getStagedDiff(rootPath);
+    if (!staged.trim()) throw new Error("No staged changes to commit");
 
-      let message = params.message?.trim() || "";
-      if (!message) {
-        if (!params.providerId) {
-          return fail("Provide a commit message or a provider to generate one");
-        }
-        const gen = await this.generateCommitMessage({
-          workspaceId: params.workspaceId,
-          rootPath,
-          providerId: params.providerId,
-          model: params.model,
-          stagedDiff: staged,
-        });
-        if (!gen.success) return gen;
-        message = gen.data;
+    let message = params.message?.trim() || "";
+    if (!message) {
+      if (!params.providerId) {
+        throw new Error(
+          "Provide a commit message or a provider to generate one",
+        );
       }
-
-      const result = await this.performCommit({
+      message = await this.generateCommitMessage({
         workspaceId: params.workspaceId,
         rootPath,
-        runId: null,
-        message,
-        stage: "none", // already staged above
+        providerId: params.providerId,
+        model: params.model,
+        stagedDiff: staged,
       });
-
-      let pushed = false;
-      if (params.push) {
-        await gitService.push(rootPath);
-        pushed = true;
-      }
-
-      return ok({ ...result, pushed });
-    } catch (error) {
-      return fail(
-        error instanceof Error ? error.message : "Failed to commit",
-      );
     }
+
+    const result = await this.performCommit({
+      workspaceId: params.workspaceId,
+      rootPath,
+      runId: null,
+      message,
+      stage: "none", // already staged above
+    });
+
+    let pushed = false;
+    if (params.push) {
+      await gitService.push(rootPath);
+      pushed = true;
+    }
+
+    return { ...result, pushed };
   },
 
   /** Push the current branch (used by the standalone Push action). */
-  async push(workspaceId: string): Promise<ServiceResponse<CommitResult>> {
-    const root = await this.resolveRoot(workspaceId);
-    if (!root.success) return root;
-    try {
-      await gitService.push(root.data.rootPath);
-      return ok({ hash: "", summary: "Pushed", pushed: true });
-    } catch (error) {
-      return fail(error instanceof Error ? error.message : "Failed to push");
-    }
+  async push(workspaceId: string): Promise<CommitResult> {
+    const { rootPath } = await this.resolveRoot(workspaceId);
+    await gitService.push(rootPath);
+    return { hash: "", summary: "Pushed", pushed: true };
   },
 
   // ───────────────────────────────────────────────────────────
@@ -712,12 +679,8 @@ export const gitFlowService = {
    * the authed login (default owner), a sanitized default repo name, and the
    * branch we'd publish. Never throws — surfaces readiness via `ghReady`.
    */
-  async getPublishPreflight(
-    workspaceId: string,
-  ): Promise<ServiceResponse<PublishPreflight>> {
-    const root = await this.resolveRoot(workspaceId);
-    if (!root.success) return root;
-    const { rootPath, projectId } = root.data;
+  async getPublishPreflight(workspaceId: string): Promise<PublishPreflight> {
+    const { rootPath, projectId } = await this.resolveRoot(workspaceId);
 
     const [branch, remotes] = await Promise.all([
       gitService.getCurrentBranch(rootPath).catch(() => "main"),
@@ -759,14 +722,14 @@ export const gitFlowService = {
       }
     }
 
-    return ok({
+    return {
       ghReady,
       login,
       suggestedName,
       branch,
       hasRemote,
       notReadyReason,
-    });
+    };
   },
 
   /**
@@ -781,77 +744,73 @@ export const gitFlowService = {
     visibility: "private" | "public";
     remoteName?: string;
     protocol: "ssh" | "https";
-  }): Promise<ServiceResponse<PublishResult>> {
-    try {
-      const root = await this.resolveRoot(params.workspaceId);
-      if (!root.success) return root;
-      const { rootPath, projectId } = root.data;
-      const remoteName = params.remoteName?.trim() || "origin";
+  }): Promise<PublishResult> {
+    const { rootPath, projectId } = await this.resolveRoot(
+      params.workspaceId,
+    );
+    const remoteName = params.remoteName?.trim() || "origin";
 
-      const [owner, rawName] = params.ownerRepo.split("/").map((s) => s.trim());
-      const name = sanitizeRepoName(rawName || "");
-      if (!owner || !name) {
-        return fail("Enter a repository as owner/name (e.g. octocat/my-repo).");
-      }
-
-      // Don't clobber an existing remote of the same name.
-      const remotes = await gitService.getRemotes(rootPath).catch(() => []);
-      if (remotes.some((r) => r.name === remoteName)) {
-        return fail(`A remote named "${remoteName}" already exists.`);
-      }
-
-      // Create the empty repo on GitHub (no --source/--push: we wire the remote
-      // ourselves so the SSH/HTTPS choice is honored).
-      const ghArgs = [
-        "repo",
-        "create",
-        `${owner}/${name}`,
-        params.visibility === "private" ? "--private" : "--public",
-      ];
-      let htmlUrl = `https://github.com/${owner}/${name}`;
-      try {
-        const { stdout } = await execFileAsync("gh", ghArgs, {
-          cwd: rootPath,
-          timeout: 30_000,
-        });
-        htmlUrl = stdout.match(/https:\/\/github\.com\/[^\s]+/)?.[0] ?? htmlUrl;
-      } catch (error) {
-        const stderr = (error as any)?.stderr?.trim?.();
-        return fail(stderr || "Failed to create the GitHub repository.");
-      }
-
-      // Wire the remote with the chosen protocol, then push + set upstream.
-      const remoteUrl =
-        params.protocol === "ssh"
-          ? `git@github.com:${owner}/${name}.git`
-          : `https://github.com/${owner}/${name}.git`;
-
-      const branch = await gitService
-        .getCurrentBranch(rootPath)
-        .catch(() => "main");
-
-      await gitService.addRemote(rootPath, remoteName, remoteUrl);
-      await gitService.push(rootPath, {
-        setUpstream: true,
-        remote: remoteName,
-        branch,
-      });
-
-      // Record the origin + default branch on the project so assertRemoteMatches
-      // and future push/PR flows treat this as a normal remote-backed repo.
-      if (projectId) {
-        await projectsRepo.update(projectId, {
-          remoteOrigin: htmlUrl,
-          defaultBranch: branch,
-        });
-      }
-
-      return ok({ url: htmlUrl, branch, owner, repo: name });
-    } catch (error) {
-      return fail(
-        error instanceof Error ? error.message : "Failed to publish repository",
+    const [owner, rawName] = params.ownerRepo.split("/").map((s) => s.trim());
+    const name = sanitizeRepoName(rawName || "");
+    if (!owner || !name) {
+      throw new Error(
+        "Enter a repository as owner/name (e.g. octocat/my-repo).",
       );
     }
+
+    // Don't clobber an existing remote of the same name.
+    const remotes = await gitService.getRemotes(rootPath).catch(() => []);
+    if (remotes.some((r) => r.name === remoteName)) {
+      throw new Error(`A remote named "${remoteName}" already exists.`);
+    }
+
+    // Create the empty repo on GitHub (no --source/--push: we wire the remote
+    // ourselves so the SSH/HTTPS choice is honored).
+    const ghArgs = [
+      "repo",
+      "create",
+      `${owner}/${name}`,
+      params.visibility === "private" ? "--private" : "--public",
+    ];
+    let htmlUrl = `https://github.com/${owner}/${name}`;
+    try {
+      const { stdout } = await execFileAsync("gh", ghArgs, {
+        cwd: rootPath,
+        timeout: 30_000,
+      });
+      htmlUrl = stdout.match(/https:\/\/github\.com\/[^\s]+/)?.[0] ?? htmlUrl;
+    } catch (error) {
+      const stderr = (error as any)?.stderr?.trim?.();
+      throw new Error(stderr || "Failed to create the GitHub repository.");
+    }
+
+    // Wire the remote with the chosen protocol, then push + set upstream.
+    const remoteUrl =
+      params.protocol === "ssh"
+        ? `git@github.com:${owner}/${name}.git`
+        : `https://github.com/${owner}/${name}.git`;
+
+    const branch = await gitService
+      .getCurrentBranch(rootPath)
+      .catch(() => "main");
+
+    await gitService.addRemote(rootPath, remoteName, remoteUrl);
+    await gitService.push(rootPath, {
+      setUpstream: true,
+      remote: remoteName,
+      branch,
+    });
+
+    // Record the origin + default branch on the project so assertRemoteMatches
+    // and future push/PR flows treat this as a normal remote-backed repo.
+    if (projectId) {
+      await projectsRepo.update(projectId, {
+        remoteOrigin: htmlUrl,
+        defaultBranch: branch,
+      });
+    }
+
+    return { url: htmlUrl, branch, owner, repo: name };
   },
 
   /**
@@ -866,26 +825,23 @@ export const gitFlowService = {
     draft?: boolean;
     providerId?: string;
     model?: string;
-  }): Promise<ServiceResponse<{ url: string }>> {
+  }): Promise<{ url: string }> {
     try {
-      const root = await this.resolveRoot(params.workspaceId);
-      if (!root.success) return root;
-      const rootPath = root.data.rootPath;
+      const { rootPath } = await this.resolveRoot(params.workspaceId);
 
       let title = params.title?.trim() || "";
       let body = params.body ?? "";
       if (!title) {
         if (!params.providerId) {
-          return fail("Provide a PR title or a provider to generate one");
+          throw new Error("Provide a PR title or a provider to generate one");
         }
         const gen = await this.generatePrBody({
           workspaceId: params.workspaceId,
           providerId: params.providerId,
           model: params.model,
         });
-        if (!gen.success) return gen;
-        title = gen.data.title;
-        if (!body) body = gen.data.body;
+        title = gen.title;
+        if (!body) body = gen.body;
       }
 
       // Verify the remote BEFORE pushing — otherwise a drifted origin would
@@ -909,13 +865,12 @@ export const gitFlowService = {
         base,
         draft: params.draft,
       });
-      return ok({ url: result.url });
+      return { url: result.url };
     } catch (error) {
+      // `gh` failures carry the useful message on stderr; surface it.
       const stderr = (error as any)?.stderr?.trim?.();
-      return fail(
-        stderr ||
-          (error instanceof Error ? error.message : "Failed to create PR"),
-      );
+      if (stderr) throw new Error(stderr);
+      throw error;
     }
   },
 };

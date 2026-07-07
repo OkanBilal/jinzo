@@ -98,4 +98,3 @@ export interface RemoveResourcePayload {
   resourceId: string;
 }
 
-export type { ServiceResponse } from "../../../shared/ipc-kit/service-response";

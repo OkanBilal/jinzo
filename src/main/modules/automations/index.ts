@@ -13,5 +13,4 @@ export type {
   AutomationRun,
   CreateAutomationInput,
   UpdateAutomationInput,
-  ServiceResponse,
 } from "./automations.dto";

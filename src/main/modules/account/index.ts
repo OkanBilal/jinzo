@@ -17,7 +17,6 @@ export {
   type AccountRecord,
   type AccountResponse,
   type UpdateAccountRequest,
-  type ServiceResponse,
 } from "./account.dto";
 
 // Constants

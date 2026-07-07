@@ -2,7 +2,6 @@
 // git-actions panel (no chat agent). Mutations invalidate the workspace diff
 // and activity caches so the Changes tab / activity feed refresh in place.
 
-import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
 import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
@@ -74,8 +73,6 @@ export const gitFlowApi = baseApi.injectEndpoints({
         handler: CHANNELS.gitFlow.getStatus,
         args: [workspaceId],
       }),
-      transformResponse: (response: ServiceResponse<GitFlowStatus>) =>
-        unwrap(response),
       keepUnusedDataFor: 30,
       // Intentionally untagged: this is the panel's own live read. Keeping it
       // off the WorkspaceDiffs tag stops the on-open resync (which refreshes
@@ -88,8 +85,6 @@ export const gitFlowApi = baseApi.injectEndpoints({
         handler: CHANNELS.gitFlow.commit,
         args: [payload],
       }),
-      transformResponse: (response: ServiceResponse<CommitResult>) =>
-        unwrap(response),
       invalidatesTags: (_result, _error, { workspaceId }) => [
         { type: "WorkspaceDiffs", id: workspaceId },
         { type: "WorkspaceActivity", id: workspaceId },
@@ -101,8 +96,6 @@ export const gitFlowApi = baseApi.injectEndpoints({
         handler: CHANNELS.gitFlow.push,
         args: [workspaceId],
       }),
-      transformResponse: (response: ServiceResponse<CommitResult>) =>
-        unwrap(response),
       invalidatesTags: (_result, _error, workspaceId) => [
         { type: "WorkspaceDiffs", id: workspaceId },
       ],
@@ -113,8 +106,6 @@ export const gitFlowApi = baseApi.injectEndpoints({
         handler: CHANNELS.gitFlow.createPr,
         args: [payload],
       }),
-      transformResponse: (response: ServiceResponse<{ url: string }>) =>
-        unwrap(response),
       invalidatesTags: (_result, _error, { workspaceId }) => [
         { type: "WorkspaceDiffs", id: workspaceId },
         { type: "WorkspaceActivity", id: workspaceId },
@@ -129,8 +120,6 @@ export const gitFlowApi = baseApi.injectEndpoints({
         handler: CHANNELS.gitFlow.generateCommitMessage,
         args: [payload],
       }),
-      transformResponse: (response: ServiceResponse<string>) =>
-        unwrap(response),
     }),
 
     generatePrBodyGitFlow: builder.mutation<
@@ -141,9 +130,6 @@ export const gitFlowApi = baseApi.injectEndpoints({
         handler: CHANNELS.gitFlow.generatePrBody,
         args: [payload],
       }),
-      transformResponse: (
-        response: ServiceResponse<{ title: string; body: string }>,
-      ) => unwrap(response),
     }),
 
     getPublishPreflight: builder.query<PublishPreflight, string>({
@@ -151,8 +137,6 @@ export const gitFlowApi = baseApi.injectEndpoints({
         handler: CHANNELS.gitFlow.getPublishPreflight,
         args: [workspaceId],
       }),
-      transformResponse: (response: ServiceResponse<PublishPreflight>) =>
-        unwrap(response),
       keepUnusedDataFor: 0,
     }),
 
@@ -161,8 +145,6 @@ export const gitFlowApi = baseApi.injectEndpoints({
         handler: CHANNELS.gitFlow.publish,
         args: [payload],
       }),
-      transformResponse: (response: ServiceResponse<PublishResult>) =>
-        unwrap(response),
       // A published repo now has a remote — refresh the workspace diff (sidebar)
       // and projects cache. The panel refetches its own gitFlow status directly.
       invalidatesTags: (_result, _error, { workspaceId }) => [

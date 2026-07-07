@@ -72,7 +72,7 @@ export async function dispatchRun(request: DispatchRunRequest): Promise<Dispatch
   }
 
   // 3. Create run record with status=running
-  const createResult = await runsService.createRun({
+  await runsService.createRun({
     id: runId,
     accountId: request.accountId,
     workspaceId: request.workspaceId,
@@ -85,10 +85,6 @@ export async function dispatchRun(request: DispatchRunRequest): Promise<Dispatch
     configSnapshot: request.configSnapshot,
     toolPolicySnapshot: request.toolPolicySnapshot,
   });
-
-  if (!createResult.success) {
-    throw new Error(`Failed to create run: ${createResult.error}`);
-  }
 
   // Set startedAt
   await runsService.updateRun(runId, { startedAt: new Date() });

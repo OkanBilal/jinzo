@@ -142,4 +142,3 @@ export interface SearchOptions {
   limit?: number;
 }
 
-export type { ServiceResponse } from "../../../shared/ipc-kit/service-response";

@@ -54,15 +54,11 @@ export const pulseApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getPulses: builder.query<Pulse[], void>({
       query: () => ({ handler: CHANNELS.pulse.getAll }),
-      transformResponse: (response: any) =>
-        response?.success ? response.data : [],
       providesTags: ['Pulse'],
     }),
 
     getPulseById: builder.query<Pulse | null, string>({
       query: (id) => ({ handler: CHANNELS.pulse.getById, args: [id] }),
-      transformResponse: (response: any) =>
-        response?.success ? response.data : null,
       providesTags: (_res, _err, id) => [{ type: 'Pulse', id }],
     }),
 
@@ -74,8 +70,6 @@ export const pulseApi = baseApi.injectEndpoints({
         handler: CHANNELS.pulse.create,
         args: [accountId, input],
       }),
-      transformResponse: (response: any) =>
-        response?.success ? response.data : null,
       invalidatesTags: ['Pulse'],
     }),
 
@@ -87,8 +81,6 @@ export const pulseApi = baseApi.injectEndpoints({
         handler: CHANNELS.pulse.update,
         args: [id, input],
       }),
-      transformResponse: (response: any) =>
-        response?.success ? response.data : null,
       invalidatesTags: ['Pulse'],
     }),
 
@@ -105,15 +97,11 @@ export const pulseApi = baseApi.injectEndpoints({
         handler: CHANNELS.pulse.toggle,
         args: [id, isActive],
       }),
-      transformResponse: (response: any) =>
-        response?.success ? response.data : null,
       invalidatesTags: ['Pulse'],
     }),
 
     runPulseNow: builder.mutation<Pulse, string>({
       query: (id) => ({ handler: CHANNELS.pulse.runNow, args: [id] }),
-      transformResponse: (response: any) =>
-        response?.success ? response.data : null,
       invalidatesTags: ['Pulse', 'Runs'],
     }),
   }),

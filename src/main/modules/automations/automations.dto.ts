@@ -20,4 +20,3 @@ export type UpdateAutomationInput = Partial<
   Pick<Automation, "name" | "kind" | "action" | "intervalMinutes" | "isActive" | "config">
 >;
 
-export type { ServiceResponse } from "../../../shared/ipc-kit/service-response";

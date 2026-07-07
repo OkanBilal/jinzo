@@ -7,22 +7,29 @@ import { getTransport } from '../../transport';
 // (local Electron IPC by default), not `window.api` directly, so the same
 // endpoints can target a remote backend by swapping the transport.
 // See docs/design/remote-backend.md.
+//
+// The base query owns unwrapping: the ServiceResponse envelope is opened HERE,
+// exactly once — endpoints receive plain `T` and must not re-unwrap in
+// `transformResponse`. See CONTEXT.md "assertOk / assertFail / unwrap".
 const ipcBaseQuery = (): BaseQueryFn<
   {
     handler: string;
     args?: any[];
   },
-  ServiceResponse<unknown>,
+  unknown,
   unknown
 > => async ({ handler, args = [] }) => {
   try {
-    const result = await getTransport().invoke(handler, args);
+    const result: ServiceResponse<unknown> = await getTransport().invoke(
+      handler,
+      args,
+    );
 
     if (!result.success) {
       return { error: result.error };
     }
 
-    return { data: result };
+    return { data: result.data };
   } catch (error: any) {
     return {
       error: {

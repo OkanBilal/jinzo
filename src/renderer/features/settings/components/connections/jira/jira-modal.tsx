@@ -106,8 +106,7 @@ export default function JiraModal(props: JiraModalProps) {
   const [getProjects] = useLazyGetJiraProjectsQuery();
   const fetchAllResources = useCallback(
     async (connectionId: string) => {
-      const result = await getProjects(connectionId).unwrap();
-      return { success: result.success, items: result.projects };
+      return getProjects(connectionId).unwrap();
     },
     [getProjects],
   );

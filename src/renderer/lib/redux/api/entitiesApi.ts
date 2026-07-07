@@ -95,8 +95,6 @@ export const entitiesApi = baseApi.injectEndpoints({
         handler: CHANNELS.entities.getAll,
         args: [params],
       }),
-      transformResponse: (response: any) =>
-        response.success ? response.data : [],
       providesTags: (result) =>
         result
           ? [
@@ -111,8 +109,6 @@ export const entitiesApi = baseApi.injectEndpoints({
         handler: CHANNELS.entities.getById,
         args: [id],
       }),
-      transformResponse: (response: any) =>
-        response.success ? response.data : null,
       providesTags: (_result, _error, id) => [{ type: "Entity", id }],
     }),
 
@@ -121,8 +117,6 @@ export const entitiesApi = baseApi.injectEndpoints({
         handler: CHANNELS.entities.create,
         args: [payload],
       }),
-      transformResponse: (response: any) =>
-        response.success ? response.data : null,
       invalidatesTags: [{ type: "Entity", id: "LIST" }],
     }),
 
@@ -131,20 +125,17 @@ export const entitiesApi = baseApi.injectEndpoints({
         handler: CHANNELS.entities.update,
         args: [payload.id, payload],
       }),
-      transformResponse: (response: any) =>
-        response.success ? response.data : null,
       invalidatesTags: (_result, _error, { id }) => [
         { type: "Entity", id },
         { type: "Entity", id: "LIST" },
       ],
     }),
 
-    deleteEntity: builder.mutation<boolean, string>({
+    deleteEntity: builder.mutation<void, string>({
       query: (id) => ({
         handler: CHANNELS.entities.delete,
         args: [id],
       }),
-      transformResponse: (response: any) => response.success,
       invalidatesTags: (_result, _error, id) => [
         { type: "Entity", id },
         { type: "Entity", id: "LIST" },
@@ -156,8 +147,6 @@ export const entitiesApi = baseApi.injectEndpoints({
         handler: CHANNELS.entities.search,
         args: [query, limit],
       }),
-      transformResponse: (response: any) =>
-        response.success ? response.data : [],
     }),
 
     getTasks: builder.query<Task[], { status?: string; limit?: number }>({
@@ -165,8 +154,6 @@ export const entitiesApi = baseApi.injectEndpoints({
         handler: CHANNELS.tasks.getAll,
         args: [params],
       }),
-      transformResponse: (response: any) =>
-        response.success ? response.data : [],
       providesTags: ["Task"],
     }),
 
@@ -175,8 +162,6 @@ export const entitiesApi = baseApi.injectEndpoints({
         handler: CHANNELS.tasks.getById,
         args: [entityId],
       }),
-      transformResponse: (response: any) =>
-        response.success ? response.data : null,
       providesTags: (_result, _error, entityId) => [
         { type: "Task", id: entityId },
       ],
@@ -190,8 +175,6 @@ export const entitiesApi = baseApi.injectEndpoints({
         handler: CHANNELS.tasks.update,
         args: [entityId, { status }],
       }),
-      transformResponse: (response: any) =>
-        response.success ? response.data : null,
       invalidatesTags: ["Task"],
     }),
 
@@ -200,8 +183,6 @@ export const entitiesApi = baseApi.injectEndpoints({
         handler: CHANNELS.issues.getAll,
         args: [params],
       }),
-      transformResponse: (response: any) =>
-        response.success ? response.data : [],
       providesTags: ["Issue"],
     }),
 
@@ -210,8 +191,6 @@ export const entitiesApi = baseApi.injectEndpoints({
         handler: CHANNELS.issues.getById,
         args: [entityId],
       }),
-      transformResponse: (response: any) =>
-        response.success ? response.data : null,
       providesTags: (_result, _error, entityId) => [
         { type: "Issue", id: entityId },
       ],
@@ -225,8 +204,6 @@ export const entitiesApi = baseApi.injectEndpoints({
         handler: CHANNELS.issues.update,
         args: [entityId, { state }],
       }),
-      transformResponse: (response: any) =>
-        response.success ? response.data : null,
       invalidatesTags: ["Issue"],
     }),
 
@@ -235,8 +212,6 @@ export const entitiesApi = baseApi.injectEndpoints({
         handler: CHANNELS.issues.getAll,
         args: [{ repo }],
       }),
-      transformResponse: (response: any) =>
-        response.success ? response.data : [],
       providesTags: ["Issue"],
     }),
 

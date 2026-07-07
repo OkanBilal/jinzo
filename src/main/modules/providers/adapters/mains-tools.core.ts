@@ -361,10 +361,13 @@ export async function handleCheckPackage(
     ecosystem: (p.ecosystem || "npm") as any,
   }));
 
-  const result = await guardsService.checkPackages(pkgs);
-  if (!result.success) {
+  let checks;
+  try {
+    checks = await guardsService.checkPackages(pkgs);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     return {
-      content: [{ type: "text" as const, text: `Guard check failed: ${result.error}` }],
+      content: [{ type: "text" as const, text: `Guard check failed: ${message}` }],
       isError: true,
     };
   }
@@ -372,7 +375,7 @@ export async function handleCheckPackage(
   const lines: string[] = [];
   let hasBlocked = false;
 
-  for (const r of result.data) {
+  for (const r of checks) {
     const status = r.allowed ? "✅ ALLOWED" : "❌ BLOCKED";
     if (!r.allowed) hasBlocked = true;
 

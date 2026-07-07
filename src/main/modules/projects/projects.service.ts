@@ -1,4 +1,3 @@
-import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import { randomUUID } from "crypto";
 import * as fs from "fs";
 import { projectsRepo } from "./projects.repo";
@@ -13,213 +12,164 @@ import type {
   ProjectResource,
   ProjectResourceWithDetails,
   ProjectResponse,
-  ServiceResponse,
   UpdateProjectPayload,
 } from "./projects.dto";
 
 // ─────────────────────────────────────────────────────────────
 // Projects Service
+//
+// Throw-style: methods return plain values and throw on failure; the
+// ServiceResponse envelope is applied by handle() at the IPC seam.
+// Single-item reads return null for absence; mutations on a missing
+// target throw (see CONTEXT.md "absence rule").
 // ─────────────────────────────────────────────────────────────
 export const projectsService = {
   // ─────────────────────────────────────────────────────────────
   // Project lifecycle
   // ─────────────────────────────────────────────────────────────
-  async list(): Promise<ServiceResponse<ProjectResponse[]>> {
-    try {
-      const projects = await projectsRepo.findAll();
-      return ok(projects);
-    } catch (error) {
-      console.error("[ProjectsService] Failed to list projects:", error);
-      return fail("Failed to list projects");
-    }
+  async list(): Promise<ProjectResponse[]> {
+    return projectsRepo.findAll();
   },
 
-  async get(id: string): Promise<ServiceResponse<ProjectResponse>> {
-    try {
-      const project = await projectsRepo.findById(id);
-      if (!project) {
-        return fail("Project not found");
-      }
-      return ok(project);
-    } catch (error) {
-      console.error(`[ProjectsService] Failed to get project ${id}:`, error);
-      return fail("Failed to get project");
-    }
+  async get(id: string): Promise<ProjectResponse | null> {
+    return projectsRepo.findById(id);
   },
 
-  async listByAccount(accountId: string): Promise<ServiceResponse<ProjectResponse[]>> {
-    try {
-      const projects = await projectsRepo.findByAccountId(accountId);
-      return ok(projects);
-    } catch (error) {
-      console.error(`[ProjectsService] Failed to list projects for account ${accountId}:`, error);
-      return fail("Failed to list projects");
-    }
+  async listByAccount(accountId: string): Promise<ProjectResponse[]> {
+    return projectsRepo.findByAccountId(accountId);
   },
 
   async findByRemoteOrigin(
     accountId: string,
     remoteOrigin: string,
-  ): Promise<ServiceResponse<ProjectResponse>> {
-    try {
-      const normalized = normalizeRemoteOrigin(remoteOrigin);
-      const project = await projectsRepo.findByRemoteOrigin(accountId, normalized);
-      if (!project) {
-        return fail("Project not found");
-      }
-      return ok(project);
-    } catch (error) {
-      console.error("[ProjectsService] Failed to find project by remote origin:", error);
-      return fail("Failed to find project");
-    }
+  ): Promise<ProjectResponse | null> {
+    const normalized = normalizeRemoteOrigin(remoteOrigin);
+    return projectsRepo.findByRemoteOrigin(accountId, normalized);
   },
 
-  async findOrCreate(payload: CreateProjectPayload): Promise<ServiceResponse<ProjectResponse>> {
-    try {
-      const normalized = payload.remoteOrigin
-        ? normalizeRemoteOrigin(payload.remoteOrigin)
-        : null;
+  async findOrCreate(payload: CreateProjectPayload): Promise<ProjectResponse> {
+    const normalized = payload.remoteOrigin
+      ? normalizeRemoteOrigin(payload.remoteOrigin)
+      : null;
 
-      const existing = normalized
-        ? await projectsRepo.findByRemoteOrigin(payload.accountId, normalized)
-        : await projectsRepo.findByAccountAndRootPath(payload.accountId, payload.rootPath);
-      if (existing) {
-        return ok(existing);
-      }
-
-      const id = payload.id || randomUUID();
-      await projectsRepo.insert({
-        ...payload,
-        id,
-        remoteOrigin: normalized,
-      });
-
-      const project = await projectsRepo.findById(id);
-      if (!project) {
-        return fail("Failed to retrieve created project");
-      }
-      return ok(project);
-    } catch (error) {
-      console.error("[ProjectsService] Failed to find or create project:", error);
-      return fail("Failed to find or create project");
-    }
-  },
-
-  async create(payload: CreateProjectPayload): Promise<ServiceResponse<ProjectResponse>> {
-    try {
-      const normalized = payload.remoteOrigin
-        ? normalizeRemoteOrigin(payload.remoteOrigin)
-        : null;
-
-      const existing = normalized
-        ? await projectsRepo.findByRemoteOrigin(payload.accountId, normalized)
-        : await projectsRepo.findByAccountAndRootPath(payload.accountId, payload.rootPath);
-      if (existing) {
-        return fail(
-          normalized
-            ? "Project with this remote origin already exists"
-            : "Project at this path already exists",
+    const existing = normalized
+      ? await projectsRepo.findByRemoteOrigin(payload.accountId, normalized)
+      : await projectsRepo.findByAccountAndRootPath(
+          payload.accountId,
+          payload.rootPath,
         );
-      }
-
-      const id = payload.id || randomUUID();
-      await projectsRepo.insert({
-        ...payload,
-        id,
-        remoteOrigin: normalized,
-      });
-
-      const project = await projectsRepo.findById(id);
-      if (!project) {
-        return fail("Failed to retrieve created project");
-      }
-      return ok(project);
-    } catch (error) {
-      console.error("[ProjectsService] Failed to create project:", error);
-      return fail("Failed to create project");
+    if (existing) {
+      return existing;
     }
+
+    const id = payload.id || randomUUID();
+    await projectsRepo.insert({
+      ...payload,
+      id,
+      remoteOrigin: normalized,
+    });
+
+    const project = await projectsRepo.findById(id);
+    if (!project) {
+      throw new Error("Failed to retrieve created project");
+    }
+    return project;
+  },
+
+  async create(payload: CreateProjectPayload): Promise<ProjectResponse> {
+    const normalized = payload.remoteOrigin
+      ? normalizeRemoteOrigin(payload.remoteOrigin)
+      : null;
+
+    const existing = normalized
+      ? await projectsRepo.findByRemoteOrigin(payload.accountId, normalized)
+      : await projectsRepo.findByAccountAndRootPath(
+          payload.accountId,
+          payload.rootPath,
+        );
+    if (existing) {
+      throw new Error(
+        normalized
+          ? "Project with this remote origin already exists"
+          : "Project at this path already exists",
+      );
+    }
+
+    const id = payload.id || randomUUID();
+    await projectsRepo.insert({
+      ...payload,
+      id,
+      remoteOrigin: normalized,
+    });
+
+    const project = await projectsRepo.findById(id);
+    if (!project) {
+      throw new Error("Failed to retrieve created project");
+    }
+    return project;
   },
 
   async update(
     id: string,
     payload: UpdateProjectPayload,
-  ): Promise<ServiceResponse<ProjectResponse>> {
-    try {
-      const updated = await projectsRepo.update(id, payload);
-      if (!updated) {
-        return fail("Project not found");
-      }
-      return ok(updated);
-    } catch (error) {
-      console.error(`[ProjectsService] Failed to update project ${id}:`, error);
-      return fail("Failed to update project");
+  ): Promise<ProjectResponse> {
+    const updated = await projectsRepo.update(id, payload);
+    if (!updated) {
+      throw new Error("Project not found");
     }
+    return updated;
   },
 
-  async remove(id: string): Promise<ServiceResponse<void>> {
-    try {
-      const project = await projectsRepo.findById(id);
-      if (!project) {
-        return fail("Project not found");
-      }
+  async remove(id: string): Promise<void> {
+    const project = await projectsRepo.findById(id);
+    if (!project) {
+      throw new Error("Project not found");
+    }
 
-      const projectWorkspaces = await workspaceRepo.findByProjectId(id);
+    const projectWorkspaces = await workspaceRepo.findByProjectId(id);
 
-      for (const ws of projectWorkspaces) {
-        if (
-          project.workspacesPath &&
-          ws.rootPath.startsWith(project.workspacesPath)
-        ) {
-          try {
-            await gitService.removeWorktree(project.rootPath, ws.rootPath);
-          } catch {
-            if (fs.existsSync(ws.rootPath)) {
-              fs.rmSync(ws.rootPath, { recursive: true, force: true });
-            }
-          }
-        }
-      }
-
-      if (project.workspacesPath && fs.existsSync(project.workspacesPath)) {
+    for (const ws of projectWorkspaces) {
+      if (
+        project.workspacesPath &&
+        ws.rootPath.startsWith(project.workspacesPath)
+      ) {
         try {
-          const remaining = fs.readdirSync(project.workspacesPath);
-          if (remaining.length === 0) {
-            fs.rmSync(project.workspacesPath, { recursive: true, force: true });
-          }
+          await gitService.removeWorktree(project.rootPath, ws.rootPath);
         } catch {
-          // Ignore cleanup errors
+          if (fs.existsSync(ws.rootPath)) {
+            fs.rmSync(ws.rootPath, { recursive: true, force: true });
+          }
         }
       }
-
-      for (const ws of projectWorkspaces) {
-        await runsRepo.deleteRunsByWorkspaceId(ws.id);
-        await workspaceRepo.deleteReviewsByWorkspace(ws.id);
-      }
-
-      await workspaceRepo.deleteByProjectId(id);
-      await projectsRepo.delete(id);
-
-      return ok(undefined);
-    } catch (error) {
-      console.error(`[ProjectsService] Failed to remove project ${id}:`, error);
-      return fail("Failed to remove project");
     }
+
+    if (project.workspacesPath && fs.existsSync(project.workspacesPath)) {
+      try {
+        const remaining = fs.readdirSync(project.workspacesPath);
+        if (remaining.length === 0) {
+          fs.rmSync(project.workspacesPath, { recursive: true, force: true });
+        }
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
+
+    for (const ws of projectWorkspaces) {
+      await runsRepo.deleteRunsByWorkspaceId(ws.id);
+      await workspaceRepo.deleteReviewsByWorkspace(ws.id);
+    }
+
+    await workspaceRepo.deleteByProjectId(id);
+    await projectsRepo.delete(id);
   },
 
-  async delete(id: string): Promise<ServiceResponse<void>> {
-    try {
-      await projectsRepo.delete(id);
-      return ok(undefined);
-    } catch (error) {
-      console.error(`[ProjectsService] Failed to delete project ${id}:`, error);
-      return fail("Failed to delete project");
-    }
+  async delete(id: string): Promise<void> {
+    await projectsRepo.delete(id);
   },
 
   /**
    * Live branch names of the project's repo (local + remote, deduped with
-   * `remotes/…` prefixes stripped). Throw-style: the envelope is applied by
-   * `handle()` at the IPC seam.
+   * `remotes/…` prefixes stripped).
    */
   async listBranchNames(id: string): Promise<string[]> {
     const project = await projectsRepo.findById(id);
@@ -237,17 +187,12 @@ export const projectsService = {
     return names;
   },
 
-  async archive(id: string): Promise<ServiceResponse<ProjectResponse>> {
-    try {
-      const archived = await projectsRepo.archive(id);
-      if (!archived) {
-        return fail("Project not found");
-      }
-      return ok(archived);
-    } catch (error) {
-      console.error(`[ProjectsService] Failed to archive project ${id}:`, error);
-      return fail("Failed to archive project");
+  async archive(id: string): Promise<ProjectResponse> {
+    const archived = await projectsRepo.archive(id);
+    if (!archived) {
+      throw new Error("Project not found");
     }
+    return archived;
   },
 
   // ─────────────────────────────────────────────────────────────
@@ -255,110 +200,82 @@ export const projectsService = {
   // ─────────────────────────────────────────────────────────────
   async listResources(
     projectId: string,
-  ): Promise<ServiceResponse<{ resources: ProjectResourceWithDetails[] }>> {
-    try {
-      if (!projectId) {
-        return fail("projectId is required");
-      }
-      const resources = await projectsRepo.listResourcesByProject(projectId);
-      return ok({ resources });
-    } catch (error) {
-      console.error("[ProjectsService] Failed to list project resources:", error);
-      return fail("Failed to list project resources");
+  ): Promise<{ resources: ProjectResourceWithDetails[] }> {
+    if (!projectId) {
+      throw new Error("projectId is required");
     }
+    const resources = await projectsRepo.listResourcesByProject(projectId);
+    return { resources };
   },
 
   async listAvailableResources(
     projectId: string,
-  ): Promise<ServiceResponse<{ resources: AvailableResource[] }>> {
-    try {
-      if (!projectId) {
-        return fail("projectId is required");
-      }
-      const resources = await projectsRepo.listAvailableResources(projectId, LINKABLE_KINDS);
-      return ok({ resources });
-    } catch (error) {
-      console.error("[ProjectsService] Failed to list available resources:", error);
-      return fail("Failed to list available resources");
+  ): Promise<{ resources: AvailableResource[] }> {
+    if (!projectId) {
+      throw new Error("projectId is required");
     }
+    const resources = await projectsRepo.listAvailableResources(
+      projectId,
+      LINKABLE_KINDS,
+    );
+    return { resources };
   },
 
   async addResource(
     projectId: string,
     resourceId: string,
-  ): Promise<ServiceResponse<{ resource: ProjectResource }>> {
-    try {
-      if (!projectId || !resourceId) {
-        return fail("projectId and resourceId are required");
-      }
-
-      const linked = await projectsRepo.isResourceLinked(projectId, resourceId);
-      if (linked) {
-        return fail("Resource is already linked to this project");
-      }
-
-      const id = randomUUID();
-      const resource = await projectsRepo.addResource(id, projectId, resourceId);
-      return ok({ resource });
-    } catch (error) {
-      console.error("[ProjectsService] Failed to add resource to project:", error);
-      return fail("Failed to add resource to project");
+  ): Promise<{ resource: ProjectResource }> {
+    if (!projectId || !resourceId) {
+      throw new Error("projectId and resourceId are required");
     }
+
+    const linked = await projectsRepo.isResourceLinked(projectId, resourceId);
+    if (linked) {
+      throw new Error("Resource is already linked to this project");
+    }
+
+    const id = randomUUID();
+    const resource = await projectsRepo.addResource(id, projectId, resourceId);
+    return { resource };
   },
 
-  async removeResource(
-    projectId: string,
-    resourceId: string,
-  ): Promise<ServiceResponse<void>> {
-    try {
-      if (!projectId || !resourceId) {
-        return fail("projectId and resourceId are required");
-      }
-      await projectsRepo.removeResource(projectId, resourceId);
-      return ok(undefined);
-    } catch (error) {
-      console.error("[ProjectsService] Failed to remove resource from project:", error);
-      return fail("Failed to remove resource from project");
+  async removeResource(projectId: string, resourceId: string): Promise<void> {
+    if (!projectId || !resourceId) {
+      throw new Error("projectId and resourceId are required");
     }
+    await projectsRepo.removeResource(projectId, resourceId);
   },
 
   // Cross-aggregate query: stitch projects ⨯ entities at the service layer.
   // The repo never touches the entities/issues schema — callers cross the
   // seam via `getIssuesByResourceIds` on the entities barrel.
-  async listIssues(
-    projectId: string,
-  ): Promise<ServiceResponse<{ issues: unknown[] }>> {
-    try {
-      if (!projectId) {
-        return fail("projectId is required");
-      }
-      const resourceIds = await projectsRepo.listLinkedResourceIds(projectId);
-      if (resourceIds.length === 0) {
-        return ok({ issues: [] });
-      }
-      const rows = await getIssuesByResourceIds(resourceIds);
-      const serialized = rows.map((item) => ({
-        issue: item.issue,
-        entity: {
-          ...item.entity,
-          occurredAt:
-            item.entity.occurredAt instanceof Date
-              ? item.entity.occurredAt.toISOString()
-              : item.entity.occurredAt,
-          createdAt:
-            item.entity.createdAt instanceof Date
-              ? item.entity.createdAt.toISOString()
-              : item.entity.createdAt,
-          updatedAt:
-            item.entity.updatedAt instanceof Date
-              ? item.entity.updatedAt.toISOString()
-              : item.entity.updatedAt,
-        },
-      }));
-      return ok({ issues: serialized });
-    } catch (error) {
-      console.error("[ProjectsService] Failed to list issues for project:", error);
-      return fail("Failed to list issues");
+  async listIssues(projectId: string): Promise<{ issues: unknown[] }> {
+    if (!projectId) {
+      throw new Error("projectId is required");
     }
+    const resourceIds = await projectsRepo.listLinkedResourceIds(projectId);
+    if (resourceIds.length === 0) {
+      return { issues: [] };
+    }
+    const rows = await getIssuesByResourceIds(resourceIds);
+    const serialized = rows.map((item) => ({
+      issue: item.issue,
+      entity: {
+        ...item.entity,
+        occurredAt:
+          item.entity.occurredAt instanceof Date
+            ? item.entity.occurredAt.toISOString()
+            : item.entity.occurredAt,
+        createdAt:
+          item.entity.createdAt instanceof Date
+            ? item.entity.createdAt.toISOString()
+            : item.entity.createdAt,
+        updatedAt:
+          item.entity.updatedAt instanceof Date
+            ? item.entity.updatedAt.toISOString()
+            : item.entity.updatedAt,
+      },
+    }));
+    return { issues: serialized };
   },
 };

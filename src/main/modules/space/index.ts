@@ -18,5 +18,4 @@ export type {
   SpacePayload,
   SanitizedSpaceResult,
   SpaceRecord,
-  ServiceResponse,
 } from "./space.dto";

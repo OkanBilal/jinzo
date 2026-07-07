@@ -29,5 +29,4 @@ export type {
   ParsedCredentials,
   CredentialsCheckResult,
   SaveCredentialsResult,
-  ServiceResponse,
 } from "./connections.dto";

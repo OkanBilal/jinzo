@@ -122,29 +122,26 @@ export function createRunWriteback(config: RunWritebackConfig): RunWriteback {
           const { toolCallId, parentToolCallId } = extractToolCallIds(meta);
 
           if (phase === "start") {
-            const created = await toolsService.createToolCall({
+            const createdId = await toolsService.createToolCall({
               accountId,
               runId,
               providerId,
               toolName: event.toolName,
-              toolCallId, // ✅ varsa DTO'da kalsın
-              parentToolCallId, // ✅ varsa DTO'da kalsın
+              toolCallId,
+              parentToolCallId,
               status: "running",
               input: event.input,
             });
 
-            if (created.success && created.data) {
-              const key = getToolCallKey(event);
-              pendingToolCalls.set(key, created.data);
+            const key = getToolCallKey(event);
+            pendingToolCalls.set(key, createdId);
 
-              // ✅ metadata'yı burada yaz
-              await toolsService.updateToolCall(created.data, {
-                startedAt: event.startedAt
-                  ? new Date(event.startedAt)
-                  : new Date(),
-                metadata: meta, // ✅ UpdateToolCallPayload destekliyorsa
-              });
-            }
+            await toolsService.updateToolCall(createdId, {
+              startedAt: event.startedAt
+                ? new Date(event.startedAt)
+                : new Date(),
+              metadata: meta,
+            });
             break;
           }
 
@@ -200,7 +197,7 @@ export function createRunWriteback(config: RunWritebackConfig): RunWriteback {
                 metadata: meta, // ✅ burada yaz
               });
             } else {
-              const created2 = await toolsService.createToolCall({
+              const createdId = await toolsService.createToolCall({
                 accountId,
                 runId,
                 providerId,
@@ -211,27 +208,25 @@ export function createRunWriteback(config: RunWritebackConfig): RunWriteback {
                 input: event.input,
               });
 
-              if (created2.success && created2.data) {
-                await toolsService.updateToolCall(created2.data, {
-                  output: (event.output ?? undefined) as
-                    | Record<string, unknown>
-                    | undefined,
-                  error: event.error,
-                  startedAt: event.startedAt
-                    ? new Date(event.startedAt)
-                    : undefined,
-                  endedAt: event.endedAt ? new Date(event.endedAt) : new Date(),
-                  latencyMs,
-                  metadata: meta, // ✅ burada yaz
-                });
-              }
+              await toolsService.updateToolCall(createdId, {
+                output: (event.output ?? undefined) as
+                  | Record<string, unknown>
+                  | undefined,
+                error: event.error,
+                startedAt: event.startedAt
+                  ? new Date(event.startedAt)
+                  : undefined,
+                endedAt: event.endedAt ? new Date(event.endedAt) : new Date(),
+                latencyMs,
+                metadata: meta,
+              });
             }
 
             break;
           }
 
           // No phase specified → complete record
-          const created3 = await toolsService.createToolCall({
+          const createdId = await toolsService.createToolCall({
             accountId,
             runId,
             providerId,
@@ -242,19 +237,17 @@ export function createRunWriteback(config: RunWritebackConfig): RunWriteback {
             input: event.input,
           });
 
-          if (created3.success && created3.data) {
-            await toolsService.updateToolCall(created3.data, {
-              output: (event.output ?? undefined) as
-                | Record<string, unknown>
-                | undefined,
-              error: event.error,
-              startedAt: event.startedAt
-                ? new Date(event.startedAt)
-                : undefined,
-              endedAt: event.endedAt ? new Date(event.endedAt) : new Date(),
-              metadata: meta, // ✅ burada yaz
-            });
-          }
+          await toolsService.updateToolCall(createdId, {
+            output: (event.output ?? undefined) as
+              | Record<string, unknown>
+              | undefined,
+            error: event.error,
+            startedAt: event.startedAt
+              ? new Date(event.startedAt)
+              : undefined,
+            endedAt: event.endedAt ? new Date(event.endedAt) : new Date(),
+            metadata: meta,
+          });
 
           break;
         }

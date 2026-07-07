@@ -61,7 +61,6 @@ export interface ProviderListResponse {
   total: number;
 }
 
-export type { ServiceResponse } from "../../../shared/ipc-kit/service-response";
 
 // ─────────────────────────────────────────────────────────────
 // CLI Detection

@@ -34,14 +34,10 @@ export const accountApi = baseApi.injectEndpoints({
       query: () => ({
         handler: CHANNELS.account.get,
       }),
-      transformResponse: (response: any) => response.success ? response.data : null,
       providesTags: ['Account'],
     }),
 
-    updateAccount: builder.mutation<
-      { success: boolean; data: Account },
-      UpdateAccountPayload
-    >({
+    updateAccount: builder.mutation<Account, UpdateAccountPayload>({
       query: (body) => ({
         handler: CHANNELS.account.update,
         args: [body],
