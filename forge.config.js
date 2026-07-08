@@ -5,13 +5,13 @@ const { AutoUnpackNativesPlugin } = require('@electron-forge/plugin-auto-unpack-
 
 module.exports = {
   hooks: {
-    packageAfterPrune: async (_forgeConfig, buildPath) => {
+    packageAfterPrune: async (_forgeConfig, buildPath, electronVersion, platform, arch) => {
       const { rebuild } = require('@electron/rebuild');
       const path = require('path');
-      const electronVersion = require('electron/package.json').version;
 
-      // Rebuild standard node_modules
-      await rebuild({ buildPath, electronVersion, force: true });
+      // `arch` must come from the hook args, not process.arch: CI cross-builds
+      // x64 on arm64 runners, where process.arch would target the wrong CPU.
+      await rebuild({ buildPath, electronVersion, arch, force: true });
 
       // Rebuild native modules inside .vite/build/node_modules
       // (Vite copies pre-built modules from project node_modules which target
@@ -26,13 +26,13 @@ module.exports = {
         }
       }));
       console.log('Rebuilding native modules in .vite/build/node_modules...');
-      await rebuild({ buildPath: viteBuildPath, electronVersion, force: true });
+      await rebuild({ buildPath: viteBuildPath, electronVersion, arch, force: true });
       fs.unlinkSync(vitePkgJson);
 
       console.log('Native modules rebuilt successfully');
 
       // Strip prebuilt binaries for other platforms to reduce bundle size
-      const targetPlatform = `${process.platform}-${process.arch}`;
+      const targetPlatform = `${platform}-${arch}`;
       console.log(`Stripping non-${targetPlatform} binaries...`);
 
       const viteNodeModules = path.join(buildPath, '.vite', 'build', 'node_modules');
@@ -64,6 +64,41 @@ module.exports = {
         for (const entry of fs.readdirSync(parentDir, { withFileTypes: true })) {
           if (entry.isDirectory() && entry.name !== targetPlatform) {
             const fullPath = path.join(parentDir, entry.name);
+            const size = getDirSize(fullPath);
+            fs.rmSync(fullPath, { recursive: true, force: true });
+            totalSaved += size;
+            console.log(`  ✓ Removed ${path.relative(viteNodeModules, fullPath)} (${(size / 1024 / 1024).toFixed(1)} MB)`);
+          }
+        }
+      }
+
+      // Strip stale per-arch build outputs (bin/<platform>-<arch>-<abi>) that
+      // were copied from project node_modules — prior local builds for another
+      // arch leave their binaries behind (e.g. bin/darwin-arm64-145 in an x64 build).
+      for (const mod of ['node-pty', 'better-sqlite3']) {
+        const binDir = path.join(viteNodeModules, mod, 'bin');
+        if (!fs.existsSync(binDir)) continue;
+        for (const entry of fs.readdirSync(binDir, { withFileTypes: true })) {
+          if (entry.isDirectory() && !entry.name.startsWith(`${targetPlatform}-`)) {
+            const fullPath = path.join(binDir, entry.name);
+            const size = getDirSize(fullPath);
+            fs.rmSync(fullPath, { recursive: true, force: true });
+            totalSaved += size;
+            console.log(`  ✓ Removed ${path.relative(viteNodeModules, fullPath)} (${(size / 1024 / 1024).toFixed(1)} MB)`);
+          }
+        }
+      }
+
+      // Strip the copilot native-binary packages for other platforms/arches
+      // (vite copies every @github/copilot-<platform>-<arch> package present;
+      // only the target one should ship). Careful: @github/copilot-sdk also
+      // lives under @github and must survive.
+      const githubScope = path.join(viteNodeModules, '@github');
+      if (fs.existsSync(githubScope)) {
+        for (const entry of fs.readdirSync(githubScope, { withFileTypes: true })) {
+          const isNativeBinaryPkg = /^copilot-(darwin|linux|linuxmusl|win32)-/.test(entry.name);
+          if (entry.isDirectory() && isNativeBinaryPkg && entry.name !== `copilot-${targetPlatform}`) {
+            const fullPath = path.join(githubScope, entry.name);
             const size = getDirSize(fullPath);
             fs.rmSync(fullPath, { recursive: true, force: true });
             totalSaved += size;
@@ -104,7 +139,7 @@ module.exports = {
     },
     asar: {
       unpack: '{**/*.node,**/copilot,**/spawn-helper,**/rg,**/*.wasm}',
-      unpackDir: '.vite/build/node_modules/{node-pty,@github/copilot-darwin-arm64,@github/copilot/prebuilds,@github/copilot/ripgrep,@anthropic-ai/claude-agent-sdk/vendor}',
+      unpackDir: '.vite/build/node_modules/{node-pty,@github/copilot-darwin-arm64,@github/copilot-darwin-x64,@github/copilot/prebuilds,@github/copilot/ripgrep,@anthropic-ai/claude-agent-sdk/vendor}',
     },
     icon: 'src/renderer/public/icon',
     extraResource: [

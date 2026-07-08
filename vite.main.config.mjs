@@ -35,10 +35,9 @@ export default defineConfig(() => {
         '@github/copilot-sdk',
         '@github/copilot',
         '@github/copilot-darwin-arm64',
-        '@openai/codex-sdk',
+        '@github/copilot-darwin-x64',
         'vscode-jsonrpc',
         'zod',
-        '@img/sharp-darwin-arm64',
       ],
     },
   },
@@ -61,14 +60,17 @@ export default defineConfig(() => {
           'ws',
         ];
 
-        // Scoped packages need their parent @scope directory created
+        // Scoped packages need their parent @scope directory created.
+        // Both darwin copilot binary packages are listed: npm only installs the
+        // host-arch one, and CI force-installs the cross-build target's variant.
+        // Whichever variants exist get copied; forge's packageAfterPrune hook
+        // strips the non-target one from the final bundle.
         const scopedModulesToCopy = [
           '@anthropic-ai/claude-agent-sdk',
           '@github/copilot-sdk',
           '@github/copilot',
           '@github/copilot-darwin-arm64',
-          '@openai/codex-sdk',
-          '@img/sharp-darwin-arm64',
+          '@github/copilot-darwin-x64',
         ];
 
         for (const mod of modulesToCopy) {
