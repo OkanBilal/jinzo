@@ -444,6 +444,13 @@ export const workspaceService = {
         : source.path;
     const name = basename(sourcePath);
 
+    // A picked folder can be anything — reject non-repos before any DB
+    // write, or the worktree path below would leave an orphan project row
+    // (it creates the project before the import can fail).
+    if (source.kind === "folder" && !(await gitService.isGitRepo(sourcePath))) {
+      throw new Error("Not a git repository");
+    }
+
     if (await preferWorktrees()) {
       // Worktree lands under worktrees/{projectName}, so the project must
       // exist before the import — source origin/baseBranch up front.

@@ -97,7 +97,7 @@ function WorkspaceGroupSection({
         className="group/section w-full flex items-center gap-1.5 px-2 py-1 mb-px rounded-lg cursor-pointer hover:bg-primary/50 dark:hover:bg-primary/5 transition-colors"
       >
         {group.icon && <span className="shrink-0 text-xs">{group.icon}</span>}
-        <span className="text-s  text-primary-800 dark:text-primary-200 truncate">
+        <span className="text-s  text-primary-950 dark:text-primary truncate">
           {group.label}
         </span>
         <div className="ml-auto flex items-center gap-1.5">
