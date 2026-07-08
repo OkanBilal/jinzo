@@ -5,14 +5,14 @@ import { proxiedImageSrc } from "@/lib/proxied-image-src";
 /**
  * Custom ReactMarkdown component overrides for consistent styling.
  */
-export const markdownComponents: Components = {
+export const  markdownComponents: Components = {
   h1: ({ children }) => (
     <h1 className="text-lg font-bold mt-4 mb-2 font-sans text-primary-900 dark:text-primary transition-all duration-150 ease-out">
       {children}
     </h1>
   ),
   h2: ({ children }) => (
-    <h2 className="text-base font-semibold mt-3 mb-2 font-sans text-primary-900 dark:text-primary transition-all duration-150 ease-out">
+    <h2 className="text-base font-semibold mt-2 mb-1 font-sans text-primary-900 dark:text-primary transition-all duration-150 ease-out">
       {children}
     </h2>
   ),

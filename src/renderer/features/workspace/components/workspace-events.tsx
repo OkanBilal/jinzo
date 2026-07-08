@@ -26,7 +26,7 @@ import {
 const EMPTY_TURNS: RunTurn[] = [];
 import { isIssueTab, getIssueEntityId, isSignalTab, getSignalEntityId, isNoteTab, getNoteId, isNewRunTab } from "../utils/repo-utils";
 import { AsciiLoader } from "./ascii-loader";
-import { Clipboard, Check, Branch, ArrowUp } from "@/components/ui/icons";
+import { Clipboard, Check, ArrowUp, Fork } from "@/components/ui/icons";
 import { useGetAppSettingsQuery } from "@/lib/redux/api";
 import { isDocumentRenderImage } from "@/lib/document-viewer";
 import { Button, Tooltip } from "@/components/ui";
@@ -212,7 +212,7 @@ function SessionTimeBar({
             className="flex items-center gap-1 ml-0.5 hover:text-primary-900 dark:hover:text-primary-100 transition-colors cursor-pointer"
             title="Fork run from here"
           >
-            <Branch className="size-4" />
+            <Fork className="size-4" />
           </Button>
         </>
       )}

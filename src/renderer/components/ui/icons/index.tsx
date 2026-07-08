@@ -135,3 +135,5 @@ export { default as Word } from "./word";
 export { default as Powerpoint } from "./powerpoint";
 export { default as Goal } from "./goal";
 export { default as ProjectFolder } from "./project-folder";
+export { default as MainsColor } from "./mains-color";
+export { default as Download } from "./download";

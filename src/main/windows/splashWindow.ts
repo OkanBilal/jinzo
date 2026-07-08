@@ -39,7 +39,9 @@ export function createSplashWindow(
     show: false,
     backgroundColor: opts.backgroundColor,
     hasShadow: false,
-    vibrancy: "under-window",
+    // Same vibrancy material as the main window (mainWindow.ts) so the splash
+    // background reads identically to the onboarding/main background.
+    vibrancy: "fullscreen-ui",
     visualEffectState: "active",
     webPreferences: {
       nodeIntegration: false,
