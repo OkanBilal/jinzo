@@ -6,32 +6,18 @@ const SvgComponent = (props: SVGProps<SVGSVGElement>) => (
     width={800}
     height={800}
     fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={1.5}
+    className="feather feather-git-branch"
     viewBox="0 0 24 24"
     {...props}
   >
-    <path
-      fill="currentColor"
-      d="M6 3a3 3 0 1 1 0 6 3 3 0 0 1 0-6ZM18 3a3 3 0 1 1 0 6 3 3 0 0 1 0-6ZM12 15a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z"
-      opacity={0.1}
-    />
-    <path
-      stroke="currentColor"
-      strokeWidth={2}
-      d="M6 3a3 3 0 1 1 0 6 3 3 0 0 1 0-6ZM18 3a3 3 0 1 1 0 6 3 3 0 0 1 0-6ZM12 15a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z"
-    />
-    <path
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeWidth={2}
-      d="M6.012 9c.101 2.45.864 3 3.64 3h4.696c2.776 0 3.539-.55 3.64-3"
-    />
-    <path
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M12 15v-3"
-    />
+    <path d="M6 3v12" />
+    <circle cx={18} cy={6} r={3} />
+    <circle cx={6} cy={18} r={3} />
+    <path d="M18 9a9 9 0 0 1-9 9" />
   </svg>
 )
 export default SvgComponent

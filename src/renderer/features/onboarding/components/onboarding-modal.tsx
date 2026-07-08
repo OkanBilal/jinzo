@@ -123,7 +123,7 @@ export function OnboardingModal({ open }: OnboardingModalProps) {
       steps={steps}
       onComplete={completeOnboarding}
       onCancel={completeOnboarding}
-      className="max-w-190 ml-72 mb-24"
+      className="max-w-190"
     />
   );
 }

@@ -24,5 +24,5 @@ export function ProjectIcon({
     }
   }
   void projectName;
-  return <ProjectFolder className="size-3.5 text-primary-900 dark:text-primary-200" />;
+  return <ProjectFolder className="size-3.5 text-primary-800 dark:text-primary-200" />;
 }

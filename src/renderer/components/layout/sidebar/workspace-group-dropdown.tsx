@@ -45,11 +45,8 @@ export function WorkspaceGroupDropdown({
         className={` ${grouping !== "none" ? "bg-primary-100/80 dark:bg-primary/5" : " "} p-1 rounded-md cursor-pointer hover:bg-primary-100/80 dark:hover:bg-primary/10 transition-colors`}
       >
         <Layers
-          className={`w-3.5 h-3.5 transition-colors ${
-            grouping !== "none"
-              ? "text-primary-950 dark:text-primary "
-              : "text-primary-800 dark:text-primary-200"
-          }`}
+          className="w-3.5 h-3.5 transition-colors text-primary-800 dark:text-primary-200"
+
         />
       </Button>
 

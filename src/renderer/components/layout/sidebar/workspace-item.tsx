@@ -175,7 +175,7 @@ export default function WorkspaceItem({
             onClick?.();
           }
         }}
-        className={`block  py-1.5
+        className={`block  py-1.25
            transition-all duration-200 ease-out cursor-pointer ${grouping !== "project" ? "rounded-xl px-2" : "rounded-[10px] px-2"} ${
             isActive
               ? "bg-primary/50 dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/10"
@@ -187,12 +187,10 @@ export default function WorkspaceItem({
             {grouping !== "project" && (
               <><span className="shrink-0 ">
                 {projectIcon ?? (
-                  <Branch className="size-3.5 text-primary-800 dark:text-primary-400" />
+                  <Branch className="size-3.5 text-primary-800 dark:text-primary-200" />
                 )}
               </span><span
-                className={`truncate text-s font-medium ${isActive
-                    ? "text-primary-800 dark:text-primary"
-                    : "text-primary-800 dark:text-primary-100"}`}
+                className="truncate text-s font-medium text-primary-800 dark:text-primary-200"
               >
                   {name}
                 </span></>
@@ -218,7 +216,7 @@ export default function WorkspaceItem({
               )}
               {branch && !isRenamingBranch && (
                 <Muted
-                  className={`text-xs text-primary-900 dark:text-primary-200 truncate ${grouping === "status" ? "-ml-1.5" : ""}`}
+                  className={`text-xs text-primary-800 dark:text-primary-200 truncate ${grouping === "status" ? "-ml-1.5" : ""}`}
                 >
                   {branch}
                 </Muted>
@@ -235,7 +233,7 @@ export default function WorkspaceItem({
                   }}
                   onBlur={handleRenameBranchConfirm}
                   onClick={(e) => e.stopPropagation()}
-                  className="text-xs bg-primary/20 dark:bg-primary/10 text-primary-900 dark:text-primary-200 rounded px-1 py-0.5 outline-none border border-primary/30 dark:border-primary/20 w-full max-w-35"
+                  className="text-xs bg-primary/20 dark:bg-primary/10 text-primary-800 dark:text-primary-200 rounded px-1 py-0.5 outline-none border border-primary/30 dark:border-primary/20 w-full max-w-35"
                 />
               )}
               {/* {branch && updatedAt && (
@@ -280,7 +278,7 @@ export default function WorkspaceItem({
           className={`absolute right-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1 cursor-pointer rounded-md`}
           aria-label="Workspace options"
         >
-          <Option className="w-5 h-5 text-primary-700 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200" />
+          <Option className="w-5 h-5 text-primary-700 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-200" />
         </Button>
       </div>
 

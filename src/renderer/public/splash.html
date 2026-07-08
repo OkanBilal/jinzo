@@ -19,6 +19,8 @@
       user-select: none;
     }
 
+    /* Matches the app's default theme background (lib/theme.ts COLORS) so the
+       splash → onboarding/main handoff doesn't visibly shift. */
     .splash-container {
       display: flex;
       flex-direction: column;
@@ -26,7 +28,7 @@
       justify-content: center;
       height: 100%;
       width: 100%;
-      background: rgba(4, 4, 4, 0.7);
+      background: rgba(0, 0, 0, 0.44); /* #00000070 */
     }
 
     .logo {
@@ -37,7 +39,7 @@
 
     @media (prefers-color-scheme: light) {
       .splash-container {
-        background: rgba(250, 250, 250, 0.7);
+        background: rgba(255, 255, 255, 0.7); /* #ffffffb3 */
       }
       .logo {
         color: rgb(100, 100, 100);

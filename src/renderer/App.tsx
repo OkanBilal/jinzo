@@ -25,7 +25,7 @@ import {
   setOnboardingCompleted,
 } from "./lib/redux/slices/appSettingsSlice";
 import { SidebarToggleButton } from "./components/layout/sidebar/sidebar-toggle-button";
-import { OnboardingModal } from "./features/onboarding/components/onboarding-modal";
+import { OnboardingScreen } from "./features/onboarding/components/onboarding-screen";
 import { ErrorBoundary } from "./components/ui/error-boundary";
 import { MainHeaderProvider } from "./hooks/use-main-header";
 import { useLayoutWidthVars } from "./hooks/use-layout-width-vars";
@@ -114,11 +114,21 @@ function AppContent() {
     if (isWeb && !onboardingCompleted) dispatch(setOnboardingCompleted(true));
   }, [onboardingCompleted, dispatch]);
 
+  // Onboarding sets up local CLIs; in web those live on the backend, so skip
+  // it. First run shows only the onboarding screen — the app shell mounts
+  // after completion.
+  if (!onboardingCompleted && !isWeb) {
+    return (
+      <>
+        <Toaster />
+        <OnboardingScreen />
+      </>
+    );
+  }
+
   return (
     <>
       <Toaster />
-      {/* Onboarding sets up local CLIs; in web those live on the backend, so skip it. */}
-      {!onboardingCompleted && !isWeb && <OnboardingModal open={true} />}
       <MainLayout>
         {/* Mobile drawer scrims — tap to dismiss. Each sits just below its panel
             (sidebar z-30, right panel z-50) and above the full-width content. */}
