@@ -190,7 +190,7 @@ export default function WorkspaceItem({
                   <Branch className="size-3.5 text-primary-800 dark:text-primary-200" />
                 )}
               </span><span
-                className="truncate text-s font-medium text-primary-800 dark:text-primary-200"
+                className="truncate text-s text-primary-950  dark:text-primary"
               >
                   {name}
                 </span></>

@@ -84,6 +84,7 @@ vi.mock("../git/git.service", () => ({
   gitService: {
     initRepo: vi.fn(),
     cloneRepo: vi.fn(),
+    isGitRepo: vi.fn(),
     importLocalRepo: vi.fn(),
     importLocalRepoDirect: vi.fn(),
     getRemotes: vi.fn(),
@@ -2428,6 +2429,7 @@ describe("workspaceService — createFromSource (workspace intake)", () => {
     ({ db, sqlite: _sqlite, cleanup } = createTestDb());
     createAccount(db, { id: "default" });
     vi.clearAllMocks();
+    gitMock.isGitRepo.mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -2576,6 +2578,49 @@ describe("workspaceService — createFromSource (workspace intake)", () => {
     const projects = await projectsRepo.findAll();
     expect(projects).toHaveLength(1); // same normalized origin → one project
     expect(a.projectId).toBe(b.projectId);
+  });
+
+  it("folder + worktree: rejects a non-git folder before any DB write (no orphan project)", async () => {
+    setWorktrees(true);
+    gitMock.isGitRepo.mockResolvedValue(false);
+
+    await expect(
+      workspaceService.createFromSource({
+        accountId: "default",
+        source: { kind: "folder", path: "/repos/not-a-repo" },
+      }),
+    ).rejects.toThrow("Not a git repository");
+    expect(gitMock.importLocalRepo).not.toHaveBeenCalled();
+    const projects = await projectsRepo.findAll();
+    expect(projects).toHaveLength(0);
+  });
+
+  it("clone: skips the repo check — a fresh clone is a repo by construction", async () => {
+    setWorktrees(false);
+    gitMock.cloneRepo.mockResolvedValue({
+      clonedPath: "/clones/fresh",
+      defaultBranch: "main",
+      originUrl: "https://github.com/foo/fresh.git",
+    });
+    gitMock.importLocalRepoDirect.mockResolvedValue({
+      branchName: "main",
+      sourcePath: "/clones/fresh",
+      baseBranch: "main",
+      tracking: null,
+      ahead: 0,
+      behind: 0,
+      originUrl: "https://github.com/foo/fresh.git",
+    });
+
+    await workspaceService.createFromSource({
+      accountId: "default",
+      source: {
+        kind: "clone",
+        url: "https://github.com/foo/fresh.git",
+        targetPath: "/clones",
+      },
+    });
+    expect(gitMock.isGitRepo).not.toHaveBeenCalled();
   });
 
   it("surfaces the git error message when the import fails", async () => {

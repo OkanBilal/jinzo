@@ -253,6 +253,11 @@ export const gitService = {
     return captureDiffSnapshot(rootPath, baseRef);
   },
 
+  /** Whether the path is inside a git repository. */
+  async isGitRepo(rootPath: string): Promise<boolean> {
+    return getGit(rootPath).checkIsRepo();
+  },
+
   /**
    * Import a local git repo by creating a branch + worktree.
    * Returns full metadata needed for workspace creation.
