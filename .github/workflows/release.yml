@@ -47,7 +47,9 @@ jobs:
       - name: Install x64 Copilot binary package
         if: matrix.arch == 'x64'
         run: |
-          VERSION=$(node -p "require('@github/copilot/package.json').optionalDependencies['@github/copilot-darwin-x64']")
+          # Read the file directly — @github/copilot's "exports" field blocks
+          # require('@github/copilot/package.json') as a bare specifier.
+          VERSION=$(node -p "JSON.parse(require('fs').readFileSync('node_modules/@github/copilot/package.json', 'utf8')).optionalDependencies['@github/copilot-darwin-x64']")
           npm pack "@github/copilot-darwin-x64@$VERSION"
           mkdir -p node_modules/@github/copilot-darwin-x64
           tar -xzf github-copilot-darwin-x64-*.tgz -C node_modules/@github/copilot-darwin-x64 --strip-components=1
