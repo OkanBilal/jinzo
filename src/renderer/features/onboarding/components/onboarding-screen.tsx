@@ -138,7 +138,7 @@ export function OnboardingScreen() {
               {isLastStep ? "Get Started" : "Continue"}
               {isLastStep ? (
                 <kbd
-                  className="ml-0.5 flex h-4.5 items-center px-1 font-sans text-[11px] leading-none"
+                  className="ml-0.5 flex h-4.5 items-center px-1 font-sans text-xxs leading-none"
                   aria-hidden
                 >
                   ⏎

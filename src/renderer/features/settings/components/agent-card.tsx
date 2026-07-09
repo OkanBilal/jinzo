@@ -1,22 +1,22 @@
+import type { ComponentType } from "react";
 import { Button } from "@/components/ui";
 import { Check, Plus } from "@/components/ui/icons";
-import { Codex, CopilotStatic, Cursor } from "@/components/ui/icons";
-import { Claude } from "@/components/ui/icons/space";
 import { cn } from "@/lib/cn";
-import type { OnboardingAgentSlug } from "../onboarding-agents";
+import {
+  PROVIDER_VARIANTS,
+  type ProviderVariant,
+} from "@/lib/provider-variants";
 
 interface AgentChoice {
-  slug: OnboardingAgentSlug;
+  slug: ProviderVariant;
   label: string;
-  Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  Icon: ComponentType<{ className?: string }>;
 }
 
-export const AGENT_CHOICES: AgentChoice[] = [
-  { slug: "claude", label: "Claude", Icon: Claude },
-  { slug: "copilot", label: "Copilot", Icon: CopilotStatic },
-  { slug: "codex", label: "Codex", Icon: Codex },
-  { slug: "cursor", label: "Cursor", Icon: Cursor },
-];
+/** Selectable agent tiles, derived from the provider registry. */
+export const AGENT_CHOICES: AgentChoice[] = Object.values(PROVIDER_VARIANTS).map(
+  (d) => ({ slug: d.variant, label: d.label, Icon: d.icon }),
+);
 
 export function AgentCard({
   label,
@@ -26,7 +26,7 @@ export function AgentCard({
   disabled,
 }: {
   label: string;
-  Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  Icon: ComponentType<{ className?: string }>;
   isSelected: boolean;
   onClick: () => void;
   disabled?: boolean;
@@ -53,7 +53,7 @@ export function AgentCard({
         className={cn(
           "flex items-center justify-center h-6 border-t transition-colors",
           isSelected
-            ? "border-primary-200 dark:border-primary-800 text-emerald-600 dark:text-emerald-400"
+            ? "border-primary-200 dark:border-primary-800 text-success"
             : "border-primary-200 dark:border-primary-800 text-primary-500 dark:text-primary-400",
         )}
       >

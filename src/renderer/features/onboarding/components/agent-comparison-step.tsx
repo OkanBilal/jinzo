@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, DropdownWrapper, Heading2 } from "@/components/ui";
-import { CopyButton } from "@/components/ui/copy-button";
+import { Button, CopyButton, DropdownWrapper, Heading2 } from "@/components/ui";
+import { useClickOutside } from "@/hooks/use-click-outside";
 import {
   Download,
   CodexColor,
@@ -198,13 +198,12 @@ function EnableButton({
         "group min-w-26 rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50",
         isSelected
           ? cn(
-              "bg-emerald-600 text-white",
-              showPreview && "hover:bg-red-500 hover:text-white",
+              "bg-success text-white",
+              showPreview && "hover:bg-danger hover:text-white",
             )
           : cn(
               "bg-primary-500/10 text-primary-500 dark:text-primary-400",
-              showPreview &&
-                "hover:bg-emerald-500/15 hover:text-emerald-600 dark:hover:text-emerald-400",
+              showPreview && "hover:bg-success/15 hover:text-success",
             ),
       )}
     >
@@ -241,32 +240,20 @@ function CliInstallBadge({
 }: {
   name: string;
   install: CliInstall;
-  onRecheck: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const close = useCallback(() => setOpen(false), []);
+  useClickOutside(panelRef, close, triggerRef);
 
   useEffect(() => {
     if (!open) return;
-    const onPointerDown = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (
-        triggerRef.current?.contains(target) ||
-        panelRef.current?.contains(target)
-      )
-        return;
-      setOpen(false);
-    };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
     };
-    document.addEventListener("mousedown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
+    return () => document.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
   return (
@@ -275,15 +262,10 @@ function CliInstallBadge({
         ref={triggerRef}
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-amber-500/15 px-3 py-1 text-sm font-medium text-amber-600 transition-colors hover:bg-amber-500/25 dark:text-amber-400"
+        className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-warning/15 px-3 py-1 text-sm font-medium text-warning transition-colors hover:bg-warning/25"
       >
         CLI not detected
-        <Download
-          className={cn(
-            "size-3 transition-transform duration-200",
-
-          )}
-        />
+        <Download className="size-3 transition-transform duration-200" />
       </Button>
       <DropdownWrapper
         isOpen={open}
@@ -340,8 +322,7 @@ export function AgentComparisonStep() {
   const { data: appSettings } = useGetAppSettingsQuery();
   const [archiveSpace] = useArchiveSpaceMutation();
   const [setActiveSpace] = useSetActiveSpaceMutation();
-  const { data: detectedClis, refetch: refetchDetectedClis } =
-    useDetectInstalledClisQuery();
+  const { data: detectedClis } = useDetectInstalledClisQuery();
   const hasAppliedAutoSelect = useRef(false);
 
   const { agentSpaces, visibleAgentCount, spacesBySlug, toggleAgent } =
@@ -455,18 +436,14 @@ export function AgentComparisonStep() {
           return (
             <RowCell key={slug}>
               {detectedClis !== undefined && !installed ? (
-                <CliInstallBadge
-                  name={name}
-                  install={install}
-                  onRecheck={() => void refetchDetectedClis()}
-                />
+                <CliInstallBadge name={name} install={install} />
               ) : (
                 <span
                   className={cn(
                     "inline-flex items-center rounded-full px-3 py-1 text-sm font-medium",
                     detectedClis === undefined
                       ? "bg-primary-500/10 text-primary-500 dark:text-primary-400"
-                      : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+                      : "bg-success/15 text-success",
                   )}
                 >
                   {detectedClis === undefined ? "Checking…" : "CLI detected"}

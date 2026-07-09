@@ -21,7 +21,7 @@ import { AsciiSpinner } from "@/components/ui/ascii-spinner";
 import {
   AgentCard,
   AGENT_CHOICES,
-} from "@/features/onboarding/components/agent-card";
+} from "./agent-card";
 import { useAgentSpaces } from "@/features/onboarding/hooks/use-agent-spaces";
 
 function UpdateButton({
