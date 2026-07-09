@@ -45,7 +45,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
     <div
       className="flex flex-col h-full"
       style={{
-        animation: "slide-fade-down 300ms ease-in-out",
+        animation: "slide-fade-down 200ms cubic-bezier(0.23, 1, 0.32, 1)",
       }}
     >
       <div className="flex flex-col items-start pt-12 pb-1 px-4">

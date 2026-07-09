@@ -1,4 +1,4 @@
-import { LazyMotion, m, domAnimation } from "motion/react";
+import { LazyMotion, m, domAnimation, MotionConfig } from "motion/react";
 
 interface PromptSuggestionChipsProps {
   suggestions: string[];
@@ -17,11 +17,12 @@ export function PromptSuggestionChips({
 
   return (
     <LazyMotion features={domAnimation}>
+      <MotionConfig reducedMotion="user">
       <div className="w-full py-2 flex flex-col items-end gap-1">
         <m.button
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
+          initial={{ opacity: 0, transform: "translateY(8px)" }}
+          animate={{ opacity: 1, transform: "translateY(0px)" }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
           onClick={() => !disabled && onSelect(suggestion)}
           disabled={disabled}
           className="shooting-star-border group rounded-2xl max-w-[80%]
@@ -44,7 +45,7 @@ export function PromptSuggestionChips({
         suggestion
         </m.span>
       </div>
-
+      </MotionConfig>
     </LazyMotion>
   );
 }

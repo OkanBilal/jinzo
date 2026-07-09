@@ -121,7 +121,7 @@ export default function PresetSpacesView({
   return (
     <div
       className="flex flex-col h-full"
-      style={{ animation: "slide-fade-down 300ms ease-in-out" }}
+      style={{ animation: "slide-fade-down 200ms cubic-bezier(0.23, 1, 0.32, 1)" }}
     >
       <div className="flex flex-col items-center pt-12 px-3">
         <Body className="text-center font-medium">

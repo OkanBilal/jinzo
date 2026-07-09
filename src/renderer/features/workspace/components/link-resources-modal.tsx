@@ -253,26 +253,6 @@ export function LinkResourcesModal({
           </div>
         </div>
       </div>
-      <style>{`
-        @keyframes wizardModalIn {
-          0% {
-            opacity: 0;
-            transform: scale(0.2);
-          }
-          70% {
-            opacity: 1;
-            transform: scale(1.015);
-          }
-          100% {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-        @keyframes wizardStepFade {
-          from { opacity: 0.6; }
-          to { opacity: 1; }
-        }
-      `}</style>
     </div>,
     document.body
   );

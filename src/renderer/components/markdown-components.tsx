@@ -7,68 +7,68 @@ import { proxiedImageSrc } from "@/lib/proxied-image-src";
  */
 export const  markdownComponents: Components = {
   h1: ({ children }) => (
-    <h1 className="text-lg font-bold mt-4 mb-2 font-sans text-primary-900 dark:text-primary transition-all duration-150 ease-out">
+    <h1 className="text-lg font-bold mt-4 mb-2 font-sans text-primary-900 dark:text-primary">
       {children}
     </h1>
   ),
   h2: ({ children }) => (
-    <h2 className="text-base font-semibold mt-2 mb-1 font-sans text-primary-900 dark:text-primary transition-all duration-150 ease-out">
+    <h2 className="text-base font-semibold mt-2 mb-1 font-sans text-primary-900 dark:text-primary">
       {children}
     </h2>
   ),
   h3: ({ children }) => (
-    <h3 className="text-sm font-semibold mt-2 mb-1 font-sans text-primary-900 dark:text-primary transition-all duration-150 ease-out">
+    <h3 className="text-sm font-semibold mt-2 mb-1 font-sans text-primary-900 dark:text-primary">
       {children}
     </h3>
   ),
   h4: ({ children }) => (
-    <h4 className="text-xs font-semibold mt-1 mb-0.5 font-sans text-primary-900 dark:text-primary transition-all duration-150 ease-out">
+    <h4 className="text-xs font-semibold mt-1 mb-0.5 font-sans text-primary-900 dark:text-primary">
       {children}
     </h4>
   ),
   p: ({ children }) => (
-    <p className=" text-sm leading-7 font-sans text-primary-900 dark:text-primary transition-all duration-150 ease-out">
+    <p className=" text-sm leading-7 font-sans text-primary-900 dark:text-primary">
       {children}
     </p>
   ),
   ul: ({ children }) => (
-    <ul className="list-disc list-outside  pl-4 text-sm  font-sans mb-2 space-y-1 text-primary-900 dark:text-primary transition-all duration-150 ease-out">
+    <ul className="list-disc list-outside  pl-4 text-sm  font-sans mb-2 space-y-1 text-primary-900 dark:text-primary">
       {children}
     </ul>
   ),
   ol: ({ children }) => (
-    <ol className="list-decimal  list-outside pl-4 text-sm font-sans mb-2 space-y-1 text-primary-900 dark:text-primary transition-all duration-150 ease-out">
+    <ol className="list-decimal  list-outside pl-4 text-sm font-sans mb-2 space-y-1 text-primary-900 dark:text-primary">
       {children}
     </ol>
   ),
   li: ({ children }) => (
-    <li className="font-sans text-sm leading-7 text-primary-900 dark:text-primary transition-all duration-150 ease-out [&>p]:my-0 [&>p:not(:last-child)]:mb-1">
+    <li className="font-sans text-sm leading-7 text-primary-900 dark:text-primary [&>p]:my-0 [&>p:not(:last-child)]:mb-1">
       {children}
     </li>
   ),
   table: ({ children }) => (
-    <div className="overflow-x-auto my-4 rounded-lg border border-primary-300 dark:border-primary-700 transition-all duration-150 ease-out">
+    <div className="overflow-x-auto my-4 rounded-lg border border-primary-300 dark:border-primary-700">
       <table className="min-w-full border-collapse">{children}</table>
     </div>
   ),
   thead: ({ children }) => (
-    <thead className="bg-primary-50 dark:bg-primary/10 transition-all duration-150 ease-out">{children}</thead>
+    <thead className="bg-primary-50 dark:bg-primary/10">{children}</thead>
   ),
   tbody: ({ children }) => (
-    <tbody className="bg-primary dark:bg-primary/5 transition-all duration-150 ease-out">{children}</tbody>
+    <tbody className="bg-primary dark:bg-primary/5">{children}</tbody>
   ),
   tr: ({ children }) => (
-    <tr className="border-b border-primary-200 dark:border-primary-700 hover:bg-primary-200/20 dark:hover:bg-primary/5 transition-all duration-150 ease-out">
+    <tr className="border-b border-primary-200 dark:border-primary-700 hover:bg-primary-200/20 dark:hover:bg-primary/5 transition-colors duration-150">
       {children}
     </tr>
   ),
   th: ({ children }) => (
-    <th className="px-4 py-3 text-left text-sm font-semibold font-sans text-primary-900 dark:text-primary-100 border-r border-primary-200 dark:border-primary-700 last:border-r-0 transition-all duration-150 ease-out">
+    <th className="px-4 py-3 text-left text-sm font-semibold font-sans text-primary-900 dark:text-primary-100 border-r border-primary-200 dark:border-primary-700 last:border-r-0">
       {children}
     </th>
   ),
   td: ({ children }) => (
-    <td className="px-4 py-3 text-sm font-sans text-primary-900 dark:text-primary border-r border-primary-200 dark:border-primary-700 last:border-r-0 transition-all duration-150 ease-out">
+    <td className="px-4 py-3 text-sm font-sans text-primary-900 dark:text-primary border-r border-primary-200 dark:border-primary-700 last:border-r-0">
       {children}
     </td>
   ),
@@ -76,19 +76,19 @@ export const  markdownComponents: Components = {
     const isInline = !className;
     if (isInline) {
       return (
-        <code className="px-1 py-0.5 rounded text-primary-900 dark:text-primary text-[0.9em] bg-primary-200/40 dark:bg-primary/10  transition-all duration-150 ease-out">
+        <code className="px-1 py-0.5 rounded text-primary-900 dark:text-primary text-[0.9em] bg-primary-200/40 dark:bg-primary/10 ">
           {children}
         </code>
       );
     }
     return (
-      <code className="block p-4 rounded-xl bg-primary-50 dark:bg-primary/10 text-primary-900 dark:text-primary text-[0.9em] overflow-x-auto transition-all duration-150 ease-out">
+      <code className="block p-4 rounded-xl bg-primary-50 dark:bg-primary/10 text-primary-900 dark:text-primary text-[0.9em] overflow-x-auto">
         {children}
       </code>
     );
   },
   pre: ({ children }) => (
-    <pre className="my-2 rounded-xl  overflow-hidden bg-primary-50 dark:bg-primary/10 transition-all duration-150 ease-out">{children}</pre>
+    <pre className="my-2 rounded-xl  overflow-hidden bg-primary-50 dark:bg-primary/10">{children}</pre>
   ),
   a: ({ href, children }) => (
     <button
@@ -98,34 +98,34 @@ export const  markdownComponents: Components = {
           window.api.shell.openExternal(href);
         }
       }}
-      className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 underline cursor-pointer transition-all duration-150 ease-out inline"
+      className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 underline cursor-pointer inline"
     >
       {children}
     </button>
   ),
   blockquote: ({ children }) => (
-    <blockquote className="border-l-4 border-primary-400 dark:border-primary-600 pl-4 py-1 my-2 italic text-primary-700 dark:text-primary-300 transition-all duration-150 ease-out">
+    <blockquote className="border-l-4 border-primary-400 dark:border-primary-600 pl-4 py-1 my-2 italic text-primary-700 dark:text-primary-300">
       {children}
     </blockquote>
   ),
   strong: ({ children }) => (
-    <strong className="font-semibold text-primary-900 dark:text-primary transition-all duration-150 ease-out">
+    <strong className="font-semibold text-primary-900 dark:text-primary">
       {children}
     </strong>
   ),
   em: ({ children }) => (
-    <em className="italic text-primary-900 dark:text-primary transition-all duration-150 ease-out">
+    <em className="italic text-primary-900 dark:text-primary">
       {children}
     </em>
   ),
-  hr: () => <hr className="my-4 border-primary-300 dark:border-primary-700 transition-all duration-150 ease-out" />,
+  hr: () => <hr className="my-4 border-primary-300 dark:border-primary-700" />,
   img: ({ src, alt }) => {
     const proxiedSrc = proxiedImageSrc(src) ?? src;
     return (
       <img
         src={proxiedSrc}
         alt={alt || ""}
-        className="max-w-full h-auto rounded-lg my-2 border border-primary-200 dark:border-primary-700 transition-all duration-150 ease-out"
+        className="max-w-full h-auto rounded-lg my-2 border border-primary-200 dark:border-primary-700"
         onError={(e) => {
           const target = e.currentTarget;
           if (src && target.src !== src) target.src = src;

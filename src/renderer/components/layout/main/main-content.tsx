@@ -44,11 +44,11 @@ export function MainContent({
 
   return (
     <main
-      className={`flex-1 overflow-hidden transition-all duration-300 ease-out mx-1.25 my-1.25 flex flex-col`}
+      className={`flex-1 overflow-hidden mx-1.25 my-1.25 flex flex-col`}
       style={{
         marginLeft,
         marginRight,
-        transition: "margin 300ms ease-out",
+        transition: "margin 200ms ease-out",
       }}
     >
       {header && (

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LazyMotion, m, AnimatePresence, domAnimation } from "motion/react";
+import { LazyMotion, m, AnimatePresence, domAnimation, MotionConfig } from "motion/react";
 
 interface AnimatedTitleProps {
   title: string;
@@ -16,6 +16,7 @@ export function AnimatedTitle({ title, className = "" }: AnimatedTitleProps) {
 
   return (
     <LazyMotion features={domAnimation}>
+      <MotionConfig reducedMotion="user">
       <AnimatePresence mode="wait">
         <m.span
           key={title}
@@ -37,13 +38,14 @@ export function AnimatedTitle({ title, className = "" }: AnimatedTitleProps) {
             opacity: 0,
           }}
           transition={{
-            duration: 0.35,
+            duration: 0.15,
             ease: [0.4, 0, 0.2, 1],
           }}
         >
           {title}
         </m.span>
       </AnimatePresence>
+      </MotionConfig>
     </LazyMotion>
   );
 }

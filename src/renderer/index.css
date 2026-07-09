@@ -388,7 +388,7 @@ body[data-resizing] iframe {
 @keyframes modal-in {
   0% {
     opacity: 0;
-    transform: translateY(100%) scale(0.22);
+    transform: translateY(100%) scale(0.96);
   }
   70% {
     opacity: 1;
@@ -422,59 +422,42 @@ body[data-resizing] iframe {
 }
 
 .animate-modal-out {
-  animation: modal-out 200ms ease-in both;
+  animation: modal-out 200ms cubic-bezier(0.23, 1, 0.32, 1) both;
   transform-origin: bottom;
   will-change: transform, opacity;
   contain: layout style paint;
 }
 
-@keyframes toast-in {
-  0% {
-    opacity: 0;
-    transform: scale(0.5) translateY(0);
-
-
-  }
-  70% {
-    opacity: 1;
-    transform: scale(1.02) translateY(0);
-
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-@keyframes toast-out {
-  0% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(0.95) translateY(0);
-  }
-}
-
-.animate-toast-in {
-  animation: toast-in 250ms cubic-bezier(0.22, 1, 0.36, 1) both;
+/* Toasts use transitions (not keyframes) so rapid add/dismiss retargets from
+   the current state instead of restarting from zero; entry via @starting-style. */
+.toast-item {
+  opacity: 1;
+  transform: scale(1) translateY(0);
   transform-origin: top;
+  transition:
+    transform 250ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 250ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform, opacity;
   contain: layout style paint;
 }
 
-.animate-toast-out {
-  animation: toast-out 200ms ease-in both;
-  transform-origin: bottom;
-  will-change: transform, opacity;
-  contain: layout style paint;
+@starting-style {
+  .toast-item {
+    opacity: 0;
+    transform: scale(0.95) translateY(-8px);
+  }
+}
+
+.toast-item[data-exiting] {
+  opacity: 0;
+  transform: scale(0.95) translateY(0);
+  transition-duration: 200ms;
 }
 
 
 @keyframes blur-reveal {
-  from { filter: blur(2px); opacity: 0.4; }
-  to { filter: blur(0); opacity: 1; }
+  from { opacity: 0.4; }
+  to { opacity: 1; }
 }
 
 @keyframes fresh-blur-in {
@@ -521,10 +504,10 @@ body[data-resizing] iframe {
 
 @keyframes claudePulse {
   0%, 100% {
-    transform: scale(1.1);
+    transform: scale(1);
   }
   50% {
-    transform: scale(0.8);
+    transform: scale(0.85);
   }
 }
 
@@ -588,7 +571,7 @@ body[data-resizing] iframe {
 @keyframes wizardModalIn {
   0% {
     opacity: 0;
-    transform: scale(0.2);
+    transform: scale(0.96);
   }
   70% {
     opacity: 1;
@@ -625,7 +608,7 @@ body[data-resizing] iframe {
   border-radius: 999px;
   box-shadow: 0 2px 5px #100f0f4d;
   cursor: pointer;
-  transition: all 0.2s ease-in-out;
+  transition: transform 160ms ease-out, box-shadow 160ms ease-out;
 
   &:hover { transform: translateY(-2px); }
   &:active {
@@ -784,11 +767,7 @@ html.mains-web.dark #root {
 }
 
 .animate-blur-reveal {
-  animation: blur-reveal 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-.fade-in {
-  animation: fade 2s ease normal backwards;
+  animation: blur-reveal 150ms ease-out forwards;
 }
 
 .noscrollbar {
@@ -880,6 +859,39 @@ html.mains-web.dark #root {
 
 @media (prefers-reduced-motion: reduce) {
   .streaming-text > * {
+    animation: none;
+  }
+
+  /* Gentler, not zero: entrances keep a quick fade (state indication) but drop
+     movement. Spinners stay — they convey loading state. Decorative loops stop. */
+  .animate-dropdown-in,
+  .animate-dropdown-sub-in,
+  .animate-modal-in,
+  .animate-slide-in,
+  .animate-slide-in-left,
+  .fresh-text-blur {
+    animation: fade 120ms ease-out both;
+  }
+
+  .animate-modal-out {
+    animation: fade 120ms ease-out reverse both;
+  }
+
+  .toast-item,
+  .toast-item[data-exiting] {
+    transition-property: opacity;
+    transition-duration: 120ms;
+  }
+
+  .marquee-track {
+    animation-play-state: paused;
+  }
+
+  .shine-text,
+  .shooting-star-border .spark,
+  .shooting-star-border .spark::before,
+  .animate-claude-pulse,
+  .animate-rotate-3d {
     animation: none;
   }
 }

@@ -68,20 +68,16 @@ function ToastItem({ toast, onDismiss }: ToastItemProps) {
     }
   };
 
-  const animationClass = exiting ? "animate-toast-out" : "animate-toast-in";
-
   return (
     <div
       role={toast.type === "error" ? "alert" : "status"}
       aria-live={toast.type === "error" ? "assertive" : "polite"}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
-      className={`
-        pointer-events-auto inline-flex items-center gap-3 px-5 py-3
+      data-exiting={exiting ? "" : undefined}
+      className="pointer-events-auto inline-flex items-center gap-3 px-5 py-3
         rounded-full max-w-[calc(100vw-24px)] glass-morphism
-        text-primary-950 dark:text-primary
-        ${animationClass}
-      `}
+        text-primary-950 dark:text-primary toast-item"
     >
       {icon && <span className="flex items-center">{icon}</span>}
       <span className="text-sm font-medium whitespace-nowrap">
