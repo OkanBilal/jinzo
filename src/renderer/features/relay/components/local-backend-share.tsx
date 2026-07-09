@@ -8,7 +8,10 @@ import {
   Toggle,
   toast,
 } from "@/components/ui";
-import { SettingsSection, SettingsDivider } from "./settings-layout";
+import {
+  SettingsSection,
+  SettingsDivider,
+} from "@/features/settings/components/settings-layout";
 
 interface Address {
   label: string;

@@ -28,7 +28,7 @@ const CodexSettings = lazy(() => import("./components/codex"));
 const CodexPlugins = lazy(() => import("./components/provider-plugins"));
 const CursorSettings = lazy(() => import("./components/cursor"));
 const ProjectsSettings = lazy(() => import("./components/projects"));
-const BackendsSettings = lazy(() => import("./components/backends"));
+const BackendsSettings = lazy(() => import("@/features/relay/components/backends"));
 const DashboardPage = lazy(
   () => import("@/features/stats/components/dashboard-page"),
 );

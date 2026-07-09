@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { Button, Input, Body, Caption, Muted, toast } from "@/components/ui";
-import { SettingsPageShell, SettingsSection, SettingsDivider } from "./settings-layout";
-import { useBackendConnection } from "@/hooks/use-backend-connection";
+import {
+  SettingsPageShell,
+  SettingsSection,
+  SettingsDivider,
+} from "@/features/settings/components/settings-layout";
+import { useBackendConnection } from "../hooks/use-backend-connection";
 import { isWeb } from "@/lib/platform";
 import { LocalBackendShare } from "./local-backend-share";
 import type {
