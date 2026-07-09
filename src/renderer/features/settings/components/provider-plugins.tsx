@@ -5,6 +5,7 @@ import {
   Body,
   Muted,
   Button,
+  CopyButton,
   toast,
   AsciiSpinner,
   Select,
@@ -22,7 +23,6 @@ import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 import { extractErrorMessage } from "@/lib/extract-error-message";
 import {
   Search,
-  Clipboard,
   Check,
   Apps,
   Sparkles,
@@ -139,9 +139,7 @@ function PluginLogo({
 
   return (
     <div
-      className={`${sizeClass} ${roundedClass} flex items-center justify-center font-semibold ${textSize} ${
-        generatedColor ? "text-white" : "text-primary"
-      } shrink-0`}
+      className={`${sizeClass} ${roundedClass} flex items-center justify-center font-semibold ${textSize} text-primary shrink-0`}
       style={{ backgroundColor: brandColor || generatedColor || "var(--color-primary-500)" }}
     >
       {name.charAt(0).toUpperCase()}
@@ -184,12 +182,12 @@ function PluginCard({
             {name}
           </span>
           {plugin.installed && !plugin.enabled && (
-            <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-primary-200/60 dark:bg-primary-800/40 text-primary-500 dark:text-primary-400">
+            <span className="shrink-0 text-t px-1.5 py-0.5 rounded-full bg-primary-200/60 dark:bg-primary-800/40 text-primary-500 dark:text-primary-400">
               Disabled
             </span>
           )}
           {plugin.updateAvailable && (
-            <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+            <span className="shrink-0 text-t px-1.5 py-0.5 rounded-full bg-warning/15 text-warning">
               Update
             </span>
           )}
@@ -207,7 +205,7 @@ function PluginCard({
         type="button"
         className={`shrink-0 size-8 flex items-center justify-center rounded-full text-lg transition-colors cursor-pointer ${
           plugin.installed
-            ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+            ? "bg-success/15 text-success"
             : "bg-primary-200/60 dark:bg-primary-800/20 text-primary-500 dark:text-primary-400 hover:bg-primary-300/60 dark:hover:bg-primary-700/30"
         }`}
         onClick={(e) => {
@@ -416,7 +414,7 @@ function PluginDetail({
                     Disabled
                   </span>
                 ) : app.isAccessible === true ? (
-                  <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+                  <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-success/15 text-success">
                     Connected
                   </span>
                 ) : app.installUrl ? (
@@ -520,7 +518,7 @@ function PluginDetail({
                 href={iface.websiteUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-500 hover:underline"
+                className="text-blue-500 dark:text-blue-400 hover:underline"
                 onClick={(e) => {
                   e.preventDefault();
                   window.open(iface.websiteUrl!, "_blank");
@@ -545,7 +543,7 @@ function PluginDetail({
                 href={iface.privacyPolicyUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-500 hover:underline"
+                className="text-blue-500 dark:text-blue-400 hover:underline"
                 onClick={(e) => {
                   e.preventDefault();
                   window.open(iface.privacyPolicyUrl!, "_blank");
@@ -564,7 +562,7 @@ function PluginDetail({
                 href={iface.termsOfServiceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-500 hover:underline"
+                className="text-blue-500 dark:text-blue-400 hover:underline"
                 onClick={(e) => {
                   e.preventDefault();
                   window.open(iface.termsOfServiceUrl!, "_blank");
@@ -581,32 +579,18 @@ function PluginDetail({
 }
 
 function PromptRow({ prompt }: { prompt: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(prompt).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }, [prompt]);
-
   return (
     <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-100/50 dark:bg-primary-800/30 group">
       <span className="flex-1 text-sm text-primary-700 dark:text-primary-300">
         {prompt}
       </span>
-      <Button
-        type="button"
-        onClick={handleCopy}
+      <CopyButton
+        text={prompt}
+        tooltip="Copy"
+        copiedTooltip="Copied!"
+        variant="bare"
         className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-primary-400 dark:text-primary-500 hover:text-primary-700 dark:hover:text-primary-200"
-        tooltip={copied ? "Copied!" : "Copy"}
-      >
-        {copied ? (
-          <Check className="size-4" />
-        ) : (
-          <Clipboard className="size-4" />
-        )}
-      </Button>
+      />
     </div>
   );
 }

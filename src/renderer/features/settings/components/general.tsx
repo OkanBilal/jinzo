@@ -62,7 +62,7 @@ function UpdateButton({
     case "error":
       return (
         <div className="flex items-center gap-3">
-          <span className="text-xs text-red-400 dark:text-red-400/80 leading-relaxed text-right line-clamp-2 max-w-48">
+          <span className="text-xs text-danger dark:text-danger/80 leading-relaxed text-right line-clamp-2 max-w-48">
             {state.error}
           </span>
           <Button type="button" variant="ghost" onClick={onCheck}>

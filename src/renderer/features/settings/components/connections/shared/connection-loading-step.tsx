@@ -1,8 +1,17 @@
 import { useEffect } from "react";
-import { useWizard } from "@/components/ui";
-import { LoadingState } from "./connection-modal-wrapper";
+import { useWizard, Muted } from "@/components/ui";
 
 type StepId = "loading" | "setToken" | "add" | "manage";
+
+function LoadingState({ message = "Loading..." }: { message?: string }) {
+  return (
+    <div className="flex items-center justify-center py-20">
+      <div className="text-center space-y-3">
+        <Muted className="shine-text">{message}</Muted>
+      </div>
+    </div>
+  );
+}
 
 interface ConnectionLoadingStepProps {
   targetStep: StepId | null;

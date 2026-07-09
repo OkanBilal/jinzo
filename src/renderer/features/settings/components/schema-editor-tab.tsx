@@ -55,7 +55,7 @@ function PropertyRow({
             ? "bg-primary-950/10 dark:bg-primary/20 text-primary-800 dark:text-primary-200"
             : "bg-primary-950/5 dark:bg-primary/5 text-primary-500 dark:text-primary-400"
         }`}
-        title="Is Array"
+        tooltip="Is Array"
       >
         [ ]
       </Button>
@@ -66,14 +66,14 @@ function PropertyRow({
             ? "bg-primary-950/10 dark:bg-primary/20 text-primary-800 dark:text-primary-200"
             : "bg-primary-950/5 dark:bg-primary/5 text-primary-500 dark:text-primary-400"
         }`}
-        title="Required"
+        tooltip="Required"
       >
         <Asterisk className="w-4 h-4" />
       </Button>
       <Button
         onClick={onRemove}
-        className="shrink-0 p-2 text-primary-500 cursor-pointer hover:text-red-500 dark:hover:text-red-400 rounded-lg transition-colors"
-        title="Remove"
+        className="shrink-0 p-2 text-primary-500 cursor-pointer hover:text-danger rounded-lg transition-colors"
+        tooltip="Remove"
       >
         <Trash className="w-4 h-4" />
       </Button>

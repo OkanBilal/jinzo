@@ -3,13 +3,11 @@ import {
   Alert,
   Body,
   Caption,
+  CopyButton as UiCopyButton,
   Input,
   Toggle,
-  Button,
   toast,
 } from "@/components/ui";
-import { Clipboard, Check } from "@/components/ui/icons";
-import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import { SettingsSection, SettingsDivider } from "./settings-layout";
 
 interface Address {
@@ -42,21 +40,13 @@ function ValueField({ value }: { value: string }) {
 
 /** Icon-only copy button with a brief check on success. */
 function CopyButton({ value, tooltip }: { value: string; tooltip: string }) {
-  const { copy, isCopied } = useCopyToClipboard();
   return (
-    <Button
-      type="button"
+    <UiCopyButton
+      text={value}
+      tooltip={tooltip}
       variant="bare"
       className="text-primary-900 dark:text-primary-200"
-      tooltip={tooltip}
-      onClick={() => void copy(value)}
-    >
-      {isCopied ? (
-        <Check className="size-4" />
-      ) : (
-        <Clipboard className="size-4" />
-      )}
-    </Button>
+    />
   );
 }
 

@@ -105,7 +105,6 @@ export function SchemaListTab({
                   tooltip="Edit Schema"
                   onClick={() => onOpenEditEditor(entry.id)}
                   className="p-1 rounded hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors cursor-pointer"
-                  title="Edit"
                 >
                   <Edit className="size-4" />
                 </Button>
@@ -113,15 +112,13 @@ export function SchemaListTab({
                   tooltip="Duplicate Schema"
                   onClick={() => onDuplicate(entry.id)}
                   className="p-1 rounded hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors cursor-pointer"
-                  title="Duplicate"
                 >
                   <Duplicate className="size-4" />
                 </Button>
                 <Button
-                 tooltip="Delete Schema"
+                  tooltip="Delete Schema"
                   onClick={() => onRequestDelete(entry.id)}
-                  className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 transition-colors cursor-pointer"
-                  title="Delete"
+                  className="p-1 rounded hover:bg-danger/10 dark:hover:bg-danger/20 text-danger transition-colors cursor-pointer"
                 >
                   <Trash className="size-4" />
                 </Button>

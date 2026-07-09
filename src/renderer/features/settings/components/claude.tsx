@@ -1,18 +1,18 @@
 import { useState } from "react";
-import { AsciiSpinner, Button, Select } from "@/components/ui";
+import { Button, Select } from "@/components/ui";
 import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout";
 import { useCapabilities } from "@/lib/platform";
 import {
+  ProviderAccountSection,
+  ProviderCliSection,
   ProviderSettingsLayout,
+  selectedSchemaLabel,
   useProviderSettings,
 } from "./provider-settings-shared";
 import { StructuredOutputsModal } from "./structured-outputs-modal";
 import type { ClaudeCodeAdapterConfig } from "../../../../shared/adapter.types";
 import { PROVIDER_IDS } from "../../../../shared/provider-ids";
-import {
-  useGetProviderAccountInfoQuery,
-  useUpdateProviderCliMutation,
-} from "@/lib/redux/api";
+import { useGetProviderAccountInfoQuery } from "@/lib/redux/api";
 
 type ClaudePermissionMode = NonNullable<
   ClaudeCodeAdapterConfig["permissionMode"]
@@ -49,26 +49,9 @@ export default function ClaudeSettings(
     useGetProviderAccountInfoQuery(PROVIDER_IDS.claude);
   const account = accountInfo?.account;
   const cli = accountInfo?.cli;
-  const [updateCli, { isLoading: isUpdatingCli }] = useUpdateProviderCliMutation();
-  const [cliUpdateResult, setCliUpdateResult] = useState<string | null>(null);
-
-  const handleUpdateCli = async () => {
-    setCliUpdateResult(null);
-    try {
-      const res = await updateCli(PROVIDER_IDS.claude).unwrap();
-      setCliUpdateResult(res.success ? "Claude CLI updated." : res.output || "Update failed.");
-    } catch {
-      setCliUpdateResult("Update failed.");
-    }
-  };
 
   const permissionMode = config.permissionMode ?? "bypassPermissions";
-
-  const structuredOutputs = config.structuredOutputs ?? {};
-  const structuredOutputsSelectedId = config.structuredOutputsSelectedId ?? null;
-  const selectedSchemaName = structuredOutputsSelectedId
-    ? (structuredOutputs[structuredOutputsSelectedId]?.name ?? "Off")
-    : "Off";
+  const selectedSchemaName = selectedSchemaLabel(config);
 
   const handlePermissionModeChange = async (mode: ClaudePermissionMode) => {
     if (!provider || updating) return;
@@ -90,61 +73,28 @@ export default function ClaudeSettings(
       error={error}
     >
       {/* Account info — from the Claude Code login session */}
-      <SettingsSection title="Account">
-        {isLoadingAccount ? (
-          <div className="flex items-center justify-between py-4">
-            <div className="flex flex-col gap-1.5">
-              <div className="h-4 w-40 rounded bg-primary-200/50 dark:bg-primary-700/30 animate-pulse" />
-              <div className="h-3 w-24 rounded bg-primary-200/30 dark:bg-primary-700/20 animate-pulse" />
-            </div>
-            <div className="h-4 w-12 rounded bg-primary-200/50 dark:bg-primary-700/30 animate-pulse" />
-          </div>
-        ) : account?.type === "claude" ? (
-          <SettingsRow title={account.email} description="Signed in">
-            <span className="text-sm font-medium text-primary-900 dark:text-primary-100">
-              {account.planType || "Claude"}
-            </span>
-          </SettingsRow>
-        ) : account?.type === "apiKey" ? (
-          <SettingsRow title="Authentication" description="Connected via API key">
-            <span className="text-sm text-primary-500 dark:text-primary-400">API Key</span>
-          </SettingsRow>
-        ) : (
-          <SettingsRow
-            title="Not signed in"
-            description="Run `claude login` in your terminal to authenticate"
-          >
-            <span className="text-xs text-primary-400 dark:text-primary-500">No account</span>
-          </SettingsRow>
-        )}
-      </SettingsSection>
+      <ProviderAccountSection
+        isLoading={isLoadingAccount}
+        signedIn={
+          account?.type === "claude"
+            ? {
+                title: account.email,
+                description: "Signed in",
+                plan: account.planType || "Claude",
+              }
+            : null
+        }
+        isApiKey={account?.type === "apiKey"}
+        notSignedInDescription="Run `claude login` in your terminal to authenticate"
+      />
 
       {/* CLI version + self-update — `claude --version` / `claude update` */}
-      <SettingsSection title="CLI">
-        <SettingsRow
-          title="Claude Code CLI"
-          description={cli?.version ? `Version ${cli.version}` : "Version unknown"}
-        >
-          <div className="flex items-center gap-3">
-            {cliUpdateResult && (
-              <span className="text-xs text-primary-500 dark:text-primary-400">
-                {cliUpdateResult}
-              </span>
-            )}
-            <Button
-              variant="primary"
-              onClick={handleUpdateCli}
-              disabled={isUpdatingCli}
-              className="gap-1 flex items-center"
-            >
-              {isUpdatingCli ? (
-                <AsciiSpinner variant="null" kind="download" />
-              ) : null}
-              {isUpdatingCli ? "Updating…" : "Update CLI"}
-            </Button>
-          </div>
-        </SettingsRow>
-      </SettingsSection>
+      <ProviderCliSection
+        providerId={PROVIDER_IDS.claude}
+        cliName="Claude Code CLI"
+        shortName="Claude"
+        cli={cli}
+      />
 
       <SettingsSection  title="Configuration">
         <SettingsRow
