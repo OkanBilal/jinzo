@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { WizardProvider, type WizardContextValue } from "./wizard-context";
 import { usePrefersReducedMotion } from "../../../hooks/use-prefers-reduced-motion";
+import { useSuppressBrowserView } from "../../../hooks/use-suppress-browser-view";
 import { Button } from "../button";
 import { Close } from "../icons";
 import { Heading3 } from "../text";
@@ -167,6 +168,9 @@ export function WizardModal<
   );
   useWizardEscape(open, isSubmitting, close);
   useWizardFocusTrap(open, stepIndex);
+  // The embedded browser panel is a native view that paints above all DOM
+  // content — hide it while the wizard is open so the modal isn't occluded.
+  useSuppressBrowserView(open);
 
   const { contextValue } = useWizardNavigation<TData>({
     steps,

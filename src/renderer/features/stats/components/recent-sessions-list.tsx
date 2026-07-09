@@ -1,6 +1,7 @@
 import { Caption, ChartCard } from "@/components/ui";
 import { Chat } from "@/components/ui/icons";
 import type { RecentSession } from "@/lib/redux/api";
+import { formatCostUSD, formatDurationMs } from "@/lib/format";
 
 interface RecentSessionsListProps {
   sessions: RecentSession[];
@@ -14,19 +15,6 @@ const PROVIDER_COLORS: Record<string, string> = {
 };
 
 
-function formatCost(usd: number | null): string {
-  if (usd === null || usd === 0) return "";
-  return `$${usd.toFixed(3)}`;
-}
-
-function formatDuration(ms: number | null): string {
-  if (ms === null) return "";
-  const secs = Math.round(ms / 1000);
-  if (secs < 60) return `${secs}s`;
-  const mins = Math.floor(secs / 60);
-  const remSecs = secs % 60;
-  return `${mins}m ${remSecs}s`;
-}
 
 export default function RecentSessionsList({ sessions }: RecentSessionsListProps) {
   return (
@@ -62,10 +50,10 @@ export default function RecentSessionsList({ sessions }: RecentSessionsListProps
             </div>
             <div className="flex items-center gap-3 shrink-0 text-primary-400 dark:text-primary-500">
               {s.durationMs !== null && (
-                <Caption>{formatDuration(s.durationMs)}</Caption>
+                <Caption>{formatDurationMs(s.durationMs)}</Caption>
               )}
               {s.totalCostUsd !== null && s.totalCostUsd > 0 && (
-                <Caption>{formatCost(s.totalCostUsd)}</Caption>
+                <Caption>{formatCostUSD(s.totalCostUsd)}</Caption>
               )}
             </div>
           </div>

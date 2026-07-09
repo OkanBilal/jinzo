@@ -1,8 +1,8 @@
-import { useReducer, useSyncExternalStore } from "react";
-import { createPortal } from "react-dom";
+import { useReducer } from "react";
 import {
   useGetProviderByIdQuery,
 } from "@/lib/redux/api";
+import { Modal } from "@/components/ui";
 import { SchemaListTab } from "./schema-list-tab";
 import { SchemaEditorTab, type SchemaProperty } from "./schema-editor-tab";
 import { SchemaDeleteDialog } from "./schema-delete-dialog";
@@ -39,20 +39,12 @@ interface StructuredOutputsModalProps {
   enableFlag?: boolean;
 }
 
-const emptySubscribe = () => () => {};
-
 export function StructuredOutputsModal({
   isOpen,
   onClose,
   providerId,
   enableFlag = false,
 }: StructuredOutputsModalProps) {
-  const isBrowser = useSyncExternalStore(
-    emptySubscribe,
-    () => true,
-    () => false,
-  );
-
   const { data: provider } = useGetProviderByIdQuery(providerId);
   const config = (provider?.config ?? {}) as Record<string, unknown>;
 
@@ -112,7 +104,7 @@ export function StructuredOutputsModal({
 
   // ─── Render ───
 
-  if (!isBrowser || !isOpen) return null;
+  if (!isOpen) return null;
 
   const sortedEntries = Object.values(entries).sort(
     (a, b) => a.createdAt - b.createdAt,
@@ -125,18 +117,15 @@ export function StructuredOutputsModal({
     editorName.trim() !== "" &&
     (editorProperties.length === 0 || !hasEmptyPropertyName);
 
-  return createPortal(
-    <div className="fixed inset-0 z-(--z-dropdown) flex items-center justify-center">
-      <div
-        className="absolute inset-0 bg-primary-950/70"
-        role="presentation"
-        onClick={onClose}
-      />
-      <div
-        className="relative z-(--z-panel) w-full max-w-180 glass-morphism h-120 rounded-3xl animate-dropdown-in "
-        role="dialog"
-        aria-modal="true"
-      >
+  return (
+    <Modal
+      isOpen
+      // Escape/backdrop dismiss the nested delete confirm first, then the modal.
+      onClose={
+        deleteTargetId ? () => updateState({ deleteTargetId: null }) : onClose
+      }
+      className="w-full max-w-180 h-120 rounded-3xl"
+    >
         <SchemaModalHeader
           activeTab={activeTab}
           editingId={editingId}
@@ -184,8 +173,6 @@ export function StructuredOutputsModal({
             onConfirm={crud.handleConfirmDelete}
           />
         )}
-      </div>
-    </div>,
-    document.body,
+    </Modal>
   );
 }

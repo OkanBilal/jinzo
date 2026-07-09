@@ -26,30 +26,15 @@ import {
 const EMPTY_TURNS: RunTurn[] = [];
 import { isIssueTab, getIssueEntityId, isSignalTab, getSignalEntityId, isNoteTab, getNoteId, isNewRunTab } from "../utils/repo-utils";
 import { AsciiLoader } from "./ascii-loader";
-import { Clipboard, Check, ArrowUp, Fork } from "@/components/ui/icons";
+import { ArrowUp, Fork } from "@/components/ui/icons";
 import { useGetAppSettingsQuery } from "@/lib/redux/api";
 import { isDocumentRenderImage } from "@/lib/document-viewer";
-import { Button, Tooltip } from "@/components/ui";
+import { Button, CopyButton, Tooltip } from "@/components/ui";
+import { formatCostFromMicros, formatDurationMs } from "@/lib/format";
 import { PromptSuggestionChips } from "./prompt-suggestion-chips";
-
-function formatElapsed(ms: number): string {
-  const totalSeconds = Math.floor(ms / 1000);
-  if (totalSeconds < 60) return `${totalSeconds}s`;
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  if (minutes < 60) return `${minutes}m ${seconds}s`;
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  return `${hours}h ${remainingMinutes}m ${seconds}s`;
-}
 
 function formatNumber(n: number): string {
   return n.toLocaleString("en-US");
-}
-
-function formatCost(micros: number): string {
-  const usd = micros / 1_000_000;
-  return usd < 0.01 ? `$${usd.toFixed(4)}` : `$${usd.toFixed(2)}`;
 }
 
 
@@ -138,7 +123,7 @@ function UsageTooltipContent({ turn }: { turn: RunTurn }) {
       {turn.costMicros != null && (
         <div className="border-t border-current/15 pt-1 flex justify-between gap-4 font-medium">
           <span className="opacity-60">Total</span>
-          <span>{formatCost(turn.costMicros)}</span>
+          <span>{formatCostFromMicros(turn.costMicros)}</span>
         </div>
       )}
     </div>
@@ -153,16 +138,6 @@ function SessionTimeBar({
   info: SessionInfo;
   onFork?: (responseContent: string) => void;
 }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = useCallback(() => {
-    if (!info.responseContent) return;
-    navigator.clipboard.writeText(info.responseContent).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }, [info.responseContent]);
-
   const handleFork = useCallback(() => {
     if (onFork) {
       onFork(info.responseContent);
@@ -182,26 +157,20 @@ function SessionTimeBar({
           position="top-right"
           className="whitespace-normal max-w-none"
         >
-          <span className="cursor-default">{formatElapsed(info.elapsed)}</span>
+          <span className="cursor-default">{formatDurationMs(info.elapsed)}</span>
         </Tooltip>
       ) : (
-        <span>{formatElapsed(info.elapsed)}</span>
+        <span>{formatDurationMs(info.elapsed)}</span>
       )}
       {info.responseContent && (
         <>
           <span className="size-0.75 rounded-full bg-current opacity-50" />
-          <Button
+          <CopyButton
+            text={info.responseContent}
             tooltip="Copy response"
-            onClick={handleCopy}
+            variant="bare"
             className="flex items-center gap-1 hover:text-primary-900 dark:hover:text-primary-100 transition-colors cursor-pointer"
-            title="Copy response"
-          >
-            {copied ? (
-              <Check className="size-4" />
-            ) : (
-              <Clipboard className="size-4" />
-            )}
-          </Button>
+          />
         </>
       )}
       {onFork && (
@@ -210,7 +179,6 @@ function SessionTimeBar({
             tooltip="Fork run from here"
             onClick={handleFork}
             className="flex items-center gap-1 ml-0.5 hover:text-primary-900 dark:hover:text-primary-100 transition-colors cursor-pointer"
-            title="Fork run from here"
           >
             <Fork className="size-4" />
           </Button>

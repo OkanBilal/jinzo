@@ -23,10 +23,10 @@ const STATUS_LABEL: Record<TransportStatus, string> = {
 function StatusDot({ status }: { status: TransportStatus }) {
   const color =
     status === "connected"
-      ? "bg-green-500"
+      ? "bg-success"
       : status === "connecting" || status === "reconnecting"
-        ? "bg-yellow-500"
-        : "bg-red-500";
+        ? "bg-warning"
+        : "bg-danger";
   return (
     <span
       className={`inline-block w-2 h-2 rounded-full ${color}`}

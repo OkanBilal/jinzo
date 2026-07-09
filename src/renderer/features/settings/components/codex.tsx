@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { appEvents } from "@/lib/transport";
-import { Toggle, Button, toast, Select, AsciiSpinner } from "@/components/ui";
+import { Toggle, Button, toast, Select } from "@/components/ui";
 import {
   SettingsSection,
   SettingsRow,
@@ -9,7 +9,6 @@ import {
 import {
   useGetProviderRateLimitsQuery,
   useGetProviderAccountInfoQuery,
-  useUpdateProviderCliMutation,
 } from "@/lib/redux/api";
 import { providersApi } from "@/lib/redux/api/providersApi";
 import { useAppDispatch } from "@/lib/redux/hooks";
@@ -20,59 +19,16 @@ import type { CodexAdapterConfig } from "../../../../shared/adapter.types";
 type CodexApprovalMode = NonNullable<CodexAdapterConfig["approvalMode"]>;
 type CodexPersonality = NonNullable<CodexAdapterConfig["personality"]>;
 import {
+  ProviderAccountSection,
+  ProviderCliSection,
   ProviderSettingsLayout,
+  ProviderUsageSection,
+  selectedSchemaLabel,
   useProviderSettings,
+  type ProviderUsageRow,
 } from "./provider-settings-shared";
 import { CODEX_SANDBOX_MODES } from "@/lib/provider-modes";
 import { PROVIDER_IDS } from "../../../../shared/provider-ids";
-
-function formatResetDate(resetsAt: number): string {
-  const date = new Date(resetsAt * 1000);
-  const now = new Date();
-  const isToday = date.toDateString() === now.toDateString();
-  if (isToday) {
-    return `Resets ${date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
-  }
-  return `Resets ${date.toLocaleDateString([], { month: "short", day: "numeric" })}`;
-}
-
-function RateLimitRow({
-  label,
-  usedPercent,
-  resetsAt,
-}: {
-  label: string;
-  usedPercent: number;
-  resetsAt?: number;
-}) {
-  const remaining = 100 - usedPercent;
-
-  return (
-    <div className="flex items-center justify-between  py-3">
-      <div className="flex flex-col gap-0.5">
-        <span className="text-sm font-medium text-primary-900 dark:text-primary-100">
-          {label}
-        </span>
-        {resetsAt && (
-          <span className="text-xs text-primary-400 dark:text-primary-500">
-            {formatResetDate(resetsAt)}
-          </span>
-        )}
-      </div>
-      <div className="flex items-center gap-3">
-        <div className="w-28 h-1.5 rounded-full bg-primary-200/50 dark:bg-primary-700/30 overflow-hidden">
-          <div
-            className="h-full rounded-full bg-primary-800 dark:bg-primary-200 transition-all duration-500"
-            style={{ width: `${remaining}%` }}
-          />
-        </div>
-        <span className="text-sm text-primary-500 dark:text-primary-400 w-16 text-right">
-          {remaining}% left
-        </span>
-      </div>
-    </div>
-  );
-}
 
 const APPROVAL_OPTIONS: Array<{
   value: CodexApprovalMode;
@@ -157,22 +113,6 @@ export default function CodexSettings() {
     useGetProviderAccountInfoQuery(PROVIDER_IDS.codex);
   const cli = accountInfo?.cli;
 
-  const [updateCli, { isLoading: isUpdatingCli }] =
-    useUpdateProviderCliMutation();
-  const [cliUpdateResult, setCliUpdateResult] = useState<string | null>(null);
-
-  const handleUpdateCli = async () => {
-    setCliUpdateResult(null);
-    try {
-      const res = await updateCli(PROVIDER_IDS.codex).unwrap();
-      setCliUpdateResult(
-        res.success ? "Codex CLI updated." : res.output || "Update failed.",
-      );
-    } catch {
-      setCliUpdateResult("Update failed.");
-    }
-  };
-
   const [isStructuredOutputsModalOpen, setIsStructuredOutputsModalOpen] =
     useState(false);
 
@@ -183,20 +123,30 @@ export default function CodexSettings() {
   const skipGitRepoCheck = config.skipGitRepoCheck ?? false;
   const personality = config.personality ?? "none";
 
-  const structuredOutputs = config.structuredOutputs ?? {};
-  const structuredOutputsSelectedId =
-    config.structuredOutputsSelectedId ?? null;
-  const selectedSchemaName = structuredOutputsSelectedId
-    ? (structuredOutputs[structuredOutputsSelectedId]?.name ?? "Off")
-    : "Off";
+  const selectedSchemaName = selectedSchemaLabel(config);
 
   const account = accountInfo?.account;
-  const planLabel =
-    account?.type === "chatgpt"
-      ? account.planType.charAt(0).toUpperCase() + account.planType.slice(1)
-      : account?.type === "apiKey"
-        ? "API Key"
-        : null;
+
+  const usageRows: ProviderUsageRow[] = [
+    ...(rateLimits?.primary
+      ? [
+          {
+            label: "5 hour usage limit",
+            usedPercent: rateLimits.primary.usedPercent,
+            resetsAt: rateLimits.primary.resetsAt,
+          },
+        ]
+      : []),
+    ...(rateLimits?.secondary
+      ? [
+          {
+            label: "Weekly usage limit",
+            usedPercent: rateLimits.secondary.usedPercent,
+            resetsAt: rateLimits.secondary.resetsAt,
+          },
+        ]
+      : []),
+  ];
 
   return (
     <ProviderSettingsLayout
@@ -207,70 +157,31 @@ export default function CodexSettings() {
       className="pb-16"
     >
       {/* Account info */}
-      <SettingsSection title="Account">
-        {isLoadingAccount ? (
-          <div className="flex items-center justify-between  py-4">
-            <div className="flex flex-col gap-1.5">
-              <div className="h-4 w-40 rounded bg-primary-200/50 dark:bg-primary-700/30 animate-pulse" />
-              <div className="h-3 w-24 rounded bg-primary-200/30 dark:bg-primary-700/20 animate-pulse" />
-            </div>
-            <div className="h-4 w-12 rounded bg-primary-200/50 dark:bg-primary-700/30 animate-pulse" />
-          </div>
-        ) : account?.type === "chatgpt" ? (
-          <SettingsRow title={account.email} description={account.type}>
-            <span className="text-sm font-medium text-primary-900 dark:text-primary-100">
-              {planLabel}
-            </span>
-          </SettingsRow>
-        ) : account?.type === "apiKey" ? (
-          <SettingsRow
-            title="Authentication"
-            description="Connected via API key"
-          >
-            <span className="text-sm text-primary-500 dark:text-primary-400">
-              API Key
-            </span>
-          </SettingsRow>
-        ) : (
-          <SettingsRow
-            title="Not signed in"
-            description="Sign in to Codex to view account details"
-          >
-            <span className="text-xs text-primary-400 dark:text-primary-500">
-              No account
-            </span>
-          </SettingsRow>
-        )}
-      </SettingsSection>
+      <ProviderAccountSection
+        isLoading={isLoadingAccount}
+        signedIn={
+          account?.type === "chatgpt"
+            ? {
+                title: account.email,
+                description: account.type,
+                plan:
+                  account.planType.charAt(0).toUpperCase() +
+                  account.planType.slice(1),
+              }
+            : null
+        }
+        isApiKey={account?.type === "apiKey"}
+        notSignedInDescription="Sign in to Codex to view account details"
+      />
 
       {/* CLI version + self-update — `codex --version` / `codex update` */}
-      <SettingsSection title="CLI">
-        <SettingsRow
-          title="Codex CLI"
-          description={
-            cli?.version ? `Version ${cli.version}` : "Version unknown"
-          }
-        >
-          <div className="flex items-center gap-3">
-            {cliUpdateResult && (
-              <span className="text-xs text-primary-500 dark:text-primary-400">
-                {cliUpdateResult}
-              </span>
-            )}
-            <Button
-              variant="secondary"
-              onClick={handleUpdateCli}
-              disabled={isUpdatingCli}
-              className="gap-1 flex items-center"
-            >
-              {isUpdatingCli ? (
-                <AsciiSpinner variant="null" kind="download" />
-              ) : null}
-              {isUpdatingCli ? "Updating…" : "Update CLI"}
-            </Button>
-          </div>
-        </SettingsRow>
-      </SettingsSection>
+      <ProviderCliSection
+        providerId={PROVIDER_IDS.codex}
+        cliName="Codex CLI"
+        shortName="Codex"
+        cli={cli}
+        buttonVariant="secondary"
+      />
 
       <SettingsSection title="Configuration">
         <SettingsRow
@@ -385,47 +296,11 @@ export default function CodexSettings() {
         </SettingsRow>
       </SettingsSection>
       {/* Rate limits */}
-      <SettingsSection title="Usage">
-        {isLoadingRateLimits ? (
-          <div className="divide-y divide-primary-200/50 dark:divide-primary-800/20">
-            {[0, 1].map((i) => (
-              <div key={i} className="flex items-center justify-between py-4">
-                <div className="flex flex-col gap-1.5">
-                  <div className="h-3 w-36 rounded bg-primary-200/50 dark:bg-primary-700/30 animate-pulse" />
-                  <div className="h-3 w-24 rounded bg-primary-200/30 dark:bg-primary-700/20 animate-pulse" />
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-28 h-1.5 rounded-full bg-primary-200/50 dark:bg-primary-700/30" />
-                  <div className="h-4 w-16 rounded bg-primary-200/50 dark:bg-primary-700/30 animate-pulse" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : rateLimits && (rateLimits.primary || rateLimits.secondary) ? (
-          <div className="divide-y divide-primary-200/50 dark:divide-primary-800/20">
-            {rateLimits.primary && (
-              <RateLimitRow
-                label="5 hour usage limit"
-                usedPercent={rateLimits.primary.usedPercent}
-                resetsAt={rateLimits.primary.resetsAt}
-              />
-            )}
-            {rateLimits.secondary && (
-              <RateLimitRow
-                label="Weekly usage limit"
-                usedPercent={rateLimits.secondary.usedPercent}
-                resetsAt={rateLimits.secondary.resetsAt}
-              />
-            )}
-          </div>
-        ) : (
-          <div className="px-4 py-3">
-            <span className="text-sm text-primary-400 dark:text-primary-500">
-              No usage data available
-            </span>
-          </div>
-        )}
-      </SettingsSection>
+      <ProviderUsageSection
+        isLoading={isLoadingRateLimits}
+        rows={usageRows}
+        display="remaining"
+      />
 
       <StructuredOutputsModal
         isOpen={isStructuredOutputsModalOpen}

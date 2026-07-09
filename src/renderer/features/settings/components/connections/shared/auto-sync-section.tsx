@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Body, Caption, Toggle, SegmentedTabs, Muted } from "@/components/ui";
+import { formatDate } from "@/lib/format-date";
 import {
   useGetAutomationsQuery,
   useCreateAutomationMutation,
@@ -21,21 +22,6 @@ const INTERVAL_OPTIONS = [
   { value: 480, label: "8h" },
   { value: 1440, label: "24h" },
 ];
-
-function formatTimeAgo(date: Date | string | null): string {
-  if (!date) return "Never";
-  const now = Date.now();
-  const then = new Date(date).getTime();
-  const diffMs = now - then;
-  const diffMin = Math.floor(diffMs / 60_000);
-
-  if (diffMin < 1) return "Just now";
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHours = Math.floor(diffMin / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d ago`;
-}
 
 export function AutoSyncSection({
   provider,
@@ -116,7 +102,7 @@ export function AutoSyncSection({
           </div>
           {syncAutomation?.lastRunAt && (
             <Caption>
-              Last synced: {formatTimeAgo(syncAutomation.lastRunAt)}
+              Last synced: {syncAutomation.lastRunAt ? formatDate(syncAutomation.lastRunAt) : "Never"}
             </Caption>
           )}
         </div>

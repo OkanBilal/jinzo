@@ -1,7 +1,6 @@
 import { ReactNode, useState } from "react";
 
 import {
-  Body,
   WizardModal,
   useWizard,
   type WizardStep,
@@ -21,17 +20,10 @@ import { AutoSyncSection } from "./auto-sync-section";
 import { useConnectionModalState } from "./use-connection-modal-state";
 import { ConnectionLoadingStep } from "./connection-loading-step";
 import { extractErrorMessage } from "@/lib/extract-error-message";
+import { withMinDelay } from "@/lib/with-min-delay";
 
 const CRED_MIN_LOADING_MS = 800;
 const SAVE_MIN_LOADING_MS = 1000;
-
-async function withMinDelay<T>(work: Promise<T>, minMs: number): Promise<T> {
-  const start = Date.now();
-  const result = await work;
-  const remaining = Math.max(0, minMs - (Date.now() - start));
-  if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
-  return result;
-}
 
 export interface CredentialField {
   id: string;
@@ -398,11 +390,6 @@ function ManageStep({
 
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-// Wraps default Body row with muted gray for known fields (used by manage default).
-export function DefaultManageRow({ children }: { children: ReactNode }) {
-  return <Body>{children}</Body>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

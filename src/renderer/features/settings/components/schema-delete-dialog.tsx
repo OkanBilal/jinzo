@@ -22,11 +22,7 @@ export function SchemaDeleteDialog({
           <Button variant="secondary" onClick={onCancel}>
             Cancel
           </Button>
-          <Button
-            variant="submit"
-            onClick={onConfirm}
-            className="bg-red-600 hover:bg-red-700 text-primary"
-          >
+          <Button variant="danger" onClick={onConfirm}>
             Delete
           </Button>
         </div>

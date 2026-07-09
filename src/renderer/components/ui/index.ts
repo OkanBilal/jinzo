@@ -1,6 +1,7 @@
 // Buttons
 export { Button } from "./button";
 export type { ButtonProps, ButtonVariant } from "./button";
+export { CopyButton } from "./copy-button";
 
 // Segmented tabs
 export { SegmentedTabs } from "./segmented-tabs";

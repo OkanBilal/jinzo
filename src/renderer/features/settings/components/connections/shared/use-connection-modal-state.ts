@@ -1,6 +1,7 @@
 import { useState, useReducer, useEffect, useCallback, useRef } from "react";
 import { useLazyGetConnectionQuery, useRevokeConnectionMutation } from "@/lib/redux/api";
 import { toast } from "@/components/ui";
+import { withMinDelay } from "@/lib/with-min-delay";
 
 type StepId = "loading" | "setToken" | "add" | "manage";
 
@@ -62,20 +63,21 @@ export function useConnectionModalState<TData>({
 
       if (isConnected) {
         try {
-          const startTime = Date.now();
-          const selectedData = await fetchSelectedRef.current();
+          await withMinDelay(
+            (async () => {
+              const selectedData = await fetchSelectedRef.current();
 
-          if (selectedData) {
-            finalData = { ...baseDataRef.current, ...selectedData };
-            finalStep = "manage";
-          } else {
-            const connection = await getConnection(provider).unwrap();
-            finalData = { ...baseDataRef.current, connectionId: connection.id };
-            finalStep = "manage";
-          }
-
-          const elapsed = Date.now() - startTime;
-          await new Promise((r) => setTimeout(r, Math.max(0, 600 - elapsed)));
+              if (selectedData) {
+                finalData = { ...baseDataRef.current, ...selectedData };
+                finalStep = "manage";
+              } else {
+                const connection = await getConnection(provider).unwrap();
+                finalData = { ...baseDataRef.current, connectionId: connection.id };
+                finalStep = "manage";
+              }
+            })(),
+            600,
+          );
         } catch (err) {
           console.error(`[${provider}:loadInitialData]`, err);
           try {

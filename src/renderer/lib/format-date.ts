@@ -1,9 +1,11 @@
-export function formatDate(date: string | number): string {
+export function formatDate(date: string | number | Date): string {
   const now = new Date();
   const past =
-    typeof date === "number"
-      ? new Date(date < 1e12 ? date * 1000 : date)
-      : new Date(date);
+    date instanceof Date
+      ? date
+      : typeof date === "number"
+        ? new Date(date < 1e12 ? date * 1000 : date)
+        : new Date(date);
   const diffInSeconds = Math.floor((now.getTime() - past.getTime()) / 1000);
 
   if (diffInSeconds < 60) {
