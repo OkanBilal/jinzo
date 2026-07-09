@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Web } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse } from "./_shared";
+import { ToolHeader, ToolCollapse, ToolOutputBody } from "./_shared";
+import { coerceToolOutput } from "../../utils/parse-tool-content";
 
 export interface WebFetchParams {
   /** Copilot / Claude style */
@@ -48,9 +49,9 @@ export function WebFetchDisplay({ params, output, isCompact = false }: { params:
 
       {hasContent && (
         <ToolCollapse isExpanded={isExpanded}>
-          <pre className="noscrollbar text-s font-mono text-primary-950 dark:text-primary whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-48 overflow-y-auto">
+          <ToolOutputBody className="text-s font-mono whitespace-pre-wrap">
             {content}
-          </pre>
+          </ToolOutputBody>
         </ToolCollapse>
       )}
     </div>
@@ -58,26 +59,16 @@ export function WebFetchDisplay({ params, output, isCompact = false }: { params:
 }
 
 function parseWebFetchOutput(output: unknown): string | null {
-  if (!output) return null;
+  const parsed = coerceToolOutput(output);
 
-  if (typeof output === "string") {
-    try {
-      const parsed = JSON.parse(output);
-      if (typeof parsed === "object" && parsed !== null) {
-        return (parsed as Record<string, unknown>).content as string ?? JSON.stringify(parsed, null, 2);
-      }
-      return output;
-    } catch {
-      // Codex: "Searched: https://..."; plain text results
-      return output;
-    }
-  }
-
-  if (typeof output === "object" && output !== null) {
-    const obj = output as Record<string, unknown>;
+  if (typeof parsed === "object" && parsed !== null) {
+    const obj = parsed as Record<string, unknown>;
     if (typeof obj.content === "string") return obj.content;
     return JSON.stringify(obj, null, 2);
   }
+
+  // Codex: "Searched: https://..."; plain text results
+  if (typeof output === "string") return output;
 
   return null;
 }

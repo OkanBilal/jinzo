@@ -51,7 +51,7 @@ function ToolCallGroupImpl({
           </span>
         </div>
         <ArrowUp
-          className={`size-3.5 shrink-0 text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
+          className={`size-3.5 shrink-0 text-primary-500 opacity-100 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
         />
 {/*
         {group.isRunning && (

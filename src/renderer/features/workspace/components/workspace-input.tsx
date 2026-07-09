@@ -14,8 +14,6 @@ import {
   UnifiedContextDropdown,
   type UnifiedContextTrigger,
 } from "@/features/workspace/components/unified-context-dropdown";
-import { SkillMentionDropdown } from "@/features/workspace/components/skill-mention-dropdown";
-import { IssueMentionDropdown } from "@/features/workspace/components/issue-mention-dropdown";
 import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
 import { ContextChips } from "./context-chips";
 import { InputToolbar } from "./input-toolbar";
@@ -143,8 +141,6 @@ export function WorkspaceInput({
 }: WorkspaceInputProps) {
   const inputRef = useRef<RichInputFormHandle>(null);
   const unifiedContextDropdownRef = useRef<HTMLDivElement>(null);
-  const issueMentionDropdownRef = useRef<HTMLDivElement>(null);
-  const skillMentionDropdownRef = useRef<HTMLDivElement>(null);
   const dispatch = useAppDispatch();
 
   const variant = useWorkspaceVariant();
@@ -216,16 +212,6 @@ export function WorkspaceInput({
     { visible: false, filter: "", trigger: "@" },
   );
 
-  const [hashMenu, updateHashMenu] = useReducer(
-    (prev: { visible: boolean; filter: string }, next: Partial<{ visible: boolean; filter: string }>) => ({ ...prev, ...next }),
-    { visible: false, filter: "" },
-  );
-
-  const [dollarMenu, updateDollarMenu] = useReducer(
-    (prev: { visible: boolean; filter: string }, next: Partial<{ visible: boolean; filter: string }>) => ({ ...prev, ...next }),
-    { visible: false, filter: "" },
-  );
-
   // Detect @ / context menu when goal is set externally (e.g. quick actions)
   useEffect(() => {
     const slashMatch = goal.match(/(?:^|\s)\/(\S*)$/);
@@ -251,23 +237,16 @@ export function WorkspaceInput({
   // Triggers fire based on the text BEFORE the caret, so users can insert mentions
   // mid-text — not just at the end of the prompt.
   const handleCaretContext = useCallback((before: string) => {
-    const slashMatch = before.match(/(?:^|\s)\/(\S*)$/);
-    const atMatch = before.match(/(?:^|\s)@(\S*)$/);
-    if (slashMatch) {
-      updateUnifiedMenu({ filter: slashMatch[1], visible: true, trigger: "/" });
-    } else if (atMatch) {
-      updateUnifiedMenu({ filter: atMatch[1], visible: true, trigger: "@" });
+    const match = before.match(/(?:^|\s)([/@#$])(\S*)$/);
+    if (match) {
+      updateUnifiedMenu({
+        filter: match[2],
+        visible: true,
+        trigger: match[1] as UnifiedContextTrigger,
+      });
     } else {
       updateUnifiedMenu({ visible: false, filter: "" });
     }
-
-    const hashMatch = before.match(/(?:^|\s)#(\S*)$/);
-    if (hashMatch) updateHashMenu({ filter: hashMatch[1], visible: true });
-    else updateHashMenu({ visible: false, filter: "" });
-
-    const dollarMatch = before.match(/(?:^|\s)\$(\S*)$/);
-    if (dollarMatch) updateDollarMenu({ filter: dollarMatch[1], visible: true });
-    else updateDollarMenu({ visible: false, filter: "" });
   }, []);
 
   const handleSlashCommandSelect = useCallback(
@@ -285,8 +264,8 @@ export function WorkspaceInput({
   );
 
   const handleSkillSelect = useCallback(
-    (skill: SkillInfo, trigger: "$" | "@" | "/") => {
-      updateDollarMenu({ visible: false, filter: "" });
+    (skill: SkillInfo, trigger: UnifiedContextTrigger) => {
+      if (trigger === "#") return; // the issues-only menu never lists skills
       updateUnifiedMenu({ visible: false, filter: "" });
       dispatch(
         addContextSkill({
@@ -317,13 +296,6 @@ export function WorkspaceInput({
       handleSkillSelect(skill, unifiedMenu.trigger);
     },
     [handleSkillSelect, unifiedMenu.trigger],
-  );
-
-  const handleDollarSkillSelect = useCallback(
-    (skill: SkillInfo) => {
-      handleSkillSelect(skill, "$");
-    },
-    [handleSkillSelect],
   );
 
   const contextSkillsRef = useRef(contextSkills);
@@ -407,6 +379,7 @@ export function WorkspaceInput({
   const handleUnifiedFileSelect = useCallback(
     (node: FileNode) => {
       const t = unifiedMenu.trigger;
+      if (t === "#" || t === "$") return; // only the combined @ / menu lists files
       // Dispatch first so fileChipMap has the entry by the time the sync effect rebuilds the chip
       // from a rewritten goal string in the dropdown-focus fallback path.
       dispatch(addContextFile(node));
@@ -447,26 +420,6 @@ export function WorkspaceInput({
     [dispatch, goal, onGoalChange, unifiedMenu.filter, unifiedMenu.trigger],
   );
 
-  const handleIssueSelect = useCallback(
-    (item: IssueWithEntity) => {
-      const ok = inputRef.current?.replaceTokenWithText("#", "") ?? false;
-      if (!ok) {
-        const next = replaceMentionInGoal(goal, "#", hashMenu.filter, "");
-        if (next !== null) onGoalChange(next);
-      }
-      updateHashMenu({ visible: false, filter: "" });
-      dispatch(addContextIssue({
-        entityId: item.issue.entityId,
-        title: item.entity.title,
-        body: item.entity.body,
-        provider: item.issue.provider,
-        number: item.issue.number,
-        labels: item.issue.labels,
-      }));
-    },
-    [dispatch, goal, onGoalChange, hashMenu.filter],
-  );
-
   const handleUnifiedFileNavigate = useCallback(
     (dirPath: string) => {
       const t = unifiedMenu.trigger;
@@ -482,9 +435,9 @@ export function WorkspaceInput({
   );
 
   const handleSubmit = useCallback(() => {
-    if (unifiedMenu.visible || hashMenu.visible || dollarMenu.visible) return;
+    if (unifiedMenu.visible) return;
     onSubmit();
-  }, [unifiedMenu.visible, hashMenu.visible, dollarMenu.visible, onSubmit]);
+  }, [unifiedMenu.visible, onSubmit]);
 
   const [isFileDragOver, setIsFileDragOver] = useState(false);
 
@@ -633,6 +586,7 @@ export function WorkspaceInput({
           projectId={projectId}
           commands={providerCommands}
           skills={providerSkills}
+          isLoadingSkills={isLoadingSkills}
           onSelectCommand={handleSlashCommandSelect}
           onSelectSkill={handleUnifiedSkillSelect}
           onSelectFile={handleUnifiedFileSelect}
@@ -640,23 +594,6 @@ export function WorkspaceInput({
           onSelectIssue={handleUnifiedIssueSelect}
           onClose={() => updateUnifiedMenu({ visible: false, filter: "" })}
           dropdownRef={unifiedContextDropdownRef}
-        />
-        <SkillMentionDropdown
-          isOpen={dollarMenu.visible}
-          filterText={dollarMenu.filter}
-          skills={providerSkills}
-          isLoading={isLoadingSkills}
-          onSelectSkill={handleDollarSkillSelect}
-          onClose={() => updateDollarMenu({ visible: false, filter: "" })}
-          dropdownRef={skillMentionDropdownRef}
-        />
-        <IssueMentionDropdown
-          isOpen={hashMenu.visible}
-          filterText={hashMenu.filter}
-          projectId={projectId}
-          onSelectIssue={handleIssueSelect}
-          onClose={() => updateHashMenu({ visible: false, filter: "" })}
-          dropdownRef={issueMentionDropdownRef}
         />
       </div>
       <InputToolbar

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Mains } from "@/components/ui/icons";
 import { ToolHeader, ToolCollapse } from "./_shared";
 import { Tiny } from "@/components/ui";
+import { shortPath } from "../../utils/path-utils";
 
 export interface CommitParams {
   message?: string;
@@ -61,9 +62,4 @@ export function CommitDisplay({
       )}
     </div>
   );
-}
-
-function shortPath(fullPath: string): string {
-  const parts = fullPath.split("/");
-  return parts.length > 3 ? ".../" + parts.slice(-3).join("/") : fullPath;
 }

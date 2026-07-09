@@ -13,7 +13,15 @@ import { normalizePath, pathsMatch } from "../utils/path-utils";
 import type { FileContentResponse, ServiceResponse } from "@/features/workspace/types/file-explorer";
 import { ImagePreviewModal } from "./image-preview-modal";
 import { useLocalImageUrl } from "@/hooks/use-local-image-url";
+import { useIsDarkMode } from "@/hooks/use-is-dark-mode";
 import { Button } from "@/components/ui";
+import type { FindingSeverity } from "@/lib/redux/api";
+import {
+  asFindingSeverity,
+  SEVERITY_HEX_LIGHT,
+  SEVERITY_HEX_DARK,
+  type SeverityHex,
+} from "../lib/severity";
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "webp", "gif"]);
 
@@ -87,31 +95,10 @@ interface DiffViewerProps {
   filePath?: string;
 }
 
-// ── Severity helpers ─────────────────────────────────────
-
-type Severity = "critical" | "warning" | "info";
-
-function asSeverity(s: string): Severity {
-  if (s === "critical" || s === "warning" || s === "info") return s;
-  return "info";
-}
-
-const severityColors: Record<Severity, { pill: string; pillBg: string; line: string }> = {
-  critical: { pill: "#dc2626", pillBg: "#ef444426", line: "#ef444414" },
-  warning: { pill: "#d97706", pillBg: "#f59e0b26", line: "#f59e0b14" },
-  info: { pill: "#2563eb", pillBg: "#3b82f626", line: "#3b82f60f" },
-};
-
-const severityColorsDark: Record<Severity, { pill: string; pillBg: string; line: string }> = {
-  critical: { pill: "#f44336", pillBg: "#f4433633", line: "#1a1a1a" },
-  warning: { pill: "#fcd34d", pillBg: "#f59e0b33", line: "#1a1a1a" },
-  info: { pill: "#93c5fd", pillBg: "#3b82f633", line: "#1a1a1a" },
-};
-
 // ── FindingAnnotation (module-scope) ─────────────────────
 
 interface FindingAnnotationOptions {
-  colors: Record<Severity, { pill: string; pillBg: string; line: string }>;
+  colors: Record<FindingSeverity, SeverityHex>;
   textColor: string;
   mutedColor: string;
   suggestionColor: string;
@@ -126,7 +113,7 @@ function makeFindingAnnotation({ colors, textColor, mutedColor, suggestionColor,
     return (
       <div className="finding-annotation" style={findings.length === 0 ? { display: "none" } : undefined}>
         {findings.map((f) => {
-          const sev = asSeverity(f.severity);
+          const sev = asFindingSeverity(f.severity);
           const c = colors[sev];
           return (
             <div
@@ -149,15 +136,13 @@ function makeFindingAnnotation({ colors, textColor, mutedColor, suggestionColor,
                 <div className="flex items-center gap-1.5 shrink-0">
                   <Button
                     onClick={() => onApprove(f.id)}
-                    className="px-2 cursor-pointer py-0.5 text-xxs rounded-sm font-medium transition-colors"
-                    style={{ backgroundColor: "#16a34a22", color: "#22c55e" }}
+                    className="px-2 cursor-pointer py-0.5 text-xxs rounded-sm font-medium transition-colors bg-green-600/13 text-green-500"
                   >
                     ✓ Approve
                   </Button>
                   <Button
                     onClick={() => onFix(f)}
-                    className="px-2 cursor-pointer py-0.5 text-xxs rounded-sm font-medium transition-colors"
-                    style={{ backgroundColor: "#3b82f622", color: "#60a5fa" }}
+                    className="px-2 cursor-pointer py-0.5 text-xxs rounded-sm font-medium transition-colors bg-blue-500/13 text-blue-400"
                   >
                     Fix
                   </Button>
@@ -190,7 +175,7 @@ export function DiffViewer({
   workspaceId,
   filePath,
 }: DiffViewerProps) {
-  const isDarkMode = document.documentElement.classList.contains("dark");
+  const isDarkMode = useIsDarkMode();
   const dispatch = useAppDispatch();
   const [updateFinding] = useUpdateReviewFindingMutation();
 
@@ -276,7 +261,7 @@ export function DiffViewer({
     return annotations;
   }, [fileFindings]);
 
-  const colors = isDarkMode ? severityColorsDark : severityColors;
+  const colors = isDarkMode ? SEVERITY_HEX_DARK : SEVERITY_HEX_LIGHT;
   const textColor = isDarkMode ? "#fff" : "#1c1917";
   const mutedColor = isDarkMode ? "#dad8ce" : "#78716c";
   const suggestionColor = isDarkMode ? "#86efac" : "#16a34a";

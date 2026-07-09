@@ -2,7 +2,9 @@ import { useState } from "react";
 import { Read } from "@/components/ui/icons";
 import { useOpenFileInEditor } from "../../hooks/use-open-file-in-editor";
 import { FileIconComponent } from "../file-explorer/components/file-icon";
-import { ToolHeader, ToolCollapse } from "./_shared";
+import { ToolHeader, ToolCollapse, ToolOutputBody } from "./_shared";
+import { coerceToolOutput } from "../../utils/parse-tool-content";
+import { shortFileName } from "../../utils/path-utils";
 
 export interface ReadParams {
   // Claude params
@@ -70,7 +72,7 @@ export function ReadDisplay({
             />
           )}
           <code className="min-w-0 font-sans truncate">
-            {shortPath(fullFilePath)}
+            {shortFileName(fullFilePath)}
           </code>
         </span>
         {numLines > 0 && (
@@ -82,9 +84,9 @@ export function ReadDisplay({
 
       {hasContent && (
         <ToolCollapse isExpanded={isExpanded}>
-          <pre className="noscrollbar text-xs font-mono text-primary-950 dark:text-primary whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-48 overflow-y-auto">
+          <ToolOutputBody className="text-xs font-mono whitespace-pre-wrap">
             {content}
-          </pre>
+          </ToolOutputBody>
         </ToolCollapse>
       )}
     </div>
@@ -95,18 +97,12 @@ function parseReadOutput(output: unknown): {
   content: string | null;
   numLines: number;
 } {
-  if (!output) return { content: null, numLines: 0 };
-
-  let parsed = output;
+  const parsed = coerceToolOutput(output);
   if (typeof parsed === "string") {
-    try {
-      parsed = JSON.parse(parsed);
-    } catch {
-      return {
-        content: parsed as string,
-        numLines: (parsed as string).split("\n").length,
-      };
-    }
+    return {
+      content: parsed,
+      numLines: parsed.split("\n").length,
+    };
   }
 
   if (typeof parsed === "object" && parsed !== null) {
@@ -132,9 +128,4 @@ function parseReadOutput(output: unknown): {
   }
 
   return { content: null, numLines: 0 };
-}
-
-function shortPath(fullPath: string): string {
-  const parts = fullPath.split("/");
-  return parts.length > 3 ? "" + parts.slice(-1).join("/") : fullPath;
 }

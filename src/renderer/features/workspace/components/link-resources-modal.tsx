@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import {
   Caption,
@@ -8,6 +7,7 @@ import {
   Checkbox,
   toast,
   Body,
+  Modal,
 } from "@/components/ui";
 import { extractErrorMessage } from "@/lib/extract-error-message";
 import {
@@ -181,79 +181,71 @@ export function LinkResourcesModal({
     );
   };
 
-  return createPortal(
-    <div className="fixed inset-0 z-(--z-overlay) flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-primary-950/50" role="presentation" onClick={handleCancel} />
+  return (
+    <Modal
+      isOpen
+      onClose={handleCancel}
+      className="w-full max-w-xl rounded-3xl"
+    >
+      {/* Header */}
+      <div className="px-6 pt-6 pb-4">
+        <Heading3>
+          Link Resources
+        </Heading3>
+      </div>
 
-      {/* Modal */}
-      <div
-        className="relative z-(--z-overlay) w-full max-w-xl rounded-3xl overflow-hidden glass-morphism"
-        style={{
-          animation: "wizardModalIn 250ms cubic-bezier(0.22, 1, 0.36, 1) both",
-        }}
-      >
-        {/* Header */}
-        <div className="px-6 pt-6 pb-4">
-          <Heading3>
-            Link Resources
-          </Heading3>
+      {/* Content */}
+      <div className="px-6 pb-6 space-y-4">
+        <div className="flex items-center gap-2"></div>
+
+        <div className="max-h-64 overflow-y-auto border border-primary-200/60 bg-primary dark:bg-primary-950/50 dark:border-primary-800/40 rounded-2xl ">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex items-center gap-2">
+                <span className="text-sm shine-text">
+                  Loading resources...
+                </span>
+              </div>
+            </div>
+          ) : resources.length === 0 ? (
+            <div className="p-8 text-center flex flex-col items-center">
+              <Connect className="size-6 mb-3 text-primary-400 dark:text-primary-700" />
+              <Body className="font-medium">
+                No resources available
+              </Body>
+              <Caption className="mt-1 block">
+                Connect apps in{" "}
+                <Button
+                  type="button"
+                  onClick={goToApps}
+                  className="underline dark:hover:text-primary-300 hover:text-primary-600 transition-colors cursor-pointer"
+                >
+                  settings
+                </Button>{" "}
+                first
+              </Caption>
+            </div>
+          ) : (
+            <div className="divide-y divide-primary-200/60 dark:divide-primary-800/40">
+              {resources.map(renderResourceItem)}
+            </div>
+          )}
         </div>
 
-        {/* Content */}
-        <div className="px-6 pb-6 space-y-4">
-          <div className="flex items-center gap-2"></div>
-
-          <div className="max-h-64 overflow-y-auto border border-primary-200/60 bg-primary dark:bg-primary-950/50 dark:border-primary-800/40 rounded-2xl ">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm shine-text">
-                    Loading resources...
-                  </span>
-                </div>
-              </div>
-            ) : resources.length === 0 ? (
-              <div className="p-8 text-center flex flex-col items-center">
-                <Connect className="size-6 mb-3 text-primary-400 dark:text-primary-700" />
-                <Body className="font-medium">
-                  No resources available
-                </Body>
-                <Caption className="mt-1 block">
-                  Connect apps in{" "}
-                  <Button
-                    type="button"
-                    onClick={goToApps}
-                    className="underline dark:hover:text-primary-300 hover:text-primary-600 transition-colors cursor-pointer"
-                  >
-                    settings
-                  </Button>{" "}
-                  first
-                </Caption>
-              </div>
-            ) : (
-              <div className="divide-y divide-primary-200/60 dark:divide-primary-800/40">
-                {resources.map(renderResourceItem)}
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-between items-center gap-3 pt-2">
-            <Button variant="ghost" onClick={handleCancel} disabled={saving}>
-              Cancel
-            </Button>
-            <Button
-              variant="submit"
-              onClick={handleSave}
-              disabled={saving}
-              isLoading={saving}
-            >
-              {saving ? "Saving..." : "Done"}
-            </Button>
-          </div>
+        <div className="flex justify-between items-center gap-3 pt-2">
+          <Button variant="ghost" onClick={handleCancel} disabled={saving}>
+            Cancel
+          </Button>
+          <Button
+            variant="submit"
+            onClick={handleSave}
+            disabled={saving}
+            isLoading={saving}
+          >
+            {saving ? "Saving..." : "Done"}
+          </Button>
         </div>
       </div>
-    </div>,
-    document.body
+    </Modal>
   );
 }

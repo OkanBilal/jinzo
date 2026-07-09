@@ -9,6 +9,7 @@ import { ArrowUp, Close } from "@/components/ui/icons";
 import { Button, toast } from "@/components/ui";
 import { FileIconComponent } from "./file-explorer/components/file-icon";
 import { parseFileDiffSegment, parsePerFileStats } from "../utils/parse-diff";
+import { DIFF_ADDED_TEXT, DIFF_REMOVED_TEXT } from "../lib/severity";
 
 // DiffViewer pulls in `@pierre/diffs` (~hundreds of KB + heavy syntax parser).
 // Defer the bundle until the summary bar is actually opened + a file picked.
@@ -117,14 +118,14 @@ export function DiffSummaryBar({
                 <NumberFlow
                   value={stats.insertions}
                   prefix="+"
-                  className="text-green-600 dark:text-green-400 font-medium"
+                  className={`${DIFF_ADDED_TEXT} font-medium`}
                 />
               )}
               {stats.deletions > 0 && (
                 <NumberFlow
                   value={stats.deletions}
                   prefix="-"
-                  className="text-red-500 dark:text-red-400 font-medium"
+                  className={`${DIFF_REMOVED_TEXT} font-medium`}
                 />
               )}
             </span>
@@ -189,14 +190,14 @@ export function DiffSummaryBar({
                             <NumberFlow
                               value={fStats.ins}
                               prefix="+"
-                              className="text-green-600 dark:text-green-400"
+                              className={DIFF_ADDED_TEXT}
                             />
                           )}
                           {fStats.del > 0 && (
                             <NumberFlow
                               value={fStats.del}
                               prefix="-"
-                              className="text-red-500 dark:text-red-400"
+                              className={DIFF_REMOVED_TEXT}
                             />
                           )}
                         </span>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Mains } from "@/components/ui/icons";
 import { ToolHeader, ToolCollapse } from "./_shared";
+import { coerceToolOutput } from "../../utils/parse-tool-content";
 
 export interface GetDiffParams {
   runId?: string;
@@ -131,12 +132,9 @@ function parseDiffOutput(output: unknown): {
     return { diffText: null, files: null, stats: null };
   }
 
+  parsed = coerceToolOutput(parsed);
   if (typeof parsed === "string") {
-    try {
-      parsed = JSON.parse(parsed);
-    } catch {
-      return { diffText: parsed as string, files: null, stats: null };
-    }
+    return { diffText: parsed, files: null, stats: null };
   }
 
   if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {

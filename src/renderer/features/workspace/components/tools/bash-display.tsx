@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Bash } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse } from "./_shared";
+import { ToolHeader, ToolCollapse, ToolOutputBody } from "./_shared";
+import { coerceToolOutput } from "../../utils/parse-tool-content";
 
 export interface BashParams {
   command?: string;
@@ -30,9 +31,9 @@ export function BashDisplay({ params, output, isCompact = false }: { params: Bas
 
       {hasDetails && stdout && (
         <ToolCollapse isExpanded={isExpanded}>
-          <pre className="noscrollbar text-s font-sans text-primary-950 dark:text-primary whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-48 overflow-y-auto">
+          <ToolOutputBody className="text-s font-sans whitespace-pre-wrap">
             {stdout}
-          </pre>
+          </ToolOutputBody>
         </ToolCollapse>
       )}
     </div>
@@ -40,16 +41,8 @@ export function BashDisplay({ params, output, isCompact = false }: { params: Bas
 }
 
 function parseStdout(output: unknown): string | null {
-  if (!output) return null;
-
-  let parsed = output;
-  if (typeof parsed === "string") {
-    try {
-      parsed = JSON.parse(parsed);
-    } catch {
-      return parsed ? stripAnsi(parsed as string) : null;
-    }
-  }
+  const parsed = coerceToolOutput(output);
+  if (typeof parsed === "string") return stripAnsi(parsed);
 
   if (typeof parsed === "object" && parsed !== null) {
     const obj = parsed as Record<string, unknown>;
@@ -57,7 +50,7 @@ function parseStdout(output: unknown): string | null {
     if (typeof obj.content === "string" && obj.content) return stripAnsi(obj.content);
   }
 
-  return typeof parsed === "string" ? stripAnsi(parsed) : null;
+  return null;
 }
 
 // eslint-disable-next-line no-control-regex

@@ -100,7 +100,7 @@ export function DocumentViewerPanel() {
             {currentDoc?.fileName ?? "Document"}
           </div>
           {currentDoc && (
-            <div className="text-[10px] text-primary-500 dark:text-primary-400 -mt-0.25">
+            <div className="text-t text-primary-500 dark:text-primary-400 -mt-px">
               {DOC_VIEWER_LABELS[currentDoc.docType]}
             </div>
           )}
@@ -122,7 +122,7 @@ export function DocumentViewerPanel() {
             tooltip="Reset zoom"
             tooltipPosition="bottom"
             onClick={() => setZoom(1)}
-            className="min-w-10 px-1 text-[11px] tabular-nums rounded-md cursor-pointer hover:bg-primary-200/60 dark:hover:bg-primary-800/60"
+            className="min-w-10 px-1 text-xxs tabular-nums rounded-md cursor-pointer hover:bg-primary-200/60 dark:hover:bg-primary-800/60"
             aria-label="Reset zoom"
           >
             {Math.round(zoom * 100)}%

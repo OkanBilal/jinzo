@@ -1,4 +1,4 @@
-import { RefObject, useCallback, useEffect, useMemo, useReducer, useState } from "react";
+import { ReactNode, RefObject, useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { Button, DropdownWrapper } from "@/components/ui";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import type { CommandInfo, SkillInfo } from "@/lib/redux/api/providersApi";
@@ -11,7 +11,11 @@ import { useListProjectIssuesQuery } from "@/lib/redux/api";
 import { ProviderIcon } from "./provider-icon";
 import { useLocalImageUrl } from "@/hooks/use-local-image-url";
 
-export type UnifiedContextTrigger = "@" | "/";
+/**
+ * "@" and "/" open the full combined menu (skills, files, issues, commands);
+ * "$" narrows to skills only and "#" to issues only.
+ */
+export type UnifiedContextTrigger = "@" | "/" | "$" | "#";
 
 interface FetchState {
   entries: DirEntry[];
@@ -86,6 +90,22 @@ function bucketSkill(skill: SkillInfo): "plugins" | "mac_apps" | "skills" | null
   return "skills";
 }
 
+function getScopeLabel(scope?: string): string {
+  switch (scope) {
+    case "user":
+      return "User";
+    case "project":
+    case "repo":
+      return "Project";
+    case "system":
+      return "System";
+    case "plugin":
+      return "Plugin";
+    default:
+      return "";
+  }
+}
+
 function SkillRowIcon({ skill }: { skill: SkillInfo }) {
   const [failed, setFailed] = useState(false);
   const iconPath = skill.iconLarge || skill.iconSmall;
@@ -111,6 +131,34 @@ function SkillRowIcon({ skill }: { skill: SkillInfo }) {
   );
 }
 
+function RowButton({
+  active,
+  onHover,
+  onSelect,
+  className = "",
+  children,
+}: {
+  active: boolean;
+  onHover: () => void;
+  onSelect: () => void;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Button
+      type="button"
+      data-dropdown-active={active ? "true" : undefined}
+      onMouseEnter={onHover}
+      onClick={onSelect}
+      className={`w-full text-left px-3 py-1.5 cursor-pointer transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 ${
+        active ? "bg-primary-200/30 dark:bg-primary-800" : ""
+      } ${className}`}
+    >
+      {children}
+    </Button>
+  );
+}
+
 type FlatRow =
   | { kind: "skill"; skill: SkillInfo; bucket: "plugins" | "mac_apps" | "skills" }
   | { kind: "file"; entry: DirEntry; dirPath: string }
@@ -125,6 +173,7 @@ interface UnifiedContextDropdownProps {
   projectId?: string;
   commands: CommandInfo[];
   skills: SkillInfo[];
+  isLoadingSkills?: boolean;
   onSelectCommand: (command: CommandInfo) => void;
   onSelectSkill: (skill: SkillInfo) => void;
   onSelectFile: (node: FileNode) => void;
@@ -186,12 +235,13 @@ function buildSections(
 
 export function UnifiedContextDropdown({
   isOpen,
-  trigger: _trigger,
+  trigger,
   filterText,
   workspacePath,
   projectId,
   commands,
   skills,
+  isLoadingSkills = false,
   onSelectCommand,
   onSelectSkill,
   onSelectFile,
@@ -200,7 +250,11 @@ export function UnifiedContextDropdown({
   onClose,
   dropdownRef,
 }: UnifiedContextDropdownProps) {
-  void _trigger;
+  const isCombined = trigger === "@" || trigger === "/";
+  const wantsSkills = isCombined || trigger === "$";
+  const wantsFiles = isCombined && Boolean(workspacePath);
+  const wantsIssues = isCombined || trigger === "#";
+  const wantsCommands = isCombined;
 
   const [fetchState, dispatchFetch] = useReducer(fetchReducer, {
     entries: [],
@@ -217,7 +271,7 @@ export function UnifiedContextDropdown({
   const isWorkspaceFileSearch = dirPath === "" && nameFilter.length > 0;
 
   useEffect(() => {
-    if (!isOpen || !workspacePath) return;
+    if (!isOpen || !workspacePath || !wantsFiles) return;
 
     if (!isWorkspaceFileSearch) {
       let cancelled = false;
@@ -277,10 +331,10 @@ export function UnifiedContextDropdown({
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [isOpen, workspacePath, dirPath, nameFilter, isWorkspaceFileSearch]);
+  }, [isOpen, workspacePath, dirPath, nameFilter, isWorkspaceFileSearch, wantsFiles]);
 
   const { data: issues = [], isLoading: isLoadingIssues } = useListProjectIssuesQuery(projectId ?? "", {
-    skip: !isOpen || !projectId,
+    skip: !isOpen || !projectId || !wantsIssues,
   });
 
   const filteredIssues = useMemo(() => {
@@ -355,23 +409,26 @@ export function UnifiedContextDropdown({
 
   const sections = useMemo(() => {
     return buildSections(
-      pluginSkills,
-      macSkills,
-      regularSkills,
-      sortedFiles,
+      wantsSkills ? pluginSkills : [],
+      wantsSkills ? macSkills : [],
+      wantsSkills ? regularSkills : [],
+      wantsFiles ? sortedFiles : [],
       dirPath,
-      Boolean(workspacePath),
-      filteredIssues,
-      filteredCommands,
+      wantsFiles,
+      wantsIssues ? filteredIssues : [],
+      wantsCommands ? filteredCommands : [],
     );
   }, [
+    wantsSkills,
     pluginSkills,
     macSkills,
     regularSkills,
+    wantsFiles,
     sortedFiles,
     dirPath,
-    workspacePath,
+    wantsIssues,
     filteredIssues,
+    wantsCommands,
     filteredCommands,
   ]);
 
@@ -436,7 +493,21 @@ export function UnifiedContextDropdown({
   if (!isOpen) return null;
 
   const isLoading =
-    flatRows.length === 0 && (fetchState.loading || (Boolean(projectId) && isLoadingIssues));
+    flatRows.length === 0 &&
+    (trigger === "$"
+      ? isLoadingSkills
+      : trigger === "#"
+        ? Boolean(projectId) && isLoadingIssues
+        : fetchState.loading || (Boolean(projectId) && isLoadingIssues));
+
+  const emptyText =
+    trigger === "$"
+      ? "No skills available"
+      : trigger === "#"
+        ? projectId
+          ? "No matching issues"
+          : "No project linked"
+        : "No matches";
 
   return (
     <div ref={dropdownRef}>
@@ -446,7 +517,7 @@ export function UnifiedContextDropdown({
         minWidth="min-w-[22rem]"
       >
         <div className="max-h-96 max-w-115 overflow-auto noscrollbar">
-          {dirPath && (
+          {wantsFiles && dirPath && (
             <div className="px-3 pt-2 pb-1 text-xs font-medium truncate text-primary-400 dark:text-primary-500">
               {dirPath}
             </div>
@@ -456,8 +527,8 @@ export function UnifiedContextDropdown({
           ) : flatRows.length === 0 &&
             !fetchState.loading &&
             !isLoadingIssues &&
-            (workspacePath ? !fetchState.error : true) ? (
-            <div className="px-4 py-3 text-sm text-primary-500 dark:text-primary-400">No matches</div>
+            (wantsFiles ? !fetchState.error : true) ? (
+            <div className="px-4 py-3 text-sm text-primary-500 dark:text-primary-400">{emptyText}</div>
           ) : (
             sections.map((section, sectionIndex) => {
               if (section.rows.length === 0 && section.title !== "Files") return null;
@@ -487,46 +558,52 @@ export function UnifiedContextDropdown({
                   {section.rows.map((row, j) => {
                     const idx = baseIdx + j;
                     const active = idx === activeIndex;
+                    const rowProps = {
+                      active,
+                      onHover: () => setActiveIndex(idx),
+                      onSelect: () => selectRowAt(idx),
+                    };
                     if (row.kind === "skill") {
                       const skill = row.skill;
                       const title = skill.displayName || skill.name;
                       const desc = skill.shortDescription || skill.description;
+                      const scopeLabel = getScopeLabel(skill.scope || skill.source);
                       return (
-                        <Button
+                        <RowButton
                           key={`${row.bucket}-${skill.name}-${skill.path ?? ""}`}
-                          type="button"
-                          data-dropdown-active={active ? "true" : undefined}
-                          onMouseEnter={() => setActiveIndex(idx)}
-                          onClick={() => selectRowAt(idx)}
-                          className={`w-full text-left px-3 py-1.5 cursor-pointer text-xs transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 ${
-                            active ? "bg-primary-200/30 dark:bg-primary-800" : ""
-                          }`}
+                          {...rowProps}
+                          className="text-xs"
                         >
                           <div className="flex items-start gap-2">
                             <SkillRowIcon skill={skill} />
                             <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                              <div className="font-medium truncate text-xs">{title}</div>
+                              <div className="font-medium flex items-center gap-1.5">
+                                <span className="truncate text-xs">{title}</span>
+                                <div className="ml-auto gap-2 flex items-center shrink-0">
+                                  {skill.argumentHint && (
+                                    <span className="font-normal text-xs text-primary-500 dark:text-primary-400">
+                                      {skill.argumentHint}
+                                    </span>
+                                  )}
+                                  {scopeLabel && (
+                                    <span className="text-t px-1.5 py-px rounded-full bg-primary-200/50 dark:bg-primary-700/50 text-primary-600 dark:text-primary-300">
+                                      {scopeLabel}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
                               {desc && (
                                 <div className="text-xs line-clamp-2 text-primary-500 dark:text-primary-400">{desc}</div>
                               )}
                             </div>
                           </div>
-                        </Button>
+                        </RowButton>
                       );
                     }
                     if (row.kind === "file") {
                       const { entry } = row;
                       return (
-                        <Button
-                          key={entry.fullPath}
-                          type="button"
-                          data-dropdown-active={active ? "true" : undefined}
-                          onMouseEnter={() => setActiveIndex(idx)}
-                          onClick={() => selectRowAt(idx)}
-                          className={`w-full text-left px-3 py-1.5 cursor-pointer transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 ${
-                            active ? "bg-primary-200/30 dark:bg-primary-800" : ""
-                          }`}
-                        >
+                        <RowButton key={entry.fullPath} {...rowProps}>
                           <div className="flex items-start gap-2 min-w-0">
                             <FileIconComponent
                               isDirectory={entry.type === "directory"}
@@ -550,22 +627,13 @@ export function UnifiedContextDropdown({
                               <span className="ml-auto text-xs text-primary-500 dark:text-primary-400 shrink-0">/</span>
                             )}
                           </div>
-                        </Button>
+                        </RowButton>
                       );
                     }
                     if (row.kind === "issue") {
                       const item = row.item;
                       return (
-                        <Button
-                          key={item.issue.entityId}
-                          type="button"
-                          data-dropdown-active={active ? "true" : undefined}
-                          onMouseEnter={() => setActiveIndex(idx)}
-                          onClick={() => selectRowAt(idx)}
-                          className={`w-full text-left px-3 py-1.5 cursor-pointer transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 ${
-                            active ? "bg-primary-200/30 dark:bg-primary-800" : ""
-                          }`}
-                        >
+                        <RowButton key={item.issue.entityId} {...rowProps}>
                           <div className="flex items-center gap-2 min-w-0">
                             <ProviderIcon
                               provider={item.issue.provider}
@@ -579,21 +647,12 @@ export function UnifiedContextDropdown({
                             )}
                             <span className="truncate text-xs">{item.entity.title}</span>
                           </div>
-                        </Button>
+                        </RowButton>
                       );
                     }
                     const cmd = row.command;
                     return (
-                      <Button
-                        key={`cmd-${cmd.name}`}
-                        type="button"
-                        data-dropdown-active={active ? "true" : undefined}
-                        onMouseEnter={() => setActiveIndex(idx)}
-                        onClick={() => selectRowAt(idx)}
-                        className={`w-full text-left px-3 py-1.5 cursor-pointer text-xs transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 ${
-                          active ? "bg-primary-200/30 dark:bg-primary-800" : ""
-                        }`}
-                      >
+                      <RowButton key={`cmd-${cmd.name}`} {...rowProps} className="text-xs">
                         <div className="flex flex-col gap-0.5">
                           <div className="font-medium">/{cmd.name}</div>
                           {cmd.description && (
@@ -602,7 +661,7 @@ export function UnifiedContextDropdown({
                             </div>
                           )}
                         </div>
-                      </Button>
+                      </RowButton>
                     );
                   })}
                 </div>

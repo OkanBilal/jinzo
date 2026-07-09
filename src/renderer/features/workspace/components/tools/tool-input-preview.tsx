@@ -1,3 +1,5 @@
+import { coerceToolOutput } from "../../utils/parse-tool-content";
+
 interface ToolInputPreviewProps {
   toolName: string;
   toolInput?: Record<string, unknown>;
@@ -27,10 +29,8 @@ export function ToolInputPreview({ toolName, toolInput }: ToolInputPreviewProps)
 /** If input is { args: "<json string>" }, parse args and merge into top level */
 function normalizeInput(input: Record<string, unknown>): Record<string, unknown> {
   if (typeof input.args === "string") {
-    try {
-      const parsed = JSON.parse(input.args);
-      if (typeof parsed === "object" && parsed !== null) return { ...input, ...parsed };
-    } catch { /* ignore */ }
+    const parsed = coerceToolOutput(input.args);
+    if (typeof parsed === "object" && parsed !== null) return { ...input, ...parsed };
   }
   return input;
 }

@@ -115,7 +115,7 @@ export function renderPluginIcon(
   }
   return (
     <span
-      className={`${sizeClass} rounded flex items-center justify-center text-[9px] font-semibold text-white shrink-0`}
+      className={`${sizeClass} rounded flex items-center justify-center text-xt font-semibold text-white shrink-0`}
       style={{ backgroundColor: plugin.brandColor }}
     >
       {label.charAt(0).toUpperCase()}

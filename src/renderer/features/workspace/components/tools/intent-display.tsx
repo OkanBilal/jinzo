@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Notes } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse } from "./_shared";
+import { ToolHeader, ToolCollapse, ToolOutputBody } from "./_shared";
 
 export interface IntentParams {
   intent?: string;
@@ -27,9 +27,9 @@ export function IntentDisplay({ params, isCompact = false }: { params: IntentPar
 
       {hasIntent && (
         <ToolCollapse isExpanded={isExpanded}>
-          <div className="noscrollbar text-s text-primary-950 dark:text-primary whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-48 overflow-y-auto">
+          <ToolOutputBody as="div" className="text-s whitespace-pre-wrap">
             {params.intent}
-          </div>
+          </ToolOutputBody>
         </ToolCollapse>
       )}
     </div>

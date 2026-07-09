@@ -290,7 +290,7 @@ export function ToolApprovalDialog({
                       aria-hidden
                     >
                       {isSelected && (
-                        <span className="text-[10px] font-bold leading-none text-primary">
+                        <span className="text-t font-bold leading-none text-primary">
                           ✓
                         </span>
                       )}

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Task } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse } from "./_shared";
+import { ToolHeader, ToolCollapse, ToolOutputBody } from "./_shared";
 
 export interface TaskParams {
   description?: string;
@@ -29,9 +29,9 @@ export function TaskDisplay({ params, isCompact = false }: { params: TaskParams;
 
       {hasPrompt && (
         <ToolCollapse isExpanded={isExpanded}>
-          <div className="noscrollbar text-sm text-primary-950 dark:text-primary whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-48 overflow-y-auto">
+          <ToolOutputBody as="div" className="text-sm whitespace-pre-wrap">
             {params.prompt}
-          </div>
+          </ToolOutputBody>
         </ToolCollapse>
       )}
     </div>

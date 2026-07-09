@@ -59,6 +59,9 @@ export type { TooltipProps, TooltipPosition } from "./tooltip";
 // Alert
 export { default as Alert } from "./alert";
 
+// Modal
+export { Modal, ModalHeader } from "./modal";
+
 // Dropdown Menu
 export { DropdownMenu, DropdownMenuSub, DropdownMenuItem } from "./dropdown-menu";
 

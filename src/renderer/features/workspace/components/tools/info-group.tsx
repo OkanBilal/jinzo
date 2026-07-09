@@ -8,7 +8,6 @@ import {
   Picture,
   Document,
   Codex,
-  Close,
   Sparkles,
   External,
   ArrowUp,
@@ -16,6 +15,7 @@ import {
   Mains,
 } from "@/components/ui/icons";
 import { ProviderIcon } from "../provider-icon";
+import { ImagePreviewModal } from "../image-preview-modal";
 import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
 import {
   Body,
@@ -210,57 +210,6 @@ function renderMessageWithChips(
   return out;
 }
 
-function ImagePreviewModal({
-  name,
-  dataUrl,
-  onClose,
-}: {
-  name: string;
-  dataUrl: string;
-  onClose: () => void;
-}) {
-  const overlayRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
-
-  return (
-    <div
-      ref={overlayRef}
-      className="fixed inset-0 z-9999 flex items-center justify-center bg-black/70 backdrop-blur-sm"
-      onClick={(e) => {
-        if (e.target === overlayRef.current) onClose();
-      }}
-    >
-      <div className="relative flex flex-col glass-morphism rounded-xl shadow-2xl w-[92vw] max-w-6xl max-h-[92vh] mx-4 overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-primary-200 dark:border-primary-800 shrink-0">
-          <span className="text-xs font-mono text-primary-600 dark:text-primary-400 truncate">
-            {name}
-          </span>
-          <Button
-            onClick={onClose}
-            className="ml-3 shrink-0 p-1 rounded-md hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
-          >
-            <Close className="w-3.5 h-3.5 text-primary-500" />
-          </Button>
-        </div>
-        <div className="flex-1 min-h-0 bg-primary-100 dark:bg-primary-900 flex items-center justify-center p-3 overflow-auto">
-          <img
-            src={dataUrl}
-            alt={name}
-            className="max-h-full max-w-full object-contain rounded"
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 interface InfoGroupProps {
   group: EventGroup;
   workspaceRootPath?: string;
@@ -369,7 +318,7 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
             {previewAtt && (
               <ImagePreviewModal
                 name={previewAtt.name}
-                dataUrl={previewAtt.dataUrl}
+                src={previewAtt.dataUrl}
                 onClose={() => setPreviewAtt(null)}
               />
             )}
@@ -490,7 +439,7 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
         {previewAtt && (
           <ImagePreviewModal
             name={previewAtt.name}
-            dataUrl={previewAtt.dataUrl}
+            src={previewAtt.dataUrl}
             onClose={() => setPreviewAtt(null)}
           />
         )}
@@ -796,7 +745,7 @@ function ArtifactBody({
       {previewAtt && (
         <ImagePreviewModal
           name={previewAtt.name}
-          dataUrl={previewAtt.dataUrl}
+          src={previewAtt.dataUrl}
           onClose={() => onPreview(null)}
         />
       )}
