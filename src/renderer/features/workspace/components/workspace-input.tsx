@@ -1,5 +1,5 @@
 import { useReducer, useRef, useEffect, useCallback, useState, useMemo } from "react";
-import { getProviderVariant } from "../lib/provider-variants";
+import { getProviderVariant } from "@/lib/provider-variants";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import type { CommandInfo, SkillInfo } from "@/lib/redux/api/providersApi";
 import type { Run } from "../types";

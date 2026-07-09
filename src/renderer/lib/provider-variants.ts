@@ -16,7 +16,7 @@
 import type { ComponentType } from "react";
 import { CopilotStatic, Codex, Cursor } from "@/components/ui/icons";
 import { Claude } from "@/components/ui/icons/space";
-import { PROVIDER_IDS, type ProviderId } from "../../../../shared/provider-ids";
+import { PROVIDER_IDS, type ProviderId } from "../../shared/provider-ids";
 
 export type ProviderVariant = "claude" | "copilot" | "codex" | "cursor";
 
@@ -32,6 +32,8 @@ export type FastModeStyle =
 export interface ProviderVariantDescriptor {
   variant: ProviderVariant;
   providerId: ProviderId;
+  /** Human-facing name ("Claude", "Copilot", …) — the one source for tab/page/picker labels. */
+  label: string;
   /** Tab/header icon for this variant. */
   icon: ComponentType<{ className?: string }>;
   /** Accent class always applied to this variant's icon (e.g. Claude's tint). */
@@ -62,6 +64,7 @@ export interface ProviderVariantDescriptor {
 export const PROVIDER_VARIANTS: Record<ProviderVariant, ProviderVariantDescriptor> = {
   claude: {
     variant: "claude",
+    label: "Claude",
     providerId: PROVIDER_IDS.claude,
     icon: Claude,
     accentClassName: "text-claude",
@@ -77,6 +80,7 @@ export const PROVIDER_VARIANTS: Record<ProviderVariant, ProviderVariantDescripto
   },
   copilot: {
     variant: "copilot",
+    label: "Copilot",
     providerId: PROVIDER_IDS.copilot,
     icon: CopilotStatic,
     permissionKey: "permissionMode",
@@ -91,6 +95,7 @@ export const PROVIDER_VARIANTS: Record<ProviderVariant, ProviderVariantDescripto
   },
   codex: {
     variant: "codex",
+    label: "Codex",
     providerId: PROVIDER_IDS.codex,
     icon: Codex,
     permissionKey: "sandboxMode",
@@ -105,6 +110,7 @@ export const PROVIDER_VARIANTS: Record<ProviderVariant, ProviderVariantDescripto
   },
   cursor: {
     variant: "cursor",
+    label: "Cursor",
     providerId: PROVIDER_IDS.cursor,
     icon: Cursor,
     permissionKey: "mode",
@@ -121,4 +127,16 @@ export const PROVIDER_VARIANTS: Record<ProviderVariant, ProviderVariantDescripto
 
 export function getProviderVariant(variant: ProviderVariant): ProviderVariantDescriptor {
   return PROVIDER_VARIANTS[variant];
+}
+
+/**
+ * Reverse lookup for callers that hold a provider id (pulse pickers, stats
+ * filters) rather than a variant. Undefined for non-agent provider ids.
+ */
+export function getProviderVariantById(
+  providerId: string,
+): ProviderVariantDescriptor | undefined {
+  return Object.values(PROVIDER_VARIANTS).find(
+    (d) => d.providerId === providerId,
+  );
 }

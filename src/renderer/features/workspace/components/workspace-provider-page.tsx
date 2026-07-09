@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { getProviderVariant } from "../lib/provider-variants";
+import { getProviderVariant } from "@/lib/provider-variants";
 import type { RefObject } from "react";
 import {
   WorkspaceEmptyState,

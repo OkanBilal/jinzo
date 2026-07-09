@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { PROVIDER_IDS } from "../../../../shared/provider-ids";
+import { PROVIDER_IDS } from "../../shared/provider-ids";
 import {
   PROVIDER_VARIANTS,
   getProviderVariant,

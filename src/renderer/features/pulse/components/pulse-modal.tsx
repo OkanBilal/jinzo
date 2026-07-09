@@ -11,6 +11,7 @@ import {
   applyTemplate,
   EMPTY_PULSE_FORM,
   formToCreateInput,
+  isPulseFormValid,
   pulseToForm,
   type PulseFormState,
 } from "../hooks/use-pulse-form";
@@ -51,12 +52,7 @@ function PulseStep({ isEditing }: { isEditing: boolean }) {
   const ctx = useWizard<PulseWizardData>();
   const { data, setData } = ctx;
 
-  const canSubmit =
-    data.title.trim().length > 0 &&
-    data.prompt.trim().length > 0 &&
-    !!data.workspaceId &&
-    !!data.providerId &&
-    !!data.model;
+  const canSubmit = isPulseFormValid(data);
 
   return (
     <div className="-m-2">

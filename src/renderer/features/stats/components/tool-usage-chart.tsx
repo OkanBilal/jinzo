@@ -63,7 +63,7 @@ export default function ToolUsageChart({ data }: ToolUsageChartProps) {
             content: (
               <Text
 
-                className="text-[8px] truncate block max-w-full"
+                className="text-xt truncate block max-w-full"
                 as="span"
               >
                 {d.toolName}

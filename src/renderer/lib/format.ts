@@ -22,3 +22,9 @@ export function formatCostFromMicros(micros: number): string {
   const usd = micros / 1_000_000;
   return usd < 0.01 ? `$${usd.toFixed(4)}` : `$${usd.toFixed(2)}`;
 }
+
+/** Display label for a reasoning-effort level ("xhigh" → "Extra High"). */
+export function formatEffortLevel(level: string): string {
+  if (level === "ultracode") return "Ultracode";
+  return level === "xhigh" ? "Extra High" : level;
+}

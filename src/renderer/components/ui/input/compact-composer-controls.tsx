@@ -1,3 +1,4 @@
+import { formatEffortLevel } from "@/lib/format";
 import { useRef, useState } from "react";
 import DropdownWrapper from "../dropdown-wrapper";
 import { Button } from "../button";
@@ -24,11 +25,6 @@ interface CompactComposerControlsProps {
   fastMode: boolean;
   onFastModeToggle: () => void;
   supportsFastMode: boolean;
-}
-
-function formatEffortLabel(level: string): string {
-  if (level === "ultracode") return "Ultracode";
-  return level === "xhigh" ? "Extra High" : level;
 }
 
 const SECTION =
@@ -147,7 +143,7 @@ export function CompactComposerControls({
                     className={`${ROW} capitalize ${active ? ROW_ACTIVE : ROW_IDLE}`}
                   >
                     <Brain className="size-3.5 shrink-0" />
-                    <span className="flex-1">{formatEffortLabel(level)}</span>
+                    <span className="flex-1">{formatEffortLevel(level)}</span>
                     {active && <Check className="size-3.5 shrink-0" />}
                   </Button>
                 );
