@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Trash } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse } from "./_shared";
+import { ToolHeader, ToolCollapse, ToolOutputBody } from "./_shared";
+import { coerceToolOutput } from "../../utils/parse-tool-content";
+import { shortFileName } from "../../utils/path-utils";
 
 /** Cursor ACP / agent delete file tool — often mirrors edit-style fields with empty `new_string`. */
 export interface DeleteParams {
@@ -11,21 +13,8 @@ export interface DeleteParams {
   _title?: string;
 }
 
-function shortPathDisplay(fullPath: string): string {
-  const parts = fullPath.split("/");
-  return parts.length > 3 ? "" + parts.slice(-1).join("/") : fullPath;
-}
-
 function pathFromOutput(output: unknown): string | undefined {
-  if (!output) return undefined;
-  let o: unknown = output;
-  if (typeof o === "string") {
-    try {
-      o = JSON.parse(o);
-    } catch {
-      return undefined;
-    }
-  }
+  const o = coerceToolOutput(output);
   if (typeof o === "object" && o !== null) {
     const r = o as Record<string, unknown>;
     if (typeof r.file_path === "string") return r.file_path;
@@ -61,7 +50,7 @@ export function DeleteDisplay({
   const [isExpanded, setIsExpanded] = useState(false);
 
   const fullPath = resolveFilePath(params, output);
-  const displayPath = shortPathDisplay(fullPath);
+  const displayPath = shortFileName(fullPath);
   const canExpand = fullPath.length > 0 && fullPath !== displayPath;
 
   return (
@@ -81,9 +70,9 @@ export function DeleteDisplay({
 
       {canExpand && (
         <ToolCollapse isExpanded={isExpanded}>
-          <pre className="noscrollbar text-xs font-mono text-primary-950 dark:text-primary whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-48 overflow-y-auto break-all">
+          <ToolOutputBody className="text-xs font-mono whitespace-pre-wrap break-all">
             {fullPath}
-          </pre>
+          </ToolOutputBody>
         </ToolCollapse>
       )}
     </div>

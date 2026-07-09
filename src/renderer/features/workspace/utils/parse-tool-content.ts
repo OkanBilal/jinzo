@@ -1,3 +1,19 @@
+/**
+ * Tool outputs arrive either as structured objects or as that object JSON-
+ * serialized into a string, depending on the provider adapter. Returns the
+ * parsed value when the string is JSON, the original string when it isn't,
+ * and null for empty output — so parsers can branch on shape, not encoding.
+ */
+export function coerceToolOutput(output: unknown): unknown {
+  if (!output) return null;
+  if (typeof output !== "string") return output;
+  try {
+    return JSON.parse(output);
+  } catch {
+    return output;
+  }
+}
+
 export interface ParsedToolContent {
   toolName: string;
   params: Record<string, unknown> | null;

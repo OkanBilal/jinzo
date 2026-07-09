@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import type {
   ContextIssue,
   ContextSignal,
@@ -7,9 +7,8 @@ import type {
 } from "@/lib/redux/slices/workspaceSlice";
 import { Close, Web } from "@/components/ui/icons";
 import { ProviderIcon } from "./provider-icon";
-import { Button } from "@/components/ui";
+import { Button, Modal, ModalHeader } from "@/components/ui";
 import { Body } from "@/components/ui/text";
-import { useSuppressBrowserView } from "@/hooks/use-suppress-browser-view";
 
 interface ContextChipsProps {
   contextIssues: ContextIssue[];
@@ -38,20 +37,6 @@ function BrowserSelectionPreview({
   sel: ContextBrowserSelection;
   onClose: () => void;
 }) {
-  const overlayRef = useRef<HTMLDivElement>(null);
-
-  // The browser panel is a native view that paints above the DOM — hide it while
-  // this preview is open so it doesn't render behind the browser.
-  useSuppressBrowserView(true);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
-
   const surroundImg = sel.surroundingScreenshotCaptureName
     ? `mains-capture://cap/${sel.surroundingScreenshotCaptureName}`
     : undefined;
@@ -61,85 +46,72 @@ function BrowserSelectionPreview({
   const summary = sel.componentName || `${sel.tagName}${sel.selector ? ` · ${sel.selector.split(" > ").slice(-1)[0]}` : ""}`;
 
   return (
-    <div
-      ref={overlayRef}
-      className="fixed inset-0 z-10000 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onClick={(e) => {
-        if (e.target === overlayRef.current) onClose();
-      }}
+    <Modal
+      isOpen
+      onClose={onClose}
+      backdrop="media"
+      className="max-w-lg w-full bg-primary-50 dark:bg-primary-950"
     >
-      <div className="relative flex flex-col bg-primary-50 dark:bg-primary-950 glass-morphism rounded-xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-primary-200 dark:border-primary-800">
-          <div className="flex items-center gap-2 min-w-0">
-            <Web className="w-3.5 h-3.5 shrink-0 text-primary-800 dark:text-primary-100" />
-            <div className="min-w-0">
-              <Body className="text-xs">
-                {summary}
-              </Body>
-              <Body className="text-xs opacity-60">
-                {hostname(sel.url)}
-                {/* {sel.selector && <Body className="text-xs opacity-60"> · {sel.selector}</Body>} */}
-              </Body>
-            </div>
-          </div>
-          <Button
-            onClick={onClose}
-            className="ml-3 shrink-0 p-1 rounded-md hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors cursor-pointer"
-          >
-            <Close className="w-3.5 h-3.5 text-primary-500" />
-          </Button>
+      <ModalHeader onClose={onClose}>
+        <Web className="w-3.5 h-3.5 shrink-0 text-primary-800 dark:text-primary-100" />
+        <div className="min-w-0">
+          <Body className="text-xs">
+            {summary}
+          </Body>
+          <Body className="text-xs opacity-60">
+            {hostname(sel.url)}
+          </Body>
         </div>
+      </ModalHeader>
 
-        {/* Screenshot */}
-        {surroundImg ? (
-          <div className="relative bg-primary-100 dark:bg-primary-950">
-            <img
-              src={surroundImg}
-              alt="Surrounding context"
-              className="w-full max-h-72 object-contain"
-            />
-            {elementImg && (
-              <div className="absolute bottom-2 right-2 rounded-md overflow-hidden border-2 border-blue-500 shadow-lg">
-                <img
-                  src={elementImg}
-                  alt="Selected element"
-                  className="max-w-32 max-h-20 object-contain bg-primary"
-                />
-              </div>
-            )}
-          </div>
-        ) : elementImg ? (
-          <div className="bg-primary-100 dark:bg-primary-900">
-            <img
-              src={elementImg}
-              alt="Selected element"
-              className="w-full max-h-72 object-contain"
-            />
-          </div>
-        ) : (
-          <div className="flex items-center justify-center h-32 bg-primary-100 dark:bg-primary-900 text-primary-400 text-xs">
-            No screenshot available
-          </div>
-        )}
+      {/* Screenshot */}
+      {surroundImg ? (
+        <div className="relative bg-primary-100 dark:bg-primary-950">
+          <img
+            src={surroundImg}
+            alt="Surrounding context"
+            className="w-full max-h-72 object-contain"
+          />
+          {elementImg && (
+            <div className="absolute bottom-2 right-2 rounded-md overflow-hidden border-2 border-blue-500 shadow-lg">
+              <img
+                src={elementImg}
+                alt="Selected element"
+                className="max-w-32 max-h-20 object-contain bg-primary"
+              />
+            </div>
+          )}
+        </div>
+      ) : elementImg ? (
+        <div className="bg-primary-100 dark:bg-primary-900">
+          <img
+            src={elementImg}
+            alt="Selected element"
+            className="w-full max-h-72 object-contain"
+          />
+        </div>
+      ) : (
+        <div className="flex items-center justify-center h-32 bg-primary-100 dark:bg-primary-900 text-primary-400 text-xs">
+          No screenshot available
+        </div>
+      )}
 
-        {/* Metadata */}
-        {(sel.text || sel.sourceFile) && (
-          <div className="px-4 py-2.5 border-t border-primary-200 dark:border-primary-800 space-y-1">
-            {sel.sourceFile && (
-              <Body className="text-xs">
-                {sel.sourceFile}
-              </Body>
-            )}
-            {sel.text && (
-              <Body className="text-xs">
-                {sel.text}
-              </Body>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+      {/* Metadata */}
+      {(sel.text || sel.sourceFile) && (
+        <div className="px-4 py-2.5 border-t border-primary-200 dark:border-primary-800 space-y-1">
+          {sel.sourceFile && (
+            <Body className="text-xs">
+              {sel.sourceFile}
+            </Body>
+          )}
+          {sel.text && (
+            <Body className="text-xs">
+              {sel.text}
+            </Body>
+          )}
+        </div>
+      )}
+    </Modal>
   );
 }
 

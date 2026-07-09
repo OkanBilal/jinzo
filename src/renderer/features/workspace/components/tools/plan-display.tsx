@@ -6,6 +6,7 @@ import type { RunEvent } from "../../types";
 import { Plan, ArrowUp } from "@/components/ui/icons";
 import { useUpdateToolCallMutation } from "@/lib/redux/api/toolsApi";
 import { Button } from "@/components/ui";
+import { coerceToolOutput } from "../../utils/parse-tool-content";
 
 type PlanStatus = "pending" | "applied" | "dismissed";
 
@@ -18,12 +19,11 @@ export function PlanDisplay({ event, onApplyPlan }: PlanDisplayProps) {
   const [updateToolCall] = useUpdateToolCallMutation();
 
   const input = event.metadata?.input as Record<string, unknown> | undefined;
-  const output = event.metadata?.output as Record<string, unknown> | string | undefined;
-  const parsedOutput = typeof output === "string"
-    ? (() => { try { return JSON.parse(output); } catch { return {}; } })()
-    : output ?? {};
+  const parsedOutput = coerceToolOutput(event.metadata?.output) as
+    | Record<string, unknown>
+    | null;
 
-  const savedStatus = (parsedOutput?.planStatus as PlanStatus) ?? "pending";
+  const savedStatus = (parsedOutput?.planStatus as PlanStatus | undefined) ?? "pending";
   const [status, setStatus] = useState<PlanStatus>(savedStatus);
   const [isExpanded, setIsExpanded] = useState(savedStatus !== "dismissed");
 

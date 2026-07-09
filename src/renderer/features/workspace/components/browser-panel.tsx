@@ -373,14 +373,14 @@ export function BrowserPanel() {
       </div>
 
       {/* Title bar */}
-      <div className="px-3 py-1 text-[11px] -mb-0.25 text-primary-500 dark:text-primary-400 truncate border-b border-primary-200/40 dark:border-primary-800/40">
+      <div className="px-3 py-1 text-xxs -mb-px text-primary-500 dark:text-primary-400 truncate border-b border-primary-200/40 dark:border-primary-800/40">
         {nav.title || nav.url || "New tab"}
       </div>
 
       {/* Viewport */}
       <div
         ref={viewportRef}
-        className="relative flex-1 overflow-hidden mb-0.25"
+        className="relative flex-1 overflow-hidden mb-px"
       >
         {!nav.url && (
           <div className="absolute inset-0 flex items-center justify-center text-primary-500 dark:text-primary-400 text-xs pointer-events-none">
@@ -388,7 +388,7 @@ export function BrowserPanel() {
           </div>
         )}
         {selectMode && (
-          <div className="absolute left-1/2 top-2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-primary-500/90 text-primary-100 text-[10px] font-medium shadow pointer-events-none">
+          <div className="absolute left-1/2 top-2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-primary-500/90 text-primary-100 text-t font-medium shadow pointer-events-none">
             Click an element to capture · Esc to cancel
           </div>
         )}

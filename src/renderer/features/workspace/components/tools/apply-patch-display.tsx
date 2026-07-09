@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useIsDarkMode } from "@/hooks/use-is-dark-mode";
 import { Edit } from "@/components/ui/icons";
 import { PatchDiff } from "@pierre/diffs/react";
 import { normalizePatchForPatchDiff } from "../../utils/patch-utils";
@@ -33,7 +34,7 @@ export function ApplyPatchDisplay({
   isCompact?: boolean;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const isDarkMode = document.documentElement.classList.contains("dark");
+  const isDarkMode = useIsDarkMode();
   const openFile = useOpenFileInEditor();
 
   // Prefer the completed output (full absolute path), since the envelope passed

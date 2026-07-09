@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Grep } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse } from "./_shared";
+import { ToolHeader, ToolCollapse, ToolOutputBody } from "./_shared";
+import { coerceToolOutput } from "../../utils/parse-tool-content";
+import { shortPath } from "../../utils/path-utils";
 
 export interface GrepParams {
   pattern?: string;
@@ -50,9 +52,9 @@ export function GrepDisplay({ params, output, isCompact = false }: { params: Gre
 
       {hasContent && (
         <ToolCollapse isExpanded={isExpanded}>
-          <pre className="noscrollbar text-xs font-mono text-primary-950 dark:text-primary whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-48 overflow-y-auto">
+          <ToolOutputBody className="text-xs font-mono whitespace-pre-wrap">
             {content}
-          </pre>
+          </ToolOutputBody>
         </ToolCollapse>
       )}
     </div>
@@ -67,21 +69,16 @@ function parseGrepOutput(output: unknown): {
   truncated: boolean;
 } {
   const empty = { content: null, numFiles: 0, numLines: 0, totalMatches: 0, truncated: false };
-  if (!output) return empty;
 
-  let parsed = output;
+  const parsed = coerceToolOutput(output);
   if (typeof parsed === "string") {
-    try {
-      parsed = JSON.parse(parsed);
-    } catch {
-      return {
-        content: parsed as string,
-        numFiles: 0,
-        numLines: (parsed as string).split("\n").length,
-        totalMatches: 0,
-        truncated: false,
-      };
-    }
+    return {
+      content: parsed,
+      numFiles: 0,
+      numLines: parsed.split("\n").length,
+      totalMatches: 0,
+      truncated: false,
+    };
   }
 
   if (typeof parsed === "object" && parsed !== null) {
@@ -113,9 +110,4 @@ function parseGrepOutput(output: unknown): {
   }
 
   return empty;
-}
-
-function shortPath(fullPath: string): string {
-  const parts = fullPath.split("/");
-  return parts.length > 3 ? ".../" + parts.slice(-3).join("/") : fullPath;
 }

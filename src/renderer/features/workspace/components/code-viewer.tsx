@@ -1,3 +1,4 @@
+import { useIsDarkMode } from "@/hooks/use-is-dark-mode";
 import { File } from "@pierre/diffs/react";
 import type { FileContents } from "@pierre/diffs/react";
 
@@ -12,7 +13,7 @@ export function CodeViewer({
   filename,
   className = "",
 }: CodeViewerProps) {
-  const isDarkMode = document.documentElement.classList.contains("dark");
+  const isDarkMode = useIsDarkMode();
 
   const file: FileContents = {
     name: filename ?? "file",

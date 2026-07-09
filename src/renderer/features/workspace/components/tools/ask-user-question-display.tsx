@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Question, Check } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse } from "./_shared";
+import { ToolHeader, ToolCollapse, ToolOutputBody } from "./_shared";
+import { coerceToolOutput } from "../../utils/parse-tool-content";
 
 interface QuestionOption {
   label: string;
@@ -70,7 +71,7 @@ export function AskUserQuestionDisplay({
 
       {hasContent && (
         <ToolCollapse isExpanded={isExpanded}>
-          <div className="text-xs font-sans text-primary-950 dark:text-primary bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-48 overflow-y-auto noscrollbar space-y-3">
+          <ToolOutputBody as="div" className="text-xs font-sans space-y-3">
             {questions.map((q, qi) => {
               const selectedAnswer = answers?.[String(qi)];
 
@@ -136,7 +137,7 @@ export function AskUserQuestionDisplay({
                 </div>
               );
             })}
-          </div>
+          </ToolOutputBody>
         </ToolCollapse>
       )}
     </div>
@@ -144,16 +145,7 @@ export function AskUserQuestionDisplay({
 }
 
 function parseOutput(output: unknown): AskUserQuestionOutput | null {
-  if (!output) return null;
-
-  let parsed = output;
-  if (typeof parsed === "string") {
-    try {
-      parsed = JSON.parse(parsed);
-    } catch {
-      return null;
-    }
-  }
+  const parsed = coerceToolOutput(output);
 
   if (typeof parsed === "object" && parsed !== null) {
     const obj = parsed as Record<string, unknown>;

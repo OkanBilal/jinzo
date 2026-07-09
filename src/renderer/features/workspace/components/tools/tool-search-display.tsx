@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Search } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse } from "./_shared";
+import { ToolHeader, ToolCollapse, ToolOutputBody } from "./_shared";
+import { coerceToolOutput } from "../../utils/parse-tool-content";
 
 export interface ToolSearchParams {
   query?: string;
@@ -33,11 +34,11 @@ export function ToolSearchDisplay({ output, isCompact = false }: { params: ToolS
 
       {hasMatches && (
         <ToolCollapse isExpanded={isExpanded}>
-          <div className="noscrollbar text-s font-sans text-primary-950 dark:text-primary bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-48 overflow-y-auto">
+          <ToolOutputBody as="div" className="text-s font-sans">
             {matches.map((m) => (
               <div key={m} className="truncate">{m}</div>
             ))}
-          </div>
+          </ToolOutputBody>
         </ToolCollapse>
       )}
     </div>
@@ -45,16 +46,7 @@ export function ToolSearchDisplay({ output, isCompact = false }: { params: ToolS
 }
 
 function parseToolSearchOutput(output: unknown): { matches: string[]; total: number } {
-  if (!output) return { matches: [], total: 0 };
-
-  let parsed = output;
-  if (typeof parsed === "string") {
-    try {
-      parsed = JSON.parse(parsed);
-    } catch {
-      return { matches: [], total: 0 };
-    }
-  }
+  const parsed = coerceToolOutput(output);
 
   if (typeof parsed === "object" && parsed !== null) {
     const obj = parsed as Record<string, unknown>;

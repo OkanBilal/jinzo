@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Layers } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse } from "./_shared";
+import { ToolHeader, ToolCollapse, ToolOutputBody } from "./_shared";
+import { coerceToolOutput } from "../../utils/parse-tool-content";
 
 export interface SqlParams {
   query?: string;
@@ -39,9 +40,9 @@ export function SqlDisplay({
 
       {hasDetails && (
         <ToolCollapse isExpanded={isExpanded}>
-          <pre className="noscrollbar text-s font-mono text-primary-950 dark:text-primary whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-48 overflow-y-auto">
+          <ToolOutputBody className="text-s font-mono whitespace-pre-wrap">
             {query}
-          </pre>
+          </ToolOutputBody>
         </ToolCollapse>
       )}
     </div>
@@ -51,14 +52,8 @@ export function SqlDisplay({
 /** Tolerate the `{ args: "<json>" }` envelope the adapter wraps non-object tool args in. */
 function normalize(params: SqlParams): { query: string; description: string } {
   let p: SqlParams = params;
-  if (typeof params.args === "string") {
-    try {
-      const parsed = JSON.parse(params.args);
-      if (parsed && typeof parsed === "object") p = { ...params, ...parsed };
-    } catch {
-      /* ignore */
-    }
-  }
+  const parsed = coerceToolOutput(params.args);
+  if (parsed && typeof parsed === "object") p = { ...params, ...parsed };
   return {
     query: typeof p.query === "string" ? p.query : "",
     description: typeof p.description === "string" ? p.description : "",

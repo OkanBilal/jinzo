@@ -161,7 +161,7 @@ export function DocumentRenderHost({
   };
 
   return (
-    <div className="relative flex-1 min-h-0 flex flex-col bg-[#f3f4f6]">
+    <div className="relative flex-1 min-h-0 flex flex-col bg-primary-100 dark:bg-primary-900">
       <div className="relative flex-1 min-h-0 overflow-auto p-3">
         <div ref={hostRef} className="min-h-full" />
         {status === "loading" && (

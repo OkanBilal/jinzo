@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Mains } from "@/components/ui/icons";
 import { ToolHeader, ToolCollapse } from "./_shared";
 import { Text, Tiny } from "@/components/ui";
+import { SEVERITY_TINT } from "../../lib/severity";
+import { shortPath } from "../../utils/path-utils";
 
 interface Finding {
   severity?: string;
@@ -27,11 +29,6 @@ export interface SaveFindingParams {
   findings?: Finding[];
 }
 
-const SEVERITY_STYLES: Record<string, string> = {
-  critical: "bg-red-500/10 text-red-400",
-  warning: "bg-yellow-500/10 text-yellow-400",
-  info: "bg-blue-500/10 text-blue-400",
-};
 
 export function SaveFindingDisplay({
   params,
@@ -73,7 +70,7 @@ export function SaveFindingDisplay({
         </span>
         {findings.length === 1 && findings[0].file && (
           <span className="text-primary-500 truncate text-xs font-mono group-hover:text-primary-950 group-hover:dark:text-primary">
-            {shortName(findings[0].file)}
+            {shortPath(findings[0].file)}
           </span>
         )}
       </ToolHeader>
@@ -85,13 +82,13 @@ export function SaveFindingDisplay({
               <div key={`${f.file ?? ""}:${f.lineStart ?? ""}:${f.severity ?? ""}`} className="bg-primary-50 dark:bg-primary/5 rounded-md p-2 space-y-1">
                 <div className="flex items-center gap-2 text-xs">
                   {f.severity && (
-                    <span className={`px-1.5 py-0.5 rounded font-medium ${SEVERITY_STYLES[f.severity] ?? "bg-primary-500/10 text-primary-500"}`}>
+                    <span className={`px-1.5 py-0.5 rounded font-medium ${(SEVERITY_TINT as Record<string, string>)[f.severity] ?? "bg-primary-500/10 text-primary-500"}`}>
                       {f.severity}
                     </span>
                   )}
                   {f.file && (
                     <span className="font-mono text-primary-950 dark:text-primary">
-                      {shortName(f.file)}
+                      {shortPath(f.file)}
                       {f.lineStart != null && `:${f.lineStart}${f.lineEnd != null && f.lineEnd !== f.lineStart ? `-${f.lineEnd}` : ""}`}
                     </span>
                   )}
@@ -111,7 +108,3 @@ export function SaveFindingDisplay({
   );
 }
 
-function shortName(path: string): string {
-  const parts = path.split("/");
-  return parts.length > 3 ? ".../" + parts.slice(-3).join("/") : path;
-}

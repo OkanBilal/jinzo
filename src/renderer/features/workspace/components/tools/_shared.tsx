@@ -180,6 +180,10 @@ export function toPresentTense(label: string): string {
   return label;
 }
 
+/** Muted-until-hover text treatment for the icon/verb slots of a tool header. */
+const headerSlotClass =
+  "shrink-0 text-primary-500 dark:text-primary-300 group-hover:text-primary-950 group-hover:dark:text-primary";
+
 interface ToolHeaderProps {
   /** Tool icon (e.g. <Bash />, <Glob />). Hidden when `isCompact`. */
   icon: ReactNode;
@@ -229,28 +233,48 @@ export function ToolHeader({
       }`}
     >
       {!isCompact && (
-        <span
-          className={`shrink-0 text-primary-500 dark:text-primary-300 group-hover:text-primary-950 group-hover:dark:text-primary`}
-        >
+        <span className={headerSlotClass}>
           {isRunning ? <SquareSpinner /> : icon}
         </span>
       )}
       {!isCompact && (
-        <span
-          className={`shrink-0 font-medium text-primary-500 dark:text-primary-300 group-hover:text-primary-950 group-hover:dark:text-primary`}
-        >
+        <span className={`font-medium ${headerSlotClass}`}>
           {verbContent}
         </span>
       )}
       {children}
       {hasDetails && (
         <ArrowUp
-          className={`size-3.5 shrink-0 text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${
+          className={`size-3.5 shrink-0 text-primary-500 opacity-100 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${
             isExpanded ? "rotate-180" : "rotate-90"
           }`}
         />
       )}
     </Button>
+  );
+}
+
+/**
+ * Standard scrollable output panel rendered inside a ToolCollapse. Owns the
+ * shared shell (tinted background, radius, padding, max-height, scroll);
+ * per-tool typography (font, size, whitespace) comes in via `className`.
+ */
+export function ToolOutputBody({
+  as = "pre",
+  className = "",
+  children,
+}: {
+  as?: "pre" | "div";
+  className?: string;
+  children: ReactNode;
+}) {
+  const Tag = as;
+  return (
+    <Tag
+      className={`noscrollbar text-primary-950 dark:text-primary bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-48 overflow-y-auto ${className}`}
+    >
+      {children}
+    </Tag>
   );
 }
 

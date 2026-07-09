@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Glob } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse } from "./_shared";
+import { ToolHeader, ToolCollapse, ToolOutputBody } from "./_shared";
+import { coerceToolOutput } from "../../utils/parse-tool-content";
+import { shortPath } from "../../utils/path-utils";
 
 export interface GlobParams {
   pattern?: string;
@@ -35,11 +37,11 @@ export function GlobDisplay({ params, output, isCompact = false }: { params: Glo
 
       {hasFiles && (
         <ToolCollapse isExpanded={isExpanded}>
-          <div className="noscrollbar text-xs font-mono text-primary-950 dark:text-primary bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-48 overflow-y-auto">
+          <ToolOutputBody as="div" className="text-xs font-mono">
             {filenames.map((f) => (
               <div key={f} className="truncate">{shortPath(f)}</div>
             ))}
-          </div>
+          </ToolOutputBody>
         </ToolCollapse>
       )}
     </div>
@@ -55,18 +57,10 @@ function parseRawFileList(raw: string): { filenames: string[]; numFiles: number 
 }
 
 function parseGlobOutput(output: unknown): { filenames: string[]; numFiles: number } {
-  if (!output) return { filenames: [], numFiles: 0 };
-
-  let parsed = output;
-  if (typeof parsed === "string") {
-    try {
-      parsed = JSON.parse(parsed);
-    } catch {
-      // Adapters that emit raw shell stdout (newline-separated paths) get a
-      // best-effort fallback so the file list still renders.
-      return parseRawFileList(parsed as string);
-    }
-  }
+  const parsed = coerceToolOutput(output);
+  // Adapters that emit raw shell stdout (newline-separated paths) get a
+  // best-effort fallback so the file list still renders.
+  if (typeof parsed === "string") return parseRawFileList(parsed);
 
   if (typeof parsed === "object" && parsed !== null) {
     const obj = parsed as Record<string, unknown>;
@@ -76,9 +70,4 @@ function parseGlobOutput(output: unknown): { filenames: string[]; numFiles: numb
   }
 
   return { filenames: [], numFiles: 0 };
-}
-
-function shortPath(fullPath: string): string {
-  const parts = fullPath.split("/");
-  return parts.length > 3 ? ".../" + parts.slice(-3).join("/") : fullPath;
 }

@@ -18,6 +18,7 @@ import {
   Codex,
 } from "@/components/ui/icons";
 import { Button, Caption } from "@/components/ui";
+import { DIFF_ADDED_TEXT, DIFF_REMOVED_TEXT, SEVERITY_TEXT } from "../lib/severity";
 import { buildSyntheticDiff } from "../utils/expand-diff";
 import { parseFileDiffSegment, parsePerFileStats } from "../utils/parse-diff";
 import { normalizePath, pathsMatch } from "../utils/path-utils";
@@ -37,12 +38,12 @@ function DiffStats({ stats }: { stats: WorkspaceDiff["stats"] }) {
   return (
     <div className="flex items-center gap-1.5 text-xxs tabular-nums">
       {insertions && (
-        <span className="text-green-600 dark:text-green-400">
+        <span className={DIFF_ADDED_TEXT}>
           +{insertions}
         </span>
       )}
       {deletions && (
-        <span className="text-red-500 dark:text-red-400">-{deletions}</span>
+        <span className={DIFF_REMOVED_TEXT}>-{deletions}</span>
       )}
     </div>
   );
@@ -54,20 +55,20 @@ function FindingBadges({ counts }: { counts: Record<FindingSeverity, number> }) 
     <div className="flex items-center gap-1 text-t tabular-nums shrink-0">
       {counts.critical > 0 && (
         <span className="flex items-center gap-0.5">
-          <CircleDot className="size-2 text-red-500 dark:text-red-400" />
-          <span className="text-red-500 dark:text-red-400">{counts.critical}</span>
+          <CircleDot className={`size-2 ${SEVERITY_TEXT.critical}`} />
+          <span className={SEVERITY_TEXT.critical}>{counts.critical}</span>
         </span>
       )}
       {counts.warning > 0 && (
         <span className="flex items-center gap-0.5">
-          <CircleDot className="size-2 text-yellow-400" />
-          <span className="text-yellow-400">{counts.warning}</span>
+          <CircleDot className={`size-2 ${SEVERITY_TEXT.warning}`} />
+          <span className={SEVERITY_TEXT.warning}>{counts.warning}</span>
         </span>
       )}
       {counts.info > 0 && (
         <span className="flex items-center gap-0.5">
-          <CircleDot className="size-2 text-blue-500 dark:text-blue-500" />
-          <span className="text-blue-500 dark:text-blue-500">{counts.info}</span>
+          <CircleDot className={`size-2 ${SEVERITY_TEXT.info}`} />
+          <span className={SEVERITY_TEXT.info}>{counts.info}</span>
         </span>
       )}
     </div>
@@ -261,12 +262,12 @@ export function DiffSection({
                 {fileStats[filePath] && (
                   <div className="flex items-center gap-1 text-xxs tabular-nums shrink-0">
                     {fileStats[filePath].ins > 0 && (
-                      <span className="text-green-600 dark:text-green-400">
+                      <span className={DIFF_ADDED_TEXT}>
                         +{fileStats[filePath].ins}
                       </span>
                     )}
                     {fileStats[filePath].del > 0 && (
-                      <span className="text-red-500 dark:text-red-400">
+                      <span className={DIFF_REMOVED_TEXT}>
                         -{fileStats[filePath].del}
                       </span>
                     )}
