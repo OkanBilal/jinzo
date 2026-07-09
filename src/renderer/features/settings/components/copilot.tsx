@@ -14,6 +14,7 @@ import {
 } from "@/lib/redux/api";
 import type { CopilotAdapterConfig } from "../../../../shared/adapter.types";
 import { PROVIDER_IDS } from "../../../../shared/provider-ids";
+import { getProviderVariant } from "@/lib/provider-variants";
 
 export default function CopilotSettings(
 ) {
@@ -66,7 +67,7 @@ export default function CopilotSettings(
 
   return (
     <ProviderSettingsLayout
-      title="Copilot"
+      title={getProviderVariant("copilot").label}
       provider={provider}
       isLoading={isLoading}
       error={error}
@@ -75,7 +76,7 @@ export default function CopilotSettings(
       <ProviderCliSection
         providerId={PROVIDER_IDS.copilot}
         cliName="GitHub Copilot CLI"
-        shortName="Copilot"
+        shortName={getProviderVariant("copilot").label}
         cli={cli}
         buttonVariant="secondary"
       />

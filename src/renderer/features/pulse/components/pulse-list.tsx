@@ -100,7 +100,7 @@ export function PulseList({ onEdit }: PulseListProps) {
                         await deletePulse(pulse.id).unwrap();
                         setConfirmDeleteId(null);
                       }}
-                      className="px-2 py-1 rounded-lg text-xs bg-red-500/15 text-red-500 hover:bg-red-500/25 cursor-pointer"
+                      className="px-2 py-1 rounded-lg text-xs bg-danger/15 text-danger hover:bg-danger/25 cursor-pointer"
                     >
                       Confirm
                     </Button>

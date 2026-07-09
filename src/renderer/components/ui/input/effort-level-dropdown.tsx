@@ -1,3 +1,4 @@
+import { formatEffortLevel } from "@/lib/format";
 import { RefObject } from "react";
 import { Brain, ArrowUp } from "../icons";
 import DropdownWrapper from "../dropdown-wrapper";
@@ -24,11 +25,6 @@ const ULTRACODE_GRADIENT = {
   text: "bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 bg-clip-text text-transparent dark:from-cyan-400 dark:via-blue-400 dark:to-indigo-400",
   icon: "text-blue-500 dark:text-blue-400",
 } as const;
-
-function formatEffortLabel(level: string): string {
-  if (level === "ultracode") return "Ultracode";
-  return level === "xhigh" ? "Extra High" : level;
-}
 
 export function EffortLevelDropdown({
   variant,
@@ -93,7 +89,7 @@ export function EffortLevelDropdown({
                 : "text-primary-950 dark:text-primary capitalize tracking-tight"
           }
         >
-          {thinkingMode ? formatEffortLabel(effortLevel) || "On" : "Off"}
+          {thinkingMode ? formatEffortLevel(effortLevel) || "On" : "Off"}
         </span>
         <ArrowUp
           className={`size-3.5 ml-0.5 rotate-180 ${
@@ -141,7 +137,7 @@ export function EffortLevelDropdown({
             }`}
           >
             <Brain className="size-3" />
-            {formatEffortLabel(level)}
+            {formatEffortLevel(level)}
           </Button>
         ))}
         {supportsUltracode && variant === "claude" && (
@@ -171,7 +167,7 @@ export function EffortLevelDropdown({
                   : "text-primary-700 dark:text-primary-300"
               }
             >
-              {formatEffortLabel("ultracode")}
+              {formatEffortLevel("ultracode")}
             </span>
           </Button>
         )}

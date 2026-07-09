@@ -11,7 +11,7 @@ import type { ReviewTab as ReviewTabType } from "@/lib/redux/slices/workspaceSli
 import { useRef } from "react";
 import { Button } from "@/components/ui";
 import { cn } from "@/lib/cn";
-import { getProviderVariant } from "../lib/provider-variants";
+import { getProviderVariant } from "@/lib/provider-variants";
 import { useAppSelector } from "@/lib/redux/hooks";
 import { useIsMobile } from "@/lib/platform";
 import { ProviderIcon } from "./provider-icon";

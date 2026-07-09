@@ -1,4 +1,3 @@
-import { useCallback, useMemo, useState } from "react";
 import type {
   CreatePulseInput,
   Pulse,
@@ -94,50 +93,13 @@ export function formToCreateInput(form: PulseFormState): CreatePulseInput {
   };
 }
 
-export function usePulseForm(initial?: Pulse | null) {
-  const [form, setForm] = useState<PulseFormState>(() =>
-    initial ? pulseToForm(initial) : { ...EMPTY_PULSE_FORM },
+/** A pulse can be saved once it has a title, a prompt, and a full run target. */
+export function isPulseFormValid(form: PulseFormState): boolean {
+  return (
+    form.title.trim().length > 0 &&
+    form.prompt.trim().length > 0 &&
+    !!form.workspaceId &&
+    !!form.providerId &&
+    !!form.model
   );
-
-  const update = useCallback(<K extends keyof PulseFormState>(
-    key: K,
-    value: PulseFormState[K],
-  ) => {
-    setForm((prev) => {
-      const next = { ...prev, [key]: value };
-      // Reset dayOfWeek when leaving weekly; default to Monday entering weekly
-      if (key === "frequency") {
-        if (value === "weekly" && next.dayOfWeek == null) next.dayOfWeek = 1;
-        if (value !== "weekly") next.dayOfWeek = null;
-      }
-      // Reset effort when provider changes
-      if (key === "providerId") {
-        next.model = "";
-        next.thinkingMode = false;
-        next.effortLevel = "";
-      }
-      // Clear effort when model changes
-      if (key === "model") {
-        next.thinkingMode = false;
-        next.effortLevel = "";
-      }
-      return next;
-    });
-  }, []);
-
-  const reset = useCallback((next?: Pulse | null) => {
-    setForm(next ? pulseToForm(next) : { ...EMPTY_PULSE_FORM });
-  }, []);
-
-  const isValid = useMemo(
-    () =>
-      form.title.trim().length > 0 &&
-      form.prompt.trim().length > 0 &&
-      !!form.workspaceId &&
-      !!form.providerId &&
-      !!form.model,
-    [form],
-  );
-
-  return { form, setForm, update, reset, isValid };
 }

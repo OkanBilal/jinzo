@@ -6,15 +6,14 @@ import {
   Bot,
   Brain,
   Clock,
-  Codex,
-  CopilotStatic,
   Project,
 } from "@/components/ui/icons";
+import { Earth } from "@/components/ui/icons/space";
+import { formatEffortLevel } from "@/lib/format";
 import {
-  Claude,
-  CursorIcon,
-  Earth,
-} from "@/components/ui/icons/space";
+  getProviderVariantById,
+  type ProviderVariant,
+} from "@/lib/provider-variants";
 import { ProjectIcon } from "@/components/layout/sidebar/project-icon";
 import DropdownWrapper from "@/components/ui/dropdown-wrapper";
 import Select from "@/components/ui/select";
@@ -53,31 +52,86 @@ const SUPPORTED_PROVIDER_IDS = [
   PROVIDER_IDS.cursor,
 ] as const satisfies readonly ProviderId[];
 
-const PROVIDER_LABELS: Record<string, string> = {
-  [PROVIDER_IDS.claude]: "Claude",
-  [PROVIDER_IDS.copilot]: "Copilot",
-  [PROVIDER_IDS.codex]: "Codex",
-  [PROVIDER_IDS.cursor]: "Cursor",
-};
+function providerLabel(id: string, fallback: string): string {
+  return getProviderVariantById(id)?.label ?? fallback;
+}
 
 function ProviderIcon({ id, className }: { id: string; className?: string }) {
-  const cls = className ?? "size-4";
-  switch (id) {
-    case PROVIDER_IDS.claude:
-      return <Claude className={cls} />;
-    case PROVIDER_IDS.copilot:
-      return <CopilotStatic className={cls} />;
-    case PROVIDER_IDS.codex:
-      return <Codex className={cls} />;
-    case PROVIDER_IDS.cursor:
-      return <CursorIcon className={cls} />;
-    default:
-      return null;
-  }
+  const Icon = getProviderVariantById(id)?.icon;
+  if (!Icon) return null;
+  return <Icon className={className ?? "size-4"} />;
 }
+
+// ── Shared picker primitives ────────────────────────────────────
+// Every picker is the same shell: a trigger pill that toggles a
+// DropdownWrapper, closed on outside click, with selected/hover option rows.
 
 const triggerClass =
   "flex items-center gap-1.5 px-2 py-1.5 rounded-xl text-s transition-all cursor-pointer animate-blur-reveal text-primary-700 dark:text-primary-300 hover:bg-primary-200/30 dark:hover:bg-primary-800";
+
+function usePickerState() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const close = useCallback(() => setOpen(false), []);
+  const toggle = useCallback(() => setOpen((v) => !v), []);
+  useClickOutside(ref, close);
+  return { open, ref, toggle, close };
+}
+
+function PickerTrigger({
+  tooltip,
+  onClick,
+  disabled = false,
+  className = "",
+  chevronClassName = "size-3.5 rotate-180",
+  children,
+}: {
+  tooltip: string;
+  onClick: () => void;
+  disabled?: boolean;
+  className?: string;
+  chevronClassName?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Button
+      type="button"
+      tooltip={tooltip}
+      disabled={disabled}
+      onClick={onClick}
+      className={`${triggerClass} ${className}`}
+    >
+      {children}
+      <ArrowUp className={chevronClassName} />
+    </Button>
+  );
+}
+
+function PickerOption({
+  selected,
+  onSelect,
+  className = "",
+  children,
+}: {
+  selected: boolean;
+  onSelect: () => void;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Button
+      type="button"
+      onClick={onSelect}
+      className={`w-full flex items-center gap-2 text-left px-2.5 py-1.5 text-sm cursor-pointer transition-colors first:rounded-t-xl last:rounded-b-xl ${
+        selected
+          ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-700 dark:text-primary-100"
+          : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
+      } ${className}`}
+    >
+      {children}
+    </Button>
+  );
+}
 
 // 24h × 4 (15-minute) = 96 entries, formatted as "1:15 PM"
 const TIME_OPTIONS: { value: string; label: string }[] = (() => {
@@ -127,7 +181,7 @@ function WorkspacePickRows({
       </div>
       {branch ? (
         <div
-          className="truncate text-[11px] text-primary-500 dark:text-primary-400"
+          className="truncate text-xxs text-primary-500 dark:text-primary-400"
           title={branch}
         >
           {branch}
@@ -165,10 +219,7 @@ export function WorkspacePicker({
   value: string;
   onChange: (id: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const close = useCallback(() => setOpen(false), []);
-  useClickOutside(ref, close);
+  const { open, ref, toggle, close } = usePickerState();
   const { data: workspaces = [] } = useListWorkspacesQuery();
   const { data: projects = [] } = useListProjectsQuery();
   const projectDataMap = useMemo(() => {
@@ -183,25 +234,19 @@ export function WorkspacePicker({
 
   return (
     <div className="relative" ref={ref}>
-      <Button
-        type="button"
-        tooltip="Select workspace"
-        onClick={() => setOpen((v) => !v)}
-        className={triggerClass}
-      >
+      <PickerTrigger tooltip="Select workspace" onClick={toggle}>
         {selected ? (
-            <div className="flex items-center gap-2">
-              {workspaceProjectIcon(selected, projectDataMap)}
-              <span className="truncate max-w-[200px]">{selected.name}</span>
-            </div>
+          <div className="flex items-center gap-2">
+            {workspaceProjectIcon(selected, projectDataMap)}
+            <span className="truncate max-w-50">{selected.name}</span>
+          </div>
         ) : (
           <>
             <Project className="size-3.5 shrink-0" />
-            <span className="truncate max-w-[200px]">Select workspace</span>
+            <span className="truncate max-w-50">Select workspace</span>
           </>
         )}
-        <ArrowUp className="size-3.5 rotate-180 " />
-      </Button>
+      </PickerTrigger>
       <DropdownWrapper isOpen={open} minWidth="min-w-44">
         {active.length === 0 && (
           <div className="px-3 py-2 text-xs text-primary-500">
@@ -210,24 +255,19 @@ export function WorkspacePicker({
         )}
         <div className="max-h-64 overflow-auto noscrollbar">
           {active.map((w) => (
-            <Button
+            <PickerOption
               key={w.id}
-              type="button"
-              onClick={() => {
+              selected={value === w.id}
+              onSelect={() => {
                 onChange(w.id);
-                setOpen(false);
+                close();
               }}
-              className={`w-full flex items-center gap-2 text-left px-2.5 py-1.5 text-s cursor-pointer transition-colors first:rounded-t-sm! last:rounded-b-sm! ${
-                value === w.id
-                  ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-700 dark:text-primary-100"
-                  : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
-              }`}
             >
               <WorkspacePickRows
                 w={w}
                 projectIcon={workspaceProjectIcon(w, projectDataMap)}
               />
-            </Button>
+            </PickerOption>
           ))}
         </div>
       </DropdownWrapper>
@@ -244,10 +284,7 @@ export function ProviderPicker({
   value: string;
   onChange: (id: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const close = useCallback(() => setOpen(false), []);
-  useClickOutside(ref, close);
+  const { open, ref, toggle, close } = usePickerState();
   const { data: providers = [] } = useGetEnabledProvidersQuery();
   const eligible = providers.filter((p) =>
     (SUPPORTED_PROVIDER_IDS as readonly string[]).includes(p.id),
@@ -256,20 +293,14 @@ export function ProviderPicker({
 
   return (
     <div className="relative" ref={ref}>
-      <Button
-        type="button"
-        tooltip="Select provider"
-        onClick={() => setOpen((v) => !v)}
-        className={triggerClass}
-      >
+      <PickerTrigger tooltip="Select provider" onClick={toggle}>
         {selected ? (
           <ProviderIcon id={selected.id} className="size-4" />
         ) : (
           <Earth className="size-4" />
         )}
-        <span>{selected ? PROVIDER_LABELS[selected.id] ?? selected.displayName : "Provider"}</span>
-        <ArrowUp className="size-3.5 rotate-180 " />
-      </Button>
+        <span>{selected ? providerLabel(selected.id, selected.displayName) : "Provider"}</span>
+      </PickerTrigger>
       <DropdownWrapper isOpen={open} minWidth="min-w-44">
         {eligible.length === 0 && (
           <div className="px-3 py-2 text-xs text-primary-500">
@@ -277,22 +308,17 @@ export function ProviderPicker({
           </div>
         )}
         {eligible.map((p) => (
-          <Button
+          <PickerOption
             key={p.id}
-            type="button"
-            onClick={() => {
+            selected={value === p.id}
+            onSelect={() => {
               onChange(p.id);
-              setOpen(false);
+              close();
             }}
-            className={`w-full flex items-center gap-2 text-left px-2.5 py-1.5 text-sm cursor-pointer transition-colors first:rounded-t-sm! last:rounded-b-sm! ${
-              value === p.id
-                ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-700 dark:text-primary-100"
-                : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
-            }`}
           >
             <ProviderIcon id={p.id} className="size-4 shrink-0" />
-            <span>{PROVIDER_LABELS[p.id] ?? p.displayName}</span>
-          </Button>
+            <span>{providerLabel(p.id, p.displayName)}</span>
+          </PickerOption>
         ))}
       </DropdownWrapper>
     </div>
@@ -310,23 +336,12 @@ export function ModelPicker({
   value: string;
   onChange: (id: string, supportedEffortLevels?: string[]) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const close = useCallback(() => setOpen(false), []);
-  useClickOutside(ref, close);
+  const { open, ref, toggle, close } = usePickerState();
   const { data: models = [] } = useGetProviderModelsQuery(providerId, {
     skip: !providerId,
   });
   const variant: ModelIconVariant | undefined =
-    providerId === PROVIDER_IDS.claude
-      ? "claude"
-      : providerId === PROVIDER_IDS.copilot
-        ? "copilot"
-        : providerId === PROVIDER_IDS.codex
-          ? "codex"
-          : providerId === PROVIDER_IDS.cursor
-            ? "cursor"
-            : undefined;
+    getProviderVariantById(providerId)?.variant;
   const selectableModels = dedupeModelsByPrettyName(models, variant);
   const selected = models.find((m) => m.id === value);
   const selectedDisplay = selected
@@ -335,23 +350,21 @@ export function ModelPicker({
 
   return (
     <div className="relative" ref={ref}>
-      <Button
-        type="button"
+      <PickerTrigger
         tooltip="Select model"
         disabled={!providerId}
-        onClick={() => setOpen((v) => !v)}
-        className={`${triggerClass} ${!providerId ? "opacity-40 cursor-not-allowed" : ""}`}
+        onClick={toggle}
+        className={!providerId ? "opacity-40 cursor-not-allowed" : ""}
       >
         {selectedDisplay ? (
           getModelIcon(selectedDisplay, variant)
         ) : (
           <Bot className="size-4" />
         )}
-        <span className="truncate max-w-[140px]">
+        <span className="truncate max-w-35">
           {selectedDisplay ?? "Model"}
         </span>
-        <ArrowUp className="size-3.5 rotate-180" />
-      </Button>
+      </PickerTrigger>
       <DropdownWrapper isOpen={open} minWidth="min-w-56">
         {models.length === 0 && (
           <div className="px-3 py-2 text-xs text-primary-500">
@@ -362,22 +375,17 @@ export function ModelPicker({
           {selectableModels.map((m) => {
             const displayName = getModelPrettyName(m, variant);
             return (
-              <Button
+              <PickerOption
                 key={m.id}
-                type="button"
-                onClick={() => {
+                selected={value === m.id}
+                onSelect={() => {
                   onChange(m.id, m.supportedEffortLevels);
-                  setOpen(false);
+                  close();
                 }}
-                className={`w-full flex items-center gap-2 text-left px-2.5 py-1.5 text-sm cursor-pointer transition-colors first:rounded-t-xl last:rounded-b-xl ${
-                  value === m.id
-                    ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-700 dark:text-primary-100"
-                    : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
-                }`}
               >
                 {getModelIcon(displayName, variant)}
                 <span className="truncate">{displayName}</span>
-              </Button>
+              </PickerOption>
             );
           })}
         </div>
@@ -406,10 +414,7 @@ export function SchedulePicker({
     dayOfWeek: number | null;
   }) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const close = useCallback(() => setOpen(false), []);
-  useClickOutside(ref, close);
+  const { open, ref, toggle } = usePickerState();
 
   const update = (
     patch: Partial<{
@@ -435,23 +440,21 @@ export function SchedulePicker({
 
   return (
     <div className="relative" ref={ref}>
-      <Button
-        type="button"
+      <PickerTrigger
         tooltip="Schedule"
-        onClick={() => setOpen((v) => !v)}
-        className={triggerClass}
+        onClick={toggle}
+        chevronClassName="size-3.5 rotate-180 opacity-60"
       >
         <Clock className="size-4" />
-        <span className="truncate max-w-[220px]">
+        <span className="truncate max-w-55">
           {formatSchedule({ frequency, hour, minute, dayOfWeek })}
         </span>
-        <ArrowUp className="size-3.5 rotate-180 opacity-60" />
-      </Button>
+      </PickerTrigger>
       <DropdownWrapper isOpen={open} minWidth="min-w-44">
         <div className="p-3 space-y-3">
           {/* Frequency */}
           <div>
-            <div className="text-[11px] tracking-wide text-primary-500 mb-0.5">
+            <div className="text-xxs tracking-wide text-primary-500 mb-0.5">
               Frequency
             </div>
             <Select<PulseFrequency>
@@ -464,7 +467,7 @@ export function SchedulePicker({
           {/* Day of week — only for weekly */}
           {frequency === "weekly" && (
             <div>
-              <div className="text-[11px] tracking-wide text-primary-500 mb-0.5">
+              <div className="text-xxs tracking-wide text-primary-500 mb-0.5">
                 Day
               </div>
               <Select<string>
@@ -478,7 +481,7 @@ export function SchedulePicker({
           {/* Time — hourly fires on the hour, no minute picker */}
           {frequency !== "hourly" && (
             <div>
-              <div className="text-[11px] tracking-wide text-primary-500 mb-0.5">
+              <div className="text-xxs tracking-wide text-primary-500 mb-0.5">
                 Time
               </div>
               <Select<string>
@@ -512,23 +515,14 @@ export function PulseEffortPicker({
   effortLevel: string;
   onChange: (next: { thinkingMode: boolean; effortLevel: string }) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const close = useCallback(() => setOpen(false), []);
-  useClickOutside(ref, close);
+  const { open, ref, toggle, close } = usePickerState();
   const { data: models = [] } = useGetProviderModelsQuery(providerId, {
     skip: !providerId,
   });
   const model = models.find((m) => m.id === modelId);
   const supported = model?.supportedEffortLevels ?? [];
-  const variant: "claude" | "copilot" | "codex" | "cursor" =
-    providerId === PROVIDER_IDS.claude
-      ? "claude"
-      : providerId === PROVIDER_IDS.copilot
-        ? "copilot"
-        : providerId === PROVIDER_IDS.codex
-          ? "codex"
-          : "cursor";
+  const variant: ProviderVariant =
+    getProviderVariantById(providerId)?.variant ?? "cursor";
 
   // No effort levels and not claude → render nothing
   if (supported.length === 0 && variant !== "claude") return null;
@@ -552,14 +546,12 @@ export function PulseEffortPicker({
     );
   }
 
-  const formatLevel = (l: string) => (l === "xhigh" ? "Extra High" : l);
-
   return (
     <div className="relative animate-blur-reveal" ref={ref}>
       <Button
         type="button"
         tooltip="Thinking & Effort"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
         className={`flex items-center px-2 py-1 gap-1 rounded-xl text-s transition-all cursor-pointer hover:bg-primary-200/30 dark:hover:bg-primary-800 ${
           thinkingMode
             ? "gap-1 text-primary-700 dark:text-primary-300"
@@ -568,44 +560,35 @@ export function PulseEffortPicker({
       >
         <Brain className="size-4" />
         <span className={thinkingMode ? "capitalize tracking-tight" : ""}>
-          {thinkingMode ? formatLevel(effortLevel) || "On" : "Off"}
+          {thinkingMode ? formatEffortLevel(effortLevel) || "On" : "Off"}
         </span>
         <ArrowUp className="size-3.5 rotate-180" />
       </Button>
       <DropdownWrapper isOpen={open} minWidth="min-w-32">
         {variant !== "codex" && (
-          <Button
-            type="button"
-            onClick={() => {
+          <PickerOption
+            selected={!thinkingMode}
+            onSelect={() => {
               onChange({ thinkingMode: false, effortLevel: "" });
-              setOpen(false);
+              close();
             }}
-            className={`w-full text-left px-2.5 py-1.5 text-s cursor-pointer transition-colors first:rounded-t-sm last:rounded-b-sm ${
-              !thinkingMode
-                ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-700 dark:text-primary-100"
-                : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
-            }`}
           >
             Off
-          </Button>
+          </PickerOption>
         )}
         {supported.map((level) => (
-          <Button
+          <PickerOption
             key={level}
-            type="button"
-            onClick={() => {
+            selected={thinkingMode && effortLevel === level}
+            onSelect={() => {
               onChange({ thinkingMode: true, effortLevel: level });
-              setOpen(false);
+              close();
             }}
-            className={`w-full flex items-center gap-1.5 text-left px-2.5 py-1.5 text-sm cursor-pointer transition-colors capitalize last:rounded-b-xl ${
-              thinkingMode && effortLevel === level
-                ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-700 dark:text-primary-100"
-                : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
-            }`}
+            className="gap-1.5 capitalize"
           >
             <Brain className="size-3" />
-            {formatLevel(level)}
-          </Button>
+            {formatEffortLevel(level)}
+          </PickerOption>
         ))}
       </DropdownWrapper>
     </div>

@@ -10,7 +10,7 @@ import {
 import { setWorkspaceModel } from "@/lib/redux/slices/workspaceSlice";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { dedupeModelsByPrettyName, getModelPrettyName } from "@/lib/model-icons";
-import { getProviderVariant, type ProviderVariant } from "../lib/provider-variants";
+import { getProviderVariant, type ProviderVariant } from "@/lib/provider-variants";
 
 export function useProviderModels(
   activeProviderId: string,

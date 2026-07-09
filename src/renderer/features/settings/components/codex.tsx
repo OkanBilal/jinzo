@@ -29,6 +29,7 @@ import {
 } from "./provider-settings-shared";
 import { CODEX_SANDBOX_MODES } from "@/lib/provider-modes";
 import { PROVIDER_IDS } from "../../../../shared/provider-ids";
+import { getProviderVariant } from "@/lib/provider-variants";
 
 const APPROVAL_OPTIONS: Array<{
   value: CodexApprovalMode;
@@ -150,7 +151,7 @@ export default function CodexSettings() {
 
   return (
     <ProviderSettingsLayout
-      title="Codex"
+      title={getProviderVariant("codex").label}
       provider={provider}
       isLoading={isLoading}
       error={error}
@@ -178,7 +179,7 @@ export default function CodexSettings() {
       <ProviderCliSection
         providerId={PROVIDER_IDS.codex}
         cliName="Codex CLI"
-        shortName="Codex"
+        shortName={getProviderVariant("codex").label}
         cli={cli}
         buttonVariant="secondary"
       />

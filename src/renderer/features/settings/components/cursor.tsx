@@ -9,6 +9,7 @@ import {
 import type { CursorAdapterConfig } from "../../../../shared/adapter.types";
 import { CURSOR_MODES } from "@/lib/provider-modes";
 import { PROVIDER_IDS } from "../../../../shared/provider-ids";
+import { getProviderVariant } from "@/lib/provider-variants";
 import { useGetProviderAccountInfoQuery } from "@/lib/redux/api/providersApi";
 
 export default function CursorSettings(
@@ -29,7 +30,7 @@ export default function CursorSettings(
 
   return (
     <ProviderSettingsLayout
-      title="Cursor"
+      title={getProviderVariant("cursor").label}
       provider={provider}
       isLoading={isLoading}
       error={error}
@@ -53,7 +54,7 @@ export default function CursorSettings(
       <ProviderCliSection
         providerId={PROVIDER_IDS.cursor}
         cliName="Cursor Agent CLI"
-        shortName="Cursor"
+        shortName={getProviderVariant("cursor").label}
         cli={cli}
       >
         {cli?.outdated && (

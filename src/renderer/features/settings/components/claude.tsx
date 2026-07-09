@@ -12,6 +12,7 @@ import {
 import { StructuredOutputsModal } from "./structured-outputs-modal";
 import type { ClaudeCodeAdapterConfig } from "../../../../shared/adapter.types";
 import { PROVIDER_IDS } from "../../../../shared/provider-ids";
+import { getProviderVariant } from "@/lib/provider-variants";
 import { useGetProviderAccountInfoQuery } from "@/lib/redux/api";
 
 type ClaudePermissionMode = NonNullable<
@@ -67,7 +68,7 @@ export default function ClaudeSettings(
 
   return (
     <ProviderSettingsLayout
-      title="Claude"
+      title={getProviderVariant("claude").label}
       provider={provider}
       isLoading={isLoading}
       error={error}
@@ -92,7 +93,7 @@ export default function ClaudeSettings(
       <ProviderCliSection
         providerId={PROVIDER_IDS.claude}
         cliName="Claude Code CLI"
-        shortName="Claude"
+        shortName={getProviderVariant("claude").label}
         cli={cli}
       />
 

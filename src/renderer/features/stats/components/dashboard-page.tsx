@@ -10,14 +10,14 @@ import RecentSessionsList from "./recent-sessions-list";
 import { Caption, Heading3, SegmentedTabs, Select } from "@/components/ui";
 import SuccessRateChart from "./success-rate-chart";
 import { useIsMobile } from "@/lib/platform";
-import { PROVIDER_IDS } from "../../../../shared/provider-ids";
+import { PROVIDER_VARIANTS } from "@/lib/provider-variants";
 
 const TABS: { id: ProviderFilter; label: string }[] = [
   { id: "all", label: "All" },
-  { id: PROVIDER_IDS.claude, label: "Claude" },
-  { id: PROVIDER_IDS.copilot, label: "Copilot" },
-  { id: PROVIDER_IDS.codex, label: "Codex" },
-  { id: PROVIDER_IDS.cursor, label: "Cursor" },
+  ...Object.values(PROVIDER_VARIANTS).map((d) => ({
+    id: d.providerId as ProviderFilter,
+    label: d.label,
+  })),
 ];
 
 const OPTIONS = TABS.map((t) => ({ value: t.id, label: t.label }));
@@ -73,8 +73,6 @@ export default function DashboardPage() {
         <CostByModelChart data={data.costByModel} />
         <ToolUsageChart data={data.toolUsage} />
       </div>
-
-      {/* <CodeActivityStats data={data.codeActivity} /> */}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <SuccessRateChart data={data.statusBreakdown} />
