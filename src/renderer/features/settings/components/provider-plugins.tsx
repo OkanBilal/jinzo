@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef, Fragment, type ReactNode } from "react";
 import {
   Heading2,
   Heading3,
@@ -18,9 +18,10 @@ import {
   useSetProviderPluginEnabledMutation,
   useUpdateProviderPluginMutation,
 } from "@/lib/redux/api";
-import type { PluginInfo, PluginScope } from "@/lib/redux/api";
+import type { PluginAppSummary, PluginInfo, PluginScope } from "@/lib/redux/api";
 import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 import { extractErrorMessage } from "@/lib/extract-error-message";
+import { proxiedImageSrc } from "@/lib/proxied-image-src";
 import {
   Search,
   Check,
@@ -112,6 +113,7 @@ function PluginLogo({
   plugin: PluginInfo;
   size?: "sm" | "md" | "lg";
 }) {
+  const [logoFailed, setLogoFailed] = useState(false);
   const sizeClass =
     size === "lg" ? "size-14" : size === "md" ? "size-8" : "size-8";
   const roundedClass = size === "lg" ? "rounded-2xl" : "rounded-xl";
@@ -124,15 +126,15 @@ function PluginLogo({
   // plugin gets a distinct avatar instead of an identical grey one.
   const generatedColor = brandColor ? null : pluginAvatarColor(plugin.id || plugin.name);
 
-  if (logo) {
+  if (logo && !logoFailed) {
     return (
       <img
-        src={logo}
+        src={proxiedImageSrc(logo)}
         alt={name}
+        loading="lazy"
+        decoding="async"
         className={`${sizeClass} ${roundedClass} object-cover shrink-0`}
-        onError={(e) => {
-          (e.target as HTMLImageElement).style.display = "none";
-        }}
+        onError={() => setLogoFailed(true)}
       />
     );
   }
@@ -147,6 +149,98 @@ function PluginLogo({
   );
 }
 
+/**
+ * Horizontal scroll rail that fades content out at whichever edge still has
+ * more to scroll. Uses a CSS mask instead of overlay gradients so it works on
+ * any background (light/dark, glass) without color matching.
+ */
+function HorizontalFadeScroller({
+  children,
+  contentClassName = "flex gap-4 w-max",
+}: {
+  children: ReactNode;
+  contentClassName?: string;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [fade, setFade] = useState({ left: false, right: false });
+
+  const updateFade = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const left = el.scrollLeft > 4;
+    const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 4;
+    setFade((f) => (f.left === left && f.right === right ? f : { left, right }));
+  }, []);
+
+  useEffect(() => {
+    updateFade();
+    const observer = new ResizeObserver(updateFade);
+    if (scrollRef.current) observer.observe(scrollRef.current);
+    if (contentRef.current) observer.observe(contentRef.current);
+    return () => observer.disconnect();
+  }, [updateFade]);
+
+  const mask = `linear-gradient(to right, ${
+    fade.left ? "transparent, black 3rem" : "black"
+  }, ${fade.right ? "black calc(100% - 3rem), transparent" : "black"})`;
+
+  return (
+    <div
+      ref={scrollRef}
+      onScroll={updateFade}
+      className="overflow-x-auto noscrollbar snap-x pb-1"
+      style={{ maskImage: mask, WebkitMaskImage: mask }}
+    >
+      <div ref={contentRef} className={contentClassName}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** Group plugin apps by marketplace category, preserving first-seen order. */
+function groupAppsByCategory(
+  apps: PluginAppSummary[],
+): Array<{ category: string | null; apps: PluginAppSummary[] }> {
+  const groups: Array<{ category: string | null; apps: PluginAppSummary[] }> = [];
+  const indexByCategory = new Map<string, number>();
+  for (const app of apps) {
+    const category = app.category ?? null;
+    const key = category ?? "";
+    let i = indexByCategory.get(key);
+    if (i === undefined) {
+      i = groups.length;
+      indexByCategory.set(key, i);
+      groups.push({ category, apps: [] });
+    }
+    groups[i].apps.push(app);
+  }
+  return groups;
+}
+
+/** App logo from the connector directory; falls back to the generic Apps icon. */
+function AppIncludeIcon({ app }: { app: PluginAppSummary }) {
+  const [failed, setFailed] = useState(false);
+  if (app.iconUrl && !failed) {
+    return (
+      <img
+        src={proxiedImageSrc(app.iconUrl)}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        className="size-7 rounded-lg object-cover shrink-0"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return (
+    <div className="size-7 rounded-lg bg-primary-200/50 dark:bg-primary-700/30 flex items-center justify-center shrink-0">
+      <Apps className="size-4 text-primary-800 dark:text-primary" />
+    </div>
+  );
+}
+
 // ── Plugin Card (Connection-style) ──
 
 function PluginCard({
@@ -155,19 +249,24 @@ function PluginCard({
   onInstall,
   onUninstall,
   isInstalling,
+  compact = false,
 }: {
   plugin: PluginInfo;
   onSelect: () => void;
   onInstall: () => void;
   onUninstall: () => void;
   isInstalling: boolean;
+  /** Tighter padding + smaller controls, for the featured rail. */
+  compact?: boolean;
 }) {
   const name = plugin.interface?.displayName || humanizePluginName(plugin.name);
   const description = plugin.interface?.shortDescription || "";
 
   return (
     <div
-      className="rounded-3xl glass-morphism px-4 py-6 cursor-pointer hover:bg-primary-200/60 dark:hover:bg-primary/5 transition-colors flex items-center gap-3"
+      className={`glass-morphism cursor-pointer rounded-3xl hover:bg-primary-200/60 dark:hover:bg-primary/5 transition-colors flex items-center gap-3 ${
+        compact ? "px-4 py-4" : " px-4 py-6"
+      }`}
       onClick={onSelect}
       role="button"
       tabIndex={0}
@@ -203,7 +302,7 @@ function PluginCard({
       </div>
       <Button
         type="button"
-        className={`shrink-0 size-8 flex items-center justify-center rounded-full text-lg transition-colors cursor-pointer ${
+        className={`shrink-0 ${compact ? "size-7" : "size-8"} flex items-center justify-center rounded-full text-lg transition-colors cursor-pointer ${
           plugin.installed
             ? "bg-success/15 text-success"
             : "bg-primary-200/60 dark:bg-primary-800/20 text-primary-500 dark:text-primary-400 hover:bg-primary-300/60 dark:hover:bg-primary-700/30"
@@ -268,10 +367,16 @@ function PluginDetail({
   const pluginName = plugin.name || plugin.id.split("@")[0];
   // Scope only applies to Claude's CLI install; Codex has no scope concept.
   const supportsScope = providerId === PROVIDER_IDS.claude;
+  // Codex remote-catalog plugins have no plugin-level enable/disable — their
+  // enabled state lives server-side and the config flag is ignored. Only
+  // install/uninstall applies.
+  const supportsEnableToggle = plugin.source?.type !== "remote";
 
+  // Remote-catalog plugins have no marketplace path — the codex driver resolves
+  // them by backend id, so an empty path is fine to send.
   const { data: detail } = useReadProviderPluginQuery(
     { providerId, pluginName, marketplacePath },
-    { skip: !marketplacePath },
+    { skip: !pluginName },
   );
   const hasIncludes =
     detail &&
@@ -336,17 +441,19 @@ function PluginDetail({
                       )}
                     </Button>
                   )}
-                  <Button onClick={onToggleEnabled} disabled={isToggling} variant="secondary">
-                    {isToggling ? (
-                      <div className="px-1.5">
-                        <AsciiSpinner variant="null" />
-                      </div>
-                    ) : plugin.enabled ? (
-                      "Disable"
-                    ) : (
-                      "Enable"
-                    )}
-                  </Button>
+                  {supportsEnableToggle && (
+                    <Button onClick={onToggleEnabled} disabled={isToggling} variant="secondary">
+                      {isToggling ? (
+                        <div className="px-1.5">
+                          <AsciiSpinner variant="null" />
+                        </div>
+                      ) : plugin.enabled ? (
+                        "Disable"
+                      ) : (
+                        "Enable"
+                      )}
+                    </Button>
+                  )}
                   <Button onClick={onUninstall} disabled={isInstalling} variant="secondary">
                     {isInstalling ? (
                       <div className="px-1.5">
@@ -369,8 +476,10 @@ function PluginDetail({
           {iface.screenshots.map((src, i) => (
             <img
               key={i}
-              src={src}
+              src={proxiedImageSrc(src)}
               alt={`${name} screenshot ${i + 1}`}
+              loading="lazy"
+              decoding="async"
               className="h-48 rounded-xl object-cover"
             />
           ))}
@@ -391,24 +500,29 @@ function PluginDetail({
         <div className="mb-8">
           <Heading3 className="mb-3">Includes</Heading3>
           <div className="rounded-xl border border-primary-200/60 dark:border-primary-800/20 divide-y divide-primary-200/60 dark:divide-primary-800/20">
-            {detail.apps.map((app) => (
-              <div key={app.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="size-7 rounded-lg bg-primary-200/50 dark:bg-primary-700/30 flex items-center justify-center shrink-0">
-                  <Apps className="size-4 text-primary-800 dark:text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-primary-900 dark:text-primary-100">
-                    {name}{" "}
-                    <span className="text-xs font-normal text-primary-400 dark:text-primary-500 ml-1">
-                      App
-                    </span>
+            {groupAppsByCategory(detail.apps).map(({ category, apps: categoryApps }) => (
+              <Fragment key={category ?? "uncategorized"}>
+                {category && (
+                  <div className="px-4 pt-2.5 pb-1 text-xs font-medium text-primary-400 dark:text-primary-500">
+                    {category}
                   </div>
-                  {app.description && (
-                    <div className="text-xs text-primary-500 dark:text-primary-400 truncate">
-                      {app.description}
+                )}
+                {categoryApps.map((app) => (
+                  <div key={app.id} className="flex items-center gap-3 px-4 py-3">
+                    <AppIncludeIcon app={app} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-primary-900 dark:text-primary-100">
+                        {app.name || name}{" "}
+                        <span className="text-xs font-normal text-primary-400 dark:text-primary-500 ml-1">
+                          App
+                        </span>
+                      </div>
+                      {app.description && (
+                        <div className="text-xs text-primary-500 dark:text-primary-400 truncate">
+                          {app.description}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
                 {app.isEnabled === false ? (
                   <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-primary-200/60 dark:bg-primary-800/20 text-primary-500 dark:text-primary-400">
                     Disabled
@@ -428,7 +542,9 @@ function PluginDetail({
                     <External className="size-4" />
                   </Button>
                 ) : null}
-              </div>
+                  </div>
+                ))}
+              </Fragment>
             ))}
             {detail.skills.map((skill) => (
               <div
@@ -654,15 +770,21 @@ export default function ProviderPlugins({
     //.filter((p) => p.interface?.developerName === "OpenAI" || p.interface?.developerName === "Vercel Labs" );
   }, [pluginData]);
 
-  const featuredIds = useMemo(() => {
+  // id → rank; the marketplace's featuredPluginIds order is a curated ranking,
+  // so keep it instead of falling back to marketplace order.
+  const featuredRank = useMemo(() => {
+    const rank = new Map<string, number>();
     const fromApi = pluginData?.featuredPluginIds ?? [];
-    if (fromApi.length > 0) return new Set(fromApi);
-    const set = new Set<string>();
+    if (fromApi.length > 0) {
+      fromApi.forEach((id, i) => rank.set(id, i));
+      return rank;
+    }
     for (const p of allPlugins) {
       const name = p.name || p.id.split("@")[0];
-      if (FEATURED_PLUGIN_NAMES.includes(name)) set.add(p.id);
+      const i = FEATURED_PLUGIN_NAMES.indexOf(name);
+      if (i !== -1) rank.set(p.id, i);
     }
-    return set;
+    return rank;
   }, [pluginData, allPlugins]);
 
   // Unique categories
@@ -697,16 +819,19 @@ export default function ProviderPlugins({
   // fall back to the most-installed plugins ("Popular") — useful for Claude,
   // which has no featured list but does report install counts.
   const featured = useMemo(
-    () => filteredPlugins.filter((p) => featuredIds.has(p.id)),
-    [filteredPlugins, featuredIds],
+    () =>
+      filteredPlugins
+        .filter((p) => featuredRank.has(p.id))
+        .sort((a, b) => featuredRank.get(a.id)! - featuredRank.get(b.id)!),
+    [filteredPlugins, featuredRank],
   );
   const popular = useMemo(() => {
-    if (featuredIds.size > 0) return [];
+    if (featuredRank.size > 0) return [];
     return [...filteredPlugins]
       .filter((p) => (p.installs ?? 0) > 0)
       .sort((a, b) => (b.installs ?? 0) - (a.installs ?? 0))
       .slice(0, 6);
-  }, [filteredPlugins, featuredIds]);
+  }, [filteredPlugins, featuredRank]);
   const highlight = featured.length ? featured : popular;
   const highlightLabel = featured.length ? "Featured" : "Popular";
   const highlightIds = useMemo(() => new Set(highlight.map((p) => p.id)), [highlight]);
@@ -732,7 +857,9 @@ export default function ProviderPlugins({
   const selectedPluginMarketplacePath = useMemo(() => {
     if (!selectedPluginId || !pluginData) return "";
     for (const mp of pluginData.marketplaces) {
-      if (mp.plugins.some((p) => p.id === selectedPluginId)) return mp.path;
+      // Remote marketplaces report a null path — normalize so the read query
+      // still fires and the driver can resolve the plugin by backend id.
+      if (mp.plugins.some((p) => p.id === selectedPluginId)) return mp.path ?? "";
     }
     return "";
   }, [selectedPluginId, pluginData]);
@@ -883,32 +1010,34 @@ export default function ProviderPlugins({
         </div>
       </div>
 
-      {/* Featured / Popular */}
+      {/* Featured / Popular — horizontal rail in curated order */}
       {highlight.length > 0 && !categoryFilter && (
-        <div className="mb-6">
+        <div className="my-12">
           <Body className=" font-medium mb-3">
             {highlightLabel}
           </Body>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-8">
+          <HorizontalFadeScroller contentClassName="grid grid-rows-2 grid-flow-col gap-3 w-max">
             {highlight.map((p) => (
-              <PluginCard
-                key={p.id}
-                plugin={p}
-                onSelect={() => setSelectedPluginId(p.id)}
-                onInstall={() => handleInstall(p.id)}
-                onUninstall={() => handleUninstall(p.id)}
-                isInstalling={
-                  (isInstalling || isUninstalling) && actionInFlight === p.id
-                }
-              />
+              <div key={p.id} className="w-72 snap-start">
+                <PluginCard
+                  compact
+                  plugin={p}
+                  onSelect={() => setSelectedPluginId(p.id)}
+                  onInstall={() => handleInstall(p.id)}
+                  onUninstall={() => handleUninstall(p.id)}
+                  isInstalling={
+                    (isInstalling || isUninstalling) && actionInFlight === p.id
+                  }
+                />
+              </div>
             ))}
-          </div>
+          </HorizontalFadeScroller>
         </div>
       )}
 
       {/* Grouped by category */}
       {grouped.map(([category, plugins]) => (
-        <div key={category} className="mb-6">
+        <div key={category} className="mb-12">
           <Body className=" font-medium mb-3">
             {formatCategory(category)}
           </Body>

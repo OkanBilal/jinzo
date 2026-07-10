@@ -20,6 +20,7 @@ export function SignalTab({ signal, isActive, isFirst, onClick, onClose }: {
       onClose={onClose}
       icon={<ProviderIcon provider={sig.source} />}
       label={label}
+      tooltip={label}
     />
   );
 }

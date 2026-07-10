@@ -1,5 +1,6 @@
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { useGetProviderPluginsQuery } from "@/lib/redux/api";
+import { proxiedImageSrc } from "@/lib/proxied-image-src";
 import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 
 /**
@@ -100,16 +101,21 @@ export function renderPluginIcon(
   sizeClass = "size-4",
 ): ReactNode | null {
   if (!plugin) return null;
+  return <PluginIcon plugin={plugin} sizeClass={sizeClass} />;
+}
+
+function PluginIcon({ plugin, sizeClass }: { plugin: PluginLogo; sizeClass: string }) {
+  const [failed, setFailed] = useState(false);
   const label = plugin.displayName || plugin.name;
-  if (plugin.logo) {
+  if (plugin.logo && !failed) {
     return (
       <img
-        src={plugin.logo}
+        src={proxiedImageSrc(plugin.logo)}
         alt={label}
+        loading="lazy"
+        decoding="async"
         className={`${sizeClass} rounded object-cover shrink-0`}
-        onError={(e) => {
-          (e.target as HTMLImageElement).style.visibility = "hidden";
-        }}
+        onError={() => setFailed(true)}
       />
     );
   }

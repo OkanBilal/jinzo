@@ -8,8 +8,9 @@
 // until the signing call resolves).
 
 import { isWeb } from "./platform/platform";
+import { proxiedImageSrc } from "./proxied-image-src";
 
-const PASS_THROUGH = /^(data:|blob:|https?:|mains-localimg:|mains-capture:|mains-img:|mains-appicon:|\/__localimg)/;
+const PASS_THROUGH = /^(data:|blob:|https?:|mains-localimg:|mains-capture:|mains-img:|mains-appicon:|\/__localimg|\/__img)/;
 
 // In web mode the `mains-localimg://` custom protocol doesn't exist; the backend
 // serves the same signed path over HTTP at `/__localimg`. Rewrite the scheme to
@@ -27,6 +28,15 @@ const inflight = new Map<string, Promise<string | null>>();
 
 export function isPassThroughSrc(src: string): boolean {
   return PASS_THROUGH.test(src);
+}
+
+/**
+ * Displayable form of a pass-through src: remote http(s) URLs are routed
+ * through the image proxy (the renderer CSP's `img-src` disallows arbitrary
+ * https); every other pass-through scheme is returned unchanged.
+ */
+export function resolvePassThroughSrc(src: string): string {
+  return proxiedImageSrc(src) ?? src;
 }
 
 export function getCachedSignedUrl(absPath: string): string | undefined {
@@ -64,7 +74,7 @@ export async function signLocalImage(absPath: string): Promise<string | null> {
  */
 export function applySignedSrc(img: HTMLImageElement, src: string): () => void {
   if (isPassThroughSrc(src)) {
-    img.src = src;
+    img.src = resolvePassThroughSrc(src);
     return () => {};
   }
   const cached = urlCache.get(src);

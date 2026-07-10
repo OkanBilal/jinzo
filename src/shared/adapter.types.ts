@@ -1598,6 +1598,10 @@ export interface PluginAppSummary {
   installUrl?: string;
   isAccessible?: boolean;
   isEnabled?: boolean;
+  /** Grouping label from the marketplace, e.g. "Team communication". */
+  category?: string;
+  /** Remote logo URL resolved from the codex connector directory cache. */
+  iconUrl?: string;
 }
 
 export interface PluginDetail {

@@ -8,7 +8,29 @@ import {
   serveLocalDocument,
 } from "./imageProxy.local-serve";
 
-//TODO: imageproxy service limitations check
+/**
+ * Bound concurrent upstream fetches. A grid of hundreds of remote images (e.g.
+ * the plugins page) fires all its proxy requests at once; unbounded parallel
+ * TLS connects to the same CDN get reset or time out (ECONNRESET /
+ * UND_ERR_CONNECT_TIMEOUT). The slot is held for connection setup + headers —
+ * body streaming reuses the established connection and is cheap.
+ */
+const MAX_CONCURRENT_REMOTE_FETCHES = 8;
+let activeRemoteFetches = 0;
+const remoteFetchQueue: Array<() => void> = [];
+
+async function withRemoteFetchSlot<T>(fn: () => Promise<T>): Promise<T> {
+  if (activeRemoteFetches >= MAX_CONCURRENT_REMOTE_FETCHES) {
+    await new Promise<void>((resolve) => remoteFetchQueue.push(resolve));
+  }
+  activeRemoteFetches++;
+  try {
+    return await fn();
+  } finally {
+    activeRemoteFetches--;
+    remoteFetchQueue.shift()?.();
+  }
+}
 
 function checkContentLength(response: Response): Response | null {
   const length = response.headers.get("content-length");
@@ -227,9 +249,8 @@ export function registerImageProxyHandler() {
       if (imageProxyService.matchUrlToGithub(originalUrl)) {
         const headers = await imageProxyService.buildGithubAuthHeaders();
         if (headers) {
-          const response = await imageProxyService.safeImageFetch(
-            originalUrl,
-            headers
+          const response = await withRemoteFetchSlot(() =>
+            imageProxyService.safeImageFetch(originalUrl, headers),
           );
 
           const tooLarge = checkContentLength(response);
@@ -251,7 +272,9 @@ export function registerImageProxyHandler() {
       }
 
       // Everything else — SSRF-guarded passthrough (no auth)
-      const response = await imageProxyService.safeImageFetch(originalUrl, null);
+      const response = await withRemoteFetchSlot(() =>
+        imageProxyService.safeImageFetch(originalUrl, null),
+      );
       const tooLarge = checkContentLength(response);
       if (tooLarge) return tooLarge;
 
@@ -269,7 +292,11 @@ export function registerImageProxyHandler() {
         // a valid http(s) URL). Refuse rather than fetch internal endpoints.
         return new Response("Forbidden", { status: 403 });
       }
-      console.error("[imageProxy] Protocol handler error:", error);
+      const causeCode = (error as { cause?: { code?: string } })?.cause?.code;
+      console.error(
+        `[imageProxy] Protocol handler error${causeCode ? ` (${causeCode})` : ""}:`,
+        (error as Error)?.message ?? error,
+      );
       return new Response("Image proxy error", { status: 500 });
     }
   });

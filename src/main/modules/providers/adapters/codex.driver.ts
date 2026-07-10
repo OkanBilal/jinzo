@@ -997,6 +997,80 @@ function fileToDataUrl(filePath: string | undefined | null): string | undefined 
   }
 }
 
+interface AppDirectoryEntry {
+  name?: string;
+  description?: string;
+  logoUrl?: string;
+  installUrl?: string;
+  isAccessible?: boolean;
+  isEnabled?: boolean;
+}
+
+let appDirectoryMemo: { mtimeMs: number; map: Map<string, AppDirectoryEntry> } | null = null;
+
+/**
+ * App/connector id → directory entry from codex's cached ChatGPT connector
+ * directory (`~/.codex/cache/codex_app_directory/*.json`). This is what gives
+ * plugin apps their real logos and Connected state — `plugin/read` returns
+ * only id/name/description/category for remote plugins. Best-effort: returns
+ * an empty map when the cache is missing, and the auth state is only as fresh
+ * as codex's last directory sync.
+ */
+function loadAppDirectory(): Map<string, AppDirectoryEntry> {
+  try {
+    const dir = path.join(os.homedir(), ".codex", "cache", "codex_app_directory");
+    let newestPath: string | null = null;
+    let newestMtime = 0;
+    for (const f of fs.readdirSync(dir)) {
+      if (!f.endsWith(".json")) continue;
+      const stat = fs.statSync(path.join(dir, f));
+      if (stat.mtimeMs > newestMtime) {
+        newestMtime = stat.mtimeMs;
+        newestPath = path.join(dir, f);
+      }
+    }
+    if (!newestPath) return new Map();
+    if (appDirectoryMemo && appDirectoryMemo.mtimeMs === newestMtime) return appDirectoryMemo.map;
+
+    const data = JSON.parse(fs.readFileSync(newestPath, "utf8")) as {
+      connectors?: Array<Record<string, unknown>>;
+    };
+    const map = new Map<string, AppDirectoryEntry>();
+    for (const c of data.connectors ?? []) {
+      const id = c?.id as string | undefined;
+      if (!id) continue;
+      map.set(id, {
+        name: (c.name as string) ?? undefined,
+        description: (c.description as string) ?? undefined,
+        logoUrl: (c.logoUrl as string) ?? undefined,
+        installUrl: (c.installUrl as string) ?? undefined,
+        isAccessible: (c.isAccessible as boolean) ?? undefined,
+        isEnabled: (c.isEnabled as boolean) ?? undefined,
+      });
+    }
+    appDirectoryMemo = { mtimeMs: newestMtime, map };
+    return map;
+  } catch {
+    return new Map();
+  }
+}
+
+/**
+ * Resolve a plugin asset to something the renderer can display. Older Codex
+ * releases return local file paths (converted to data URLs); the remote plugin
+ * catalog (openai-curated-remote) returns https/data URLs in the `*Url` fields
+ * instead, with the path fields null. Tries each candidate in order.
+ */
+function pluginAssetUrl(...candidates: Array<string | undefined | null>): string | undefined {
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    if (/^(https?:|data:)/i.test(candidate)) return candidate;
+    const dataUrl = fileToDataUrl(candidate);
+    if (dataUrl) return dataUrl;
+  }
+  return undefined;
+}
+
 /**
  * Per-run session state handed back to Core as opaque `session`.
  * The runId is the only thing Core sees; everything else lives on the
@@ -1032,6 +1106,14 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
 
   // Marketplace path cache: marketplace name → path
   const marketplacePathCache = new Map<string, string>();
+  /**
+   * Remote-catalog marketplaces (openai-curated-remote) have no on-disk path —
+   * their plugins are addressed by backend id (`remotePluginId`) via the
+   * `remoteMarketplaceName` param instead. Keyed by both the composite plugin
+   * id (`name@marketplace`, used by install/uninstall) and the bare plugin
+   * name (used by readPlugin, which never sees the composite id).
+   */
+  const remotePluginRefCache = new Map<string, { remotePluginId: string; marketplaceName: string }>();
 
   // Usage accumulation per run
   const usageAccumulator = new Map<string, {
@@ -4273,9 +4355,11 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
               websiteUrl: (p.interface as any).websiteUrl ?? undefined,
               defaultPrompt: (p.interface as any).defaultPrompt ?? undefined,
               brandColor: (p.interface as any).brandColor ?? undefined,
-              composerIcon: fileToDataUrl((p.interface as any).composerIcon),
-              logo: fileToDataUrl((p.interface as any).logo),
-              screenshots: ((p.interface as any).screenshots ?? []).map((s: string) => fileToDataUrl(s)).filter(Boolean) as string[],
+              composerIcon: pluginAssetUrl((p.interface as any).composerIcon, (p.interface as any).composerIconUrl),
+              logo: pluginAssetUrl((p.interface as any).logo, (p.interface as any).logoUrl),
+              screenshots: ([...((p.interface as any).screenshots ?? []), ...((p.interface as any).screenshotUrls ?? [])] as string[])
+                .map((s) => pluginAssetUrl(s))
+                .filter(Boolean) as string[],
               privacyPolicyUrl: (p.interface as any).privacyPolicyUrl ?? undefined,
               termsOfServiceUrl: (p.interface as any).termsOfServiceUrl ?? undefined,
             } : null,
@@ -4289,9 +4373,18 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
           };
         });
 
-        // Cache marketplace paths for install/uninstall
-        for (const mp of marketplaces) {
-          marketplacePathCache.set(mp.name, mp.path);
+        // Cache marketplace paths + remote plugin refs for install/uninstall/read
+        for (const mp of rawMarketplaces) {
+          const mpName = mp.name as string;
+          const mpPath = mp.path as string | null;
+          if (mpPath) marketplacePathCache.set(mpName, mpPath);
+          for (const p of (mp.plugins as Array<Record<string, unknown>> | undefined) ?? []) {
+            const remotePluginId = p.remotePluginId as string | undefined;
+            if (!remotePluginId) continue;
+            const ref = { remotePluginId, marketplaceName: mpName };
+            remotePluginRefCache.set(p.id as string, ref);
+            remotePluginRefCache.set(p.name as string, ref);
+          }
         }
 
         return {
@@ -4313,7 +4406,15 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
 
     async readPlugin(pluginName: string, marketplacePath: string): Promise<PluginDetail> {
       const server = await ensureServer();
-      const result = await server.sendRequest("plugin/read", { pluginName, marketplacePath }, 15000) as Record<string, unknown>;
+      // Local marketplaces read by path; remote-catalog plugins (path-less) by backend id.
+      const remoteRef = !marketplacePath ? remotePluginRefCache.get(pluginName) : undefined;
+      if (!marketplacePath && !remoteRef) {
+        throw new Error(`Marketplace not found for plugin "${pluginName}". Try browsing plugins first.`);
+      }
+      const params = marketplacePath
+        ? { pluginName, marketplacePath }
+        : { pluginName: remoteRef!.remotePluginId, remoteMarketplaceName: remoteRef!.marketplaceName };
+      const result = await server.sendRequest("plugin/read", params, 30000) as Record<string, unknown>;
       const p = result?.plugin as Record<string, unknown>;
       if (!p) throw new Error("plugin/read returned no plugin data");
 
@@ -4321,6 +4422,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       const iface = summary?.interface as Record<string, unknown> | undefined;
       const skills = (p.skills as Array<Record<string, unknown>>) ?? [];
       const apps = (p.apps as Array<Record<string, unknown>>) ?? [];
+      const appDirectory = loadAppDirectory();
 
       return {
         marketplaceName: p.marketplaceName as string,
@@ -4343,9 +4445,11 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
             websiteUrl: iface.websiteUrl as string | undefined,
             defaultPrompt: iface.defaultPrompt as string[] | undefined,
             brandColor: iface.brandColor as string | undefined,
-            composerIcon: fileToDataUrl(iface.composerIcon as string | undefined),
-            logo: fileToDataUrl(iface.logo as string | undefined),
-            screenshots: ((iface.screenshots as string[]) ?? []).map((s) => fileToDataUrl(s)).filter(Boolean) as string[],
+            composerIcon: pluginAssetUrl(iface.composerIcon as string | undefined, iface.composerIconUrl as string | undefined),
+            logo: pluginAssetUrl(iface.logo as string | undefined, iface.logoUrl as string | undefined),
+            screenshots: ([...((iface.screenshots as string[]) ?? []), ...((iface.screenshotUrls as string[]) ?? [])])
+              .map((s) => pluginAssetUrl(s))
+              .filter(Boolean) as string[],
             privacyPolicyUrl: iface.privacyPolicyUrl as string | undefined,
             termsOfServiceUrl: iface.termsOfServiceUrl as string | undefined,
           } : null,
@@ -4362,15 +4466,22 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
             enabled: (s.enabled as boolean) ?? false,
           };
         }),
-        apps: apps.map((a) => ({
-          id: a.id as string,
-          name: a.name as string,
-          needsAuth: (a.needsAuth as boolean) ?? false,
-          description: a.description as string | undefined,
-          installUrl: a.installUrl as string | undefined,
-          isAccessible: a.isAccessible as boolean | undefined,
-          isEnabled: a.isEnabled as boolean | undefined,
-        })),
+        apps: apps.map((a) => {
+          // plugin/read only carries id/name/description/category for remote
+          // plugins; logos and Connected state come from the directory cache.
+          const dirEntry = appDirectory.get(a.id as string);
+          return {
+            id: a.id as string,
+            name: (a.name as string) || dirEntry?.name || (a.id as string),
+            needsAuth: (a.needsAuth as boolean) ?? false,
+            description: (a.description as string | undefined) ?? dirEntry?.description,
+            installUrl: (a.installUrl as string | undefined) ?? dirEntry?.installUrl,
+            isAccessible: (a.isAccessible as boolean | undefined) ?? dirEntry?.isAccessible,
+            isEnabled: (a.isEnabled as boolean | undefined) ?? dirEntry?.isEnabled,
+            category: a.category as string | undefined,
+            iconUrl: dirEntry?.logoUrl,
+          };
+        }),
         mcpServers: (p.mcpServers as string[]) ?? [],
       };
     },
@@ -4378,25 +4489,35 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     async installPlugin(pluginId: string, _scope?: "user" | "project" | "local"): Promise<void> {
       // Codex has no install-scope concept; _scope exists only for interface parity.
       const server = await ensureServer();
-      // pluginId format: "name@marketplace" e.g. "github@openai-curated"
+      // pluginId format: "name@marketplace" e.g. "github@openai-curated-remote"
       const atIdx = pluginId.lastIndexOf("@");
       const marketplaceName = atIdx !== -1 ? pluginId.slice(atIdx + 1) : "";
-      const marketplacePath = marketplacePathCache.get(marketplaceName);
-      if (!marketplacePath) {
-        throw new Error(`Marketplace path not found for "${marketplaceName}". Try browsing plugins first.`);
-      }
       const pluginName = atIdx !== -1 ? pluginId.slice(0, atIdx) : pluginId;
-      await server.sendRequest("plugin/install", { pluginName, marketplacePath });
+      const marketplacePath = marketplacePathCache.get(marketplaceName);
+      const remoteRef = remotePluginRefCache.get(pluginId);
 
-      // Enable the plugin after install via config
-      try {
-        await server.sendRequest("config/value/write", {
-          keyPath: `plugins.${pluginId}.enabled`,
-          value: true,
-          mergeStrategy: "replace",
-        });
-      } catch (err) {
-        logWarn("Failed to auto-enable plugin via config:", err);
+      if (marketplacePath) {
+        await server.sendRequest("plugin/install", { pluginName, marketplacePath }, 120000);
+
+        // Enable the plugin after install via config
+        try {
+          await server.sendRequest("config/value/write", {
+            keyPath: `plugins.${pluginId}.enabled`,
+            value: true,
+            mergeStrategy: "replace",
+          });
+        } catch (err) {
+          logWarn("Failed to auto-enable plugin via config:", err);
+        }
+      } else if (remoteRef) {
+        // Remote catalog: install goes by backend id and downloads the bundle
+        // (hence the long timeout); the server enables it as part of install.
+        await server.sendRequest("plugin/install", {
+          pluginName: remoteRef.remotePluginId,
+          remoteMarketplaceName: remoteRef.marketplaceName,
+        }, 120000);
+      } else {
+        throw new Error(`Marketplace not found for "${pluginId}". Try browsing plugins first.`);
       }
 
       logInfo(`Plugin installed and enabled: ${pluginId}`);
@@ -4407,15 +4528,29 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       const atIdx = pluginId.lastIndexOf("@");
       const marketplaceName = atIdx !== -1 ? pluginId.slice(atIdx + 1) : "";
       const marketplacePath = marketplacePathCache.get(marketplaceName);
-      if (!marketplacePath) {
-        throw new Error(`Marketplace path not found for "${marketplaceName}". Try browsing plugins first.`);
+      const remoteRef = remotePluginRefCache.get(pluginId);
+
+      if (marketplacePath) {
+        await server.sendRequest("plugin/uninstall", { pluginId, marketplacePath });
+      } else if (remoteRef) {
+        // Remote plugins uninstall by backend id — the composite id silently no-ops.
+        await server.sendRequest("plugin/uninstall", { pluginId: remoteRef.remotePluginId });
+      } else {
+        throw new Error(`Marketplace not found for "${pluginId}". Try browsing plugins first.`);
       }
-      await server.sendRequest("plugin/uninstall", { pluginId, marketplacePath });
       logInfo(`Plugin uninstalled: ${pluginId}`);
     },
 
     async setPluginEnabled(pluginId: string, enabled: boolean): Promise<void> {
       const server = await ensureServer();
+      // Remote-catalog plugins ignore the config-level enabled flag (their
+      // state lives server-side): the write below would "succeed" without
+      // changing anything, so refuse loudly instead of pretending.
+      const atIdx = pluginId.lastIndexOf("@");
+      const marketplaceName = atIdx !== -1 ? pluginId.slice(atIdx + 1) : "";
+      if (!marketplacePathCache.get(marketplaceName) && remotePluginRefCache.has(pluginId)) {
+        throw new Error("Codex remote plugins can't be enabled/disabled — uninstall the plugin instead.");
+      }
       await server.sendRequest("config/value/write", {
         keyPath: `plugins.${pluginId}.enabled`,
         value: enabled,
