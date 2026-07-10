@@ -18,10 +18,10 @@ import {
   Edit,
   Plus,
   Connect,
-  Apps,
   Project,
   Sun,
   Relay,
+  Plugin,
 } from "@/components/ui/icons";
 import CloneRepoModal from "./clone-repo-modal";
 import CreateProjectModal from "./create-project-modal";
@@ -302,8 +302,8 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                       }`}
                       aria-current={isPluginsRoute ? "page" : undefined}
                     >
-                      <Apps
-                        className={`w-4 h-4 -ml-1 ${
+                      <Plugin
+                        className={`w-4 h-4 -ml-1 -rotate-45 ${
                           isPluginsRoute
                             ? "text-primary-950 dark:text-primary"
                             : "text-primary-900 dark:text-primary-200"
@@ -335,8 +335,8 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                   }}
                   aria-current={isPluginsRoute ? "page" : undefined}
                 >
-                  <Apps
-                    className={`w-4 h-4 -ml-1 shrink-0 ${
+                  <Plugin
+                    className={`w-4 h-4 -ml-1 shrink-0 -rotate-45 ${
                       isPluginsRoute
                         ? "text-primary-950 dark:text-primary"
                         : "text-primary-900 dark:text-primary-200"
