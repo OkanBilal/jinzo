@@ -19,6 +19,7 @@ export function NoteTab({ review, isActive, isFirst, onClick, onClose }: NoteTab
       onClose={onClose}
       icon={<Note className="w-4 h-4" />}
       label={review.title}
+      tooltip={review.title}
     />
   );
 }

@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui";
+import { Button, Tooltip } from "@/components/ui";
 import { Close } from "@/components/ui/icons";
 import { useAppSelector } from "@/lib/redux/hooks";
 
@@ -10,6 +10,8 @@ interface BaseTabProps {
   label: React.ReactNode;
   onClose?: (e: React.MouseEvent) => void;
   closeIcon?: React.ReactNode;
+  /** Full title shown in a tooltip below the tab on hover */
+  tooltip?: string;
 }
 
 const COLORS = {
@@ -25,10 +27,11 @@ export function BaseTab({
   label,
   onClose,
   closeIcon,
+  tooltip,
 }: BaseTabProps) {
   const sidebarCollapsed = useAppSelector((state) => state.appSettings.sidebarCollapsed);
 
-  return (
+  const tab = (
     <div
       role="button"
       tabIndex={0}
@@ -77,6 +80,19 @@ export function BaseTab({
         <CloseOverlay isActive={isActive} onClose={onClose} closeIcon={closeIcon} />
       )}
     </div>
+  );
+
+  if (!tooltip) return tab;
+
+  return (
+    <Tooltip
+      content={tooltip}
+      position="bottom"
+      delay={400}
+      className="max-w-xs whitespace-normal wrap-break-word"
+    >
+      {tab}
+    </Tooltip>
   );
 }
 

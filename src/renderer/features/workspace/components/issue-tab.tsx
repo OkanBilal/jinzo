@@ -23,6 +23,7 @@ export function IssueTab({ issue, isActive, isFirst, onClick, onClose }: {
       onClose={onClose}
       icon={<ProviderIcon provider={iss.provider} />}
       label={label}
+      tooltip={label}
     />
   );
 }

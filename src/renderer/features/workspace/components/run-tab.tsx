@@ -124,6 +124,7 @@ export function RunTab({ run, isActive, isFirst, onClick, onClose, onRename, tit
         onClose={handleOptionsClick}
         icon={<TabIcon run={run} variant={variant} isActive={isActive} />}
         label={label}
+        tooltip={isRenaming ? undefined : run.title || run.goal || title}
         closeIcon={<Option className="size-3.5 text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200" />}
       />
       <DropdownMenu
