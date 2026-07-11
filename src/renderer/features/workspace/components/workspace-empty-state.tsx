@@ -1,10 +1,10 @@
 import { useState } from "react";
 import type { Workspace } from "../types";
-import { useRouteType } from "@/hooks/use-route-type";
+import { useWorkspaceVariant } from "@/hooks/use-workspace-variant";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import { useUpdateSpaceMutation } from "@/lib/redux/api";
 import { solidColors, themeConfigToSwatchIndex } from "@/lib/space-themes";
-import type { RouteType } from "@/lib/route-utils";
+import type { WorkspaceVariant } from "@/lib/provider-variants";
 import { ParticleLogoCanvas } from "./particle-logo-canvas";
 import { Mains } from "@/components/ui/icons";
 import { Button } from "@/components/ui";
@@ -14,8 +14,8 @@ import CodexSettings from "@/features/settings/components/codex";
 import CopilotSettings from "@/features/settings/components/copilot";
 import CursorSettings from "@/features/settings/components/cursor";
 
-function RouteProviderSettings({ routeType }: { routeType: RouteType }) {
-  switch (routeType) {
+function ProviderSettings({ variant }: { variant: WorkspaceVariant }) {
+  switch (variant) {
     case "claude":
       return <ClaudeSettings />;
     case "codex":
@@ -44,7 +44,7 @@ export function WorkspaceEmptyState({
   isCustomizing = false,
   onToggleCustomize,
 }: WorkspaceEmptyStateProps) {
-  const routeType = useRouteType();
+  const variant = useWorkspaceVariant();
   const { activeSpace } = useActiveSpace();
   const [updateSpace] = useUpdateSpaceMutation();
 
@@ -118,7 +118,7 @@ export function WorkspaceEmptyState({
                   />
                 </div>
 
-                <RouteProviderSettings routeType={routeType} />
+                <ProviderSettings variant={variant} />
               </div>
             ) : null}
           </div>
@@ -131,7 +131,7 @@ export function WorkspaceEmptyState({
     <div className="relative flex flex-col items-center justify-center h-full pb-6">
       <ParticleLogoCanvas
         className="w-125 h-70"
-        routeType={routeType}
+        variant={variant}
         text=""
       />
     </div>

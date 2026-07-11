@@ -29,28 +29,13 @@ import { OnboardingScreen } from "./features/onboarding/components/onboarding-sc
 import { ErrorBoundary } from "./components/ui/error-boundary";
 import { MainHeaderProvider } from "./hooks/use-main-header";
 import { useLayoutWidthVars } from "./hooks/use-layout-width-vars";
-import { PROVIDER_IDS, type ProviderId } from "../shared/provider-ids";
+import { getProviderVariant } from "./lib/provider-variants";
 
 /** Layout widths live in CSS (`--sidebar-width`, `--panel-width`, `--browser-panel-width`) — see index.css. */
 const SIDEBAR_WIDTH = "var(--sidebar-width)";
 const RIGHT_PANEL_WIDTH = "var(--panel-width)";
 const BROWSER_PANEL_WIDTH = "var(--browser-panel-width)";
 const DOC_VIEWER_PANEL_WIDTH = "var(--doc-viewer-panel-width)";
-
-function providerIdForVariant(variant: ReturnType<typeof useWorkspaceVariant>): ProviderId | undefined {
-  switch (variant) {
-    case "claude":
-      return PROVIDER_IDS.claude;
-    case "copilot":
-      return PROVIDER_IDS.copilot;
-    case "codex":
-      return PROVIDER_IDS.codex;
-    case "cursor":
-      return PROVIDER_IDS.cursor;
-    default:
-      return undefined;
-  }
-}
 
 function useDropdownAnimationPrewarm() {
   useEffect(() => {
@@ -85,7 +70,8 @@ function AppContent() {
   const location = useLocation();
   const hideRightPanel = shouldHideRightPanel(location.pathname);
   const variant = useWorkspaceVariant();
-  const activeProviderId = providerIdForVariant(variant);
+  const activeProviderId =
+    variant === "default" ? undefined : getProviderVariant(variant).providerId;
   const bottomTerminal = useBottomTerminal();
   const browserPanel = useBrowserPanel();
   const docViewer = useDocumentViewer();

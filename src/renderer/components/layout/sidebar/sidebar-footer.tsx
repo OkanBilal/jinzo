@@ -4,15 +4,12 @@ import { Settings, Question } from "@/components/ui/icons";
 import SpaceSelector from "./space-selector";
 import type { Space } from "@/lib/redux/api";
 import { Button } from "@/components/ui";
-import { useAppSelector } from "@/lib/redux/hooks";
 
 interface SidebarFooterProps {
   spaces: Space[];
   activeSpaceId: string | null;
   onSpaceChange: (spaceId: string) => void;
-  onSpaceContextMenu?: (space: Space, event: React.MouseEvent) => void;
   onSettingsClick: () => void;
-  onPlusClick: (event: React.MouseEvent) => void;
   onHelpClick: (event: React.MouseEvent) => void;
 }
 
@@ -20,13 +17,9 @@ export function SidebarFooter({
   spaces,
   activeSpaceId,
   onSpaceChange,
-  onSpaceContextMenu,
   onSettingsClick,
   onHelpClick,
 }: SidebarFooterProps) {
-  const onboardingCompleted = useAppSelector(
-    (state) => state.appSettings.onboardingCompleted,
-  );
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -65,16 +58,13 @@ export function SidebarFooter({
             <Settings className="size-4.5 text-primary-900 dark:text-primary-200 hover:text-primary-950 dark:hover:text-primary-100 transition-colors duration-300" />
           </Button>
         </div>
-        {onboardingCompleted ? (
           <div className="">
             <SpaceSelector
               spaces={spaces}
               activeSpaceId={activeSpaceId}
               onSpaceChange={onSpaceChange}
-              onContextMenu={onSpaceContextMenu}
             />
           </div>
-        ) : null}
         <div>
           <Button
             tooltip="Help & Resources"

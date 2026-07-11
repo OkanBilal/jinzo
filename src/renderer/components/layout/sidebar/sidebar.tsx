@@ -5,15 +5,9 @@ import { SidebarFooter } from "./sidebar-footer";
 import { SidebarContent } from "./sidebar-content";
 import DeleteConfirmationModal from "./delete-confirmation-modal";
 import NewButton from "./new-button";
-import CreateSpaceView from "./create-space-view";
-import PresetSpacesView from "./preset-spaces-view";
 import SettingsView from "./settings-view";
-import CreateSpaceMenu from "./create-space-menu";
 import HelpMenu from "./help-menu";
 import { useCapabilities, useIsMobile } from "@/lib/platform";
-import SpaceContextMenu from "./space-context-menu";
-import EditSpaceModal from "./edit-space-modal";
-import DeleteSpaceModal from "./delete-space-modal";
 import {
   Edit,
   Plus,
@@ -27,14 +21,13 @@ import CloneRepoModal from "./clone-repo-modal";
 import CreateProjectModal from "./create-project-modal";
 import { useDeleteWorkspace } from "@/features/workspace/hooks";
 import { useArchiveWorkspace } from "@/features/workspace/hooks";
-import { useSpaceContextMenu } from "@/hooks/use-space-context-menu";
-import { useSpaceMenu } from "@/hooks/use-space-menu";
 import { useSidebarSearch } from "@/hooks/use-sidebar-search";
 import { useSettingsNavigation } from "@/hooks/use-settings-navigation";
 import { useSidebarData } from "@/hooks/use-sidebar-data";
 import { useSidebarActions } from "@/hooks/use-sidebar-actions";
 import { useSidebarConfig } from "@/hooks/use-sidebar-config";
 import { useActiveSpace } from "@/hooks/use-active-space";
+import { useSpaceProviderVariant } from "@/hooks/use-space-provider-variant";
 import { useScriptNotifications } from "@/hooks/use-script-notifications";
 import { useSidebarSpaceSwipe } from "@/hooks/use-sidebar-space-swipe";
 import { UpdateBanner } from "./update-banner";
@@ -61,8 +54,8 @@ export default function Sidebar({ collapsed }: SidebarProps) {
   const dispatch = useAppDispatch();
   const sidebarWidth = useAppSelector((s) => s.appSettings.sidebarWidth);
   const sidebarConfig = useSidebarConfig();
-  const { spaces, activeSpaceId, activeSpaceAgentSlug } =
-    useActiveSpace();
+  const { spaces, activeSpaceId } = useActiveSpace();
+  const spaceProvider = useSpaceProviderVariant();
 
   const {
     searchQuery,
@@ -75,29 +68,6 @@ export default function Sidebar({ collapsed }: SidebarProps) {
   const { isSettingsOpen, handleOpenSettings, handleCloseSettings } =
     useSettingsNavigation();
 
-  const {
-    isCreatingSpace,
-    isViewingPresetSpaces,
-    createSpaceMenuState,
-    handleOpenCreateSpaceMenu,
-    handleCloseCreateSpaceMenu,
-    handleStartCreatingSpace,
-    handleStartViewingPresetSpaces,
-    handleStopCreatingSpace,
-  } = useSpaceMenu();
-
-  const {
-    contextMenuState,
-    editModalState,
-    deleteSpaceState,
-    handleSpaceContextMenu,
-    handleCloseContextMenu,
-    handleEditSpace,
-    handleCloseEditModal,
-    handleDeleteSpace,
-    handleConfirmDeleteSpace,
-    handleCancelDeleteSpace,
-  } = useSpaceContextMenu();
 
   // Global listeners
   useScriptNotifications();
@@ -163,10 +133,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
   const isRelayRoute =
     location.pathname === "/relay" ||
     location.pathname.startsWith("/relay/");
-  /** Copilot/Cursor drivers don't implement the plugin API yet. */
-  const isPluginsDisabledForAgent =
-    activeSpaceAgentSlug === "copilot" ||
-    activeSpaceAgentSlug === "cursor";
+  const isPluginsDisabledForAgent = !spaceProvider.supportsPlugins;
 
   return (
     <>
@@ -183,13 +150,8 @@ export default function Sidebar({ collapsed }: SidebarProps) {
         role="complementary"
         aria-label="Workspace sidebar"
       >
-        {/* <SpaceSwitchIndicator activeSpace={activeSpace} /> */}
         {isSettingsOpen ? (
           <SettingsView onClose={handleCloseSettings} />
-        ) : isCreatingSpace ? (
-          <CreateSpaceView onClose={handleStopCreatingSpace} />
-        ) : isViewingPresetSpaces ? (
-          <PresetSpacesView onClose={handleStopCreatingSpace} />
         ) : (
           <div className="h-full overflow-hidden flex flex-col">
             <SidebarHeader
@@ -405,9 +367,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
               spaces={spaces}
               activeSpaceId={activeSpaceId}
               onSpaceChange={handleSpaceChange}
-              onSpaceContextMenu={handleSpaceContextMenu}
               onSettingsClick={handleOpenSettings}
-              onPlusClick={handleOpenCreateSpaceMenu}
               onHelpClick={handleOpenHelpMenu}
             />
           </div>
@@ -436,36 +396,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
         description="This action cannot be undone. The workspace will be permanently deleted."
       />
 
-      <SpaceContextMenu
-        isOpen={contextMenuState.isOpen}
-        position={contextMenuState.position}
-        space={contextMenuState.targetSpace}
-        onEdit={handleEditSpace}
-        onDelete={handleDeleteSpace}
-        onClose={handleCloseContextMenu}
-      />
 
-      <EditSpaceModal
-        isOpen={editModalState.isOpen}
-        space={editModalState.space}
-        onClose={handleCloseEditModal}
-        sidebarWidth="var(--sidebar-width)"
-      />
-
-      <DeleteSpaceModal
-        space={deleteSpaceState.space}
-        isDeleting={deleteSpaceState.isDeleting}
-        onConfirm={handleConfirmDeleteSpace}
-        onCancel={handleCancelDeleteSpace}
-      />
-
-      <CreateSpaceMenu
-        isOpen={createSpaceMenuState.isOpen}
-        position={createSpaceMenuState.position}
-        onCreateSpace={handleStartCreatingSpace}
-        onPresetSpaces={handleStartViewingPresetSpaces}
-        onClose={handleCloseCreateSpaceMenu}
-      />
 
       <HelpMenu
         isOpen={helpMenuState.isOpen}

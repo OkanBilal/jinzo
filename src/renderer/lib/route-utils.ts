@@ -2,56 +2,34 @@ import { matchPath } from "react-router-dom";
 import { parseUiConfig } from "./parse-ui-config";
 
 export type RouteType =
-  | "claude"
-  | "copilot"
-  | "codex"
-  | "cursor"
+  | "code"
   | "settings"
   | "home"
   | "plugins"
   | "pulse"
   | "unknown";
 
-export type WorkspaceRouteType = Extract<
-  RouteType,
-  "claude" | "copilot" | "codex" | "cursor"
->;
-
-export type WorkspaceVariant = WorkspaceRouteType | "default";
-
 const ROUTE_PATTERNS = {
-  claude: "/claude/:id?",
-  copilot: "/copilot/:id?",
-  codex: "/codex/:id?",
-  cursor: "/cursor/:id?",
+  code: "/code/:id?",
   settings: "/settings",
   home: "/",
   plugins: "/plugins",
   pulse: "/pulse",
 } as const;
 
+/** Base path of the unified agent workspace route (all providers, space-driven). */
+export const WORKSPACE_BASE_PATH = getBaseRoutePath("code");
+
 export function getRouteType(pathname: string): RouteType {
   if (pathname === "/") return "home";
   if (pathname === "/settings" || pathname.startsWith("/settings"))
     return "settings";
 
-  if (matchPath(ROUTE_PATTERNS.claude, pathname)) return "claude";
-  if (matchPath(ROUTE_PATTERNS.copilot, pathname)) return "copilot";
-  if (matchPath(ROUTE_PATTERNS.codex, pathname)) return "codex";
-  if (matchPath(ROUTE_PATTERNS.cursor, pathname)) return "cursor";
+  if (matchPath(ROUTE_PATTERNS.code, pathname)) return "code";
   if (matchPath(ROUTE_PATTERNS.plugins, pathname)) return "plugins";
   if (matchPath(ROUTE_PATTERNS.pulse, pathname)) return "pulse";
 
   return "unknown";
-}
-
-export function isWorkspaceRouteType(routeType: RouteType): routeType is WorkspaceRouteType {
-  return routeType === "claude" || routeType === "copilot" || routeType === "codex" || routeType === "cursor";
-}
-
-export function getWorkspaceVariant(pathname: string): WorkspaceVariant {
-  const routeType = getRouteType(pathname);
-  return isWorkspaceRouteType(routeType) ? routeType : "default";
 }
 
 /**
@@ -61,20 +39,6 @@ export function getWorkspaceVariant(pathname: string): WorkspaceVariant {
 export function getBaseRoutePath(routeType: RouteType): string {
   if (routeType === "unknown") return "/";
   return ROUTE_PATTERNS[routeType].split("/:")[0] || "/";
-}
-
-/** Base URL segment for opening a workspace from the sidebar (e.g. `/codex`). Uses the current agent route when on one; otherwise the active space `defaultRoute` (plugins, home, unknown paths). */
-export function getWorkspaceListBasePath(
-  pathname: string,
-  spaceDefaultRoute: string,
-): string {
-  const routeType = getRouteType(pathname);
-  if (isWorkspaceRouteType(routeType)) {
-    return getBaseRoutePath(routeType);
-  }
-  const raw = (spaceDefaultRoute || "/claude").trim().replace(/\/+$/, "");
-  if (raw === "" || raw === "/") return "/claude";
-  return raw;
 }
 
 /** Default HashRouter path from a space record (`uiConfig.sidebar.defaultRoute`). */

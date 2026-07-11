@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   getRouteType,
   getBaseRoutePath,
-  getWorkspaceListBasePath,
+  WORKSPACE_BASE_PATH,
 } from "./route-utils";
 
 describe("getRouteType", () => {
@@ -18,34 +18,30 @@ describe("getRouteType", () => {
     expect(getRouteType("/settings/account")).toBe("settings");
   });
 
-  it('returns "claude" for /claude', () => {
-    expect(getRouteType("/claude")).toBe("claude");
+  it('returns "code" for /code', () => {
+    expect(getRouteType("/code")).toBe("code");
   });
 
-  it('returns "claude" for /claude/:id', () => {
-    expect(getRouteType("/claude/workspace-123")).toBe("claude");
-  });
-
-  it('returns "copilot" for /copilot', () => {
-    expect(getRouteType("/copilot")).toBe("copilot");
-  });
-
-  it('returns "copilot" for /copilot/:id', () => {
-    expect(getRouteType("/copilot/workspace-456")).toBe("copilot");
+  it('returns "code" for /code/:id', () => {
+    expect(getRouteType("/code/workspace-123")).toBe("code");
   });
 
   it('returns "unknown" for unmatched path', () => {
     expect(getRouteType("/random/path")).toBe("unknown");
   });
+
+  it('returns "unknown" for retired per-provider routes', () => {
+    expect(getRouteType("/claude/workspace-123")).toBe("unknown");
+  });
 });
 
 describe("getBaseRoutePath", () => {
-  it('returns /claude for "claude"', () => {
-    expect(getBaseRoutePath("claude")).toBe("/claude");
+  it('returns /code for "code"', () => {
+    expect(getBaseRoutePath("code")).toBe("/code");
   });
 
-  it('returns /copilot for "copilot"', () => {
-    expect(getBaseRoutePath("copilot")).toBe("/copilot");
+  it("pins the public workspace URL", () => {
+    expect(WORKSPACE_BASE_PATH).toBe("/code");
   });
 
   it('returns /settings for "settings"', () => {
@@ -58,19 +54,5 @@ describe("getBaseRoutePath", () => {
 
   it('returns / for "unknown"', () => {
     expect(getBaseRoutePath("unknown")).toBe("/");
-  });
-});
-
-describe("getWorkspaceListBasePath", () => {
-  it("uses current agent route when on /codex", () => {
-    expect(getWorkspaceListBasePath("/codex/ws-1", "/copilot")).toBe("/codex");
-  });
-
-  it("uses space default on /plugins", () => {
-    expect(getWorkspaceListBasePath("/plugins", "/cursor")).toBe("/cursor");
-  });
-
-  it("falls back when space default missing on unknown path", () => {
-    expect(getWorkspaceListBasePath("/plugins", "")).toBe("/claude");
   });
 });

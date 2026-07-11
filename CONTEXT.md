@@ -130,14 +130,14 @@ _Avoid_: hand-writing a tool definition inside a driver instead of rendering it 
 
 ## Provider variants
 
-Renderer-side vocabulary for the workspace UI shared across the four agent pages.
+Renderer-side vocabulary for the workspace UI shared across the four agent providers, all hosted on the single `/code` route.
 
 **provider variant**:
-The renderer's short identifier for one of the four agent UIs — `claude | copilot | codex | cursor`. Distinct from the **ProviderId** DB key (`claude_code`, `copilot_cli`, …); the **variant descriptor** maps between them. The route-level `WorkspaceVariant` additionally includes `default`, which callers narrow to a variant before use.
+The renderer's short identifier for one of the four agent UIs — `claude | copilot | codex | cursor`. Distinct from the **ProviderId** DB key (`claude_code`, `copilot_cli`, …); the **variant descriptor** maps between them. The active variant comes from the active space's `uiConfig.providerId` (`useSpaceProviderVariant`), not the pathname — the space picker is the only way to switch providers. `WorkspaceVariant` additionally includes `default` (returned by `useWorkspaceVariant` off the `/code` route), which callers narrow to a variant before use.
 _Avoid_: re-declaring the `"claude" | "copilot" | "codex" | "cursor"` union inline — import `ProviderVariant`.
 
 **variant descriptor**:
-The single renderer-side table — `features/workspace/lib/provider-variants.ts`, keyed by **provider variant** — holding each variant's `providerId`, `icon`/`accentClassName`, and capability/config facts: `permissionKey`, `permissionDefault`, `effortKey`, `thinkingCoupledToEffort`, `fastMode` (`boolean` vs Codex's `serviceTier`), and `supportsUltracode` / `supportsPlanMode` / `supportsGoalMode` / `supportsSkills`. Components and `use-provider-models` read fields from it instead of branching on `variant === "..."`. The config-key fields mirror what the main-process drivers read (codex → `sandboxMode`, `modelReasoningEffort`, `serviceTier`; cursor → `mode`; claude/copilot → `permissionMode`) — a contract shared across the process boundary even though only the renderer branches (each driver hard-codes its own keys).
+The single renderer-side table — `src/renderer/lib/provider-variants.ts`, keyed by **provider variant** — holding each variant's `providerId`, `icon`/`accentClassName`, and capability/config facts: `permissionKey`, `permissionDefault`, `effortKey`, `thinkingCoupledToEffort`, `fastMode` (`boolean` vs Codex's `serviceTier`), `supportsUltracode` / `supportsPlanMode` / `supportsGoalMode` / `supportsSkills`, and the `/code` page wiring (`planExit`, `enableForkRun`, `enableSuggestions`) that used to live as per-route props. Components and `use-provider-models` read fields from it instead of branching on `variant === "..."`. The config-key fields mirror what the main-process drivers read (codex → `sandboxMode`, `modelReasoningEffort`, `serviceTier`; cursor → `mode`; claude/copilot → `permissionMode`) — a contract shared across the process boundary even though only the renderer branches (each driver hard-codes its own keys).
 _Avoid_: re-deriving a variant's icon, provider id, config key, or capability with an inline `variant === "..."` ternary; duplicating the variant↔providerId mapping (use `getProviderVariant(variant).providerId`).
 
 ## Transcript rows

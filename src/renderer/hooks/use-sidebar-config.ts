@@ -15,7 +15,7 @@ export function useSidebarConfig(): SidebarConfig {
     () => ({
       title: uiConfig.sidebar?.title || "Workspaces",
       itemType: (uiConfig.sidebar?.itemType || "workspace") as SidebarItemType,
-      defaultRoute: uiConfig.sidebar?.defaultRoute || "/claude",
+      defaultRoute: uiConfig.sidebar?.defaultRoute || "/code",
     }),
     [uiConfig],
   );

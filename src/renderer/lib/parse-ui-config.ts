@@ -20,6 +20,8 @@ export interface ParsedRightPanelConfig {
  * on top.
  */
 export interface ParsedUiConfig {
+  /** Agent provider this space drives on `/code` (a `PROVIDER_IDS` value). Falls back to claude when absent. */
+  providerId?: string;
   sidebar?: ParsedSidebarConfig;
   rightPanel?: ParsedRightPanelConfig;
 }

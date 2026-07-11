@@ -1,4 +1,5 @@
 import type { SpacePayload, SanitizedSpaceResult } from "./space.dto";
+import { isProviderId } from "../../../shared/provider-ids";
 
 // ─────────────────────────────────────────────────────────────
 // Validation Helpers
@@ -74,11 +75,21 @@ export function sanitizeSpacePayload(payload: unknown): SanitizedSpaceResult {
     }
   }
 
-  // UI Config (optional, should be valid JSON)
+  // UI Config (optional, should be valid JSON). providerId is the load-bearing
+  // provider selector for the /code route — reject unknown ids here instead of
+  // letting the renderer silently fall back to claude on a typo.
   if (typeof raw.uiConfig === "string" && raw.uiConfig) {
     try {
-      JSON.parse(raw.uiConfig);
-      data.uiConfig = raw.uiConfig;
+      const parsed: unknown = JSON.parse(raw.uiConfig);
+      const providerId =
+        typeof parsed === "object" && parsed !== null
+          ? (parsed as Record<string, unknown>).providerId
+          : undefined;
+      if (providerId !== undefined && !isProviderId(providerId)) {
+        errors.uiConfig = `Unknown providerId "${String(providerId)}"`;
+      } else {
+        data.uiConfig = raw.uiConfig;
+      }
     } catch {
       errors.uiConfig = "Invalid JSON format";
     }

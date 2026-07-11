@@ -12,8 +12,7 @@ import { ArrowUp, Plus } from "@/components/ui/icons";
 import WorkspaceItem from "./workspace-item";
 import type { Workspace as WorkspaceResponse } from "@/lib/redux/api/workspaceApi";
 import { LinkResourcesModal } from "@/features/workspace/components/link-resources-modal";
-import { useSidebarConfig } from "@/hooks/use-sidebar-config";
-import { getWorkspaceListBasePath } from "@/lib/route-utils";
+import { WORKSPACE_BASE_PATH } from "@/lib/route-utils";
 import { getWorkspaceStatusConfig } from "@/lib/workspace-status";
 import WorkspaceStatusIcon from "@/components/ui/icons/workspace-status-icon";
 import type { WorkspaceStatus } from "@/lib/redux/api/workspaceApi";
@@ -157,7 +156,6 @@ export default function WorkspacesList({
   }>({ isOpen: false, projectId: "", workspaceName: "" });
   const navigate = useNavigate();
   const location = useLocation();
-  const { defaultRoute: spaceDefaultRoute } = useSidebarConfig();
   const [updateWorkspace] = useUpdateWorkspaceMutation();
   const [createWorkspaceFromSource] = useCreateWorkspaceFromSourceMutation();
   const [renameWorkspaceBranch] = useRenameWorkspaceBranchMutation();
@@ -188,10 +186,7 @@ export default function WorkspacesList({
     return map;
   }, [projects]);
 
-  const basePath = useMemo(
-    () => getWorkspaceListBasePath(location.pathname, spaceDefaultRoute),
-    [location.pathname, spaceDefaultRoute],
-  );
+  const basePath = WORKSPACE_BASE_PATH;
 
   if (isLoading) {
     return (

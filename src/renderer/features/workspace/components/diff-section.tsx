@@ -9,7 +9,7 @@ import {
   type FindingSeverity,
 } from "@/lib/redux/api";
 import { setPendingGoal, setPendingAutoExecute, setPendingReviewTarget } from "@/lib/redux/slices/workspaceSlice";
-import { useRouteType } from "@/hooks/use-route-type";
+import { useWorkspaceVariant } from "@/hooks/use-workspace-variant";
 import { FileIconComponent } from "./file-explorer/components/file-icon";
 import {
   Diff,
@@ -80,7 +80,7 @@ export function DiffSection({
   onSelectDiffFile,
 }: DiffSectionProps) {
   const dispatch = useAppDispatch();
-  const routeType = useRouteType();
+  const variant = useWorkspaceVariant();
   const [selectedDiffFile, setSelectedDiffFile] = useState<string | null>(null);
 
   const { currentData: diff, isFetching } = useGetLatestWorkspaceDiffQuery(
@@ -137,7 +137,7 @@ export function DiffSection({
   }, [allFindings, diffFiles]);
 
   const handleReviewChanges = () => {
-    if (routeType === "codex") {
+    if (variant === "codex") {
       dispatch(setPendingReviewTarget({ type: "uncommittedChanges" }));
       return;
     }
@@ -204,7 +204,7 @@ export function DiffSection({
           onClick={handleReviewChanges}
           className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100/50 dark:bg-primary/5 hover:bg-primary-100 dark:hover:bg-primary/10 text-primary-900 dark:text-primary-200 transition-colors"
         >
-          {routeType === "codex" ? <Codex className="w-3.5 h-3.5" /> : <Chat className="w-3.5 h-3.5" />}
+          {variant === "codex" ? <Codex className="w-3.5 h-3.5" /> : <Chat className="w-3.5 h-3.5" />}
           Review Changes
         </Button>
       </div>

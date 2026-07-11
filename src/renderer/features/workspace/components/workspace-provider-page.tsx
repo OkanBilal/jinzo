@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { getProviderVariant } from "@/lib/provider-variants";
+import type { ProviderVariant } from "@/lib/provider-variants";
 import type { RefObject } from "react";
 import {
   WorkspaceEmptyState,
@@ -28,29 +29,22 @@ import { useSetMainHeader } from "@/hooks/use-main-header";
 import { useWorkspaceRouteTopRounding } from "@/hooks/use-workspace-route-top-rounding";
 import { useBottomTerminal } from "@/hooks/use-bottom-terminal";
 
-type WorkspaceProviderVariant = "claude" | "copilot" | "codex" | "cursor";
-
-type PlanExitConfig = {
-  key: string;
-  planValue: string | boolean;
-  nextValue: string | boolean;
-};
-
 interface WorkspaceProviderPageProps {
   providerId: string;
-  variant: WorkspaceProviderVariant;
-  planExitConfig?: PlanExitConfig;
-  enableForkRun?: boolean;
-  enableSuggestions?: boolean;
+  variant: ProviderVariant;
 }
 
 export function WorkspaceProviderPage({
   providerId,
   variant,
-  planExitConfig,
-  enableForkRun = false,
-  enableSuggestions = false,
 }: WorkspaceProviderPageProps) {
+  // Per-variant page behavior comes straight from the descriptor table —
+  // no props to forget or default divergently.
+  const {
+    planExit: planExitConfig,
+    enableForkRun,
+    enableSuggestions,
+  } = getProviderVariant(variant);
   const onboardingCompleted = useAppSelector(
     (state) => state.appSettings.onboardingCompleted,
   );

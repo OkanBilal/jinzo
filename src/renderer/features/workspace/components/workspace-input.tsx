@@ -1,5 +1,4 @@
 import { useReducer, useRef, useEffect, useCallback, useState, useMemo } from "react";
-import { getProviderVariant } from "@/lib/provider-variants";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import type { CommandInfo, SkillInfo } from "@/lib/redux/api/providersApi";
 import type { Run } from "../types";
@@ -7,7 +6,7 @@ import type { FileNode } from "@/features/workspace/types/file-explorer";
 import type { ContextIssue, ContextSignal, ContextSkill, ContextBrowserSelection } from "@/lib/redux/slices/workspaceSlice";
 import { addContextFile, addContextIssue, addContextSkill, removeContextSkill } from "@/lib/redux/slices/workspaceSlice";
 import type { UploadedFile, RichInputFormHandle, RichSkillChipData, RichFileChipData } from "@/components/ui";
-import { useWorkspaceVariant } from "@/hooks/use-workspace-variant";
+import { useSpaceProviderVariant } from "@/hooks/use-space-provider-variant";
 import { useIsMobile } from "@/lib/platform";
 import { Button, RichInputForm } from "@/components/ui";
 import {
@@ -143,11 +142,9 @@ export function WorkspaceInput({
   const unifiedContextDropdownRef = useRef<HTMLDivElement>(null);
   const dispatch = useAppDispatch();
 
-  const variant = useWorkspaceVariant();
-  const providerVariant: "claude" | "copilot" | "codex" | "cursor" =
-    variant === "claude" ? "claude" : variant === "codex" ? "codex" : variant === "cursor" ? "cursor" : "copilot";
-  const defaultProviderId = getProviderVariant(providerVariant).providerId;
-  const activeProviderId = providerId ?? defaultProviderId;
+  const spaceProvider = useSpaceProviderVariant();
+  const providerVariant = spaceProvider.variant;
+  const activeProviderId = providerId ?? spaceProvider.providerId;
 
   const {
     selectedModelDisplayName,

@@ -62,8 +62,8 @@ Mains is an Electron 41 desktop app (React 19 renderer, SQLite + Drizzle ORM). C
 
 **Renderer** (`src/renderer/`)
 - React app with Redux Toolkit, React Router (HashRouter), `@/` alias → `src/renderer/`
-- Routes: `/` (default route), `/settings`, `/copilot[/:workspaceId]` (GitHub Copilot agent), `/claude[/:workspaceId]` (Claude Code agent), `/codex[/:workspaceId]` (OpenAI Codex agent), `/cursor[/:workspaceId]` (Cursor agent), `/plugins`, `/pulse`, `/relay`
-- Copilot / Claude / Codex / Cursor routes share the same workspace UI but pick different provider IDs (`copilot_cli`, `claude_code`, `codex`, `cursor`)
+- Routes: `/` (default route), `/settings`, `/code[/:workspaceId]` (unified agent workspace — all providers), `/plugins`, `/pulse`, `/relay`
+- `/code` hosts every agent provider; which provider it drives comes from the active space's `uiConfig.providerId` (`claude_code`, `copilot_cli`, `codex`, `cursor`) — switching space via the space picker switches the provider
 - Route table lives in `src/renderer/components/layout/main/main-routes.tsx`
 
 ### Module Architecture (`src/main/modules/`)
