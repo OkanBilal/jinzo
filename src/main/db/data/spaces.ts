@@ -2,6 +2,8 @@
 // Default Spaces Seed Data
 // ─────────────────────────────────────────────────────────────
 
+import { PROVIDER_IDS } from "../../../shared/provider-ids";
+
 export interface SeedSpace {
   id: string;
   name: string;
@@ -28,10 +30,11 @@ export const seedSpaces: SeedSpace[] = [
       darkBackground: "#00000070",
     },
     uiConfig: {
+      providerId: PROVIDER_IDS.claude,
       sidebar: {
         title: "Project",
         itemType: "workspace",
-        defaultRoute: "/claude",
+        defaultRoute: "/code",
       },
       rightPanel: { component: "workspace" },
     },
@@ -49,10 +52,11 @@ export const seedSpaces: SeedSpace[] = [
       darkBackground: "#00000070",
     },
     uiConfig: {
+      providerId: PROVIDER_IDS.codex,
       sidebar: {
         title: "Project",
         itemType: "workspace",
-        defaultRoute: "/codex",
+        defaultRoute: "/code",
       },
       rightPanel: { component: "workspace" },
     },
@@ -69,10 +73,11 @@ export const seedSpaces: SeedSpace[] = [
       darkBackground: "#00000070",
     },
     uiConfig: {
+      providerId: PROVIDER_IDS.copilot,
       sidebar: {
         title: "Project",
         itemType: "workspace",
-        defaultRoute: "/copilot",
+        defaultRoute: "/code",
       },
       rightPanel: { component: "workspace" },
     },
@@ -89,10 +94,11 @@ export const seedSpaces: SeedSpace[] = [
       darkBackground: "#00000070",
     },
     uiConfig: {
+      providerId: PROVIDER_IDS.cursor,
       sidebar: {
         title: "Project",
         itemType: "workspace",
-        defaultRoute: "/cursor",
+        defaultRoute: "/code",
       },
       rightPanel: { component: "workspace" },
     },

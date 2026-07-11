@@ -6,14 +6,12 @@ interface SpaceSelectorProps {
   spaces: Space[];
   activeSpaceId: string | null;
   onSpaceChange: (spaceId: string) => void;
-  onContextMenu?: (space: Space, event: React.MouseEvent) => void;
 }
 
 function SpaceSelector({
   spaces,
   activeSpaceId,
   onSpaceChange,
-  onContextMenu,
 }: SpaceSelectorProps) {
   return (
     <div className="flex items-center gap-1.5 overflow-x-auto noscrollbar px-1 ">
@@ -25,10 +23,6 @@ function SpaceSelector({
           <Button
             key={space.id}
             onClick={() => onSpaceChange(space.id)}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              onContextMenu?.(space, e);
-            }}
             className={`shrink-0 flex items-center justify-center size-8 hover:bg-primary/50 dark:hover:bg-primary/20
                rounded-xl transition-all duration-200 ease-out font-medium cursor-pointer ${
               isActive

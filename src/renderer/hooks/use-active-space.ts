@@ -2,10 +2,22 @@ import { useMemo } from "react";
 import { useGetAppSettingsQuery, useGetSpacesQuery } from "@/lib/redux/api";
 
 export function useActiveSpace() {
-  const { data: appSettings } = useGetAppSettingsQuery();
-  const { data: allSpaces = [] } = useGetSpacesQuery();
+  // selectFromResult keeps subscribers from re-rendering on isFetching flips —
+  // this hook feeds provider resolution app-wide (AppContent included), so a
+  // default subscription would fan every spaces refetch out to the whole tree.
+  const { data: appSettings, isLoading: isLoadingSettings } =
+    useGetAppSettingsQuery(undefined, {
+      selectFromResult: ({ data, isLoading }) => ({ data, isLoading }),
+    });
+  const { data: allSpaces = [], isLoading: isLoadingSpaces } =
+    useGetSpacesQuery(undefined, {
+      selectFromResult: ({ data, isLoading }) => ({ data, isLoading }),
+    });
 
   const activeSpaceId = appSettings?.activeSpaceId || "";
+
+  /** False until both queries have data — gate provider-keyed mounts on this. */
+  const isLoaded = !isLoadingSettings && !isLoadingSpaces;
 
   const spaces = useMemo(() => {
     return allSpaces.filter((s) => !s.isArchived);
@@ -15,17 +27,10 @@ export function useActiveSpace() {
     return allSpaces.find((m) => m.id === activeSpaceId);
   }, [allSpaces, activeSpaceId]);
 
-  const spaceSlug = activeSpace?.slug;
-  const isClaudeSpace = spaceSlug === "claude";
-  /** Agent flavor for the row pointed to by `app_settings.active_space_id` */
-  const activeSpaceAgentSlug = spaceSlug ?? null;
-
   return {
     activeSpaceId,
     activeSpace,
-    spaceSlug,
-    activeSpaceAgentSlug,
-    isClaudeSpace,
+    isLoaded,
     spaces,
     allSpaces,
   };

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   useSetActiveSpaceMutation,
   useCreateWorkspaceFromSourceMutation,
@@ -9,12 +9,7 @@ import {
 import { toast } from "@/components/ui";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import { useSidebarConfig } from "@/hooks/use-sidebar-config";
-import {
-  getRouteType,
-  getWorkspaceListBasePath,
-  getBaseRoutePath,
-  getSpaceDefaultRoute,
-} from "@/lib/route-utils";
+import { getSpaceDefaultRoute, WORKSPACE_BASE_PATH } from "@/lib/route-utils";
 
 /** Pull a human message out of an RTK/IPC rejection (string | {error} | Error). */
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -33,7 +28,6 @@ function getErrorMessage(error: unknown, fallback: string): string {
 
 export function useSidebarActions() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { spaces } = useActiveSpace();
   const sidebarConfig = useSidebarConfig();
   const { data: account } = useGetAccountQuery();
@@ -49,19 +43,17 @@ export function useSidebarActions() {
 
   const handleSpaceChange = async (spaceId: string) => {
     try {
-      // Parse route BEFORE mutation to avoid stale closure issues
       const selectedSpace = spaces.find((s) => s.id === spaceId);
       const defaultRoute = selectedSpace
         ? getSpaceDefaultRoute(selectedSpace)
         : "/";
 
+      // Navigate BEFORE the mutation: the provider follows the active space,
+      // so any /code/:workspaceId param must be gone before the new space's
+      // provider can render against it (an interim render with the old param
+      // would stamp that workspace into the new provider's persisted state).
+      navigate(defaultRoute, { replace: true });
       await setActiveSpace(spaceId || null).unwrap();
-
-      // Use setTimeout to ensure navigation happens after React reconciliation
-      // This fixes packaged version timing issues with HashRouter
-      setTimeout(() => {
-        navigate(defaultRoute, { replace: true });
-      }, 0);
     } catch (error) {
       console.error("Error changing space:", error);
       toast.error("Failed to change space");
@@ -69,11 +61,7 @@ export function useSidebarActions() {
   };
 
   const goToWorkspace = (workspaceId: string) => {
-    const basePath = getWorkspaceListBasePath(
-      location.pathname,
-      sidebarConfig.defaultRoute,
-    );
-    navigate(`${basePath}/${workspaceId}`);
+    navigate(`${WORKSPACE_BASE_PATH}/${workspaceId}`);
   };
 
   // Pick a folder, then hand it to the main-process workspace intake.
@@ -145,8 +133,7 @@ export function useSidebarActions() {
       }).unwrap();
       toast.success("Project created");
       setIsCreateProjectModalOpen(false);
-      const basePath = getBaseRoutePath(getRouteType(location.pathname));
-      navigate(`${basePath}/${workspace.id}`);
+      goToWorkspace(workspace.id);
     } catch (error) {
       console.error("Failed to create project:", error);
       toast.error(getErrorMessage(error, "Failed to create project"));

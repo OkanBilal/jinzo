@@ -3,25 +3,19 @@ import { useBrowserPanel } from "@/hooks/use-browser-panel";
 import ProviderPlugins from "@/features/settings/components/provider-plugins";
 import { Heading3, Muted } from "@/components/ui";
 import { PageShell } from "@/components/layout/page-shell";
-import { useActiveSpace } from "@/hooks/use-active-space";
-import { PROVIDER_IDS } from "../../shared/provider-ids";
-
-// Agent slugs whose driver implements the plugin API. Copilot/Cursor don't.
-const PLUGIN_PROVIDER_BY_SLUG: Record<string, string> = {
-  claude: PROVIDER_IDS.claude,
-  codex: PROVIDER_IDS.codex,
-};
+import { useSpaceProviderVariant } from "@/hooks/use-space-provider-variant";
 
 export default function PluginsPage() {
   const { close: closeBrowserPanel } = useBrowserPanel();
-  const { activeSpaceAgentSlug } = useActiveSpace();
+  const spaceProvider = useSpaceProviderVariant();
 
   useEffect(() => {
     closeBrowserPanel();
   }, [closeBrowserPanel]);
 
-  const providerId = activeSpaceAgentSlug
-    ? PLUGIN_PROVIDER_BY_SLUG[activeSpaceAgentSlug]
+  // Only drivers that implement the plugin API get the page (see supportsPlugins).
+  const providerId = spaceProvider.supportsPlugins
+    ? spaceProvider.providerId
     : undefined;
 
   return (

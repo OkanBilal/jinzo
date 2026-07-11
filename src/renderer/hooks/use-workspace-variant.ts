@@ -1,16 +1,15 @@
-import { useMemo } from "react";
 import { useRouteType } from "./use-route-type";
-import { isWorkspaceRouteType, type WorkspaceVariant } from "@/lib/route-utils";
+import { useSpaceProviderVariant } from "./use-space-provider-variant";
+import type { WorkspaceVariant } from "@/lib/provider-variants";
 
 /**
  * Returns the active workspace variant ("claude" / "copilot" / "codex" / "cursor"),
- * or "default" on non-workspace routes. Derived from `useRouteType` to avoid
- * parsing the pathname twice when both hooks are active in the tree.
+ * or "default" on non-workspace routes. The variant comes from the active
+ * space's provider (see `useSpaceProviderVariant`), not from the pathname —
+ * `/code` hosts every provider.
  */
 export function useWorkspaceVariant(): WorkspaceVariant {
   const routeType = useRouteType();
-  return useMemo(
-    () => (isWorkspaceRouteType(routeType) ? routeType : "default"),
-    [routeType],
-  );
+  const descriptor = useSpaceProviderVariant();
+  return routeType === "code" ? descriptor.variant : "default";
 }

@@ -20,6 +20,9 @@ import { PROVIDER_IDS, type ProviderId } from "../../shared/provider-ids";
 
 export type ProviderVariant = "claude" | "copilot" | "codex" | "cursor";
 
+/** Variant of the surface the user is on: a provider variant on `/code`, "default" elsewhere. */
+export type WorkspaceVariant = ProviderVariant | "default";
+
 /**
  * How a variant stores its "fast mode" toggle. Codex maps it to the "fast"
  * service tier (and accepts the legacy "priority" id); the others use a plain
@@ -28,6 +31,17 @@ export type ProviderVariant = "claude" | "copilot" | "codex" | "cursor";
 export type FastModeStyle =
   | { kind: "boolean"; key: "fastMode" }
   | { kind: "serviceTier"; key: "serviceTier"; on: string; match: string[] };
+
+/**
+ * Config write performed when the user leaves plan mode: set `key` (currently
+ * holding `planValue`) to `nextValue`. Note codex uses a dedicated `planMode`
+ * boolean here, distinct from its `permissionKey` (`sandboxMode`).
+ */
+export interface PlanExitConfig {
+  key: string;
+  planValue: string | boolean;
+  nextValue: string | boolean;
+}
 
 export interface ProviderVariantDescriptor {
   variant: ProviderVariant;
@@ -59,6 +73,13 @@ export interface ProviderVariantDescriptor {
   supportsPlanMode: boolean;
   supportsGoalMode: boolean;
   supportsSkills: boolean;
+  /** Whether the provider's driver implements the plugin API (gates the Plugins page). */
+  supportsPlugins: boolean;
+
+  // ── /code page wiring (was per-route props before the agent routes unified) ──
+  planExit: PlanExitConfig;
+  enableForkRun: boolean;
+  enableSuggestions: boolean;
 }
 
 export const PROVIDER_VARIANTS: Record<ProviderVariant, ProviderVariantDescriptor> = {
@@ -77,6 +98,10 @@ export const PROVIDER_VARIANTS: Record<ProviderVariant, ProviderVariantDescripto
     supportsPlanMode: false,
     supportsGoalMode: false,
     supportsSkills: true,
+    supportsPlugins: true,
+    planExit: { key: "permissionMode", planValue: "plan", nextValue: "acceptEdits" },
+    enableForkRun: true,
+    enableSuggestions: true,
   },
   copilot: {
     variant: "copilot",
@@ -92,6 +117,10 @@ export const PROVIDER_VARIANTS: Record<ProviderVariant, ProviderVariantDescripto
     supportsPlanMode: false,
     supportsGoalMode: false,
     supportsSkills: false,
+    supportsPlugins: false,
+    planExit: { key: "permissionMode", planValue: "plan", nextValue: "acceptEdits" },
+    enableForkRun: false,
+    enableSuggestions: false,
   },
   codex: {
     variant: "codex",
@@ -107,6 +136,10 @@ export const PROVIDER_VARIANTS: Record<ProviderVariant, ProviderVariantDescripto
     supportsPlanMode: true,
     supportsGoalMode: true,
     supportsSkills: true,
+    supportsPlugins: true,
+    planExit: { key: "planMode", planValue: true, nextValue: false },
+    enableForkRun: true,
+    enableSuggestions: false,
   },
   cursor: {
     variant: "cursor",
@@ -122,6 +155,10 @@ export const PROVIDER_VARIANTS: Record<ProviderVariant, ProviderVariantDescripto
     supportsPlanMode: false,
     supportsGoalMode: false,
     supportsSkills: false,
+    supportsPlugins: false,
+    planExit: { key: "mode", planValue: "plan", nextValue: "agent" },
+    enableForkRun: true,
+    enableSuggestions: true,
   },
 };
 

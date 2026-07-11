@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import type { WorkspaceVariant } from "@/lib/provider-variants";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { useParticleLogo } from "../hooks/use-particle-logo";
 
@@ -34,11 +35,11 @@ const CURSOR_VIEWBOX = "0 0 24 24";
 
 interface ParticleLogoCanvasProps {
   className?: string;
-  routeType: "claude" | "copilot" | "codex" | "cursor" | string;
+  variant: WorkspaceVariant;
   text?: string;
 }
 
-export function ParticleLogoCanvas({ className, routeType, text }: ParticleLogoCanvasProps) {
+export function ParticleLogoCanvas({ className, variant, text }: ParticleLogoCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reducedMotion = usePrefersReducedMotion();
 
@@ -47,16 +48,16 @@ export function ParticleLogoCanvas({ className, routeType, text }: ParticleLogoC
   let renderMode: "fill" | "stroke" = "fill";
   let strokeWidth = 2;
 
-  if (routeType === "copilot") {
+  if (variant === "copilot") {
     svgPaths = COPILOT_PATHS;
     svgViewBox = COPILOT_VIEWBOX;
     renderMode = "stroke";
-  } else if (routeType === "codex") {
+  } else if (variant === "codex") {
     svgPaths = CODEX_PATHS;
     svgViewBox = CODEX_VIEWBOX;
     renderMode = "stroke";
     strokeWidth = 0.75;
-  } else if (routeType === "cursor") {
+  } else if (variant === "cursor") {
     svgPaths = CURSOR_PATHS;
     svgViewBox = CURSOR_VIEWBOX;
     renderMode = "fill";
