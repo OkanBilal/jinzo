@@ -4,7 +4,7 @@ import { useActiveSpace } from "@/hooks/use-active-space";
 
 /**
  * Unified agent workspace route — hosts every provider. Which provider it
- * drives comes from the active space (`uiConfig.providerId`); switching space
+ * drives comes from the active space (`space.providerId`); switching space
  * remounts the page via `key` so no per-run UI state leaks across providers.
  *
  * Renders nothing until the space queries resolve: provider resolution is

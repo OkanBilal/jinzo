@@ -1,5 +1,7 @@
 import { baseApi } from "./baseApi";
 import { CHANNELS } from "../../../../shared/ipc-kit/channels";
+import type { ProviderId } from "../../../../shared/provider-ids";
+import type { ModeId } from "../../../../shared/modes";
 
 export interface Space {
   id: string;
@@ -11,7 +13,8 @@ export interface Space {
   model: string | null;
   icon: string | null;
   themeConfig: string | null;
-  uiConfig: string | null;
+  providerId: ProviderId;
+  mode: ModeId;
   sortOrder: number;
   isArchived: boolean;
   createdAt: number;
@@ -23,10 +26,11 @@ export interface CreateSpacePayload {
   slug?: string;
   description?: string;
   systemPrompt?: string;
-  model?: string; 
+  model?: string;
   icon?: string;
   themeConfig?: string;
-  uiConfig?: string;
+  providerId?: ProviderId;
+  mode?: ModeId;
   sortOrder?: number;
 }
 
@@ -38,7 +42,8 @@ export interface UpdateSpacePayload {
   model?: string;
   icon?: string;
   themeConfig?: string;
-  uiConfig?: string;
+  providerId?: ProviderId;
+  mode?: ModeId;
   sortOrder?: number;
 }
 

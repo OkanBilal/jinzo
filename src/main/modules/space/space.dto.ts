@@ -1,6 +1,9 @@
 // ─────────────────────────────────────────────────────────────
 // Space Payload Types
 // ─────────────────────────────────────────────────────────────
+import type { ProviderId } from "../../../shared/provider-ids";
+import type { ModeId } from "../../../shared/modes";
+
 export interface SpacePayload {
   name: string;
   slug?: string;
@@ -9,7 +12,8 @@ export interface SpacePayload {
   model?: string;
   icon?: string;
   themeConfig?: string;
-  uiConfig?: string;
+  providerId?: ProviderId;
+  mode?: ModeId;
   sortOrder?: number;
 }
 
@@ -31,7 +35,8 @@ export interface SpaceRecord {
   model: string | null;
   icon: string | null;
   themeConfig: string | null;
-  uiConfig: string | null;
+  providerId: ProviderId;
+  mode: ModeId;
   sortOrder: number | null;
   isArchived: boolean | null;
   createdAt: Date | null;

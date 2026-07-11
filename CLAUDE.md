@@ -63,7 +63,7 @@ Mains is an Electron 41 desktop app (React 19 renderer, SQLite + Drizzle ORM). C
 **Renderer** (`src/renderer/`)
 - React app with Redux Toolkit, React Router (HashRouter), `@/` alias → `src/renderer/`
 - Routes: `/` (default route), `/settings`, `/code[/:workspaceId]` (unified agent workspace — all providers), `/plugins`, `/pulse`, `/relay`
-- `/code` hosts every agent provider; which provider it drives comes from the active space's `uiConfig.providerId` (`claude_code`, `copilot_cli`, `codex`, `cursor`) — switching space via the space picker switches the provider
+- `/code` hosts every agent provider; which provider it drives comes from the active space's `providerId` column (`claude_code`, `copilot_cli`, `codex`, `cursor`) — switching space via the space picker switches the provider. The space's `mode` column (`developer`, `work`, `chat`) selects the UI shape via `src/renderer/lib/mode-config.ts`
 - Route table lives in `src/renderer/components/layout/main/main-routes.tsx`
 
 ### Module Architecture (`src/main/modules/`)
@@ -205,7 +205,7 @@ Domain-specific views on entities:
 - Individual code review findings linked to reviews with severity, file, line range, and suggestions
 
 **Space System** (`src/main/modules/space/`)
-- User-defined profiles with systemPrompt, model, icon, themeConfig, uiConfig
+- User-defined profiles with systemPrompt, model, icon, themeConfig, providerId, mode
 - Space-level overrides for connections, resources, apps, and tool permissions
 - Active space set via appSettings
 

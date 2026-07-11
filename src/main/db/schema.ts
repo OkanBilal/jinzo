@@ -8,6 +8,8 @@ import {
   uniqueIndex,
   check,
 } from "drizzle-orm/sqlite-core";
+import { PROVIDER_IDS, SUPPORTED_PROVIDER_IDS } from "../../shared/provider-ids";
+import { DEFAULT_MODE_ID, MODE_IDS } from "../../shared/modes";
 
 /* -----------------------------
    ACCOUNTS / SETTINGS
@@ -877,7 +879,15 @@ export const spaces = sqliteTable(
     model: text("model"),
     icon: text("icon"),
     themeConfig: text("theme_config"), // JSON
-    uiConfig: text("ui_config"), // JSON
+    // Agent engine this space drives on /code. Enum (not FK) so tests can
+    // insert spaces without seeding providers; writes are validated against
+    // the same id set in space.validation.ts.
+    providerId: text("provider_id", { enum: SUPPORTED_PROVIDER_IDS })
+      .notNull()
+      .default(PROVIDER_IDS.claude),
+    // Experience the space drives (developer / work / chat) — UI shape comes
+    // from the renderer's MODE_CONFIGS table keyed by this value.
+    mode: text("mode", { enum: MODE_IDS }).notNull().default(DEFAULT_MODE_ID),
     isArchived: integer("is_archived", { mode: "boolean" })
       .notNull()
       .default(false),
@@ -898,10 +908,6 @@ export const spaces = sqliteTable(
     check(
       "check_spaces_theme_json",
       sql`json_valid(${t.themeConfig}) OR ${t.themeConfig} IS NULL`,
-    ),
-    check(
-      "check_spaces_ui_json",
-      sql`json_valid(${t.uiConfig}) OR ${t.uiConfig} IS NULL`,
     ),
   ],
 );

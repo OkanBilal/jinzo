@@ -50,6 +50,13 @@
       "when": 1782019284183,
       "tag": "0006_gray_vermin",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1783781330954,
+      "tag": "0007_yellow_blue_shield",
+      "breakpoints": true
     }
   ]
 }

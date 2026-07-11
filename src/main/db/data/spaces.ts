@@ -2,7 +2,8 @@
 // Default Spaces Seed Data
 // ─────────────────────────────────────────────────────────────
 
-import { PROVIDER_IDS } from "../../../shared/provider-ids";
+import { PROVIDER_IDS, type ProviderId } from "../../../shared/provider-ids";
+import type { ModeId } from "../../../shared/modes";
 
 export interface SeedSpace {
   id: string;
@@ -14,7 +15,8 @@ export interface SeedSpace {
     lightBackground: string;
     darkBackground: string;
   };
-  uiConfig: Record<string, unknown>;
+  providerId: ProviderId;
+  mode: ModeId;
   sortOrder: number;
 }
 
@@ -29,15 +31,8 @@ export const seedSpaces: SeedSpace[] = [
       lightBackground: "#ffffffb3",
       darkBackground: "#00000070",
     },
-    uiConfig: {
-      providerId: PROVIDER_IDS.claude,
-      sidebar: {
-        title: "Project",
-        itemType: "workspace",
-        defaultRoute: "/code",
-      },
-      rightPanel: { component: "workspace" },
-    },
+    providerId: PROVIDER_IDS.claude,
+    mode: "developer",
     sortOrder: 0,
   },
 
@@ -51,18 +46,11 @@ export const seedSpaces: SeedSpace[] = [
       lightBackground: "#ffffffb3",
       darkBackground: "#00000070",
     },
-    uiConfig: {
-      providerId: PROVIDER_IDS.codex,
-      sidebar: {
-        title: "Project",
-        itemType: "workspace",
-        defaultRoute: "/code",
-      },
-      rightPanel: { component: "workspace" },
-    },
+    providerId: PROVIDER_IDS.codex,
+    mode: "developer",
     sortOrder: 1,
   },
-    {
+  {
     id: "copilot",
     name: "Copilot",
     slug: "copilot",
@@ -72,15 +60,8 @@ export const seedSpaces: SeedSpace[] = [
       lightBackground: "#ffffffb3",
       darkBackground: "#00000070",
     },
-    uiConfig: {
-      providerId: PROVIDER_IDS.copilot,
-      sidebar: {
-        title: "Project",
-        itemType: "workspace",
-        defaultRoute: "/code",
-      },
-      rightPanel: { component: "workspace" },
-    },
+    providerId: PROVIDER_IDS.copilot,
+    mode: "developer",
     sortOrder: 2,
   },
   {
@@ -93,15 +74,8 @@ export const seedSpaces: SeedSpace[] = [
       lightBackground: "#ffffffb3",
       darkBackground: "#00000070",
     },
-    uiConfig: {
-      providerId: PROVIDER_IDS.cursor,
-      sidebar: {
-        title: "Project",
-        itemType: "workspace",
-        defaultRoute: "/code",
-      },
-      rightPanel: { component: "workspace" },
-    },
+    providerId: PROVIDER_IDS.cursor,
+    mode: "developer",
     sortOrder: 3,
   },
 ];

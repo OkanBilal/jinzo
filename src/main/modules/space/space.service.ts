@@ -3,6 +3,8 @@ import { spaceRepo } from "./space.repo";
 import { ACCOUNT_ID } from "./space.constants";
 import { sanitizeSpacePayload, generateSlug } from "./space.validation";
 import type { SpaceRecord } from "./space.dto";
+import { PROVIDER_IDS } from "../../../shared/provider-ids";
+import { DEFAULT_MODE_ID } from "../../../shared/modes";
 
 function flattenFieldErrors(errors: Record<string, string>): string {
   return Object.entries(errors)
@@ -60,7 +62,8 @@ export const spaceService = {
       model: data.model || null,
       icon: data.icon || null,
       themeConfig: data.themeConfig || null,
-      uiConfig: data.uiConfig || null,
+      providerId: data.providerId ?? PROVIDER_IDS.claude,
+      mode: data.mode ?? DEFAULT_MODE_ID,
       sortOrder: data.sortOrder ?? nextOrder,
     };
 

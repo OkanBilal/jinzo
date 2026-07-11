@@ -99,7 +99,8 @@ export async function run(db: DatabaseInstance): Promise<void> {
         model: null,
         icon: space.icon || null,
         themeConfig: JSON.stringify(space.themeConfig),
-        uiConfig: JSON.stringify(space.uiConfig),
+        providerId: space.providerId,
+        mode: space.mode,
         sortOrder: space.sortOrder,
       })
       .onConflictDoNothing()

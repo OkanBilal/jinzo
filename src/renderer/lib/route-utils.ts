@@ -1,5 +1,5 @@
 import { matchPath } from "react-router-dom";
-import { parseUiConfig } from "./parse-ui-config";
+import { getModeConfig } from "./mode-config";
 
 export type RouteType =
   | "code"
@@ -41,10 +41,7 @@ export function getBaseRoutePath(routeType: RouteType): string {
   return ROUTE_PATTERNS[routeType].split("/:")[0] || "/";
 }
 
-/** Default HashRouter path from a space record (`uiConfig.sidebar.defaultRoute`). */
-export function getSpaceDefaultRoute(space: {
-  uiConfig: string | null;
-}): string {
-  const route = parseUiConfig(space.uiConfig).sidebar?.defaultRoute;
-  return typeof route === "string" && route.length > 0 ? route : "/";
+/** Default HashRouter path for a space record's mode (`MODE_CONFIGS[mode].sidebar.defaultRoute`). */
+export function getSpaceDefaultRoute(space: { mode: string }): string {
+  return getModeConfig(space.mode).sidebar.defaultRoute;
 }
