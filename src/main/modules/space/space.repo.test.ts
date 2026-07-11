@@ -96,7 +96,8 @@ describe("spaceRepo", () => {
         model: null,
         icon: null,
         themeConfig: null,
-        uiConfig: null,
+        providerId: "claude_code",
+        mode: "developer",
         sortOrder: 0,
       });
 

@@ -156,13 +156,22 @@ describe("spaceService", () => {
         model: "claude-opus-4-6",
         icon: "rocket",
         themeConfig: '{"color":"blue"}',
-        uiConfig: '{"sidebar":true}',
+        providerId: "codex",
+        mode: "work",
         sortOrder: 42,
       });
       expect(space.description).toBe("A description");
       expect(space.model).toBe("claude-opus-4-6");
       expect(space.icon).toBe("rocket");
+      expect(space.providerId).toBe("codex");
+      expect(space.mode).toBe("work");
       expect(space.sortOrder).toBe(42);
+    });
+
+    it("defaults providerId and mode when omitted", async () => {
+      const space = await spaceService.create({ name: "Bare Space" });
+      expect(space.providerId).toBe("claude_code");
+      expect(space.mode).toBe("developer");
     });
 
     it("rejects invalid themeConfig JSON", async () => {
@@ -171,9 +180,15 @@ describe("spaceService", () => {
       ).rejects.toThrow();
     });
 
-    it("rejects invalid uiConfig JSON", async () => {
+    it("rejects unknown providerId", async () => {
       await expect(
-        spaceService.create({ name: "Bad UI", uiConfig: "{broken" }),
+        spaceService.create({ name: "Bad Provider", providerId: "claude" }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects unknown mode", async () => {
+      await expect(
+        spaceService.create({ name: "Bad Mode", mode: "gaming" }),
       ).rejects.toThrow();
     });
 

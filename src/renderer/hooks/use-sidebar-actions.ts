@@ -8,7 +8,6 @@ import {
 } from "@/lib/redux/api";
 import { toast } from "@/components/ui";
 import { useActiveSpace } from "@/hooks/use-active-space";
-import { useSidebarConfig } from "@/hooks/use-sidebar-config";
 import { getSpaceDefaultRoute, WORKSPACE_BASE_PATH } from "@/lib/route-utils";
 
 /** Pull a human message out of an RTK/IPC rejection (string | {error} | Error). */
@@ -29,7 +28,6 @@ function getErrorMessage(error: unknown, fallback: string): string {
 export function useSidebarActions() {
   const navigate = useNavigate();
   const { spaces } = useActiveSpace();
-  const sidebarConfig = useSidebarConfig();
   const { data: account } = useGetAccountQuery();
 
   const [setActiveSpace] = useSetActiveSpaceMutation();
@@ -99,13 +97,9 @@ export function useSidebarActions() {
     }
   };
 
+  // Fallback for direct clicks — the dropdown items handle the usual paths.
   const handleNewClick = async () => {
-    if (sidebarConfig.itemType === "workspace") {
-      // This is now handled by dropdown items, but keep as fallback
-      handleAddProject();
-    } else {
-      navigate(sidebarConfig.defaultRoute);
-    }
+    handleAddProject();
   };
 
   const handleOpenCloneModal = () => {

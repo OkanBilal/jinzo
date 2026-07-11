@@ -133,7 +133,7 @@ _Avoid_: hand-writing a tool definition inside a driver instead of rendering it 
 Renderer-side vocabulary for the workspace UI shared across the four agent providers, all hosted on the single `/code` route.
 
 **provider variant**:
-The renderer's short identifier for one of the four agent UIs — `claude | copilot | codex | cursor`. Distinct from the **ProviderId** DB key (`claude_code`, `copilot_cli`, …); the **variant descriptor** maps between them. The active variant comes from the active space's `uiConfig.providerId` (`useSpaceProviderVariant`), not the pathname — the space picker is the only way to switch providers. `WorkspaceVariant` additionally includes `default` (returned by `useWorkspaceVariant` off the `/code` route), which callers narrow to a variant before use.
+The renderer's short identifier for one of the four agent UIs — `claude | copilot | codex | cursor`. Distinct from the **ProviderId** DB key (`claude_code`, `copilot_cli`, …); the **variant descriptor** maps between them. The active variant comes from the active space's `providerId` column (`useSpaceProviderVariant`), not the pathname — the space picker is the only way to switch providers. `WorkspaceVariant` additionally includes `default` (returned by `useWorkspaceVariant` off the `/code` route), which callers narrow to a variant before use.
 _Avoid_: re-declaring the `"claude" | "copilot" | "codex" | "cursor"` union inline — import `ProviderVariant`.
 
 **variant descriptor**:

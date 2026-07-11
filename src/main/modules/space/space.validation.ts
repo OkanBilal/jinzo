@@ -1,5 +1,6 @@
 import type { SpacePayload, SanitizedSpaceResult } from "./space.dto";
 import { isProviderId } from "../../../shared/provider-ids";
+import { isModeId } from "../../../shared/modes";
 
 // ─────────────────────────────────────────────────────────────
 // Validation Helpers
@@ -75,23 +76,23 @@ export function sanitizeSpacePayload(payload: unknown): SanitizedSpaceResult {
     }
   }
 
-  // UI Config (optional, should be valid JSON). providerId is the load-bearing
-  // provider selector for the /code route — reject unknown ids here instead of
-  // letting the renderer silently fall back to claude on a typo.
-  if (typeof raw.uiConfig === "string" && raw.uiConfig) {
-    try {
-      const parsed: unknown = JSON.parse(raw.uiConfig);
-      const providerId =
-        typeof parsed === "object" && parsed !== null
-          ? (parsed as Record<string, unknown>).providerId
-          : undefined;
-      if (providerId !== undefined && !isProviderId(providerId)) {
-        errors.uiConfig = `Unknown providerId "${String(providerId)}"`;
-      } else {
-        data.uiConfig = raw.uiConfig;
-      }
-    } catch {
-      errors.uiConfig = "Invalid JSON format";
+  // Provider (optional) — the load-bearing engine selector for the /code
+  // route; reject unknown ids here instead of letting the renderer silently
+  // fall back to claude on a typo.
+  if (raw.providerId !== undefined) {
+    if (isProviderId(raw.providerId)) {
+      data.providerId = raw.providerId;
+    } else {
+      errors.providerId = `Unknown providerId "${String(raw.providerId)}"`;
+    }
+  }
+
+  // Mode (optional) — the experience this space drives (developer/work/chat).
+  if (raw.mode !== undefined) {
+    if (isModeId(raw.mode)) {
+      data.mode = raw.mode;
+    } else {
+      errors.mode = `Unknown mode "${String(raw.mode)}"`;
     }
   }
 

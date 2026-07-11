@@ -1,16 +1,16 @@
 import { useMemo } from "react";
-import { useParsedUiConfig } from "./use-parsed-ui-config";
+import { useActiveSpace } from "./use-active-space";
+import { getModeConfig } from "@/lib/mode-config";
 
 interface LayoutConfig {
   rightPanelComponent: string;
 }
 
 export function useLayoutConfig(): LayoutConfig {
-  const uiConfig = useParsedUiConfig();
+  const { activeSpace } = useActiveSpace();
+  const mode = activeSpace?.mode;
   return useMemo(
-    () => ({
-      rightPanelComponent: uiConfig.rightPanel?.component || "config",
-    }),
-    [uiConfig],
+    () => ({ rightPanelComponent: getModeConfig(mode).rightPanel.component }),
+    [mode],
   );
 }

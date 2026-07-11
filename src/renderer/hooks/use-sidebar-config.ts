@@ -1,22 +1,11 @@
 import { useMemo } from "react";
-import { useParsedUiConfig } from "./use-parsed-ui-config";
+import { useActiveSpace } from "./use-active-space";
+import { getModeConfig, type ModeSidebarConfig } from "@/lib/mode-config";
 
-export type SidebarItemType = "workspace";
-
-export interface SidebarConfig {
-  title: string;
-  itemType: SidebarItemType;
-  defaultRoute: string;
-}
+export type SidebarConfig = ModeSidebarConfig;
 
 export function useSidebarConfig(): SidebarConfig {
-  const uiConfig = useParsedUiConfig();
-  return useMemo(
-    () => ({
-      title: uiConfig.sidebar?.title || "Workspaces",
-      itemType: (uiConfig.sidebar?.itemType || "workspace") as SidebarItemType,
-      defaultRoute: uiConfig.sidebar?.defaultRoute || "/code",
-    }),
-    [uiConfig],
-  );
+  const { activeSpace } = useActiveSpace();
+  const mode = activeSpace?.mode;
+  return useMemo(() => getModeConfig(mode).sidebar, [mode]);
 }

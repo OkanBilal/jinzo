@@ -31,7 +31,7 @@ export function useSettingsNavigation() {
       }
       setPreviousPath(null);
     } else {
-      navigate(sidebarConfig.defaultRoute || "/");
+      navigate(sidebarConfig.defaultRoute);
     }
   };
 

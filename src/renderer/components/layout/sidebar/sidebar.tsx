@@ -9,7 +9,6 @@ import SettingsView from "./settings-view";
 import HelpMenu from "./help-menu";
 import { useCapabilities, useIsMobile } from "@/lib/platform";
 import {
-  Edit,
   Plus,
   Connect,
   Project,
@@ -91,7 +90,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
   };
 
   const { account, workspaces, isLoadingWorkspaces, handleRefreshConnections } =
-    useSidebarData({ searchQuery, sidebarConfig });
+    useSidebarData({ searchQuery });
   // Picking a local folder uses a native dialog, which can't run from the web
   // client (it would open on the headless backend). Hide the folder-picker entry.
   const { nativeDialogs } = useCapabilities();
@@ -167,53 +166,43 @@ export default function Sidebar({ collapsed }: SidebarProps) {
               <NewButton
                 onClick={handleNewClick}
                 icon={
-                  sidebarConfig.itemType === "workspace" ? (
-                    <Project className="size-3.5 text-primary-900 dark:text-primary-100" />
-                  ) : (
-                    <Edit className="w-4 h-4 text-primary-900 dark:text-primary-100" />
-                  )
+                  <Project className="size-3.5 text-primary-900 dark:text-primary-100" />
                 }
                 title={sidebarConfig.title}
-                actionPrefix={
-                  sidebarConfig.itemType === "workspace" ? "Add" : "New"
-                }
-                dropdownItems={
-                  sidebarConfig.itemType === "workspace"
+                actionPrefix="Add"
+                dropdownItems={[
+                  ...(nativeDialogs
                     ? [
-                        ...(nativeDialogs
-                          ? [
-                              {
-                                label: "Add from local",
-                                icon: (
-                                  <Plus className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
-                                ),
-                                shortcut: "o",
-                                shortcutLabel: "\u2318\u21e7O",
-                                onClick: handleAddProject,
-                              },
-                            ]
-                          : []),
                         {
-                          label: "Clone from URL",
+                          label: "Add from local",
                           icon: (
-                            <Connect className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
+                            <Plus className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
                           ),
-                          shortcut: "u",
-                          shortcutLabel: "\u2318\u21e7U",
-                          onClick: handleOpenCloneModal,
-                        },
-                        {
-                          label: "Create new project",
-                          icon: (
-                            <Project className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
-                          ),
-                          shortcut: "n",
-                          shortcutLabel: "\u2318\u21e7N",
-                          onClick: handleOpenCreateProjectModal,
+                          shortcut: "o",
+                          shortcutLabel: "\u2318\u21e7O",
+                          onClick: handleAddProject,
                         },
                       ]
-                    : undefined
-                }
+                    : []),
+                  {
+                    label: "Clone from URL",
+                    icon: (
+                      <Connect className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
+                    ),
+                    shortcut: "u",
+                    shortcutLabel: "\u2318\u21e7U",
+                    onClick: handleOpenCloneModal,
+                  },
+                  {
+                    label: "Create new project",
+                    icon: (
+                      <Project className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
+                    ),
+                    shortcut: "n",
+                    shortcutLabel: "\u2318\u21e7N",
+                    onClick: handleOpenCreateProjectModal,
+                  },
+                ]}
               />
             </div>
             <div className="px-3 mb-px">

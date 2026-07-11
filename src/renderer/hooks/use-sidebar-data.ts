@@ -4,24 +4,18 @@ import {
   useGetAccountQuery,
   useListWorkspacesQuery,
 } from "@/lib/redux/api";
-import type { SidebarConfig } from "@/hooks/use-sidebar-config";
-
 
 interface UseSidebarDataOptions {
   searchQuery: string;
-  sidebarConfig: SidebarConfig;
 }
 
-export function useSidebarData({ searchQuery, sidebarConfig }: UseSidebarDataOptions) {
+export function useSidebarData({ searchQuery }: UseSidebarDataOptions) {
   // Data queries
   const { data: account } = useGetAccountQuery();
   const { data: connections = [], refetch: refetchConnections } = useGetConnectionStatesQuery();
 
-  // Workspaces for workspace mode
   const { data: workspaces = [], isLoading: isLoadingWorkspaces } =
-    useListWorkspacesQuery(undefined, {
-      skip: sidebarConfig.itemType !== "workspace",
-    });
+    useListWorkspacesQuery();
 
   const connectedConnections = useMemo(() => {
     return connections.filter((connection) => connection.isConnected).map((connection) => connection.id);

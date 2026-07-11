@@ -3,6 +3,8 @@ import { getDb } from "../../db/client";
 import { spaces } from "../../db/schema";
 import { ACCOUNT_ID } from "./space.constants";
 import type { SpaceRecord, SpacePayload } from "./space.dto";
+import type { ProviderId } from "../../../shared/provider-ids";
+import type { ModeId } from "../../../shared/modes";
 
 // ─────────────────────────────────────────────────────────────
 // Space Repository
@@ -54,7 +56,8 @@ export const spaceRepo = {
     model: string | null;
     icon: string | null;
     themeConfig: string | null;
-    uiConfig: string | null;
+    providerId: ProviderId;
+    mode: ModeId;
     sortOrder: number;
   }): Promise<void> {
     const db = getDb();
