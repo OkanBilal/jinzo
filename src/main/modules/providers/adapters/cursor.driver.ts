@@ -2419,51 +2419,69 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
           .filter(Boolean)
           .join("\n");
 
-        const titleText = await new Promise<string>((resolve, reject) => {
-          const env: Record<string, string | undefined> = {
-            ...process.env,
-            HOME: os.homedir(),
-            PATH: [
-              path.dirname(binaryPath),
-              path.join(os.homedir(), ".local", "bin"),
-              "/usr/local/bin",
-              "/opt/homebrew/bin",
-              process.env.PATH || "",
-            ].join(":"),
-          };
-          if (config.apiKey) env.CURSOR_API_KEY = config.apiKey;
+        const spawnTitleOnce = () =>
+          new Promise<string>((resolve, reject) => {
+            const env: Record<string, string | undefined> = {
+              ...process.env,
+              HOME: os.homedir(),
+              PATH: [
+                path.dirname(binaryPath),
+                path.join(os.homedir(), ".local", "bin"),
+                "/usr/local/bin",
+                "/opt/homebrew/bin",
+                process.env.PATH || "",
+              ].join(":"),
+            };
+            if (config.apiKey) env.CURSOR_API_KEY = config.apiKey;
 
-          const child = spawn(
-            binaryPath,
-            [
-              "--print",
-              "--mode",
-              "ask",
-              "--trust",
-              "--output-format",
-              "text",
-              titlePrompt,
-            ],
-            { env, stdio: ["ignore", "pipe", "pipe"], timeout: 15000 },
-          );
+            const child = spawn(
+              binaryPath,
+              [
+                "--print",
+                "--mode",
+                "ask",
+                "--trust",
+                "--output-format",
+                "text",
+                // Without --model the CLI uses the persisted user config, which
+                // may name a model the account's plan can't access (free plans
+                // are auto-only). Auto is available on every plan.
+                "--model",
+                "auto",
+                titlePrompt,
+              ],
+              // 30s: the CLI's "Connection lost, reconnecting..." cycle needs
+              // more than one 15s window to recover.
+              { env, stdio: ["ignore", "pipe", "pipe"], timeout: 30000 },
+            );
 
-          let stdout = "";
-          let stderr = "";
-          child.stdout?.on("data", (d: Buffer) => {
-            stdout += d.toString();
+            let stdout = "";
+            let stderr = "";
+            child.stdout?.on("data", (d: Buffer) => {
+              stdout += d.toString();
+            });
+            child.stderr?.on("data", (d: Buffer) => {
+              stderr += d.toString();
+            });
+            child.on("close", (code) => {
+              if (code === 0 && stdout.trim()) {
+                resolve(stdout.trim());
+              } else {
+                reject(new Error(stderr.trim() || `Exit code ${code}`));
+              }
+            });
+            child.on("error", reject);
           });
-          child.stderr?.on("data", (d: Buffer) => {
-            stderr += d.toString();
-          });
-          child.on("close", (code) => {
-            if (code === 0 && stdout.trim()) {
-              resolve(stdout.trim());
-            } else {
-              reject(new Error(stderr.trim() || `Exit code ${code}`));
-            }
-          });
-          child.on("error", reject);
-        });
+
+        let titleText: string;
+        try {
+          titleText = await spawnTitleOnce();
+        } catch {
+          // Transient backend disconnects are common on cold spawns; a fresh
+          // process usually succeeds. Title updates are fire-and-forget, so
+          // the extra attempt doesn't delay the run.
+          titleText = await spawnTitleOnce();
+        }
 
         const title = titleText
           .split("\n")[0]
@@ -2510,7 +2528,10 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
           "--trust",
           "--output-format",
           "text",
-          ...(opts?.model ? ["--model", opts.model] : []),
+          // Same reasoning as generateTitle: default to auto rather than the
+          // persisted CLI model, which may be plan-restricted.
+          "--model",
+          opts?.model ?? "auto",
           fullPrompt,
         ];
 

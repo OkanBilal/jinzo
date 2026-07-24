@@ -390,7 +390,7 @@ function PluginDetail({
         onClick={onBack}
         className="flex items-center gap-1.5 text-sm text-primary-500 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-100 mb-6 cursor-pointer"
       >
-        <ArrowUp className="size-4 rotate-270" />
+        <ArrowUp className="size-4 rotate-270 -ml-1" />
         Back to plugins
       </Button>
 
@@ -471,7 +471,7 @@ function PluginDetail({
       </div>
 
       {/* Screenshots */}
-      {iface?.screenshots && iface.screenshots.length > 0 && (
+      {/* {iface?.screenshots && iface.screenshots.length > 0 && (
         <div className="mb-6 overflow-x-auto flex gap-3 pb-2">
           {iface.screenshots.map((src, i) => (
             <img
@@ -484,7 +484,7 @@ function PluginDetail({
             />
           ))}
         </div>
-      )}
+      )} */}
 
       {/* Long description */}
       {(detail?.description || iface?.longDescription) && (

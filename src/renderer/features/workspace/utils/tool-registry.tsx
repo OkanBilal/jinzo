@@ -18,6 +18,7 @@ import {
   Task,
   Trash,
   Web,
+  Workflow,
 } from "@/components/ui/icons";
 import { FolderIcon } from "@/components/ui/icons/file-icons";
 
@@ -180,6 +181,16 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
     category: "Agent",
     icon: <Task className="size-4" />,
     aliases: ["agent"],
+  },
+  // Multi-agent orchestration tool. Input carries the workflow `script`
+  // (meta.name / description / phases) or a scriptPath+resumeFromRunId; output
+  // is the launch receipt. Rendered by WorkflowDisplay in tool-call-item.tsx.
+  {
+    displayName: "Workflow",
+    groupKey: "workflow",
+    category: "Agent",
+    icon: <Workflow className="size-4" />,
+    aliases: ["workflow"],
   },
   {
     displayName: "EnterPlanMode",

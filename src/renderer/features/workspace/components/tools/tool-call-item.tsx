@@ -26,6 +26,7 @@ import { ApplyPatchDisplay } from "./apply-patch-display";
 import { DeleteDisplay, type DeleteParams } from "./delete-display";
 import { ViewDisplay, type ViewParams } from "./view-display";
 import { ToolSearchDisplay, type ToolSearchParams } from "./tool-search-display";
+import { WorkflowDisplay, type WorkflowParams } from "./workflow-display";
 import { SkillDisplay, type SkillParams } from "./skill-display";
 import { AskUserQuestionDisplay, type AskUserQuestionParams } from "./ask-user-question-display";
 import { WebFetchDisplay, type WebFetchParams } from "./web-fetch-display";
@@ -183,6 +184,7 @@ const DISPATCH: Renderer[] = [
   withOutput<ViewParams>(["view"], ViewDisplay, summaryAs("path")),
   noOutput<IntentParams>(["report_intent"], IntentDisplay, summaryAs("intent")),
   withOutput<ToolSearchParams>(["toolsearch"], ToolSearchDisplay, summaryAs("query")),
+  withOutput<WorkflowParams>(["workflow"], WorkflowDisplay, () => ({})),
   (ctx) => {
     if (ctx.toolNameLower !== "skill") return null;
     const params = pickParams<SkillParams>(ctx, { skill: ctx.summary });

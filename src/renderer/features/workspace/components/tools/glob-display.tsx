@@ -26,11 +26,14 @@ export function GlobDisplay({ params, output, isCompact = false }: { params: Glo
         isCompact={isCompact}
       >
         {numFiles > 0 && (
-          <span className="text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className="shrink-0 whitespace-nowrap text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
             {numFiles} files
           </span>
         )}
-        <code className="text-primary-500 font-mono text-xs truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+        <code
+          className="min-w-0 truncate text-primary-500 font-mono text-xs group-hover:text-primary-950 group-hover:dark:text-primary"
+          title={params.pattern || undefined}
+        >
           {params.pattern || "?"}
         </code>
       </ToolHeader>

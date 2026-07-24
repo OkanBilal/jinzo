@@ -325,6 +325,16 @@ const activeRuns = new Map<string, {
    * lines on `collabAgentToolCall` (`spawnAgent`) items.
    */
   subAgents: Map<string, { threadId: string; nickname?: string; role?: string }>;
+  /**
+   * App/connector elicitation servers the user approved "for this run". The MCP
+   * elicitation response only speaks accept/decline/cancel (no session scope
+   * like command-exec's `acceptForSession`), so we honor "Allow for this run"
+   * on the Mains side: once a form-mode elicitation is approved for the run,
+   * later elicitations from the same `serverName` auto-accept without prompting.
+   * Lazily created; cleared automatically when the run's activeRuns entry is
+   * deleted. url-mode elicitations are never cached (they need a browser step).
+   */
+  approvedElicitationServers?: Set<string>;
 }>();
 
 // Session ID mapping: runId → threadId (for resume support)
@@ -3358,6 +3368,18 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
             const serverName = (p?.serverName as string) ?? "App";
             const mode = (p?.mode as string) ?? "form";
             const url = p?.url as string | undefined;
+            const sessionKey = serverName.toLowerCase();
+
+            // "Allow for this run" for a form-mode app approval: skip the dialog
+            // if the user already opted this server in for the run. url-mode
+            // needs a browser round-trip each time, so it's never auto-accepted.
+            if (
+              mode !== "url" &&
+              activeRuns.get(runId)?.approvedElicitationServers?.has(sessionKey)
+            ) {
+              server.respondToRequest(id, { action: "accept", content: {} });
+              break;
+            }
 
             // Dump the full payload — proposed action args may live in `_meta`
             // or a sibling field whose shape is still being mapped.
@@ -3383,6 +3405,14 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
                   shell.openExternal(url).catch((err) =>
                     logWarn(`Failed to open elicitation URL: ${err}`),
                   );
+                }
+                // Remember the opt-in so subsequent form-mode elicitations from
+                // this server skip the prompt for the rest of the run.
+                if (mode !== "url" && result.answer === "acceptForSession") {
+                  const rs = activeRuns.get(runId);
+                  if (rs) {
+                    (rs.approvedElicitationServers ??= new Set()).add(sessionKey);
+                  }
                 }
                 server.respondToRequest(id, { action: "accept", content: {} });
               }
@@ -4146,6 +4176,11 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
             "--color", "never",
             "--output-last-message", outputPath,
             "--model", titleGenerationModel,
+            // ~/.codex/config.toml leaks into ephemeral execs: a user-level
+            // reasoning effort can be unsupported by the title model (400),
+            // and configured MCP servers stall/spam a one-shot run.
+            "--ignore-user-config",
+            "-c", "model_reasoning_effort=low",
             "-",
           ];
 
@@ -4269,6 +4304,9 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
           "--color", "never",
           "--output-last-message", outputPath,
           "--model", opts?.model ?? titleGenerationModel,
+          // Same overrides as title generation — see comment there.
+          "--ignore-user-config",
+          "-c", "model_reasoning_effort=low",
           "-",
         ];
 
