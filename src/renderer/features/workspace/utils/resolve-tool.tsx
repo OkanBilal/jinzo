@@ -232,6 +232,21 @@ function resolveUnknownMcp(lower: string): ResolvedTool {
   };
 }
 
+/**
+ * Label for a tool with no registry entry. PascalCase/camelCase names are
+ * already readable and are kept verbatim (`SendMessage`, not `Send message`);
+ * snake_case and kebab-case get split into words so a raw `send_message` isn't
+ * shown as the mangled `Send_message`.
+ */
+function humanizeToolName(toolName: string): string {
+  const trimmed = toolName.trim();
+  if (trimmed.length === 0) return "Tool";
+  if (/[_-]/.test(trimmed)) {
+    return titleCase(trimmed.replace(/[_-]+/g, " ").trim());
+  }
+  return titleCase(trimmed);
+}
+
 function resolveToolImpl(toolName: string): ResolvedTool {
   const lower = toolName.toLowerCase();
 
@@ -263,10 +278,11 @@ function resolveToolImpl(toolName: string): ResolvedTool {
     };
   }
 
+  const label = humanizeToolName(toolName);
   return {
-    displayName: titleCase(toolName),
+    displayName: label,
     groupKey: lower || "unknown",
-    groupLabel: titleCase(toolName),
+    groupLabel: label,
     category: "Tool",
     icon: <Mcp className="size-4" />,
     isSpecialGroup: false,

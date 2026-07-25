@@ -51,11 +51,12 @@ import type {
 } from "../../../../shared/adapter.types";
 import { findClaudeBinary, resolveCandidate } from "../providers.utils";
 import { requestToolApproval } from "../../runs/user-input-broker";
-import type { ToolApprovalRequest } from "../../runs/runs.dto";
+import type { ToolApprovalRequest, ToolApprovalResponse } from "../../runs/runs.dto";
 import { runsRepo } from "../../runs/runs.repo";
 import {
   createLogger,
   ALLOWED_TOOLS_SET,
+  DEFAULT_ALLOWED_TOOLS,
   safeJson,
   extractArtifactsFromToolOutput,
   formatContextSection,
@@ -137,6 +138,7 @@ interface SDKOptions {
   allowedTools?: string[];
   disallowedTools?: string[];
   permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan" | "dontAsk" | "auto";
+  allowDangerouslySkipPermissions?: boolean;
   cwd?: string;
   resume?: string;
   forkSession?: boolean;
@@ -153,11 +155,89 @@ interface SDKOptions {
     | { type: "enabled"; budgetTokens?: number }
     | { type: "disabled" };
   effort?: ("low" | "medium" | "high" | "xhigh" | "max") | number;
-  settings?: Record<string, unknown>;
+  settings?: string | Record<string, unknown>;
   promptSuggestions?: boolean;
   includePartialMessages?: boolean;
   plugins?: Array<{ type: "local"; path: string; skipMcpDiscovery?: boolean }>;
+  canUseTool?: SDKCanUseTool;
 }
+
+function isSDKPermissionMode(
+  value: unknown,
+): value is NonNullable<SDKOptions["permissionMode"]> {
+  return (
+    typeof value === "string" &&
+    ["default", "acceptEdits", "bypassPermissions", "plan", "dontAsk", "auto"].includes(value)
+  );
+}
+
+export function buildClaudePermissionModeOptions(
+  permissionMode: NonNullable<SDKOptions["permissionMode"]>,
+  canUseTool?: SDKCanUseTool,
+): Pick<
+  SDKOptions,
+  | "permissionMode"
+  | "allowDangerouslySkipPermissions"
+  | "allowedTools"
+  | "canUseTool"
+  | "settings"
+> {
+  return {
+    permissionMode,
+    allowedTools: [...DEFAULT_ALLOWED_TOOLS],
+    // Build the run-scoped permission snapshot here. buildOptions materializes
+    // it to disk because Workflow children do not inherit the inline form.
+    settings: {
+      permissions: {
+        allow: [...DEFAULT_ALLOWED_TOOLS],
+      },
+    },
+    ...(permissionMode === "bypassPermissions"
+      ? { allowDangerouslySkipPermissions: true }
+      : {}),
+    // Normal bypass calls shadow this callback, but detached agents still
+    // forward permission requests that require an application decision.
+    ...(canUseTool ? { canUseTool } : {}),
+  };
+}
+
+interface SDKCanUseToolOptions {
+  signal: AbortSignal;
+  suggestions?: unknown[];
+  blockedPath?: string;
+  decisionReason?: string;
+  title?: string;
+  displayName?: string;
+  description?: string;
+  toolUseID: string;
+  agentID?: string;
+  requestId: string;
+  matchedAskRule?: {
+    source: string;
+    toolName: string;
+    ruleContent?: string;
+  };
+}
+
+type SDKPermissionResult =
+  | {
+      behavior: "allow";
+      updatedInput?: Record<string, unknown>;
+      updatedPermissions?: unknown[];
+      toolUseID?: string;
+    }
+  | {
+      behavior: "deny";
+      message: string;
+      interrupt?: boolean;
+      toolUseID?: string;
+    };
+
+type SDKCanUseTool = (
+  toolName: string,
+  input: Record<string, unknown>,
+  options: SDKCanUseToolOptions,
+) => Promise<SDKPermissionResult | null>;
 
 interface SDKMessageContent {
   type: string;
@@ -181,9 +261,22 @@ interface SDKUserMessage {
   session_id: string;
   message: {
     role: "user";
-    content: string | Array<{ type: string; text?: string }>;
+    content:
+      | string
+      | Array<{
+          type: string;
+          text?: string;
+          tool_use_id?: string;
+          content?: unknown;
+          is_error?: boolean;
+        }>;
   };
   parent_tool_use_id: string | null;
+  tool_result_meta?: Array<{
+    id: string;
+    non_execution_kind: string;
+    user_feedback?: string;
+  }>;
 }
 
 interface SDKModelUsage {
@@ -384,11 +477,14 @@ interface ClaudeSession {
   runId: string;
   options: SDKOptions;
   abortController: AbortController;
+  /** On-disk flag-settings snapshot inherited by dynamic Workflow agents. */
+  runtimeSettingsPath?: string;
   /** Mutable: set during streaming. */
   state: {
     sessionId?: string;
     lastStopReason?: string | null;
     lastUsage?: WorkRunUsage;
+    terminalToolNonExecutionKind?: string;
     hasAssistantContent: boolean;
   };
   /** Per-run tool-call correlation index (toolCallId → toolName/input). */
@@ -404,6 +500,179 @@ interface ClaudeSession {
 }
 
 const { info: logInfo, warn: logWarn, error: logError } = createLogger("[ClaudeDriver]");
+
+type ApprovalRequester = (request: ToolApprovalRequest) => Promise<ToolApprovalResponse>;
+
+interface ClaudePermissionBridgeOptions {
+  runId: string;
+  allowedTools: Set<string>;
+  bypassMode: boolean;
+  requestApproval?: ApprovalRequester;
+}
+
+interface PermissionDecision {
+  allowed: boolean;
+  updatedInput?: Record<string, unknown>;
+  reason?: string;
+}
+
+/**
+ * Build the SDK permission callback used by both foreground and background
+ * agents. Do not mirror this through an in-process PreToolUse hook: dynamic
+ * Workflow children inherit the hook registration but cannot invoke the
+ * parent's callback, so their tool calls are cancelled before permission rules
+ * or canUseTool can settle them.
+ */
+export function createClaudePermissionBridge({
+  runId,
+  allowedTools,
+  bypassMode,
+  requestApproval = requestToolApproval,
+}: ClaudePermissionBridgeOptions): {
+  canUseTool: SDKCanUseTool;
+} {
+  async function decide(
+    toolName: string,
+    toolInput: Record<string, unknown>,
+    context: { signal: AbortSignal; requestId?: string },
+  ): Promise<PermissionDecision> {
+    const isAskUser = toolName === "AskUserQuestion";
+
+    // AskUserQuestion is an interaction, not a permission gate, so it must
+    // still reach the renderer even in bypass mode.
+    if ((bypassMode && !isAskUser) || allowedTools.has(toolName) || toolName.startsWith("mcp__")) {
+      return { allowed: true, updatedInput: toolInput };
+    }
+
+    if (context.signal.aborted) {
+      return { allowed: false, reason: "Request aborted" };
+    }
+
+    const requestId =
+      context.requestId || `${runId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const req: ToolApprovalRequest = {
+      requestId,
+      runId,
+      toolName,
+      toolInput,
+      kind: isAskUser ? "ask_user" : "tool_approval",
+      timestamp: Date.now(),
+    };
+
+    if (isAskUser) {
+      const questions = toolInput.questions as
+        | Array<{
+            question?: string;
+            options?: Array<{ label: string; description?: string }>;
+            multiSelect?: boolean;
+          }>
+        | undefined;
+      if (questions && questions.length > 0) {
+        const first = questions[0];
+        req.question = first.question;
+        req.options = first.options;
+        req.multiSelect = first.multiSelect;
+      }
+    }
+
+    let resolveAbort: (() => void) | undefined;
+    const aborted = new Promise<null>((resolve) => {
+      resolveAbort = () => resolve(null);
+      context.signal.addEventListener("abort", resolveAbort, { once: true });
+    });
+
+    let response: ToolApprovalResponse | null;
+    try {
+      response = await Promise.race([requestApproval(req), aborted]);
+    } finally {
+      if (resolveAbort) context.signal.removeEventListener("abort", resolveAbort);
+    }
+
+    if (!response?.approved) {
+      return { allowed: false, reason: "User denied permission" };
+    }
+
+    if (isAskUser && response.answer !== undefined) {
+      const askedQuestions = (toolInput.questions ?? []) as Array<{ question?: string }>;
+      const answers: Record<string, string> = {};
+      for (const question of askedQuestions) {
+        if (question.question) answers[question.question] = response.answer;
+      }
+      return {
+        allowed: true,
+        updatedInput: { questions: askedQuestions, answers },
+      };
+    }
+
+    return { allowed: true, updatedInput: toolInput };
+  }
+
+  const canUseTool: SDKCanUseTool = async (toolName, toolInput, options) => {
+    const decision = await decide(toolName, toolInput, {
+      signal: options.signal,
+      requestId: options.requestId,
+    });
+    if (!decision.allowed) {
+      return {
+        behavior: "deny",
+        message: decision.reason || "Permission denied",
+        toolUseID: options.toolUseID,
+      };
+    }
+    return {
+      behavior: "allow",
+      updatedInput: decision.updatedInput ?? toolInput,
+      toolUseID: options.toolUseID,
+    };
+  };
+
+  return { canUseTool };
+}
+
+/**
+ * Dynamic Workflow agents run in a separate runtime and Claude Code 2.1.218
+ * does not propagate inline SDK flag settings to them. A settings file path is
+ * propagated, so materialize the per-run snapshot instead of mutating user or
+ * project settings.
+ */
+export function writeClaudeRuntimeSettings(
+  settings: Record<string, unknown>,
+): string {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mains-claude-settings-"));
+  try {
+    fs.chmodSync(dir, 0o700);
+    const settingsPath = path.join(dir, "settings.json");
+    fs.writeFileSync(settingsPath, JSON.stringify(settings), {
+      encoding: "utf8",
+      mode: 0o600,
+    });
+    return settingsPath;
+  } catch (error) {
+    fs.rmSync(dir, { recursive: true, force: true });
+    throw error;
+  }
+}
+
+export function removeClaudeRuntimeSettings(settingsPath?: string): void {
+  if (!settingsPath) return;
+  const settingsDir = path.dirname(settingsPath);
+  if (
+    path.dirname(settingsDir) !== os.tmpdir() ||
+    !path.basename(settingsDir).startsWith("mains-claude-settings-") ||
+    path.basename(settingsPath) !== "settings.json"
+  ) {
+    logWarn("Refusing to remove an unrecognized runtime settings path");
+    return;
+  }
+  try {
+    fs.rmSync(settingsDir, { recursive: true, force: true });
+  } catch (error) {
+    logWarn(
+      "Failed to remove runtime settings snapshot:",
+      error instanceof Error ? error.message : String(error),
+    );
+  }
+}
 
 // ─────────────────────────────────────────────────────────────
 // Driver factory
@@ -530,130 +799,6 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     };
   }
 
-  function buildToolApprovalHook(
-    runId: string,
-    allowedTools: Set<string>,
-    bypassMode: boolean,
-  ): SDKHookMatcher {
-    return {
-      hooks: [
-        async (
-          input: Record<string, unknown>,
-          _toolUseId: string | null,
-          context: { signal: AbortSignal },
-        ): Promise<Record<string, unknown>> => {
-          const toolName = (input.tool_name as string) || "unknown";
-          const toolInput = (input.tool_input as Record<string, unknown>) || {};
-          const isAskUser = toolName === "AskUserQuestion";
-
-          // In bypassPermissions mode every tool is auto-allowed EXCEPT
-          // AskUserQuestion: that's a user-interaction tool, not a permission
-          // gate, so it must still surface the interactive dialog (and have the
-          // user's answer injected below) rather than run answerless.
-          if (bypassMode && !isAskUser) {
-            return {
-              hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow" },
-            };
-          }
-
-          if (allowedTools.has(toolName)) {
-            return {
-              hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow" },
-            };
-          }
-
-          if (toolName.startsWith("mcp__")) {
-            return {
-              hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow" },
-            };
-          }
-
-          const requestId = `${runId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-          const req: ToolApprovalRequest = {
-            requestId,
-            runId,
-            toolName,
-            toolInput,
-            kind: isAskUser ? "ask_user" : "tool_approval",
-            timestamp: Date.now(),
-          };
-
-          if (isAskUser) {
-            const questions = toolInput.questions as
-              | Array<{
-                  question?: string;
-                  options?: Array<{ label: string; description?: string }>;
-                  multiSelect?: boolean;
-                }>
-              | undefined;
-
-            if (questions && questions.length > 0) {
-              const first = questions[0];
-              req.question = first.question;
-              req.options = first.options;
-              req.multiSelect = first.multiSelect;
-            }
-          }
-
-          if (context.signal.aborted) {
-            return {
-              hookSpecificOutput: {
-                hookEventName: "PreToolUse",
-                permissionDecision: "deny",
-                permissionDecisionReason: "Request aborted",
-              },
-            };
-          }
-
-          const response = await Promise.race([
-            requestToolApproval(req),
-            new Promise<null>((resolve) => {
-              context.signal.addEventListener("abort", () => resolve(null), { once: true });
-            }),
-          ]);
-
-          if (!response || !response.approved) {
-            return {
-              hookSpecificOutput: {
-                hookEventName: "PreToolUse",
-                permissionDecision: "deny",
-                permissionDecisionReason: "User denied permission",
-              },
-            };
-          }
-
-          // For AskUserQuestion, inject the user's answer into the tool input.
-          // Per Anthropic docs: `questions` MUST pass through unchanged; `answers` keys MUST
-          // be the question text (not an index). Multi-select values join with ", ".
-          if (isAskUser && response.answer !== undefined) {
-            const askedQuestions = (toolInput.questions ?? []) as Array<{ question?: string }>;
-            const answersMap: Record<string, string> = {};
-            const primaryText = askedQuestions[0]?.question;
-            if (primaryText) answersMap[primaryText] = response.answer;
-            // Best-effort fallback: mirror the answer to all questions (the dialog only
-            // renders one at a time; multi-question Claude tool calls are rare).
-            for (let i = 1; i < askedQuestions.length; i++) {
-              const text = askedQuestions[i]?.question;
-              if (text) answersMap[text] = response.answer;
-            }
-            return {
-              hookSpecificOutput: {
-                hookEventName: "PreToolUse",
-                permissionDecision: "allow",
-                updatedInput: { questions: askedQuestions, answers: answersMap },
-              },
-            };
-          }
-
-          return {
-            hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow" },
-          };
-        },
-      ],
-    };
-  }
-
   // ─────────────────────────────────────────────────────────────
   // Hooks / agents config merging + SDK conversion
   // ─────────────────────────────────────────────────────────────
@@ -770,6 +915,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     workspaceId?: string;
     forkSession?: boolean;
     onEvent?: WorkRunEventHandler;
+    permissionMode?: NonNullable<SDKOptions["permissionMode"]>;
   }): Promise<SDKOptions> {
     const {
       model,
@@ -782,6 +928,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       workspaceId,
       forkSession,
       onEvent,
+      permissionMode: runPermissionMode,
     } = args;
 
     let binaryPath: string | null = null;
@@ -834,8 +981,15 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     delete cleanEnv.ANTHROPIC_API_KEY;
     delete cleanEnv.ANTHROPIC_AUTH_TOKEN;
 
-    const permissionMode = config.permissionMode || "default";
+    const permissionMode = runPermissionMode ?? config.permissionMode ?? "default";
     const settingSources = config.settingSources ?? ["user", "project", "local"];
+    const permissionBridge = runId
+      ? createClaudePermissionBridge({
+          runId,
+          allowedTools: ALLOWED_TOOLS_SET,
+          bypassMode: permissionMode === "bypassPermissions",
+        })
+      : null;
 
     const mcpServers = readMcpServersFromSettings(settingSources, workspacePath);
     if (!mcpServers["mains"] && createSdkMcpServerFn && toolFn) {
@@ -845,7 +999,10 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
 
     const options: SDKOptions = {
       model,
-      permissionMode,
+      ...buildClaudePermissionModeOptions(
+        permissionMode,
+        permissionBridge?.canUseTool,
+      ),
       abortController,
       pathToClaudeCodeExecutable: binaryPath,
       env: cleanEnv,
@@ -922,17 +1079,6 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     options.promptSuggestions = true;
     options.includePartialMessages = true;
 
-    if (runId) {
-      const approvalHook = buildToolApprovalHook(
-        runId,
-        ALLOWED_TOOLS_SET,
-        permissionMode === "bypassPermissions",
-      );
-      if (!options.hooks) options.hooks = {};
-      if (!options.hooks.PreToolUse) options.hooks.PreToolUse = [];
-      options.hooks.PreToolUse.push(approvalHook);
-    }
-
     {
       const guardHook = await guardsService.buildClaudeGuardHook();
       if (guardHook) {
@@ -954,6 +1100,10 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       append:
         "IMPORTANT: Never commit changes using Bash (git add, git commit). If the user asks you to commit, always use the CommitChanges tool from the mains MCP server to stage and commit changes. Similarly, never create pull requests using Bash (gh pr create). Always use the CreatePR tool from the mains MCP server instead.",
     };
+
+    if (runId && options.settings && typeof options.settings !== "string") {
+      options.settings = writeClaudeRuntimeSettings(options.settings);
+    }
 
     return options;
   }
@@ -1051,12 +1201,19 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
           // they stay `running` in the DB until the run-end sweep. Emit a
           // `complete` event per block so the status flips running → done.
           const isFromSubagent = !!(userMsg as any).parent_tool_use_id;
-          for (const block of content as any[]) {
+          for (const block of content) {
             if (block?.type !== "tool_result") continue;
             const toolUseId: string = block.tool_use_id || "";
             const prev = toolUseId ? cs.toolCallIndex.get(toolUseId) : undefined;
             const output = block.content;
             const error = block.is_error ? safeJson(output) : undefined;
+            const resultMeta = userMsg.tool_result_meta?.find((meta) => meta.id === toolUseId);
+            const nonExecutionKind = resultMeta?.non_execution_kind;
+            if (nonExecutionKind) {
+              cs.state.terminalToolNonExecutionKind = nonExecutionKind;
+            } else if (!block.is_error) {
+              delete cs.state.terminalToolNonExecutionKind;
+            }
             if (toolUseId) cs.toolCallIndex.delete(toolUseId);
             events.push({
               type: "tool_call",
@@ -1070,6 +1227,8 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
                 toolCallId: toolUseId || undefined,
                 rawType: msg.type,
                 isFromSubagent,
+                nonExecutionKind,
+                userFeedback: resultMeta?.user_feedback,
               },
             });
           }
@@ -1480,6 +1639,8 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       runId,
       options,
       abortController,
+      runtimeSettingsPath:
+        typeof options.settings === "string" ? options.settings : undefined,
       isInitial,
       state: { hasAssistantContent: false },
       toolCallIndex: new Map(),
@@ -1641,6 +1802,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       if (!queryFn) throw new Error("Claude SDK not properly initialized");
 
       const abortController = new AbortController();
+      const overridePermissionMode = request.configSnapshot?.permissionMode;
       const options = await buildOptions({
         model: getModel(request.model),
         workspacePath: request.workspace.rootPath,
@@ -1649,14 +1811,10 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
         runAgents: request.agents,
         runId: request.runId,
         workspaceId: request.workspace.id,
+        permissionMode: isSDKPermissionMode(overridePermissionMode)
+          ? overridePermissionMode
+          : undefined,
       });
-
-      // Per-run permission-mode override (e.g. Pulse forces a specific mode)
-      const overridePermissionMode = (request.configSnapshot as Record<string, unknown> | null | undefined)
-        ?.permissionMode;
-      if (typeof overridePermissionMode === "string") {
-        (options as { permissionMode?: string }).permissionMode = overridePermissionMode;
-      }
 
       const session = newSession(request.runId, options, abortController, true);
       return { session, prompt: buildStartPrompt(request) };
@@ -1914,6 +2072,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
         return classifyOutcome({
           stopReason: cs.state.lastStopReason ?? null,
           usage: cs.state.lastUsage,
+          terminalToolNonExecutionKind: cs.state.terminalToolNonExecutionKind,
           aborted: signal.aborted,
           timedOut: false,
           errorMessage: undefined,
@@ -1939,6 +2098,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
         return classifyOutcome({
           stopReason: cs.state.lastStopReason ?? null,
           usage: cs.state.lastUsage,
+          terminalToolNonExecutionKind: cs.state.terminalToolNonExecutionKind,
           aborted: signal.aborted || cs.abortController.signal.aborted,
           timedOut,
           errorMessage,
@@ -1950,9 +2110,11 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       }
     },
 
-    async cleanup(_session): Promise<void> {
+    async cleanup(session): Promise<void> {
       // Per-run state lives on the Session object Core is about to drop.
-      // The SDK query auto-completes when the stream ends; nothing to release here.
+      // The SDK query auto-completes when the stream ends.
+      const cs = session as ClaudeSession;
+      removeClaudeRuntimeSettings(cs.runtimeSettingsPath);
     },
 
     async canResumeSession(runId: string): Promise<boolean> {
@@ -2907,12 +3069,21 @@ export function cleanGeneratedTitle(raw: string, fallbackGoal: string): string {
 export function classifyOutcome(args: {
   stopReason: string | null;
   usage?: WorkRunUsage;
+  terminalToolNonExecutionKind?: string;
   aborted: boolean;
   timedOut: boolean;
   errorMessage?: string;
   timeoutMs: number;
 }): DriverOutcome {
-  const { stopReason: rawStopReason, usage, aborted, timedOut, errorMessage, timeoutMs } = args;
+  const {
+    stopReason: rawStopReason,
+    usage,
+    terminalToolNonExecutionKind,
+    aborted,
+    timedOut,
+    errorMessage,
+    timeoutMs,
+  } = args;
   // DriverOutcome.stopReason is `string | undefined`; coerce null → undefined.
   const stopReason = rawStopReason ?? undefined;
 
@@ -2922,6 +3093,14 @@ export function classifyOutcome(args: {
       return {
         status: "failed",
         summary: "The model declined to fulfill this request.",
+        stopReason,
+        usage,
+      };
+    }
+    if (terminalToolNonExecutionKind === "cancelled") {
+      return {
+        status: "failed",
+        summary: "Tool execution was cancelled before the run could complete.",
         stopReason,
         usage,
       };

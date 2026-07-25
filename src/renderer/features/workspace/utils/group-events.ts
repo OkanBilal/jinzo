@@ -11,7 +11,7 @@ export interface EventGroup {
 }
 
 /** Tool events rendered as PlanDisplay — same name rules as `groupEvents` standalone plan groups. */
-function toolEventPlanName(event: { type: string; content: string }): string | null {
+export function toolEventPlanName(event: { type: string; content: string }): string | null {
   if (event.type !== "tool_call") return null;
   const colonIdx = event.content.indexOf(":");
   return (colonIdx !== -1 ? event.content.substring(0, colonIdx).trim() : event.content).toLowerCase();

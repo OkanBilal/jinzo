@@ -77,8 +77,9 @@ export const toolsRepo = {
       updateData.latencyMs = payload.latencyMs;
     if (payload.costMicros !== undefined)
       updateData.costMicros = payload.costMicros;
-    if (payload.metadata !== undefined)
-      updateData.metadata = JSON.stringify(payload.metadata);
+    if (payload.metadata !== undefined) {
+      updateData.metadata = sql`json_patch(COALESCE(${toolCalls.metadata}, '{}'), ${JSON.stringify(payload.metadata)})`;
+    }
     updateData.updatedAt = sql`(unixepoch())`;
 
     await db.update(toolCalls).set(updateData).where(eq(toolCalls.id, id));
@@ -148,4 +149,3 @@ function mapToolCallRowToResponse(
     createdAt: row.createdAt,
   };
 }
-

@@ -399,6 +399,26 @@ describe("runsRepo", () => {
       expect(updated!.output).toEqual({ result: "success" });
       expect(updated!.latencyMs).toBe(150);
     });
+
+    it("merges tool metadata so a plan decision survives provider completion", async () => {
+      const run = createRun(db, { id: "r1" });
+      const tc = createToolCall(db, { runId: run.id, toolName: "ExitPlanMode" });
+
+      await runsRepo.updateToolCall(tc.id, {
+        metadata: { planStatus: "applied" },
+      });
+      await runsRepo.updateToolCall(tc.id, {
+        metadata: { phase: "complete", toolCallId: "tool-plan" },
+      });
+
+      const calls = await runsRepo.findToolCallsByRun("r1");
+      const updated = calls.find((c) => c.id === tc.id);
+      expect(updated!.metadata).toEqual({
+        planStatus: "applied",
+        phase: "complete",
+        toolCallId: "tool-plan",
+      });
+    });
   });
 
   // ─────────────────────────────────────────────────────────────

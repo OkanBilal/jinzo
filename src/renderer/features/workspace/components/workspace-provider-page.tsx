@@ -28,6 +28,10 @@ import { useAppSelector } from "@/lib/redux/hooks";
 import { useSetMainHeader } from "@/hooks/use-main-header";
 import { useWorkspaceRouteTopRounding } from "@/hooks/use-workspace-route-top-rounding";
 import { useBottomTerminal } from "@/hooks/use-bottom-terminal";
+import {
+  isExitPlanApproval,
+  respondToExitPlanApproval,
+} from "@/features/workspace/lib/plan-approval";
 
 interface WorkspaceProviderPageProps {
   providerId: string;
@@ -67,6 +71,9 @@ export function WorkspaceProviderPage({
   const currentApproval = ws.activeRunId
     ? pendingApprovals.find((approval) => approval.runId === ws.activeRunId)
     : undefined;
+  const currentPlanApproval = isExitPlanApproval(currentApproval)
+    ? currentApproval
+    : undefined;
 
   const handleStop = useCallback(() => {
     if (ws.activeRunId) {
@@ -101,9 +108,42 @@ export function WorkspaceProviderPage({
       }
     }
 
+    if (
+      respondToExitPlanApproval(
+        currentPlanApproval,
+        true,
+        respondToolApproval,
+      )
+    ) {
+      return;
+    }
+
+    // A plan tool-call start can render a frame before its approval request
+    // reaches renderer state. Never launch a second turn during that gap (or
+    // while another tool approval is pending); the active run owns the plan.
+    if (ws.activeRun?.status === "running" || ws.activeRun?.status === "queued") {
+      return;
+    }
+
     ws.setGoal("Execute the plan above.");
     ws.setAutoExecute(true);
-  }, [ws, providerData, planExitConfig, providerId, updateProvider]);
+  }, [
+    ws,
+    providerData,
+    planExitConfig,
+    providerId,
+    updateProvider,
+    currentPlanApproval,
+    respondToolApproval,
+  ]);
+
+  const handleDismissPlan = useCallback(() => {
+    respondToExitPlanApproval(
+      currentPlanApproval,
+      false,
+      respondToolApproval,
+    );
+  }, [currentPlanApproval, respondToolApproval]);
 
   const tabBar = useMemo(
     () =>
@@ -240,6 +280,8 @@ export function WorkspaceProviderPage({
               enableSuggestions ? handleSuggestionSelect : undefined
             }
             onApplyPlan={handleApplyPlan}
+            onDismissPlan={handleDismissPlan}
+            hasPendingPlanApproval={!!currentPlanApproval}
           />
         )}
       </div>
@@ -251,7 +293,10 @@ export function WorkspaceProviderPage({
           reachable regardless of scroll position or conversation length. */}
 
       <div className="px-4">
-      {currentApproval && !ws.showEmptyState && !ws.showNewRunTab && (
+      {currentApproval &&
+        !currentPlanApproval &&
+        !ws.showEmptyState &&
+        !ws.showNewRunTab && (
         <div className="w-full max-w-200 mx-auto max-h-[55vh] overflow-y-auto noscrollbar">
           <ToolApprovalDialog
             request={currentApproval}

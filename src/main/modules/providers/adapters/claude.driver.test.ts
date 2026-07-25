@@ -3,19 +3,226 @@
 //
 // The Claude SDK is loaded via dynamic import and not exercised here —
 // integration tests would require the actual @anthropic-ai/claude-agent-sdk.
-// These tests cover the deterministic outcome classifier that translates
-// (stop reason / abort flag / timeout / error) into a DriverOutcome.
+// These tests cover the permission bridge and deterministic outcome classifier
+// without starting a real Claude CLI session.
 // ─────────────────────────────────────────────────────────────
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
+  buildClaudePermissionModeOptions,
   classifyOutcome,
+  createClaudePermissionBridge,
+  removeClaudeRuntimeSettings,
+  writeClaudeRuntimeSettings,
   mapClaudePluginList,
   mapClaudePluginDetail,
   cleanGeneratedTitle,
 } from "./claude.driver";
+import fs from "node:fs";
+import {
+  ALLOWED_TOOLS_SET,
+  DEFAULT_ALLOWED_TOOLS,
+} from "./adapter.shared";
 
 const DEFAULT_TIMEOUT = 6_000_000;
+const INHERITED_PERMISSION_SETTINGS = {
+  permissions: {
+    allow: DEFAULT_ALLOWED_TOOLS,
+  },
+};
+
+describe("claude.driver / permission mode options", () => {
+  it("acknowledges bypassPermissions so detached agents can inherit bypass mode", () => {
+    expect(buildClaudePermissionModeOptions("bypassPermissions")).toEqual({
+      permissionMode: "bypassPermissions",
+      allowDangerouslySkipPermissions: true,
+      allowedTools: DEFAULT_ALLOWED_TOOLS,
+      settings: INHERITED_PERMISSION_SETTINGS,
+    });
+  });
+
+  it("does not enable dangerous permission skipping for other modes", () => {
+    const defaultOptions = buildClaudePermissionModeOptions("default");
+    const planOptions = buildClaudePermissionModeOptions("plan");
+
+    expect(defaultOptions).toEqual({
+      permissionMode: "default",
+      allowedTools: DEFAULT_ALLOWED_TOOLS,
+      settings: INHERITED_PERMISSION_SETTINGS,
+    });
+    expect(planOptions).toEqual({
+      permissionMode: "plan",
+      allowedTools: DEFAULT_ALLOWED_TOOLS,
+      settings: INHERITED_PERMISSION_SETTINGS,
+    });
+    expect(defaultOptions.allowDangerouslySkipPermissions).toBeUndefined();
+    expect(planOptions.allowDangerouslySkipPermissions).toBeUndefined();
+  });
+
+  it("keeps the background permission callback attached in bypass mode", () => {
+    const canUseTool = vi.fn();
+
+    expect(
+      buildClaudePermissionModeOptions("bypassPermissions", canUseTool),
+    ).toMatchObject({
+      canUseTool,
+    });
+  });
+
+  it("includes every built-in required by headless workflow agents", () => {
+    const options = buildClaudePermissionModeOptions("bypassPermissions");
+
+    expect(options.allowedTools).toEqual(DEFAULT_ALLOWED_TOOLS);
+    expect(options.allowedTools).toEqual(
+      expect.arrayContaining([
+        "Workflow",
+        "ToolSearch",
+        "WebSearch",
+        "WebFetch",
+        "StructuredOutput",
+      ]),
+    );
+    expect(options).toMatchObject({
+      settings: {
+        permissions: {
+          allow: DEFAULT_ALLOWED_TOOLS,
+        },
+      },
+    });
+  });
+
+  it("materializes and removes a settings snapshot for Workflow inheritance", () => {
+    const settings = {
+      permissions: {
+        allow: ["ToolSearch", "StructuredOutput"],
+      },
+      ultracode: true,
+    };
+    const settingsPath = writeClaudeRuntimeSettings(settings);
+
+    try {
+      expect(JSON.parse(fs.readFileSync(settingsPath, "utf8"))).toEqual(settings);
+      expect(fs.statSync(settingsPath).mode & 0o777).toBe(0o600);
+    } finally {
+      removeClaudeRuntimeSettings(settingsPath);
+    }
+
+    expect(fs.existsSync(settingsPath)).toBe(false);
+  });
+});
+
+describe("claude.driver / permission bridge", () => {
+  it("does not register an in-process PreToolUse hook that Workflow children cannot call", () => {
+    const bridge = createClaudePermissionBridge({
+      runId: "run-workflow",
+      allowedTools: ALLOWED_TOOLS_SET,
+      bypassMode: true,
+    });
+
+    expect(bridge).toEqual({
+      canUseTool: expect.any(Function),
+    });
+    expect(bridge).not.toHaveProperty("preToolUseHook");
+  });
+
+  it("allows a pre-approved tool requested by a background agent through canUseTool", async () => {
+    const requestApproval = vi.fn();
+    const bridge = createClaudePermissionBridge({
+      runId: "run-1",
+      allowedTools: new Set(["Read"]),
+      bypassMode: false,
+      requestApproval,
+    });
+
+    await expect(
+      bridge.canUseTool(
+        "Read",
+        { file_path: "/tmp/file.ts" },
+        {
+          signal: new AbortController().signal,
+          toolUseID: "tool-1",
+          agentID: "background-agent-1",
+          requestId: "permission-1",
+        },
+      ),
+    ).resolves.toEqual({
+      behavior: "allow",
+      updatedInput: { file_path: "/tmp/file.ts" },
+      toolUseID: "tool-1",
+    });
+    expect(requestApproval).not.toHaveBeenCalled();
+  });
+
+  it("routes a non-allowlisted background tool through the existing approval broker", async () => {
+    const requestApproval = vi.fn().mockResolvedValue({
+      requestId: "permission-2",
+      approved: true,
+    });
+    const bridge = createClaudePermissionBridge({
+      runId: "run-2",
+      allowedTools: new Set(),
+      bypassMode: false,
+      requestApproval,
+    });
+
+    await expect(
+      bridge.canUseTool(
+        "CustomTool",
+        { value: 42 },
+        {
+          signal: new AbortController().signal,
+          toolUseID: "tool-2",
+          agentID: "background-agent-2",
+          requestId: "permission-2",
+        },
+      ),
+    ).resolves.toEqual({
+      behavior: "allow",
+      updatedInput: { value: 42 },
+      toolUseID: "tool-2",
+    });
+    expect(requestApproval).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestId: "permission-2",
+        runId: "run-2",
+        toolName: "CustomTool",
+        toolInput: { value: 42 },
+        kind: "tool_approval",
+      }),
+    );
+  });
+
+  it("never auto-approves ExitPlanMode before the user applies the plan", async () => {
+    const requestApproval = vi.fn().mockResolvedValue({
+      requestId: "plan-approval-1",
+      approved: true,
+    });
+    const bridge = createClaudePermissionBridge({
+      runId: "run-plan",
+      allowedTools: ALLOWED_TOOLS_SET,
+      bypassMode: false,
+      requestApproval,
+    });
+
+    await bridge.canUseTool(
+      "ExitPlanMode",
+      { plan: "# Proposed plan" },
+      {
+        signal: new AbortController().signal,
+        toolUseID: "tool-plan",
+        requestId: "plan-approval-1",
+      },
+    );
+
+    expect(requestApproval).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestId: "plan-approval-1",
+        toolName: "ExitPlanMode",
+        kind: "tool_approval",
+      }),
+    );
+  });
+});
 
 describe("claude.driver / classifyOutcome", () => {
   describe("success path", () => {
@@ -62,6 +269,23 @@ describe("claude.driver / classifyOutcome", () => {
           timeoutMs: DEFAULT_TIMEOUT,
         }).usage,
       ).toBe(usage);
+    });
+
+    it("does not report success when the terminal tool result was cancelled", () => {
+      expect(
+        classifyOutcome({
+          stopReason: "end_turn",
+          aborted: false,
+          timedOut: false,
+          timeoutMs: DEFAULT_TIMEOUT,
+          terminalToolNonExecutionKind: "cancelled",
+        }),
+      ).toEqual({
+        status: "failed",
+        summary: "Tool execution was cancelled before the run could complete.",
+        stopReason: "end_turn",
+        usage: undefined,
+      });
     });
   });
 

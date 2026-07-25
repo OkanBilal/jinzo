@@ -15,6 +15,8 @@ import { CheckPackageDisplay, type CheckPackageParams } from "./check-package-di
 import { SaveFindingDisplay, type SaveFindingParams } from "./save-finding-display";
 import { AgentDisplay, type AgentParams } from "./agent-display";
 import { SpawnAgentDisplay } from "./spawn-agent-display";
+import { SendMessageDisplay, type SendMessageParams } from "./send-message-display";
+import { MonitorDisplay, type MonitorParams } from "./monitor-display";
 import { IntentDisplay, type IntentParams } from "./intent-display";
 import { BashDisplay, type BashParams } from "./bash-display";
 import { GlobDisplay, type GlobParams } from "./glob-display";
@@ -30,6 +32,7 @@ import { WorkflowDisplay, type WorkflowParams } from "./workflow-display";
 import { SkillDisplay, type SkillParams } from "./skill-display";
 import { AskUserQuestionDisplay, type AskUserQuestionParams } from "./ask-user-question-display";
 import { WebFetchDisplay, type WebFetchParams } from "./web-fetch-display";
+import { GenericToolDisplay } from "./generic-tool-display";
 import { ToolStatusProvider, eventToolStatus } from "./_shared";
 
 interface ToolCallItemProps {
@@ -141,6 +144,14 @@ const DISPATCH: Renderer[] = [
 
   noOutput<TaskParams>(["task"], TaskDisplay, (ctx) => ({ description: ctx.summary })),
   noOutput<AgentParams>(["agent"], AgentDisplay, (ctx) => ({ description: ctx.summary })),
+  withOutput<SendMessageParams>(
+    ["sendmessage", "send_message"],
+    SendMessageDisplay,
+    (ctx) => ({ summary: ctx.summary }),
+  ),
+  withOutput<MonitorParams>(["monitor"], MonitorDisplay, (ctx) => ({
+    description: ctx.summary,
+  })),
 
   withOutput<EditParams>(["edit", "replace"], EditDisplay, summaryAs("file_path")),
 
@@ -330,25 +341,19 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
     if (node !== null) return wrap(node);
   }
 
-  if (isCompact) {
-    return wrap(
-      <div className="flex items-center gap-2 py-0.5 ml-5 px-2 hover:bg-primary-50 dark:hover:bg-primary/5 rounded text-s font-sans">
-        <span className="text-primary-500 truncate">{summary}</span>
-      </div>,
-    );
-  }
-
+  // No dedicated renderer matched — a tool we haven't registered, a newly
+  // shipped SDK tool, or a plugin's own. GenericToolDisplay derives a
+  // status-aware header and an expandable input/output panel from the raw
+  // payload, so an unknown tool degrades to "inspectable" instead of a dead
+  // line whose result is unreachable in the UI.
   return wrap(
-    <div className="py-0.5 text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary  rounded">
-      <div className="flex items-center gap-2 text-s font-sans">
-        <span className="">
-          {toolIcon}
-        </span>
-        <span className=" font-medium">
-          {resolved.displayName}
-        </span>
-        <span className=" truncate">{summary}</span>
-      </div>
-    </div>,
+    <GenericToolDisplay
+      icon={toolIcon}
+      displayName={resolved.displayName}
+      params={metadataInput ?? params}
+      output={event.metadata?.output}
+      summary={summary}
+      isCompact={isCompact}
+    />,
   );
 }

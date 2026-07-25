@@ -103,6 +103,23 @@ describe("mergeRunEvents", () => {
 });
 
 describe("mapToolCallToEvent", () => {
+  it("carries persisted plan status metadata into the rendered event", () => {
+    const tc = {
+      ...toolCall(7, "done", 10, 12),
+      toolName: "ExitPlanMode",
+      metadata: { planStatus: "applied", phase: "complete" },
+    } as ToolCall;
+
+    const ev = mapToolCallToEvent(tc);
+
+    expect(ev?.metadata).toMatchObject({
+      planStatus: "applied",
+      phase: "complete",
+      status: "done",
+      toolName: "ExitPlanMode",
+    });
+  });
+
   it("returns a degraded fallback event (never null) when mapping throws", () => {
     const exploding = { get content(): string { throw new Error("boom"); } };
     const tc = {

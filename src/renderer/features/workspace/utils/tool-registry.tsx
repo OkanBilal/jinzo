@@ -7,6 +7,7 @@ import {
   ExitPlan,
   Glob,
   Grep,
+  Infinite,
   Layers,
   Mains,
   Plus,
@@ -191,6 +192,27 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
     category: "Agent",
     icon: <Workflow className="size-4" />,
     aliases: ["workflow"],
+  },
+  // Agent-to-agent message. Input carries `to` + `summary` + `message` (plain
+  // text, or a protocol object for shutdown / plan-approval handshakes); output
+  // is the delivery receipt. Rendered by SendMessageDisplay in tool-call-item.tsx.
+  {
+    displayName: "SendMessage",
+    groupKey: "sendmessage",
+    category: "Agent",
+    icon: <SendMessage className="size-4" />,
+    aliases: ["sendmessage", "send_message"],
+  },
+  // Background watch. Input carries the `description` plus either a shell
+  // `command` (each stdout line is an event) or a `ws` endpoint (each text
+  // frame is an event), bounded by `timeout_ms` unless `persistent`.
+  // Rendered by MonitorDisplay in tool-call-item.tsx.
+  {
+    displayName: "Monitor",
+    groupKey: "monitor",
+    category: "Shell",
+    icon: <Infinite className="size-4" />,
+    aliases: ["monitor"],
   },
   {
     displayName: "EnterPlanMode",

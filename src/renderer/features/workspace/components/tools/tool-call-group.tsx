@@ -88,5 +88,6 @@ export {
   groupEvents,
   reconcileEventGroups,
   isPlanToolCallGroup,
+  toolEventPlanName,
   type EventGroup,
 } from "../../utils/group-events";
