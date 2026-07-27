@@ -13,7 +13,10 @@
 // Everything else here is an internal seam (used by the module + its tests).
 // ─────────────────────────────────────────────────────────────
 
-import { isPlanToolCallGroup, type EventGroup } from "../components/tools/tool-call-group";
+// Import from the pure source module, not the `tool-call-group.tsx` back-compat
+// re-export — going through the component would pull the whole React/UI tree
+// (and its browser-global-touching deps) into this React-free module.
+import { isPlanToolCallGroup, type EventGroup } from "../utils/group-events";
 import type { RunTurn } from "@/lib/redux/api";
 
 export interface SessionInfo {
