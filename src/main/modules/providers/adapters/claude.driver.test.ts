@@ -229,7 +229,7 @@ describe("claude.driver / permission bridge", () => {
     );
   });
 
-  it("never auto-approves ExitPlanMode before the user applies the plan", async () => {
+  it("switches the active SDK session to acceptEdits after the user applies the plan", async () => {
     const requestApproval = vi.fn().mockResolvedValue({
       requestId: "plan-approval-1",
       approved: true,
@@ -241,15 +241,28 @@ describe("claude.driver / permission bridge", () => {
       requestApproval,
     });
 
-    await bridge.canUseTool(
-      "ExitPlanMode",
-      { plan: "# Proposed plan" },
-      {
-        signal: new AbortController().signal,
-        toolUseID: "tool-plan",
-        requestId: "plan-approval-1",
-      },
-    );
+    await expect(
+      bridge.canUseTool(
+        "ExitPlanMode",
+        { plan: "# Proposed plan" },
+        {
+          signal: new AbortController().signal,
+          toolUseID: "tool-plan",
+          requestId: "plan-approval-1",
+        },
+      ),
+    ).resolves.toEqual({
+      behavior: "allow",
+      updatedInput: { plan: "# Proposed plan" },
+      updatedPermissions: [
+        {
+          type: "setMode",
+          mode: "acceptEdits",
+          destination: "session",
+        },
+      ],
+      toolUseID: "tool-plan",
+    });
 
     expect(requestApproval).toHaveBeenCalledWith(
       expect.objectContaining({

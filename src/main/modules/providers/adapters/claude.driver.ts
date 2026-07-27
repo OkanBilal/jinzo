@@ -513,6 +513,7 @@ interface ClaudePermissionBridgeOptions {
 interface PermissionDecision {
   allowed: boolean;
   updatedInput?: Record<string, unknown>;
+  updatedPermissions?: unknown[];
   reason?: string;
 }
 
@@ -592,6 +593,23 @@ export function createClaudePermissionBridge({
       return { allowed: false, reason: "User denied permission" };
     }
 
+    if (toolName === "ExitPlanMode") {
+      return {
+        allowed: true,
+        updatedInput: toolInput,
+        // Updating the persisted provider config only affects future queries.
+        // Move the currently running Claude SDK session out of plan mode too,
+        // so the implementation phase inherits the UI's "Edit" selection.
+        updatedPermissions: [
+          {
+            type: "setMode",
+            mode: "acceptEdits",
+            destination: "session",
+          },
+        ],
+      };
+    }
+
     if (isAskUser && response.answer !== undefined) {
       const askedQuestions = (toolInput.questions ?? []) as Array<{ question?: string }>;
       const answers: Record<string, string> = {};
@@ -622,6 +640,9 @@ export function createClaudePermissionBridge({
     return {
       behavior: "allow",
       updatedInput: decision.updatedInput ?? toolInput,
+      ...(decision.updatedPermissions
+        ? { updatedPermissions: decision.updatedPermissions }
+        : {}),
       toolUseID: options.toolUseID,
     };
   };
