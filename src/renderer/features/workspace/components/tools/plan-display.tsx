@@ -7,15 +7,30 @@ import { Plan, ArrowUp } from "@/components/ui/icons";
 import { useUpdateToolCallMutation } from "@/lib/redux/api/toolsApi";
 import { Button } from "@/components/ui";
 import { coerceToolOutput } from "../../utils/parse-tool-content";
-
-type PlanStatus = "pending" | "applied" | "dismissed";
+import {
+  getPersistedPlanStatus,
+  shouldShowPlanActions,
+  type PlanInteractionMode,
+  type PlanStatus,
+} from "../../lib/plan-approval";
 
 interface PlanDisplayProps {
   event: RunEvent;
-  onApplyPlan?: () => void;
+  interactionMode?: PlanInteractionMode;
+  hasPendingApproval?: boolean;
+  isRunActive?: boolean;
+  onApplyPlan?: () => void | Promise<void>;
+  onDismissPlan?: () => void | Promise<void>;
 }
 
-export function PlanDisplay({ event, onApplyPlan }: PlanDisplayProps) {
+export function PlanDisplay({
+  event,
+  interactionMode = "follow-up",
+  hasPendingApproval = false,
+  isRunActive = false,
+  onApplyPlan,
+  onDismissPlan,
+}: PlanDisplayProps) {
   const [updateToolCall] = useUpdateToolCallMutation();
 
   const input = event.metadata?.input as Record<string, unknown> | undefined;
@@ -23,9 +38,10 @@ export function PlanDisplay({ event, onApplyPlan }: PlanDisplayProps) {
     | Record<string, unknown>
     | null;
 
-  const savedStatus = (parsedOutput?.planStatus as PlanStatus | undefined) ?? "pending";
+  const savedStatus = getPersistedPlanStatus(event.metadata, parsedOutput);
   const [status, setStatus] = useState<PlanStatus>(savedStatus);
   const [isExpanded, setIsExpanded] = useState(savedStatus !== "dismissed");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const content = (input?.plan as string) || event.content || "";
 
@@ -44,25 +60,43 @@ export function PlanDisplay({ event, onApplyPlan }: PlanDisplayProps) {
     if (!isNaN(toolCallId)) {
       await updateToolCall({
         id: toolCallId,
-        payload: { output: { planStatus: newStatus } },
+        payload: { metadata: { planStatus: newStatus } },
       });
     }
   };
 
   const handleApply = async () => {
-    await persistStatus("applied");
-    onApplyPlan?.();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await persistStatus("applied");
+      await onApplyPlan?.();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDismiss = async () => {
-    await persistStatus("dismissed");
-    setIsExpanded(false);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await persistStatus("dismissed");
+      setIsExpanded(false);
+      await onDismissPlan?.();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const isPending = status === "pending";
+  const showActions = shouldShowPlanActions({
+    status,
+    interactionMode,
+    hasPendingApproval,
+    isRunActive,
+  });
 
   return (
-    <div className="overflow-hidden rounded-2xl glass-morphism flex flex-col my-4">
+    <div className="overflow-hidden rounded-2xl glass-surface flex flex-col my-4">
       <Button
         onClick={() => setIsExpanded(!isExpanded)}
         className="w-full flex items-center gap-2 px-4 py-2.5 cursor-pointer hover:bg-primary-100/50 dark:hover:bg-primary-500/10 transition-colors"
@@ -101,18 +135,20 @@ export function PlanDisplay({ event, onApplyPlan }: PlanDisplayProps) {
             </div>
           </div>
 
-          {/* Action buttons — only when pending */}
-          {isPending && (
+          {/* Live approvals require a pending broker request; follow-ups require a finished run. */}
+          {showActions && (
             <div className="flex items-center justify-end gap-2 px-4 py-2.5 border-t border-primary-500/10 dark:border-primary-400/10 shrink-0">
               <Button
                 variant="submit"
                 onClick={handleApply}
+                disabled={isSubmitting}
               >
                 Apply Plan
               </Button>
               <Button
                 variant="secondary"
                 onClick={handleDismiss}
+                disabled={isSubmitting}
               >
                 Dismiss
               </Button>

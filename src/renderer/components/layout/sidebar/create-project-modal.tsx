@@ -54,7 +54,7 @@ export default function CreateProjectModal({
       onClick={onClose}
     >
       <div
-        className="rounded-4xl px-6 pt-5 pb-6 glass-morphism max-w-md w-full animate-dropdown-in origin-center"
+        className="rounded-4xl px-6 pt-5 pb-6 glass-surface max-w-md w-full animate-dropdown-in origin-center"
         role="dialog"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}

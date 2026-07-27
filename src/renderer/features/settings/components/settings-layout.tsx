@@ -72,7 +72,7 @@ export function SettingsSection({
           {title}
         </Body>
       )}
-      <div className="rounded-3xl glass-morphism px-4 py-1">
+      <div className="rounded-3xl glass-surface px-4 py-1">
         {children}
       </div>
     </div>

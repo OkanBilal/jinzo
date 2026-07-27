@@ -96,7 +96,7 @@ export default function DropdownWrapper({
         !usePortal && verticalClass,
         minWidth,
         "bg-linear-to-b from-primary/90 to-primary-50/80 dark:from-primary-900 dark:to-primary-800",
-        "z-(--z-dropdown) glass-morphism rounded-2xl",
+        "z-(--z-dropdown) glass-surface rounded-2xl",
         hiddenClass,
       )}
       style={{

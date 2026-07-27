@@ -202,7 +202,7 @@ export function DiffSection({
       <div className="shrink-0 flex items-center gap-2 mb-2">
         <Button
           onClick={handleReviewChanges}
-          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100/50 dark:bg-primary/5 hover:bg-primary-100 dark:hover:bg-primary/10 text-primary-900 dark:text-primary-200 transition-colors"
+          className="flex-1 flex items-center glass-outline justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100/50 dark:bg-primary/5 hover:bg-primary-100 dark:hover:bg-primary/10 text-primary-900 dark:text-primary-200 transition-colors"
         >
           {variant === "codex" ? <Codex className="w-3.5 h-3.5" /> : <Chat className="w-3.5 h-3.5" />}
           Review Changes
@@ -238,7 +238,7 @@ export function DiffSection({
               }}
               className={`w-full flex items-center gap-2 px-2 py-1 rounded-xl duration-200 text-left transition-all animate-slide-in ${
                 isSelected
-                  ? "bg-primary/80 dark:bg-primary/5"
+                  ? "bg-primary/80 dark:bg-primary/5 glass-outline"
                   : "bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
               }`}
               style={{ animationDelay: `${index * 0.02}s` }}

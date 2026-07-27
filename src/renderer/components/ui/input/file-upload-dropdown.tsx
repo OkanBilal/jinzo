@@ -462,7 +462,7 @@ export function FileUploadDropdown({
           tooltip="Upload image"
           tooltipPosition="top"
           onClick={onImageUpload}
-          className="shrink-0 rounded-full p-1.5 transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-300/20 cursor-pointer"
+          className="shrink-0 rounded-full p-2 transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-300/20 cursor-pointer"
           aria-label="Upload image"
         >
           <Picture className="size-4 text-primary-950 dark:text-primary" />
@@ -489,11 +489,11 @@ export function FileUploadDropdown({
         tooltip="Upload file or photo"
         tooltipPosition="top"
         onClick={onToggle}
-        className="shrink-0 cursor-pointer rounded-full p-1.5 transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800"
+        className="shrink-0 cursor-pointer rounded-full p-2 transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800"
         aria-label="Upload file"
         aria-expanded={isOpen}
       >
-        <Attach className="text-primary-950 dark:text-primary" />
+        <Attach className="text-primary-950 dark:text-primary size-4" />
       </Button>
 
       <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 overflow-x-auto">
@@ -518,7 +518,7 @@ export function FileUploadDropdown({
             type="button"
             onClick={onClick}
             role="menuitem"
-            className="flex w-full cursor-pointer items-center px-3 py-2.5 text-left text-sm text-primary-900 first:rounded-t-xl last:rounded-b-xl hover:bg-primary-200/30 dark:text-primary-200 dark:hover:bg-primary-800"
+            className="flex w-full cursor-pointer items-center px-3 py-2 text-left text-sm text-primary-900 first:rounded-t-xl last:rounded-b-xl hover:bg-primary-200/30 dark:text-primary-200 dark:hover:bg-primary-800"
           >
             <Icon className="mr-2 size-3.5" />
             {label}

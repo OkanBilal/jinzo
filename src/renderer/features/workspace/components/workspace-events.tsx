@@ -5,6 +5,7 @@ import {
   groupEvents,
   reconcileEventGroups,
   isPlanToolCallGroup,
+  toolEventPlanName,
   type EventGroup,
 } from "./tools/tool-call-group";
 import { PlanDisplay } from "./tools/plan-display";
@@ -328,6 +329,8 @@ interface WorkspaceEventsProps {
   onForkRun?: (sourceRunId: string, message: string) => Promise<string | null>;
   onSuggestionSelect?: (suggestion: string) => void;
   onApplyPlan?: () => void;
+  onDismissPlan?: () => void;
+  hasPendingPlanApproval?: boolean;
 }
 
 export function WorkspaceEvents({
@@ -343,6 +346,8 @@ export function WorkspaceEvents({
   onForkRun,
   onSuggestionSelect,
   onApplyPlan,
+  onDismissPlan,
+  hasPendingPlanApproval = false,
 }: WorkspaceEventsProps) {
   const isEditorActive = activeTab === "editor";
   const isIssueActive = isIssueTab(activeTab);
@@ -486,6 +491,10 @@ export function WorkspaceEvents({
       const sessionBarForThis = sessionTimes.has(index)
         ? sessionTimes.get(index)!
         : null;
+      const planToolName =
+        group.type === "tool_calls" && group.events.length === 1
+          ? toolEventPlanName(group.events[0])
+          : null;
 
       return (
         <Fragment key={group.id}>
@@ -505,13 +514,21 @@ export function WorkspaceEvents({
               ) : null}
             </>
           ) : group.type === "tool_calls" ? (
-            group.events.length === 1 && (() => {
-              const c = group.events[0].content;
-              const ci = c.indexOf(":");
-              const n = (ci !== -1 ? c.substring(0, ci).trim() : c).toLowerCase();
-              return n === "plan" || n === "create plan" || n === "exitplanmode";
-            })() ? (
-              <PlanDisplay event={group.events[0]} onApplyPlan={onApplyPlan} />
+            planToolName === "plan" ||
+            planToolName === "create plan" ||
+            planToolName === "exitplanmode" ? (
+              <PlanDisplay
+                event={group.events[0]}
+                interactionMode={
+                  variant === "claude" && planToolName === "exitplanmode"
+                    ? "live-approval"
+                    : "follow-up"
+                }
+                hasPendingApproval={hasPendingPlanApproval}
+                isRunActive={isRunning}
+                onApplyPlan={onApplyPlan}
+                onDismissPlan={onDismissPlan}
+              />
             ) : (
               <ToolCallGroup
                 group={group}
@@ -542,6 +559,9 @@ export function WorkspaceEvents({
       handleFork,
       variant,
       onApplyPlan,
+      onDismissPlan,
+      hasPendingPlanApproval,
+      isRunning,
       currentWorkspace?.rootPath,
     ],
   );

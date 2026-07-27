@@ -68,7 +68,7 @@ export function SegmentedTabs<T extends string>({
 
   const containerClass =
     variant === "pill"
-      ? "relative flex rounded-[10px] bg-primary-200/40 dark:bg-primary-200/5 p-0.5"
+      ? "relative flex rounded-full glass-surface p-0.5"
       : variant === "bordered"
         ? "inline-flex rounded-xl border border-primary-200/50 dark:border-primary-800/40 overflow-hidden"
         : "flex gap-1";
@@ -98,7 +98,7 @@ export function SegmentedTabs<T extends string>({
       "px-2.5 py-1 text-sm rounded-xl transition-colors",
       disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
       isActive
-        ? "bg-primary-200/80 dark:bg-primary-800/60 text-primary-900 dark:text-primary-100"
+        ? "bg-primary-200/80 dark:bg-primary-800/60 text-primary-900 dark:text-primary-100 glass-button rounded-ful"
         : "text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-200 hover:bg-primary-100/50 dark:hover:bg-primary-800/30",
     );
   };
@@ -108,7 +108,7 @@ export function SegmentedTabs<T extends string>({
       {variant === "pill" && (
         <div
           aria-hidden
-          className="absolute top-0.75 bg-primary dark:bg-primary/10 rounded-lg transition-all duration-300 ease-in-out"
+          className="absolute top-0.75 bg-primary dark:bg-primary/10 glass-button rounded-full transition-all duration-300 ease-in-out"
           style={{
             left: indicator.left,
             width: indicator.width,

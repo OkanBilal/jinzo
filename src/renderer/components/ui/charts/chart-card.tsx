@@ -26,7 +26,7 @@ export default function ChartCard({
   return (
     <div
       className={cn(
-        "rounded-3xl glass-morphism p-4",
+        "rounded-3xl glass-surface p-4",
         className,
       )}
     >

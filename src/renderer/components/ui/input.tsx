@@ -7,10 +7,11 @@ import {
 
 import { cn } from "../../lib/cn";
 
+// No bg-*/border-* here: `glass-input` paints both the fill and the rim, so
+// those utilities would be dead weight. The error state retints the rim.
 const baseInputClasses =
-  "w-full rounded-xl border min-w-60 border-primary-200/70 dark:border-primary/5 bg-primary/80 dark:bg-primary-950/50 px-3 py-2 text-sm text-primary-900 dark:text-primary-100  placeholder:text-primary-400 dark:placeholder:text-primary-400 focus:outline-none transition disabled:opacity-60 disabled:cursor-not-allowed";
-const errorClasses =
-  "border-red-300 focus:ring-red-300 focus:border-red-400 dark:border-red-800 dark:focus:ring-red-600";
+  "w-full rounded-xl min-w-60 glass-input px-3 py-2 text-sm text-primary-900 dark:text-primary-100  placeholder:text-primary-400 dark:placeholder:text-primary-400 focus:outline-none transition disabled:opacity-60 disabled:cursor-not-allowed";
+const errorClasses = "[--glass-rim:var(--color-danger)]";
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   hasError?: boolean;

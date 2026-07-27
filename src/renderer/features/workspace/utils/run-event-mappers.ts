@@ -157,6 +157,7 @@ export function mapToolCallToEvent(tc: ToolCall): RunEvent | null {
   try {
     const inputDisplay = formatToolData(tc.input);
     const outputDisplay = formatToolData(tc.output);
+    const persistedMetadata = parseMetadata(tc.metadata);
     const content = `${tc.toolName}: ${inputDisplay}${outputDisplay ? `\n→ ${outputDisplay}` : ""}`;
 
     return {
@@ -165,6 +166,7 @@ export function mapToolCallToEvent(tc: ToolCall): RunEvent | null {
       content,
       timestamp: tc.createdAt ? new Date(tc.createdAt) : new Date(),
       metadata: {
+        ...persistedMetadata,
         status: tc.status,
         toolName: tc.toolName,
         input: parseRawInput(tc.input),
@@ -187,6 +189,7 @@ export function mapToolCallToEvent(tc: ToolCall): RunEvent | null {
       content: `${tc.toolName ?? "tool"}`,
       timestamp: tc.createdAt ? new Date(tc.createdAt) : new Date(),
       metadata: {
+        ...parseMetadata(tc.metadata),
         status: tc.status,
         toolName: tc.toolName,
       },

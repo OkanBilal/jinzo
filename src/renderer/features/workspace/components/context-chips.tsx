@@ -143,17 +143,17 @@ export function ContextChips({
             {contextIssues.map((issue) => (
               <div
                 key={issue.entityId}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs bg-primary dark:bg-primary-300/10 dark:text-primary-200 text-primary-700`}
+                className={`flex items-center glass-button gap-1.5 px-2 py-1.5 rounded-full text-xs  dark:text-primary-200 text-primary-700`}
               >
                 <ProviderIcon provider={issue.provider} className="size-4" fallback="text" />
                 <span className="truncate max-w-37.5">{issue.title}</span>
                 {onRemoveContextIssue && (
                   <Button
                     onClick={() => onRemoveContextIssue(issue.entityId)}
-                    className="w-4 h-4 flex items-center justify-center rounded p-0.5  transition-colors"
+                    className=" flex items-center glass-button justify-center rounded-full p-0.5  transition-colors"
                     title="Remove from context"
                   >
-                    <Close className="w-3 h-3" />
+                    <Close className="size-3" />
                   </Button>
                 )}
               </div>
@@ -162,17 +162,17 @@ export function ContextChips({
             {contextSignals.map((signal) => (
               <div
                 key={signal.entityId}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-primary dark:bg-primary-300/10 dark:text-primary-200 text-primary-700"
+                className={`flex items-center glass-button gap-1.5 px-2 py-1.5 rounded-full text-xs dark:text-primary-200 text-primary-700`}
               >
                 <ProviderIcon provider={signal.source} className="w-3 h-3" fallback="text" />
                 <span className="truncate max-w-37.5">{signal.title}</span>
                 {onRemoveContextSignal && (
                   <Button
                     onClick={() => onRemoveContextSignal(signal.entityId)}
-                    className="w-4 h-4 flex items-center justify-center rounded p-0.5 transition-colors"
+                    className="w-4 h-4 flex items-center justify-center glass-button rounded-full p-0.5 transition-colors"
                     title="Remove from context"
                   >
-                    <Close className="w-3 h-3" />
+                    <Close className="size-3" />
                   </Button>
                 )}
               </div>
@@ -192,7 +192,7 @@ export function ContextChips({
                   tabIndex={0}
                   onClick={() => setPreviewId(sel.id)}
                   onKeyDown={(e) => e.key === "Enter" && setPreviewId(sel.id)}
-                  className="flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-lg text-xs bg-primary dark:bg-primary-300/10 dark:text-primary-200 text-primary-700 cursor-pointer"
+                  className="flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full glass-button text-xs bg-primary dark:bg-primary-300/10 dark:text-primary-200 text-primary-700 cursor-pointer"
                   title={`Click to preview · ${sel.title || sel.url} — ${sel.selector}`}
                 >
                   {thumb ? (
@@ -214,10 +214,10 @@ export function ContextChips({
                         e.stopPropagation();
                         onRemoveContextBrowserSelection(sel.id);
                       }}
-                      className="w-4 h-4 flex items-center justify-center rounded p-0.5 hover:bg-primary/20 dark:hover:bg-primary/10 transition-colors"
+                      className=" flex items-center justify-center glass-button rounded-full p-0.5 hover:bg-primary/20 dark:hover:bg-primary/10 transition-colors"
                       title="Remove from context"
                     >
-                      <Close className="w-3 h-3" />
+                      <Close className="size-3" />
                     </Button>
                   )}
                 </div>

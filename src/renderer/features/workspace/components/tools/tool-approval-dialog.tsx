@@ -249,7 +249,7 @@ export function ToolApprovalDialog({
   if (request.kind === "ask_user") {
     return (
       <div className="mx-auto mb-1 max-w-210 ">
-        <div className="overflow-hidden rounded-2xl  glass-morphism">
+        <div className="overflow-hidden rounded-2xl  glass-surface">
           <div className="flex gap-3 px-3.5 pb-2 pt-3.5 sm:px-4 sm:pt-4">
             <Question className="mt-0.5 size-4 shrink-0 text-primary-600 dark:text-primary-400" />
             <div className="min-w-0 flex-1 space-y-2">
@@ -403,7 +403,7 @@ export function ToolApprovalDialog({
 
   return (
     <div className="mr-auto mb-1 max-w-210">
-      <div className="overflow-hidden rounded-2xl glass-morphism">
+      <div className="overflow-hidden rounded-2xl glass-surface">
         <div className="flex items-center gap-2 px-4 pb-1 pt-3.5">
           <span className="text-primary-500 dark:text-primary-400">
             {headerIcon}

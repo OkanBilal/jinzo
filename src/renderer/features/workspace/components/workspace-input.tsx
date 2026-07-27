@@ -149,6 +149,7 @@ export function WorkspaceInput({
   const {
     selectedModelDisplayName,
     modelDisplayNames,
+    modelEffortLevelsByDisplayName,
     isLoadingModels,
     isFetchingModels,
     handleModelChange,
@@ -540,7 +541,7 @@ export function WorkspaceInput({
       )}
 
     <div
-      className={`relative w-full max-w-200 mx-auto flex flex-col pb-2 rounded-3xl glass-morphism
+      className={`relative w-full max-w-200 mx-auto flex flex-col pb-2 rounded-[28px] glass-surface
         cursor-pointer transition-all
         ${layout === "default" ? "mb-4" : ""}
         ${isFileDragOver ? "ring-2 ring-primary/60 ring-offset-2 ring-offset-background" : ""}`}
@@ -600,6 +601,7 @@ export function WorkspaceInput({
         onGoalChange={onGoalChange}
         selectedModelDisplayName={selectedModelDisplayName}
         modelDisplayNames={modelDisplayNames}
+        modelEffortLevelsByDisplayName={modelEffortLevelsByDisplayName}
         onModelChange={handleModelChange}
         isLoadingModels={isLoadingModels}
         permissionMode={permissionMode}

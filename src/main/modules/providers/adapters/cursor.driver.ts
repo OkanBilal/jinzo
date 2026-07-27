@@ -669,6 +669,28 @@ export function resolveCursorSelection(
   return { effort, fastMode, thinking };
 }
 
+interface CursorModeRequestSender {
+  sendRequest(method: string, params?: unknown): Promise<unknown>;
+}
+
+/**
+ * Apply the requested ACP session mode even when it is Cursor's default
+ * "agent" mode. ACP sessions may retain a previous "plan" mode across resume,
+ * so omitting the default is not equivalent to resetting the session.
+ */
+export async function applyCursorSessionMode(
+  server: CursorModeRequestSender,
+  sessionId: string,
+  mode: string | undefined,
+): Promise<boolean> {
+  if (!mode) return false;
+  await server.sendRequest("session/set_mode", {
+    sessionId,
+    modeId: mode,
+  });
+  return true;
+}
+
 // ─────────────────────────────────────────────────────────────
 // Driver factory
 // ─────────────────────────────────────────────────────────────
@@ -1825,12 +1847,9 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
       }
     }
 
-    if (mode && mode !== "agent") {
+    if (mode) {
       try {
-        await server.sendRequest("session/set_mode", {
-          sessionId,
-          modeId: mode,
-        });
+        await applyCursorSessionMode(server, sessionId, mode);
       } catch {
         logWarn(`Failed to set mode to ${mode}`);
       }

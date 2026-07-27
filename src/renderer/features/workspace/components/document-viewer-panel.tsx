@@ -143,7 +143,7 @@ export function DocumentViewerPanel() {
           tooltip="Close"
           tooltipPosition="bottom-left"
           onClick={close}
-          className="p-1 rounded-md cursor-pointer text-primary-700 dark:text-primary-300 hover:bg-primary-200/60 dark:hover:bg-primary-800/60"
+          className="p-1 rounded-full glass-button cursor-pointer text-primary-700 dark:text-primary-300 hover:bg-primary-200/60 dark:hover:bg-primary-800/60"
           aria-label="Close document viewer"
         >
           <Close className="size-4" />

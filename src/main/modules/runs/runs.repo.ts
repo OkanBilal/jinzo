@@ -288,7 +288,12 @@ export const runsRepo = {
     if (payload.endedAt !== undefined) updateData.endedAt = payload.endedAt;
     if (payload.latencyMs !== undefined) updateData.latencyMs = payload.latencyMs;
     if (payload.costMicros !== undefined) updateData.costMicros = payload.costMicros;
-    if (payload.metadata !== undefined) updateData.metadata = JSON.stringify(payload.metadata);
+    if (payload.metadata !== undefined) {
+      // Metadata is extended by multiple owners over a tool call's lifetime
+      // (renderer plan decision, then provider completion details). Merge
+      // patches so the later completion cannot erase the earlier UI decision.
+      updateData.metadata = sql`json_patch(COALESCE(${toolCalls.metadata}, '{}'), ${JSON.stringify(payload.metadata)})`;
+    }
     updateData.updatedAt = sql`(unixepoch())`;
 
     await db.update(toolCalls).set(updateData).where(eq(toolCalls.id, id));

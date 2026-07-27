@@ -20,7 +20,7 @@ export function UpdateBanner() {
   }
 
   return (
-    <div className="mx-3 mb-2 rounded-xl bg-primary-100/80 dark:bg-primary/5 border border-primary-200/60 dark:border-primary/10 overflow-hidden animate-in slide-in-from-bottom-2 duration-300">
+    <div className="mx-3 mb-2 rounded-2xl glass-card overflow-hidden animate-in slide-in-from-bottom-2 duration-300">
       <div className="px-3 py-2.5 space-y-2">
         <div className="flex items-center justify-between">
           <div />

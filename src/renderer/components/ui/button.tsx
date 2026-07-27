@@ -11,12 +11,8 @@ export type ButtonVariant =
   | "secondary"
   | "ghost"
   | "danger"
-  | "warning"
-  | "success"
   | "icon"
-  | "link"
   | "subtle"
-  | "frosted"
   | "bare";
 
 
@@ -35,32 +31,24 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
-  primary:
-    "cursor-pointer bg-primary-200/60 dark:bg-primary-800/20 hover:bg-primary-200 dark:hover:bg-primary-800/40 text-primary-700 dark:text-primary-200",
-  secondary:
-    "cursor-pointer bg-primary-400 dark:bg-primary-200/10 hover:bg-primary-600 dark:hover:bg-primary-200/30 text-primary dark:text-primary-200",
-  submit:
-    "cursor-pointer bg-blue-500 hover:bg-blue-600 text-primary disabled:bg-blue-600/50",
+  // Glass variants carry no bg-*/hover:bg-* — the `glass-*` utility owns the
+  // background, and a hover:bg-* would win on specificity and wipe the rim.
+  // Their hover fills come from the --glass-hover-* tokens in index.css.
+  primary: "cursor-pointer text-primary-700 dark:text-primary-200 glass-primary",
+  secondary: "cursor-pointer text-primary dark:text-primary glass-secondary",
+  submit: "cursor-pointer text-primary glass-submit",
   ghost:
     "cursor-pointer text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900",
-  danger:
-    "cursor-pointer text-primary bg-danger hover:bg-danger-hover disabled:bg-danger-hover/50",
-  warning:
-    "cursor-pointer bg-primary-200/60 text-primary-600 dark:bg-primary-700/80 dark:text-primary-200 hover:bg-primary-300/60 dark:hover:bg-primary-800/80",
-  success:
-    "cursor-pointer bg-green-950 text-green-600 dark:bg-green-950 dark:text-green-500 hover:bg-green-900 dark:hover:bg-green-900",
+  danger: "cursor-pointer text-primary glass-danger",
   icon: "cursor-pointer p-1 rounded-md text-primary-600 dark:text-primary-200 hover:bg-primary-200/40 dark:hover:bg-primary-700",
-  link: "cursor-pointer text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 underline-offset-4 hover:underline ",
   subtle:
     "cursor-pointer flex items-center gap-2  hover:bg-primary/80 dark:hover:bg-primary/10 ",
-  frosted:
-    "cursor-pointer  text-primary-800 dark:text-primary-200 ",
   bare: "cursor-pointer",
 };
 
 
 const baseStyles =
-  "px-3 py-1.5 text-s rounded-xl items-center duration-200 transition-[color,background-color,border-color,box-shadow,transform] justify-center font-medium disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500";
+  "px-3 py-1.5 text-s font-medium rounded-xl items-center duration-200 transition-[color,background-color,border-color,box-shadow,transform] justify-center disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500";
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
@@ -90,8 +78,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const baseClass =
       variant === "bare"
         ? ""
-        : variant === "frosted"
-          ? "inline-flex items-center justify-center font-medium disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500"
           : baseStyles;
 
     const buttonElement = (

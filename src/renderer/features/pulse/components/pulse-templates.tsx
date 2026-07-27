@@ -20,7 +20,7 @@ export function PulseTemplates({
               {items.map((tpl) => (
                 <div
                   key={tpl.id}
-                  className="rounded-3xl glass-morphism px-4 py-4 cursor-pointer hover:bg-primary-200/60 dark:hover:bg-primary/5 transition-colors flex items-center gap-3"
+                  className="rounded-3xl glass-surface px-4 py-6 cursor-pointer transition-colors flex items-center gap-3"
                   onClick={() => onSelect(tpl)}
                   role="button"
                   tabIndex={0}

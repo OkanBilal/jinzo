@@ -72,7 +72,7 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
             {labels.map((label) => (
               <span
                 key={label}
-                className={`inline-block px-2.5 py-1 text-xs rounded-full capitalize font-medium bg-primary-200 dark:bg-primary-400 text-primary-600 dark:text-primary-100`}
+                className={`inline-block px-2.5 py-1 text-xs rounded-full capitalize font-medium bg-primary-200 dark:bg-primary-600 text-primary-600 dark:text-primary-100`}
               >
                 {label}
               </span>
@@ -101,8 +101,7 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
           <div>
             <Text className="mt-0.5">
               <Button
-                variant="frosted"
-                className=" px-3 py-2.5 dark:text-primary-200 font-medium  rounded-xl"
+                variant="primary"
                 onClick={() => window.api.shell.openExternal(entity.url!)}
               >
                 {iss.provider === "linear"

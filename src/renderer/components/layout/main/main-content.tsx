@@ -53,7 +53,7 @@ export function MainContent({
     >
       {header && (
         <div
-          className={`shrink-0 transition-all duration-300 ease-out ${hasRightPanel ? "max-w-[calc(100%-170px)]" : browserOpen ? "max-w-[calc(100%-180px)]" : ""}`}
+          className={`shrink-0 transition-all duration-300 ease-out ${hasRightPanel ? "max-w-[calc(100%-180px)]" : browserOpen ? "max-w-[calc(100%-180px)]" : ""}`}
           style={{ paddingLeft: headerPaddingLeft }}
         >
           {header}

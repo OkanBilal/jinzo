@@ -30,6 +30,7 @@ export interface ToolCall {
   toolCallId?: string;
   input?: string;
   output?: string;
+  metadata?: Record<string, unknown> | string | null;
   status: string;
   startedAt?: Date;
   endedAt?: Date;

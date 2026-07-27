@@ -6,8 +6,9 @@
 // translate cursor-specific stop reasons into the canonical DriverOutcome.
 // ─────────────────────────────────────────────────────────────
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
+  applyCursorSessionMode,
   mapStopReasonToOutcome,
   normalizeCursorReasoning,
   extractCursorEffortLevels,
@@ -23,6 +24,23 @@ import {
   parseCursorCommands,
   type CursorConfigOption,
 } from "./cursor.driver";
+
+describe("cursor.driver / session mode", () => {
+  it("explicitly resets a resumed plan session back to agent mode", async () => {
+    const sendRequest = vi.fn().mockResolvedValue({});
+
+    await applyCursorSessionMode(
+      { sendRequest },
+      "session-1",
+      "agent",
+    );
+
+    expect(sendRequest).toHaveBeenCalledWith("session/set_mode", {
+      sessionId: "session-1",
+      modeId: "agent",
+    });
+  });
+});
 
 // A realistic parameterized-model-picker config-option set, shaped like the
 // `session/new` response when `_meta.parameterizedModelPicker` is advertised.

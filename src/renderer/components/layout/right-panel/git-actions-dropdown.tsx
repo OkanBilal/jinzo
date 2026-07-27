@@ -290,7 +290,7 @@ export function GitActionsDropdown({ providerId }: GitActionsDropdownProps) {
       <Button
         ref={triggerRef}
         onClick={handleToggle}
-        className="flex items-center gap-1 px-1.5 py-1.25 rounded-lg cursor-pointer text-primary-700 dark:text-primary-300 hover:bg-primary-100/80 dark:hover:bg-primary/10 transition-all duration-300 ease-out"
+        className="flex items-center glass-outline rounded-full gap-1 px-2 py-1 cursor-pointer text-primary-700 dark:text-primary-300 hover:bg-primary-100/80 dark:hover:bg-primary/10 transition-all duration-300 ease-out"
       >
         <Branch className="size-3.5" />
         <Caption className="text-s">Git</Caption>

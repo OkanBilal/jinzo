@@ -99,7 +99,7 @@ export function DropdownMenu({
       <div
         ref={menuRef}
         className={cn(
-          "fixed z-(--z-dropdown) rounded-2xl overflow-hidden glass-morphism animate-dropdown-in",
+          "fixed z-(--z-dropdown) rounded-2xl overflow-hidden glass-surface animate-dropdown-in",
           className,
         )}
         style={{
@@ -204,7 +204,7 @@ export function DropdownMenuSub({
             ref={submenuRefCallback}
             onMouseEnter={handleSubmenuEnter}
             onMouseLeave={handleSubmenuLeave}
-            className="fixed z-(--z-dropdown-sub) rounded-2xl overflow-hidden glass-morphism animate-dropdown-sub-in"
+            className="fixed z-(--z-dropdown-sub) rounded-2xl overflow-hidden glass-surface animate-dropdown-sub-in"
             style={{
               top: submenuPos.top,
               left: submenuPos.left,

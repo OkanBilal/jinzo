@@ -81,6 +81,29 @@ const SANDBOX_OPTIONS = CODEX_SANDBOX_MODES.map((m) => ({
   description: m.description,
 }));
 
+function usageLimitLabel(
+  windowDurationMins: number | undefined,
+  fallback: string,
+): string {
+  if (
+    windowDurationMins === undefined ||
+    !Number.isFinite(windowDurationMins) ||
+    windowDurationMins <= 0
+  ) {
+    return fallback;
+  }
+
+  if (windowDurationMins === 7 * 24 * 60) return "Weekly usage limit";
+  if (windowDurationMins === 24 * 60) return "Daily usage limit";
+  if (windowDurationMins % (24 * 60) === 0) {
+    return `${windowDurationMins / (24 * 60)} day usage limit`;
+  }
+  if (windowDurationMins % 60 === 0) {
+    return `${windowDurationMins / 60} hour usage limit`;
+  }
+  return `${windowDurationMins} minute usage limit`;
+}
+
 export default function CodexSettings() {
   const { provider, isLoading, error, config, updateConfig } =
     useProviderSettings<CodexAdapterConfig>(PROVIDER_IDS.codex, "codex");
@@ -132,7 +155,10 @@ export default function CodexSettings() {
     ...(rateLimits?.primary
       ? [
           {
-            label: "5 hour usage limit",
+            label: usageLimitLabel(
+              rateLimits.primary.windowDurationMins,
+              "5 hour usage limit",
+            ),
             usedPercent: rateLimits.primary.usedPercent,
             resetsAt: rateLimits.primary.resetsAt,
           },
@@ -141,7 +167,10 @@ export default function CodexSettings() {
     ...(rateLimits?.secondary
       ? [
           {
-            label: "Weekly usage limit",
+            label: usageLimitLabel(
+              rateLimits.secondary.windowDurationMins,
+              "Weekly usage limit",
+            ),
             usedPercent: rateLimits.secondary.usedPercent,
             resetsAt: rateLimits.secondary.resetsAt,
           },

@@ -144,6 +144,7 @@ const GERUND_BY_PAST: Record<string, string> = {
   opened: "opening",
   closed: "closing",
   // Built-in display verbs not covered above
+  monitored: "monitoring",
   grepped: "grepping",
   viewed: "viewing",
   edited: "editing",

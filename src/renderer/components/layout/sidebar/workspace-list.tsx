@@ -402,7 +402,7 @@ export default function WorkspacesList({
         }`}
       >
         {grouping === "none" ? (
-          <div className="flex flex-col space-y-0.5">
+          <div className="flex flex-col space-y-1">
             {sortedWorkspaces.map(renderWorkspaceItem)}
           </div>
         ) : (

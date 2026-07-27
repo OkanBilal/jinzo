@@ -226,7 +226,7 @@ export function WizardModal<
         role="dialog"
         aria-modal="true"
         aria-labelledby="wizard-title"
-        className={`relative z-(--z-overlay) w-full rounded-3xl overflow-hidden glass-morphism ${className.includes("max-w-") ? "" : "max-w-2xl"} ${className}`}
+        className={`relative z-(--z-overlay) w-full rounded-3xl overflow-hidden glass-surface ${className.includes("max-w-") ? "" : "max-w-2xl"} ${className}`}
         style={{
           animation: shouldAnimate
             ? "wizardModalIn 250ms cubic-bezier(0.22, 1, 0.36, 1) both"
@@ -261,9 +261,9 @@ export function WizardModal<
             onClick={() => !isSubmitting && close()}
             disabled={isSubmitting}
             aria-label="Close modal"
-        className="rounded-lg cursor-pointer hover:bg-primary-100 dark:hover:bg-primary/10 p-1 text-primary-900 dark:text-primary-300 transition-all duration-300 ease-out"
+        className="rounded-full cursor-pointer hover:bg-primary-100 dark:hover:bg-primary/10 p-1.5 glass-button text-primary-900 dark:text-primary-300 transition-all duration-300 ease-out"
           >
-            <Close className="w-4 h-4" />
+            <Close className="size-4" />
           </Button>
         </div>
 
