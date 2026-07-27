@@ -172,7 +172,7 @@ export function PermissionModeDropdown({
         tooltip="Permission Mode"
         type="button"
         onClick={onToggle}
-        className="flex items-center gap-1.5 px-2 py-1 rounded-full text-sm transition-all cursor-pointer hover:bg-primary-200/30 animate-blur-reveal dark:hover:bg-primary-800 text-primary-950 dark:text-primary"
+        className="flex items-center gap-1.5 px-2 py-1.5 rounded-full text-sm transition-all cursor-pointer hover:bg-primary-200/30 animate-blur-reveal dark:hover:bg-primary-800 text-primary-950 dark:text-primary"
       >
         <PermissionModeIcon
           mode={permissionMode}

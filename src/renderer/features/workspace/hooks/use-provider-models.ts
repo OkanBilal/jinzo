@@ -186,6 +186,17 @@ export function useProviderModels(
     [selectableModels, variant],
   );
 
+  const modelEffortLevelsByDisplayName = useMemo(
+    () =>
+      Object.fromEntries(
+        selectableModels.map((model) => [
+          getModelPrettyName(model, variant),
+          model.supportedEffortLevels,
+        ]),
+      ),
+    [selectableModels, variant],
+  );
+
   const selectedModel = externalSelectedModel ?? persistedModel ?? "";
   const setSelectedModel = useCallback(
     (model: string) => {
@@ -278,6 +289,7 @@ export function useProviderModels(
     selectedModel,
     selectedModelDisplayName,
     modelDisplayNames,
+    modelEffortLevelsByDisplayName,
     isLoadingModels,
     isFetchingModels,
     handleModelChange,

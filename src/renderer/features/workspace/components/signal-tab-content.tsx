@@ -150,7 +150,7 @@ export function SignalTabContent({ signal }: SignalTabContentProps) {
           <div>
             <Text className="mt-0.5">
               <Button
-                variant="frosted"
+                variant="primary"
                 className="px-3 py-2.5 dark:text-primary-200 font-medium rounded-xl"
                 onClick={() => window.api.shell.openExternal(entity.url!)}
               >

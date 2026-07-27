@@ -270,7 +270,7 @@ html:not(.app-ready) *::after {
   --shadow-inset-subtle-dark: inset 0 0.5px 0 rgba(255, 255, 255, 0.03);
   --shadow-inset-toggle: inset 0 0.5px 2px rgba(0, 0, 0, 0.1);
   --shadow-inset-toggle-dark: inset 0 0.5px 2px rgba(0, 0, 0, 0.3);
-  --font-sans: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol;
 
 }
 
@@ -723,23 +723,145 @@ html.mains-web.dark #root {
   background: var(--color-primary-900) !important;
 }
 
-.glass-morphism {
-  background: linear-gradient(to bottom, var(--color-primary-100), var(--color-primary-100));
-  border: 0.5px solid #ffffff2e;
-  box-shadow:
-    0 1px 1px #00000011,
-    0 1px 1px #0000000a,
-    inset 0 1px 1px #00000011;
+/* ── Glass surfaces ──────────────────────────────────────────────────────
+   One utility for every glass surface. `glass-<name>` paints the fill on
+   padding-box plus the rim gradients on border-box (the lit-edge illusion).
+
+   Adding a surface = adding ONE token below; `glass-<name>` then exists as
+   a class. Optional companions, both looked up by the same <name>:
+     --glass-hover-<name>  fill while hovered (omit = no hover change)
+     --glass-edge-<name>   rim color override (omit = inherits --glass-rim)
+
+   Rules of use:
+   - Exactly one glass-* class per element. Two of them fight over
+     --glass-fill and the winner is whichever Tailwind emits last.
+   - Never pair with a bg-* or hover:bg-* utility: those set background-color,
+     which the `background` shorthand here overrides — and hover:bg-* wins on
+     specificity, wiping the rim on hover. Use the tokens instead, or
+     `hover:[--glass-tint:<color>]` for a genuine one-off. */
+@theme {
+  --glass-fill-surface: var(--color-primary-100);
+  --glass-fill-card: rgba(255, 255, 255, 0.98);
+  --glass-fill-input: rgba(255, 255, 255, 1);
+  --glass-fill-toggle: rgba(216, 216, 216, 1);
+  --glass-fill-button: rgba(255, 255, 255, 0.72);
+  --glass-fill-primary: rgba(240, 240, 240, 0.72);
+  --glass-fill-secondary: rgba(12, 12, 12, 0.42);
+  --glass-fill-submit: rgba(43, 127, 255, 0.9);
+  --glass-fill-danger: rgba(255, 68, 54, 0.9);
+
+  --glass-hover-button: rgba(255, 255, 255, 0.9);
+  --glass-hover-primary: var(--color-primary-200);
+  --glass-hover-submit: #2563eb;
+  --glass-hover-danger: var(--color-danger-hover);
+
+  /* Saturated fills swallow a dark rim — light them from the other side. */
+  --glass-edge-submit: rgba(255, 255, 255, 0.42);
+  --glass-edge-danger: rgba(255, 255, 255, 0.42);
 }
 
-.dark .glass-morphism {
-  background: linear-gradient(to bottom, var(--color-primary-900), var(--color-primary-900));
-  border-color: #f7f7f612;
-  box-shadow:
-    0 1px 1px #00000040,
-    0 1px 1px #00000026,
-    inset 0 1px 0 #f7f7f612;
+:root {
+  --glass-rim: rgba(0, 0, 0, 0.08);
+  --glass-rim-shadow: rgba(255, 255, 255, 0);
+  --glass-outline-rim: rgba(0, 0, 0, 0.1);
 }
+
+/* Dark mode is a token swap — the utility itself never forks. */
+.dark {
+  --glass-rim: rgba(255, 255, 255, 0.08);
+  --glass-rim-shadow: rgba(0, 0, 0, 0);
+  --glass-outline-rim: rgba(255, 255, 255, 0.1);
+
+  --glass-fill-surface: var(--color-primary-900);
+  --glass-fill-card: rgba(24, 24, 24, 0.98);
+  --glass-fill-input: rgba(14, 14, 14, 1);
+  --glass-fill-toggle: rgba(14, 14, 14, 1);
+  --glass-fill-button: rgba(36, 36, 36, 0.72);
+  --glass-fill-primary: rgba(36, 36, 36, 0.72);
+  --glass-fill-secondary: rgba(120, 120, 120, 0.42);
+
+  --glass-hover-button: rgba(48, 48, 48, 0.85);
+  --glass-hover-primary: rgba(38, 38, 37, 0.6);
+}
+
+@utility glass-* {
+  --glass-fill: --value(--glass-fill-*);
+  --glass-hover: --value(--glass-hover-*);
+  --glass-rim: --value(--glass-edge-*);
+  /* Indirection so :hover can retint without a var() cycle. */
+  --glass-tint: var(--glass-fill);
+
+  background:
+    linear-gradient(to bottom, var(--glass-tint), var(--glass-tint)) padding-box,
+    radial-gradient(
+      130% 120% at 8% -10%,
+      var(--glass-rim) 0 18%,
+      transparent 48%
+    ) border-box,
+    radial-gradient(
+      100% 90% at 104% 100%,
+      var(--glass-rim) 0 12%,
+      transparent 46%
+    ) border-box,
+    linear-gradient(
+      135deg,
+      var(--glass-rim) 0%,
+      var(--glass-rim) 25%,
+      transparent 47%,
+      var(--glass-rim-shadow) 70%,
+      var(--glass-rim) 88%,
+      var(--glass-rim) 100%
+    ) border-box;
+  border: 0.5px solid transparent;
+
+  &:hover {
+    --glass-tint: var(--glass-hover, var(--glass-fill));
+  }
+}
+
+@utility glass-outline {
+  position: relative;
+  background: none;
+  border: 0;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        130% 120% at 8% -10%,
+        var(--glass-outline-rim) 0 18%,
+        transparent 48%
+      ),
+      radial-gradient(
+        100% 90% at 104% 100%,
+        var(--glass-outline-rim) 0 12%,
+        transparent 46%
+      ),
+      linear-gradient(
+        135deg,
+        var(--glass-outline-rim) 0%,
+        var(--glass-outline-rim) 25%,
+        transparent 47%,
+        var(--glass-rim-shadow) 70%,
+        var(--glass-outline-rim) 88%,
+        var(--glass-outline-rim) 100%
+      );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+}
+
 
 
 .copilot-icon-container {
@@ -895,4 +1017,3 @@ html.mains-web.dark #root {
     animation: none;
   }
 }
-

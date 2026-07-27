@@ -30,20 +30,20 @@ export function ToggleButton({
       data-layout-toggle
       className="fixed z-(--z-panel-toggle) flex items-center gap-1.5 transition-[right] duration-300 ease-out"
       style={{
-        top: "calc(0.6875rem + env(safe-area-inset-top))",
+        top: "calc(0.4875rem + env(safe-area-inset-top))",
         right: browserOpen
           ? "calc(var(--browser-panel-width) + 0.75rem)"
           : "0.8125rem",
       }}
     >
       <GitActionsDropdown providerId={providerId} />
-      <div className="h-4 w-px bg-primary-700/40 dark:bg-primary-700/40" />
+      <div className="flex items-center gap-1.5 glass-outline rounded-full p-0.5">
       {onBrowserToggle && embeddedBrowser && (
         <Button
           tooltip={browserOpen ? "Close browser" : "Open browser"}
           tooltipPosition="left"
           onClick={onBrowserToggle}
-          className={`p-1.25 transition-all duration-300 ease-out rounded-lg cursor-pointer hover:bg-primary-100/80 dark:hover:bg-primary/10 ${
+          className={`p-1.25 transition-all duration-300 ease-out rounded-full cursor-pointer  hover:bg-primary-100/80 dark:hover:bg-primary/10 ${
             browserOpen
               ? "text-primary-800 dark:text-primary-100"
               : "text-primary-700 dark:text-primary-300"
@@ -86,6 +86,7 @@ export function ToggleButton({
           <ToggleClose  className="size-4 text-primary-700 dark:text-primary-300" />
         )}
       </Button>
+      </div>
     </div>
   );
 }

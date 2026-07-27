@@ -8,7 +8,6 @@ import {
   DictationButton,
   ModelSelectDropdown,
   FileUploadDropdown,
-  EffortLevelDropdown,
   FastModeButton,
   GoalButton,
   PermissionModeDropdown,
@@ -19,6 +18,8 @@ import {
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import { useClickOutside } from "@/hooks/use-click-outside";
 
+type EffortLevel = "minimal" | "low" | "medium" | "high" | "max" | "xhigh";
+
 interface InputToolbarProps {
   variant: "claude" | "copilot" | "codex" | "cursor";
   isLoading: boolean;
@@ -27,6 +28,10 @@ interface InputToolbarProps {
   // Model
   selectedModelDisplayName: string;
   modelDisplayNames: string[];
+  modelEffortLevelsByDisplayName: Record<
+    string,
+    EffortLevel[] | undefined
+  >;
   onModelChange: (displayName: string) => void;
   isLoadingModels: boolean;
   // Permission mode (Claude only)
@@ -48,14 +53,7 @@ interface InputToolbarProps {
   // Effort level (Claude only)
   effortLevel: string;
   onEffortLevelChange: (level: string) => void;
-  supportedEffortLevels?: (
-    | "minimal"
-    | "low"
-    | "medium"
-    | "high"
-    | "max"
-    | "xhigh"
-  )[];
+  supportedEffortLevels?: EffortLevel[];
   // Ultracode (Claude only) — bottom entry of the effort dropdown
   supportsUltracode?: boolean;
   // Stop run (active run is running)
@@ -75,6 +73,7 @@ export function InputToolbar({
   onGoalChange,
   selectedModelDisplayName,
   modelDisplayNames,
+  modelEffortLevelsByDisplayName,
   onModelChange,
   isLoadingModels,
   permissionMode,
@@ -101,9 +100,7 @@ export function InputToolbar({
   const isMobile = useIsMobile();
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [showFileDropdown, setShowFileDropdown] = useState(false);
-  const [showThinkingDropdown, setShowThinkingDropdown] = useState(false);
   const [showPermissionDropdown, setShowPermissionDropdown] = useState(false);
-  const thinkingDropdownRef = useRef<HTMLDivElement>(null);
   const permissionDropdownRef = useRef<HTMLDivElement>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
   const fileDropdownRef = useRef<HTMLDivElement>(null);
@@ -115,10 +112,6 @@ export function InputToolbar({
 
   useClickOutside(fileDropdownRef, () => {
     if (showFileDropdown) setShowFileDropdown(false);
-  });
-
-  useClickOutside(thinkingDropdownRef, () => {
-    if (showThinkingDropdown) setShowThinkingDropdown(false);
   });
 
   useClickOutside(permissionDropdownRef, () => {
@@ -224,7 +217,12 @@ export function InputToolbar({
               <ModelSelectDropdown
                 model={selectedModelDisplayName}
                 models={modelDisplayNames}
+                modelEffortLevelsByModel={modelEffortLevelsByDisplayName}
                 onModelChange={onModelChange}
+                thinkingMode={thinkingMode}
+                effortLevel={effortLevel}
+                onEffortLevelChange={onEffortLevelChange}
+                onThinkingModeToggle={onThinkingModeToggle}
                 isOpen={showModelDropdown}
                 onToggle={() => setShowModelDropdown(!showModelDropdown)}
                 onClose={() => setShowModelDropdown(false)}
@@ -232,18 +230,6 @@ export function InputToolbar({
                 openUpward={true}
                 isLoading={isLoadingModels}
                 variant={variant}
-              />
-              <EffortLevelDropdown
-                variant={variant}
-                thinkingMode={thinkingMode}
-                effortLevel={effortLevel}
-                onEffortLevelChange={onEffortLevelChange}
-                onThinkingModeToggle={onThinkingModeToggle}
-                supportedEffortLevels={supportedEffortLevels}
-                supportsUltracode={supportsUltracode}
-                isOpen={showThinkingDropdown}
-                onToggle={() => setShowThinkingDropdown(!showThinkingDropdown)}
-                dropdownRef={thinkingDropdownRef}
               />
               {supportsFastMode && (
                 <FastModeButton fastMode={fastMode} onToggle={onFastModeToggle} />

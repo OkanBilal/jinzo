@@ -175,10 +175,10 @@ export default function WorkspaceItem({
             onClick?.();
           }
         }}
-        className={`block  py-1.25
-           transition-all duration-200 ease-out cursor-pointer ${grouping !== "project" ? "rounded-xl px-2" : "rounded-[10px] px-2"} ${
+        className={`block  py-1.5
+           transition-all duration-200 ease-out cursor-pointer ${grouping !== "project" ? "rounded-2xl px-2.5" : "rounded-xl px-2"} ${
             isActive
-              ? "bg-primary/50 dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/10"
+              ? "bg-primary/50 glass-outline dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/10"
               : "bg-transparent group-hover:bg-primary/50 dark:group-hover:bg-primary/5"
           }`}
       >

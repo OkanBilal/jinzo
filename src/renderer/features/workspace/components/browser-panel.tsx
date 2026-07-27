@@ -10,7 +10,7 @@ import {
   addContextBrowserSelection,
   type ContextBrowserSelection,
 } from "@/lib/redux/slices/workspaceSlice";
-import { Button, toast } from "@/components/ui";
+import { Button, Input, toast } from "@/components/ui";
 import {
   ChevronLeft,
   Close,
@@ -303,13 +303,14 @@ export function BrowserPanel() {
         ariaLabel="Resize browser panel"
       />
       {/* Toolbar */}
-      <div className="flex items-center gap-1 px-2 py-1.5 border-b border-primary-200/60 dark:border-primary-800/50 ">
+      <div className="flex items-center gap-1 px-2 py-1 border-b border-primary-200/60 dark:border-primary-800/50 ">
+      <div className="flex items-center gap-1 rounded-full glass-outline p-0.5">
         <Button
           tooltip="Back"
           tooltipPosition="bottom"
           onClick={handleBack}
           disabled={!nav.canGoBack}
-          className="p-0.5 rounded-md cursor-pointer disabled:opacity-40 text-primary-700 dark:text-primary-300 hover:bg-primary-200/60 dark:hover:bg-primary-800/60"
+          className="p-0.5 rounded-full cursor-pointer disabled:opacity-40 text-primary-700 dark:text-primary-300 hover:bg-primary-200/60 dark:hover:bg-primary-800/60"
           aria-label="Back"
         >
           <ChevronLeft className="size-5" />
@@ -319,7 +320,7 @@ export function BrowserPanel() {
           tooltipPosition="bottom"
           onClick={handleForward}
           disabled={!nav.canGoForward}
-          className="p-0.5 rounded-md cursor-pointer disabled:opacity-40 text-primary-700 dark:text-primary-300 hover:bg-primary-200/60 dark:hover:bg-primary-800/60"
+          className="p-0.5 rounded-full cursor-pointer disabled:opacity-40 text-primary-700 dark:text-primary-300 hover:bg-primary-200/60 dark:hover:bg-primary-800/60"
           aria-label="Forward"
         >
           <ChevronLeft className="size-5 rotate-180" />
@@ -328,7 +329,7 @@ export function BrowserPanel() {
           tooltip={nav.isLoading ? "Stop" : "Reload"}
           tooltipPosition="bottom"
           onClick={handleReload}
-          className="group p-1 rounded-md cursor-pointer text-primary-700 dark:text-primary-300 hover:bg-primary-200/60 dark:hover:bg-primary-800/60"
+          className="group p-1 rounded-full cursor-pointer text-primary-700 dark:text-primary-300 hover:bg-primary-200/60 dark:hover:bg-primary-800/60"
           aria-label={nav.isLoading ? "Stop" : "Reload"}
         >
           {nav.isLoading ? (
@@ -337,21 +338,23 @@ export function BrowserPanel() {
             <Refresh className="size-4 origin-center rotate-180 transition-transform duration-200 ease-out group-active:rotate-90" />
           )}
         </Button>
-        <input
+        </div>
+        <Input
           type="text"
           value={urlInput}
           onChange={(e) => setUrlInput(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={(e) => e.currentTarget.select()}
           placeholder="Enter URL or search"
-          className="flex-1 min-w-0 px-3 py-1.5 text-xs rounded-md bg-primary-200/40 dark:bg-primary-800/40 text-primary-900 dark:text-primary-100 placeholder:text-primary-500 outline-none focus:bg-primary-200/60 dark:focus:bg-primary-800/60"
+          className="flex-1 min-w-0 text-xs rounded-full py-1.75  text-primary-900 dark:text-primary-100 placeholder:text-primary-500 outline-none focus:bg-primary-200/60 dark:focus:bg-primary-800/60"
           spellCheck={false}
         />
+        <div className="flex items-center gap-1 rounded-full glass-outline p-0.5">
         <Button
           tooltip={selectMode ? "Exit select mode (Esc)" : "Select in browser"}
           tooltipPosition="bottom-left"
           onClick={handleToggleSelect}
-          className={`p-1 rounded-md cursor-pointer transition-colors ${
+          className={`p-1 rounded-full cursor-pointer transition-colors ${
             selectMode
               ? "bg-primary-500/20 text-primary-800 dark:text-primary-100"
               : "text-primary-700 dark:text-primary-300 hover:bg-primary-200/60 dark:hover:bg-primary-800/60"
@@ -365,11 +368,12 @@ export function BrowserPanel() {
           tooltip="Close browser"
           tooltipPosition="bottom-left"
           onClick={handleClose}
-          className="p-1 rounded-md cursor-pointer text-primary-700 dark:text-primary-300 hover:bg-primary-200/60 dark:hover:bg-primary-800/60"
+          className="p-1 rounded-full cursor-pointer text-primary-700 dark:text-primary-300 hover:bg-primary-200/60 dark:hover:bg-primary-800/60"
           aria-label="Close browser"
         >
           <Close className="size-4" />
         </Button>
+        </div>
       </div>
 
       {/* Title bar */}

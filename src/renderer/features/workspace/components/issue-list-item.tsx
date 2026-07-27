@@ -61,9 +61,9 @@ export function IssueListItem({
       tabIndex={0}
       onClick={handleClick}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleClick(e as any); } }}
-      className={`w-full text-left px-1 py-1.5  rounded-xl cursor-pointer transition-all duration-200 ease-out flex items-center gap-2 group ${
+      className={`w-full text-left px-1 py-1.5  rounded-2xl cursor-pointer transition-all duration-200 ease-out flex items-center gap-2 group ${
         isActive
-          ? "bg-primary/80 dark:bg-primary/5"
+          ? "bg-primary/80 dark:bg-primary/5 glass-outline"
           : "bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
       }`}
     >

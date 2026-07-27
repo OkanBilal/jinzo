@@ -17,6 +17,7 @@ import {
   mapClaudePluginList,
   mapClaudePluginDetail,
   cleanGeneratedTitle,
+  parseSimpleYaml,
 } from "./claude.driver";
 import fs from "node:fs";
 import {
@@ -30,6 +31,42 @@ const INHERITED_PERMISSION_SETTINGS = {
     allow: DEFAULT_ALLOWED_TOOLS,
   },
 };
+
+describe("claude.driver / skill frontmatter", () => {
+  it("folds multiline YAML descriptions into readable text", () => {
+    const parsed = parseSimpleYaml(
+      [
+        "name: creating-skills",
+        "description: >",
+        "  Design and build Recursive skills — folder-based extensions that give agents",
+        "  specialized knowledge, workflows, and tools.",
+        "user-invokable: true",
+      ].join("\n"),
+    );
+
+    expect(parsed).toMatchObject({
+      name: "creating-skills",
+      description:
+        "Design and build Recursive skills — folder-based extensions that give agents specialized knowledge, workflows, and tools.",
+      "user-invokable": true,
+    });
+  });
+
+  it("preserves line breaks for literal YAML descriptions", () => {
+    const parsed = parseSimpleYaml(
+      [
+        "name: literal-skill",
+        "description: |-",
+        "  First line.",
+        "  Second line.",
+        "disable-model-invocation: false",
+      ].join("\n"),
+    );
+
+    expect(parsed.description).toBe("First line.\nSecond line.");
+    expect(parsed["disable-model-invocation"]).toBe(false);
+  });
+});
 
 describe("claude.driver / permission mode options", () => {
   it("acknowledges bypassPermissions so detached agents can inherit bypass mode", () => {

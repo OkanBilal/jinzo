@@ -57,7 +57,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         className={cn(
-          "relative flex flex-col glass-morphism rounded-xl shadow-2xl overflow-hidden max-h-[92vh]",
+          "relative flex flex-col glass-surface rounded-xl shadow-2xl overflow-hidden max-h-[92vh]",
           className,
         )}
         style={{
@@ -84,9 +84,9 @@ export function ModalHeader({ onClose, children }: ModalHeaderProps) {
       <Button
         onClick={onClose}
         aria-label="Close"
-        className="ml-3 shrink-0 p-1 rounded-md hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors cursor-pointer"
+        className="ml-3 shrink-0 p-1.5 rounded-full glass-button hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors cursor-pointer"
       >
-        <Close className="w-3.5 h-3.5 text-primary-500" />
+        <Close className="size-4 text-primary-500" />
       </Button>
     </div>
   );

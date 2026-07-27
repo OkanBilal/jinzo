@@ -155,23 +155,23 @@ export function ImagePreviewModal({ name, src, onClose }: ImagePreviewModalProps
       backdrop="media"
       className="w-fit min-w-80 max-w-[92vw]"
     >
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-primary-200 dark:border-primary-800 shrink-0">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-primary-200 dark:border-primary-800  shrink-0">
         <span className="text-xs font-mono text-primary-600 dark:text-primary-400 truncate">
           {name}
         </span>
-        <div className="flex items-center gap-1 ml-3 shrink-0">
+        <div className="flex items-center gap-1 ml-3 shrink-0 glass-surface p-1 rounded-full">
           <Button
             onClick={handleDownload}
             aria-label="Download image"
             tooltip="Download"
-            className="p-1 rounded-md hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors cursor-pointer"
+            className="p-1 rounded-full hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors cursor-pointer"
           >
             <Download className="w-3.5 h-3.5 text-primary-500" />
           </Button>
           <Button
             onClick={onClose}
             aria-label="Close"
-            className="p-1 rounded-md hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors cursor-pointer"
+            className="p-1 rounded-full hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors cursor-pointer"
           >
             <Close className="w-3.5 h-3.5 text-primary-500" />
           </Button>
@@ -196,7 +196,7 @@ export function ImagePreviewModal({ name, src, onClose }: ImagePreviewModalProps
             cursor: canPan ? (dragging ? "grabbing" : "grab") : "default",
           }}
         />
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-0.5 rounded-full bg-primary-950/80 dark:bg-primary-950/70 backdrop-blur px-1.5 py-1 shadow-lg">
+        <div className="absolute bottom-3 glass-surface left-1/2 -translate-x-1/2 flex items-center gap-0.5 rounded-full px-1.5 py-1 shadow-lg">
           <Button
             onClick={zoomOut}
             disabled={scale <= MIN_SCALE}

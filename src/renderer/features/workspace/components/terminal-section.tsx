@@ -34,7 +34,7 @@ export function TerminalSection({
             tooltip="Close terminal"
             tooltipPosition="top-left"
             onClick={onClose}
-            className="rounded-lg cursor-pointer hover:bg-primary-100/80 dark:hover:bg-primary/10 p-1 text-primary-900 dark:text-primary-300 transition-all duration-300 ease-out"
+            className="rounded-full glass-button cursor-pointer hover:bg-primary-100/80 dark:hover:bg-primary/10 p-1 text-primary-900 dark:text-primary-300 transition-all duration-300 ease-out"
           >
             <Close className="size-4" />
           </Button>

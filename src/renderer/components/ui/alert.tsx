@@ -37,7 +37,7 @@ export default function Alert({
       onClick={onSecondary}
     >
       <div
-        className="rounded-4xl p-6 glass-morphism max-w-84 w-full animate-dropdown-in origin-center"
+        className="rounded-4xl p-6 glass-surface max-w-84 w-full animate-dropdown-in origin-center"
         role="dialog"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}

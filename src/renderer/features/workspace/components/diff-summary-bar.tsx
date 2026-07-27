@@ -95,7 +95,7 @@ export function DiffSummaryBar({
 
   return (
     <div className="w-full max-w-200 mx-auto mb-1">
-      <div className="rounded-2xl glass-morphism  overflow-hidden">
+      <div className="rounded-2xl glass-surface  overflow-hidden">
         {/* Header row */}
         <div className="flex items-center gap-2 px-4 py-2">
           <Button
@@ -225,7 +225,7 @@ export function DiffSummaryBar({
                 </span>
                 <Button
                   onClick={() => setSelectedFile(null)}
-                  className="p-0.5 rounded hover:bg-primary-100 dark:hover:bg-primary-800 cursor-pointer"
+                  className="p-0.5 rounded-full hover:bg-primary-100 glass-button dark:hover:bg-primary-800 cursor-pointer"
                 >
                   <Close className="size-3 text-primary-500" />
                 </Button>

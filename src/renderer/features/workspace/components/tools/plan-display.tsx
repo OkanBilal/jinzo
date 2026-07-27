@@ -96,7 +96,7 @@ export function PlanDisplay({
   });
 
   return (
-    <div className="overflow-hidden rounded-2xl glass-morphism flex flex-col my-4">
+    <div className="overflow-hidden rounded-2xl glass-surface flex flex-col my-4">
       <Button
         onClick={() => setIsExpanded(!isExpanded)}
         className="w-full flex items-center gap-2 px-4 py-2.5 cursor-pointer hover:bg-primary-100/50 dark:hover:bg-primary-500/10 transition-colors"

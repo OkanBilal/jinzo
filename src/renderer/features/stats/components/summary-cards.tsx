@@ -26,7 +26,7 @@ export default function SummaryCards({ summary }: SummaryCardsProps) {
       {cards.map((card) => (
         <div
           key={card.label}
-          className="rounded-3xl glass-morphism px-4 py-3.5 text-center"
+          className="rounded-3xl glass-surface px-4 py-3.5 text-center"
         >
           <Heading2>
             <NumberFlow

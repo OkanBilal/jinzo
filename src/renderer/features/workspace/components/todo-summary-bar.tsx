@@ -145,7 +145,7 @@ export function TodoSummaryBar({ events }: TodoSummaryBarProps) {
 
   return (
     <div className="w-full max-w-200 mx-auto mb-1">
-      <div className="rounded-2xl glass-morphism overflow-hidden">
+      <div className="rounded-2xl glass-surface overflow-hidden">
         <Button
           onClick={() => setIsExpanded((v) => !v)}
           className="group flex items-center gap-2 w-full px-4 py-3 cursor-pointer"

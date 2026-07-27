@@ -76,7 +76,7 @@ function ToastItem({ toast, onDismiss }: ToastItemProps) {
       onMouseLeave={() => setIsPaused(false)}
       data-exiting={exiting ? "" : undefined}
       className="pointer-events-auto inline-flex items-center gap-3 px-5 py-3
-        rounded-full max-w-[calc(100vw-24px)] glass-morphism
+        rounded-full max-w-[calc(100vw-24px)] glass-outline bg-primary dark:bg-primary-950
         text-primary-950 dark:text-primary toast-item"
     >
       {icon && <span className="flex items-center">{icon}</span>}

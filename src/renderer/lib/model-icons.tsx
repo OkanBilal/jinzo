@@ -8,6 +8,7 @@ import {
   Kimi,
   Mains,
   Meta,
+  Zai,
 } from "@/components/ui/icons";
 import { Claude } from "@/components/ui/icons/space";
 
@@ -54,9 +55,15 @@ function formatCursorModelName(model: string): string {
   return `${brandDisplay} ${tokens.join(" ")}`;
 }
 
+function removeGptNameSeparators(model: string): string {
+  if (!/^gpt-/i.test(model)) return model;
+  return model.replace(/^gpt-/i, "GPT ").replace(/-/g, " ");
+}
+
 export function formatModelDisplayName(model: string, variant?: ModelIconVariant): string {
-  if (variant === "cursor") return formatCursorModelName(model);
-  return model;
+  const formatted =
+    variant === "cursor" ? formatCursorModelName(model) : model;
+  return removeGptNameSeparators(formatted);
 }
 
 export function getModelPrettyName(
@@ -129,6 +136,9 @@ export function getModelIcon(modelName: string, variant?: ModelIconVariant) {
   }
   if (name.includes("kimi")) {
     return <Kimi className="size-3.5 dark:text-primary text-primary-950" />;
+  }
+  if (name.includes("glm")) {
+    return <Zai className="size-3.5 dark:text-primary text-primary-950" />;
   }
   // Default icon
   return <Mains className="size-3.5 dark:text-primary text-primary-950" />;

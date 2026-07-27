@@ -211,7 +211,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 tooltip="View your pulse"
                 className={`justify-start flex items-center gap-2 w-full rounded-xl transition-colors ${
                   isPulseRoute
-                    ? "bg-primary/50 dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/10"
+                    ? "bg-primary/50 glass-outline dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/10"
                     : ""
                 }`}
                 onClick={() => navigate("/pulse")}
@@ -235,7 +235,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 </Body>
               </Button>
             </div>
-            <div className="px-3 mb-px">
+            <div className="px-3 mb-px ">
               {isPluginsDisabledForAgent ? (
                 <Tooltip
                   content="Not available for this agent yet."
@@ -248,7 +248,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                       disabled
                       className={`justify-start flex items-center gap-2 w-full rounded-xl transition-colors pointer-events-none opacity-50 ${
                         isPluginsRoute
-                          ? "bg-primary/50 dark:bg-primary/5"
+                          ? "bg-primary/50 dark:bg-primary/5 glass-outline"
                           : ""
                       }`}
                       aria-current={isPluginsRoute ? "page" : undefined}
@@ -278,7 +278,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                   tooltip="View plugins"
                   className={`justify-start flex items-center gap-2 w-full rounded-xl transition-colors ${
                     isPluginsRoute
-                      ? "bg-primary/50 dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/10"
+                      ? " glass-outline bg-primary/50 dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/10"
                       : ""
                   }`}
                   onClick={() => {
@@ -312,7 +312,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 tooltip="Relay"
                 className={`justify-start flex items-center gap-2 w-full rounded-xl transition-colors ${
                   isRelayRoute
-                    ? "bg-primary/50 dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/10"
+                    ? " glass-outline bg-primary/50 dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/10"
                     : ""
                 }`}
                 onClick={() => navigate("/relay")}

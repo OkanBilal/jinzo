@@ -180,9 +180,9 @@ export function WorkspaceSidebar() {
   return (
     <div className="flex-1 flex flex-col h-[calc(100%-1rem)] mt-2 -pb-4 rounded-xl overflow-hidden">
       <div className="shrink-0 py-2 mt-8 px-3">
-        <div className="relative flex items-center p-0.5 rounded-xl bg-primary/50  dark:bg-primary/5">
+        <div className="glass-outline relative flex items-center p-0.5 rounded-xl ">
           <div
-            className={`absolute top-0.5 bottom-0.5 rounded-[10px] dark:bg-primary/10 bg-primary  transition-transform duration-200 ease-out`}
+            className={`absolute top-0.5 bottom-0.5 rounded-[10px] glass-outline dark:bg-primary/10 bg-primary  transition-transform duration-200 ease-out`}
             style={{
               width: "calc((100% - 0.75rem) / 3)",
               left: "0.125rem",

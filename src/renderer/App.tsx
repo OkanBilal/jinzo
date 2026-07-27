@@ -52,7 +52,7 @@ function useDropdownAnimationPrewarm() {
       el.style.cssText =
         "position:fixed;bottom:0;right:0;opacity:0.001;pointer-events:none;";
       el.innerHTML =
-        '<div class="animate-dropdown-in glass-morphism rounded-2xl" style="width:240px;height:280px;padding:12px;font-size:13px;">prewarm</div>';
+        '<div class="animate-dropdown-in glass-surface rounded-2xl" style="width:240px;height:280px;padding:12px;font-size:13px;">prewarm</div>';
       document.body.appendChild(el);
       timeoutId = window.setTimeout(() => el?.remove(), 600);
     });

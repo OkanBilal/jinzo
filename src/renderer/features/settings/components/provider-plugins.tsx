@@ -264,7 +264,7 @@ function PluginCard({
 
   return (
     <div
-      className={`glass-morphism cursor-pointer rounded-3xl hover:bg-primary-200/60 dark:hover:bg-primary/5 transition-colors flex items-center gap-3 ${
+      className={`glass-surface cursor-pointer rounded-3xl transition-colors flex items-center gap-3 ${
         compact ? "px-4 py-4" : " px-4 py-6"
       }`}
       onClick={onSelect}
@@ -976,7 +976,7 @@ export default function ProviderPlugins({
             onClick={() => setCategoryFilter(null)}
             className={`shrink-0 whitespace-nowrap px-2.5 py-1 text-sm rounded-xl transition-colors cursor-pointer ${
               !categoryFilter
-                ? "bg-primary-200/80 dark:bg-primary-800/60 text-primary-900 dark:text-primary-100"
+                ? "bg-primary-200/80 glass-button dark:bg-primary-800/60 text-primary-900 dark:text-primary-100"
                 : "text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-200 hover:bg-primary-100/50 dark:hover:bg-primary-800/30"
             }`}
           >
@@ -1005,7 +1005,7 @@ export default function ProviderPlugins({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search plugins..."
-            className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-primary-100/50 dark:bg-primary-800/30 border border-primary-200/50 dark:border-primary-700/30 text-sm text-primary-900 dark:text-primary-100 placeholder:text-primary-400 dark:placeholder:text-primary-500 outline-none focus:ring-1 focus:ring-primary-300 dark:focus:ring-primary-600"
+            className="w-full pl-8 pr-3 py-1.5 rounded-xl glass-input   text-sm text-primary-900 dark:text-primary-100 placeholder:text-primary-400 dark:placeholder:text-primary-500 outline-none "
           />
         </div>
       </div>

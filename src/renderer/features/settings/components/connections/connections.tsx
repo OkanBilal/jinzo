@@ -197,7 +197,7 @@ function ConnectionCard({
   onAction: () => void;
 }) {
   return (
-    <div className="rounded-3xl glass-morphism  p-4 flex flex-col justify-between">
+    <div className="rounded-3xl glass-surface  p-4 flex flex-col justify-between">
       <div className="flex items-start justify-between mb-10">
         <div className="flex items-center gap-2 min-w-0">
           <ConnectionIcon connection={connection} />

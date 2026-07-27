@@ -13,7 +13,7 @@ export function SchemaDeleteDialog({
 }: SchemaDeleteDialogProps) {
   return (
     <div className="absolute inset-0 z-(--z-overlay) flex items-center justify-center rounded-3xl backdrop-blur-xs bg-primary-950/50">
-      <div className="glass-morphism min-w-md rounded-3xl px-6 py-10 space-y-3 animate-dropdown-in ">
+      <div className="glass-surface min-w-md rounded-3xl px-6 py-10 space-y-3 animate-dropdown-in ">
         <Body className="font-medium">Delete schema?</Body>
         <Muted className="mb-6">
           &ldquo;{schemaName}&rdquo; will be permanently removed.

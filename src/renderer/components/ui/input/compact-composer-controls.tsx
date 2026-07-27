@@ -6,6 +6,7 @@ import { ArrowUp, Brain, BoltFill, Check } from "../icons";
 import { Bolt } from "../icons/space";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { formatModelDisplayName, getModelIcon } from "@/lib/model-icons";
+import { ULTRACODE_GRADIENT_TEXT } from "./ultracode-styles";
 
 type Variant = "claude" | "copilot" | "codex" | "cursor";
 type EffortLevel = "minimal" | "low" | "medium" | "high" | "max" | "xhigh";
@@ -64,11 +65,23 @@ export function CompactComposerControls({
   useClickOutside(containerRef, () => setIsOpen(false));
 
   const modelList = (Array.isArray(models) ? models : []).filter(
-    (m) => !(variant === "cursor" && m.toLowerCase() === "default"),
+    (m) => {
+      const normalized = m.trim().toLowerCase();
+      const normalizedDisplayName = formatModelDisplayName(m, variant)
+        .trim()
+        .toLowerCase();
+      return (
+        normalized !== "auto" &&
+        normalizedDisplayName !== "auto" &&
+        !(variant === "cursor" && normalized === "default")
+      );
+    },
   );
   const displayModel = formatModelDisplayName(model, variant);
   const hasEffortLevels =
     !!supportedEffortLevels && supportedEffortLevels.length > 0;
+  const selectedEffortLabel =
+    thinkingMode && effortLevel ? formatEffortLevel(effortLevel) : "";
 
   return (
     <div className="relative animate-blur-reveal" ref={containerRef}>
@@ -81,8 +94,20 @@ export function CompactComposerControls({
         aria-expanded={isOpen}
       >
         {getModelIcon(displayModel, variant)}
-        <span className="max-w-24 truncate">
+        <span className="max-w-36 truncate">
           {isLoadingModels && !displayModel ? "…" : displayModel}
+          {selectedEffortLabel && (
+            <span
+              className={`capitalize ${
+                effortLevel === "ultracode"
+                  ? `font-medium ${ULTRACODE_GRADIENT_TEXT}`
+                  : "font-normal text-primary-500 dark:text-primary-300"
+              }`}
+            >
+              {" "}
+              {selectedEffortLabel}
+            </span>
+          )}
         </span>
         <ArrowUp className="size-3.5 rotate-180" />
       </Button>
@@ -157,8 +182,22 @@ export function CompactComposerControls({
                   }}
                   className={`${ROW} ${thinkingMode && effortLevel === "ultracode" ? ROW_ACTIVE : ROW_IDLE}`}
                 >
-                  <Brain className="size-3.5 shrink-0" />
-                  <span className="flex-1">Ultracode</span>
+                  <Brain
+                    className={`size-3.5 shrink-0 ${
+                      thinkingMode && effortLevel === "ultracode"
+                        ? "text-cyan-500 dark:text-cyan-400"
+                        : ""
+                    }`}
+                  />
+                  <span
+                    className={`flex-1 ${
+                      thinkingMode && effortLevel === "ultracode"
+                        ? `font-medium ${ULTRACODE_GRADIENT_TEXT}`
+                        : ""
+                    }`}
+                  >
+                    Ultracode
+                  </span>
                   {thinkingMode && effortLevel === "ultracode" && (
                     <Check className="size-3.5 shrink-0" />
                   )}

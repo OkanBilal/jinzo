@@ -99,7 +99,14 @@ export interface ModelInfo {
   contextWindow?: number;
   supportsFastMode?: boolean;
   supportsEffort?: boolean;
-  supportedEffortLevels?: ('low' | 'medium' | 'high' | 'max')[];
+  supportedEffortLevels?: (
+    | 'minimal'
+    | 'low'
+    | 'medium'
+    | 'high'
+    | 'max'
+    | 'xhigh'
+  )[];
   /**
    * Provider-specific service tiers (e.g. Codex: priority/flex/default).
    * Mirrors the field on the main-process `ModelInfo`; populated from

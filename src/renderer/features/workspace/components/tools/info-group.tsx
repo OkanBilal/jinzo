@@ -655,7 +655,7 @@ function InlineMarkdownImage({
     <Button
       type="button"
       onClick={() => onPreview({ name, dataUrl: url })}
-      className="block w-full overflow-hidden rounded-xl border border-primary-200/40 dark:border-primary-700/40 bg-primary-100 dark:bg-primary-900 cursor-pointer"
+      className="block w-full overflow-hidden rounded-xl glass-surface cursor-pointer"
       title={abs}
     >
       <img

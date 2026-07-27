@@ -1,6 +1,12 @@
 import { memo, useState } from "react";
 import { ArrowUp } from "@/components/ui/icons";
 import { groupConsecutiveToolCalls } from "../../utils/group-tool-calls";
+import { resolveTool } from "../../utils/resolve-tool";
+import {
+  normalizeSlug,
+  renderPluginIcon,
+  usePluginLogoMap,
+} from "../../hooks";
 import { ToolSubGroupAccordion } from "./tool-sub-group-accordion";
 import type { EventGroup } from "../../utils/group-events";
 import { Button } from "@/components/ui";
@@ -17,6 +23,7 @@ function ToolCallGroupImpl({
 }: ToolCallGroupProps) {
   const [expandedOverride, setExpandedOverride] = useState<boolean | null>(null);
   const isExpanded = expandedOverride ?? defaultExpanded;
+  const pluginLogos = usePluginLogoMap();
 
   const subGroups = groupConsecutiveToolCalls(group.events);
   const toolCount = subGroups.reduce((acc, sg) => acc + sg.events.length, 0);
@@ -34,6 +41,24 @@ function ToolCallGroupImpl({
   const toolTypes = new Set(subGroups.map((sg) => sg.displayName));
   const toolSummary = Array.from(toolTypes).slice(0, 3).join(", ");
   const moreCount = toolTypes.size > 3 ? ` +${toolTypes.size - 3}` : "";
+  const toolIcons = new Map<string, React.ReactNode>();
+
+  for (const subGroup of subGroups) {
+    const resolved = resolveTool(subGroup.events[0].content);
+    const iconKey = resolved.vendorId
+      ? `vendor:${normalizeSlug(resolved.vendorId)}`
+      : `tool:${resolved.groupKey}`;
+
+    if (toolIcons.has(iconKey)) continue;
+
+    const pluginIcon = resolved.vendorId
+      ? renderPluginIcon(
+          pluginLogos.get(normalizeSlug(resolved.vendorId)),
+          "size-4",
+        )
+      : null;
+    toolIcons.set(iconKey, pluginIcon ?? subGroup.icon);
+  }
 
   return (
     <div className="mb-2">
@@ -41,7 +66,24 @@ function ToolCallGroupImpl({
         onClick={() => setExpandedOverride(!isExpanded)}
         className="group w-full flex items-center gap-1 mb-1 text-s font-sans cursor-pointer"
       >
-        <div className="flex items-center gap-1 transition-all duration-200">
+        <div className="flex items-center transition-all duration-200">
+          <span
+            aria-hidden="true"
+            className={`flex shrink-0 items-center gap-0.5 overflow-hidden text-primary-500 transition-[max-width,opacity,transform,margin] duration-200 ease-out group-hover:text-primary-950 group-hover:dark:text-primary ${
+              isExpanded
+                ? "mr-0 max-w-0 -translate-x-1 opacity-0"
+                : "mr-1 max-w-20 translate-x-0 opacity-100"
+            }`}
+          >
+            {Array.from(toolIcons.entries()).slice(0, 5).map(([key, icon]) => (
+              <span
+                key={key}
+                className="flex size-4 items-center justify-center [&>svg]:size-3.5"
+              >
+                {icon}
+              </span>
+            ))}
+          </span>
           <span className="text-primary-500  group-hover:text-primary-950 group-hover:dark:text-primary">
             {toolCount} tool call{toolCount !== 1 ? "s" : ""}
           </span>

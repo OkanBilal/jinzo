@@ -50,11 +50,11 @@ export function ThemePreviewCard({
     >
       <div
         className={cn(
-          "relative rounded-xl overflow-hidden border-2 transition-all duration-200",
+          "relative rounded-xl overflow-hidden border transition-all duration-200",
           dimensions,
           isSelected
-            ? "border-blue-500"
-            : "border-primary-200 dark:border-primary-700 hover:border-primary-300 dark:hover:border-primary-600",
+            ? "border-blue-500/40"
+            : "glass-card",
         )}
       >
         {isAuto ? (
