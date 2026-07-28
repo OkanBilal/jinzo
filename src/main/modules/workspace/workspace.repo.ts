@@ -109,7 +109,7 @@ export const workspaceRepo = {
       name: payload.name,
       rootPath: payload.rootPath,
       repoUrl: payload.repoUrl,
-      defaultBranch: payload.defaultBranch,
+      baseBranch: payload.baseBranch,
       metadata: payload.metadata ? JSON.stringify(payload.metadata) : null,
       status:
         (payload as CreateWorkspacePayload & { status?: WorkspaceStatus })
@@ -130,8 +130,8 @@ export const workspaceRepo = {
     if (payload.name !== undefined) updateData.name = payload.name;
     if (payload.rootPath !== undefined) updateData.rootPath = payload.rootPath;
     if (payload.repoUrl !== undefined) updateData.repoUrl = payload.repoUrl;
-    if (payload.defaultBranch !== undefined)
-      updateData.defaultBranch = payload.defaultBranch;
+    if (payload.baseBranch !== undefined)
+      updateData.baseBranch = payload.baseBranch;
     if (payload.metadata !== undefined)
       updateData.metadata = JSON.stringify(payload.metadata);
     if (payload.status !== undefined) updateData.status = payload.status;
@@ -599,7 +599,7 @@ function mapWorkspaceRow(
     name: row.name,
     rootPath: row.rootPath,
     repoUrl: row.repoUrl,
-    defaultBranch: row.defaultBranch,
+    baseBranch: row.baseBranch,
     metadata: safeJsonParse(row.metadata),
     status: row.status as WorkspaceStatus,
     isArchived: row.isArchived,

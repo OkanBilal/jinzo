@@ -295,6 +295,8 @@ const api = {
     get: (id: string) => ipcRenderer.invoke(CHANNELS.workspace.get, id),
     listByAccount: (accountId: string) =>
       ipcRenderer.invoke(CHANNELS.workspace.listByAccount, accountId),
+    listGitStates: () =>
+      ipcRenderer.invoke(CHANNELS.workspace.listGitStates),
     getByRootPath: (accountId: string, rootPath: string) =>
       ipcRenderer.invoke(
         CHANNELS.workspace.getByRootPath,
@@ -339,6 +341,17 @@ const api = {
       return () =>
         ipcRenderer.removeListener(
           CHANNELS.workspace.findingsChanged,
+          listener,
+        );
+    },
+    onGitStateChanged: (
+      callback: (data: { workspaceId: string; branch: string | null }) => void,
+    ) => {
+      const listener = (_: any, data: any) => callback(data);
+      ipcRenderer.on(CHANNELS.workspace.gitStateChanged, listener);
+      return () =>
+        ipcRenderer.removeListener(
+          CHANNELS.workspace.gitStateChanged,
           listener,
         );
     },

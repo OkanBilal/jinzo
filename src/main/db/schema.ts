@@ -212,7 +212,7 @@ export const workspaces = sqliteTable(
     name: text("name").notNull(),
     rootPath: text("root_path").notNull(), // local absolute path
     repoUrl: text("repo_url"),
-    defaultBranch: text("default_branch"),
+    baseBranch: text("base_branch"), // PR target; current branch is always read live from git
     metadata: text("metadata"), // JSON (optional)
     status: text("status", {
       enum: ["backlog", "todo", "in_progress", "in_review", "done", "canceled", "duplicate"],
@@ -1263,4 +1263,3 @@ export const pulses = sqliteTable(
     check("check_pulses_minute", sql`${t.minute} BETWEEN 0 AND 59`),
   ],
 );
-

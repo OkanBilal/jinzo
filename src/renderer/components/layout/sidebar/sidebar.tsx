@@ -89,8 +89,13 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     setHelpMenuState({ isOpen: false, position: { x: 0, y: 0 } });
   };
 
-  const { account, workspaces, isLoadingWorkspaces, handleRefreshConnections } =
-    useSidebarData({ searchQuery });
+  const {
+    account,
+    workspaces,
+    gitStateByWorkspaceId,
+    isLoadingWorkspaces,
+    handleRefreshConnections,
+  } = useSidebarData({ searchQuery });
   // Picking a local folder uses a native dialog, which can't run from the web
   // client (it would open on the headless backend). Hide the folder-picker entry.
   const { nativeDialogs } = useCapabilities();
@@ -347,6 +352,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
             </div>
             <SidebarContent
               workspaces={workspaces}
+              gitStateByWorkspaceId={gitStateByWorkspaceId}
               isLoadingWorkspaces={isLoadingWorkspaces}
               onDeleteWorkspace={deleteWorkspace.handleDeleteClick}
               onArchiveWorkspace={archiveWorkspace.handleArchiveClick}

@@ -90,8 +90,12 @@ _Avoid_: re-inlining the find-or-create-project / `metadata` / `createWorkspace`
 
 ### Workspace git operations
 
-Renderer-triggered git effects that also touch workspace state are **workspace operations**, not git channels: `workspace:renameBranch` (renames the branch — against the worktree's source repo when applicable — then updates `defaultBranch` + `metadata.worktree.branch` in one place) and `workspace:discardChanges` (hard-reset to the recorded diff's `baseRef` + delete the workspace's latest diff). Both were previously orchestrated inside components (`workspace-list.tsx`, `diff-summary-bar.tsx`) via `api.git.*` calls, with the renderer holding git semantics like the worktree `sourcePath`-vs-`rootPath` distinction.
+Renderer-triggered git effects that also touch workspace state are **workspace operations**, not git channels: `workspace:renameBranch` resolves the branch actually checked out at `workspace.rootPath` and renames it against the worktree's source repo when applicable; `workspace:discardChanges` hard-resets to the recorded diff's `baseRef` and deletes the workspace's latest diff. The current branch is never persisted. `workspace:listGitStates` reads it live from git for every workspace, and the main process watches each workspace git directory's `HEAD`, emitting `workspace:gitStateChanged` when an external checkout or rename changes it. Both operations were previously orchestrated inside components (`workspace-list.tsx`, `diff-summary-bar.tsx`) via `api.git.*` calls, with the renderer holding git semantics like the worktree `sourcePath`-vs-`rootPath` distinction.
 _Avoid_: orchestrating multi-step git + workspace-state sequences in the renderer; deciding worktree source-vs-root paths outside `workspace.service`.
+
+**Branch model**:
+`projects.defaultBranch` is the repository integration branch. `workspaces.baseBranch` is that workspace's explicit PR target. The workspace's current/head branch exists only in git and is read at display/action time; there is deliberately no workspace `defaultBranch`, `currentBranch`, or `metadata.worktree.branch` field. Direct intake keeps the checked-out branch live while resolving the base from `origin/HEAD` (then conventional local `main`/`master`, then current checkout). Worktree intake creates the new branch explicitly from the project default branch.
+_Avoid_: persisting the checked-out branch; deriving PR base from the current checkout; using cached workspace metadata for commit, push, PR head, or rename.
 
 ## git module
 

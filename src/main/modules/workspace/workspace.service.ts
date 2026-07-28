@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { execFile } from "child_process";
-import { existsSync } from "fs";
+import { existsSync, watch, type FSWatcher } from "fs";
 import path from "path";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
 import { emit } from "../../ipc-kit";
@@ -16,6 +16,7 @@ import type {
   WorkspaceMetadata,
   WorkspaceIntakePayload,
   WorkspaceResponse,
+  WorkspaceGitState,
   WorkspaceStatus,
   ScriptCompleteEvent,
   ActivityResponse,
@@ -180,15 +181,6 @@ async function readOriginUrl(rootPath: string): Promise<string | null> {
   }
 }
 
-/** Read the checked-out branch of a repo, falling back to `main`. */
-async function readCurrentBranch(rootPath: string): Promise<string> {
-  try {
-    return (await gitService.getCurrentBranch(rootPath)) || "main";
-  } catch {
-    return "main";
-  }
-}
-
 /** A project's worktree dir is the parent of its first worktree. */
 function deriveWorkspacesPath(worktreePath: string): string {
   return worktreePath.substring(0, worktreePath.lastIndexOf("/"));
@@ -225,8 +217,6 @@ interface MetadataParts {
   tracking: string | null;
   ahead: number;
   behind: number;
-  baseBranch: string;
-  branchName: string;
   originUrl: string | null;
   worktree: { name: string; path: string; sourcePath: string } | null;
 }
@@ -244,12 +234,114 @@ function buildMetadata(parts: MetadataParts): WorkspaceMetadata {
           name: parts.worktree.name,
           path: parts.worktree.path,
           sourcePath: parts.worktree.sourcePath,
-          branch: parts.branchName,
         }
       : { enabled: false },
     origin: parts.originUrl ? { url: parts.originUrl } : undefined,
-    baseBranch: parts.baseBranch,
   };
+}
+
+// ─────────────────────────────────────────────────────────────
+// Live git-state watchers
+// ─────────────────────────────────────────────────────────────
+
+interface GitStateWatcher {
+  rootPath: string;
+  branch: string | null;
+  watcher: FSWatcher;
+  refreshTimer?: ReturnType<typeof setTimeout>;
+}
+
+const gitStateWatchers = new Map<string, GitStateWatcher>();
+
+function emitGitStateChanged(state: WorkspaceGitState): void {
+  const existing = gitStateWatchers.get(state.workspaceId);
+  if (existing) existing.branch = state.branch;
+  emit(CHANNELS.workspace.gitStateChanged, state);
+}
+
+function removeGitStateWatcher(workspaceId: string): void {
+  const entry = gitStateWatchers.get(workspaceId);
+  if (!entry) return;
+  if (entry.refreshTimer) clearTimeout(entry.refreshTimer);
+  entry.watcher.close();
+  gitStateWatchers.delete(workspaceId);
+}
+
+function scheduleGitStateRefresh(workspaceId: string): void {
+  const entry = gitStateWatchers.get(workspaceId);
+  if (!entry) return;
+  if (entry.refreshTimer) clearTimeout(entry.refreshTimer);
+  entry.refreshTimer = setTimeout(() => {
+    const current = gitStateWatchers.get(workspaceId);
+    if (!current) return;
+    gitService
+      .getCurrentBranch(current.rootPath)
+      .then((branch) => {
+        if (branch !== current.branch) {
+          emitGitStateChanged({ workspaceId, branch });
+        }
+      })
+      .catch(() => {
+        if (current.branch !== null) {
+          emitGitStateChanged({ workspaceId, branch: null });
+        }
+      });
+  }, 75);
+  entry.refreshTimer.unref?.();
+}
+
+async function ensureGitStateWatcher(
+  workspace: WorkspaceResponse,
+  branch: string | null,
+): Promise<void> {
+  const existing = gitStateWatchers.get(workspace.id);
+  if (existing?.rootPath === workspace.rootPath) {
+    existing.branch = branch;
+    return;
+  }
+  if (existing) removeGitStateWatcher(workspace.id);
+
+  try {
+    const gitDirectory = await gitService.getGitDirectory(workspace.rootPath);
+    const watcher = watch(
+      gitDirectory,
+      { persistent: false },
+      (_eventType, filename) => {
+        if (filename && filename.toString() !== "HEAD") return;
+        scheduleGitStateRefresh(workspace.id);
+      },
+    );
+    watcher.on("error", () => removeGitStateWatcher(workspace.id));
+    gitStateWatchers.set(workspace.id, {
+      rootPath: workspace.rootPath,
+      branch,
+      watcher,
+    });
+  } catch {
+    // A missing/non-git workspace is represented by branch:null.
+  }
+}
+
+async function syncGitStateWatchers(
+  workspaces: WorkspaceResponse[],
+  states: WorkspaceGitState[],
+): Promise<void> {
+  const activeIds = new Set(workspaces.map((workspace) => workspace.id));
+  for (const workspaceId of gitStateWatchers.keys()) {
+    if (!activeIds.has(workspaceId)) removeGitStateWatcher(workspaceId);
+  }
+
+  const branchByWorkspace = new Map(
+    states.map((state) => [state.workspaceId, state.branch]),
+  );
+  await Promise.all(
+    workspaces.map((workspace) =>
+      ensureGitStateWatcher(
+        workspace,
+        branchByWorkspace.get(workspace.id) ?? null,
+      ),
+    ),
+  );
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -288,7 +380,29 @@ export const workspaceService = {
     return workspaceRepo.findByProjectId(projectId);
   },
 
+  async listGitStates(): Promise<WorkspaceGitState[]> {
+    const workspaces = await workspaceRepo.findAll();
+    const states = await Promise.all(
+      workspaces.map(async (workspace) => ({
+        workspaceId: workspace.id,
+        branch: await gitService
+          .getCurrentBranch(workspace.rootPath)
+          .catch(() => null),
+      })),
+    );
+    await syncGitStateWatchers(workspaces, states);
+    return states;
+  },
+
+  stopGitStateWatchers(): void {
+    for (const workspaceId of gitStateWatchers.keys()) {
+      removeGitStateWatcher(workspaceId);
+    }
+  },
+
   async deleteByProject(projectId: string): Promise<void> {
+    const workspaces = await workspaceRepo.findByProjectId(projectId);
+    for (const workspace of workspaces) removeGitStateWatcher(workspace.id);
     await workspaceRepo.deleteByProjectId(projectId);
   },
 
@@ -384,13 +498,11 @@ export const workspaceService = {
         accountId,
         name: source.name,
         rootPath: init.rootPath,
-        defaultBranch: "main",
+        baseBranch: "main",
         metadata: buildMetadata({
           tracking: null,
           ahead: 0,
           behind: 0,
-          baseBranch: "main",
-          branchName: "main",
           originUrl: null,
           worktree: null,
         }),
@@ -403,10 +515,19 @@ export const workspaceService = {
     if (source.kind === "worktree") {
       const project = await projectsRepo.findById(source.projectId);
       if (!project) throw new Error("Project not found");
+      const baseBranch =
+        project.defaultBranch ??
+        (await gitService.getDefaultBranch(project.rootPath));
+      if (!project.defaultBranch) {
+        await projectsRepo.update(project.id, { defaultBranch: baseBranch });
+      }
 
       const imported = await gitService.importLocalRepo(
         project.rootPath,
-        project.name,
+        {
+          projectName: project.name,
+          baseBranch,
+        },
       );
       if (!project.workspacesPath) {
         await projectsRepo.update(project.id, {
@@ -418,13 +539,11 @@ export const workspaceService = {
         name: project.name,
         rootPath: imported.worktreePath,
         repoUrl: imported.originUrl ?? project.remoteOrigin ?? undefined,
-        defaultBranch: imported.branchName,
+        baseBranch,
         metadata: buildMetadata({
           tracking: imported.tracking,
           ahead: imported.ahead,
           behind: imported.behind,
-          baseBranch: imported.baseBranch,
-          branchName: imported.branchName,
           originUrl: imported.originUrl ?? project.remoteOrigin ?? null,
           worktree: {
             name: imported.worktreeName,
@@ -455,17 +574,25 @@ export const workspaceService = {
       // Worktree lands under worktrees/{projectName}, so the project must
       // exist before the import — source origin/baseBranch up front.
       const originUrl = await readOriginUrl(sourcePath);
-      const baseBranch = await readCurrentBranch(sourcePath);
+      const detectedDefaultBranch =
+        await gitService.getDefaultBranch(sourcePath);
       const project = await findOrCreateProject({
         accountId,
         name,
         rootPath: sourcePath,
         remoteOrigin: originUrl ?? undefined,
-        defaultBranch: baseBranch,
+        defaultBranch: detectedDefaultBranch,
       });
+      const baseBranch = project.defaultBranch ?? detectedDefaultBranch;
+      if (!project.defaultBranch) {
+        await projectsRepo.update(project.id, { defaultBranch: baseBranch });
+      }
       const imported = await gitService.importLocalRepo(
         sourcePath,
-        project.name,
+        {
+          projectName: project.name,
+          baseBranch,
+        },
       );
       if (!project.workspacesPath) {
         await projectsRepo.update(project.id, {
@@ -477,13 +604,11 @@ export const workspaceService = {
         name,
         rootPath: imported.worktreePath,
         repoUrl: originUrl ?? undefined,
-        defaultBranch: imported.branchName,
+        baseBranch,
         metadata: buildMetadata({
           tracking: imported.tracking,
           ahead: imported.ahead,
           behind: imported.behind,
-          baseBranch,
-          branchName: imported.branchName,
           originUrl,
           worktree: {
             name: imported.worktreeName,
@@ -505,18 +630,20 @@ export const workspaceService = {
       branches: [imported.branchName],
       defaultBranch: imported.baseBranch,
     });
+    const baseBranch = project.defaultBranch ?? imported.baseBranch;
+    if (!project.defaultBranch) {
+      await projectsRepo.update(project.id, { defaultBranch: baseBranch });
+    }
     return this.create({
       accountId,
       name,
       rootPath: sourcePath,
       repoUrl: imported.originUrl ?? undefined,
-      defaultBranch: imported.branchName,
+      baseBranch,
       metadata: buildMetadata({
         tracking: imported.tracking,
         ahead: imported.ahead,
         behind: imported.behind,
-        baseBranch: imported.baseBranch,
-        branchName: imported.branchName,
         originUrl: imported.originUrl,
         worktree: null,
       }),
@@ -534,6 +661,7 @@ export const workspaceService = {
   },
 
   async delete(id: string): Promise<void> {
+    removeGitStateWatcher(id);
     await workspaceRepo.delete(id);
   },
 
@@ -550,6 +678,7 @@ export const workspaceService = {
 
     const archived = await workspaceRepo.archive(id);
     if (!archived) throw new Error("Failed to archive workspace");
+    removeGitStateWatcher(id);
 
     // Fire-and-forget: run project archiveScript in background
     if (workspace.projectId) {
@@ -599,42 +728,41 @@ export const workspaceService = {
   // operations".
   // ─────────────────────────────────────────────────────────────
 
-  /**
-   * Rename the workspace's branch — against the worktree's source repo when
-   * applicable — then update `defaultBranch` + `metadata.worktree.branch` in
-   * the same operation.
-   */
+  /** Rename the branch actually checked out in the workspace. */
   async renameBranch(
     workspaceId: string,
     newBranchName: string,
   ): Promise<WorkspaceResponse> {
     const workspace = await workspaceRepo.findById(workspaceId);
     if (!workspace) throw new Error("Workspace not found");
-    const oldBranch = workspace.defaultBranch;
-    if (!oldBranch || !workspace.rootPath) {
-    throw new Error("Workspace has no branch to rename");
+    if (!workspace.rootPath) {
+      throw new Error("Workspace has no root path");
+    }
+    const oldBranch = await gitService.getCurrentBranch(workspace.rootPath);
+    if (!oldBranch || oldBranch === "HEAD") {
+      throw new Error("Workspace has no named branch to rename");
+    }
+    const project = workspace.projectId
+      ? await projectsRepo.findById(workspace.projectId)
+      : null;
+    if (
+      oldBranch === workspace.baseBranch ||
+      oldBranch === project?.defaultBranch
+    ) {
+      throw new Error(
+        `Cannot rename protected base/default branch "${oldBranch}" from a workspace`,
+      );
     }
 
     // A worktree's branch is owned by its source repo, not the checkout.
     const worktree = workspace.metadata?.worktree;
     const gitPath =
-    worktree?.enabled && worktree.sourcePath
-      ? worktree.sourcePath
-      : workspace.rootPath;
+      worktree?.enabled && worktree.sourcePath
+        ? worktree.sourcePath
+        : workspace.rootPath;
     await gitService.renameBranch(gitPath, oldBranch, newBranchName);
-
-    const metadata: WorkspaceMetadata = workspace.metadata
-    ? { ...workspace.metadata }
-    : {};
-    if (metadata.worktree?.enabled) {
-    metadata.worktree = { ...metadata.worktree, branch: newBranchName };
-    }
-    const updated = await workspaceRepo.update(workspaceId, {
-    defaultBranch: newBranchName,
-    metadata,
-    });
-    if (!updated) throw new Error("Workspace not found");
-    return updated;
+    emitGitStateChanged({ workspaceId, branch: newBranchName });
+    return workspace;
   },
 
   /**

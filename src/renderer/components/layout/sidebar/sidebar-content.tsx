@@ -1,11 +1,15 @@
 import type { CSSProperties, MouseEvent } from "react";
 import WorkspacesList from "./workspace-list";
-import type { Workspace as WorkspaceResponse } from "@/lib/redux/api/workspaceApi";
+import type {
+  Workspace as WorkspaceResponse,
+  WorkspaceGitState,
+} from "@/lib/redux/api/workspaceApi";
 
 const EMPTY_WORKSPACES: WorkspaceResponse[] = [];
 
 interface SidebarContentProps {
   workspaces: WorkspaceResponse[];
+  gitStateByWorkspaceId: ReadonlyMap<string, WorkspaceGitState>;
   isLoadingWorkspaces: boolean;
   onDeleteWorkspace?: (workspaceId: string, e: MouseEvent) => void;
   onArchiveWorkspace?: (workspaceId: string) => void;
@@ -13,6 +17,7 @@ interface SidebarContentProps {
 
 export function SidebarContent({
   workspaces = EMPTY_WORKSPACES,
+  gitStateByWorkspaceId,
   isLoadingWorkspaces = false,
   onDeleteWorkspace,
   onArchiveWorkspace,
@@ -25,6 +30,7 @@ export function SidebarContent({
       <div style={{ animation: "slide-fade-down 200ms cubic-bezier(0.23, 1, 0.32, 1)" }}>
         <WorkspacesList
           workspaces={workspaces}
+          gitStateByWorkspaceId={gitStateByWorkspaceId}
           isLoading={isLoadingWorkspaces}
           onDeleteWorkspace={onDeleteWorkspace}
           onArchiveWorkspace={onArchiveWorkspace}

@@ -10,7 +10,10 @@ import { useAppSelector } from "@/lib/redux/hooks";
 import { Button } from "@/components/ui";
 import { ArrowUp, Plus } from "@/components/ui/icons";
 import WorkspaceItem from "./workspace-item";
-import type { Workspace as WorkspaceResponse } from "@/lib/redux/api/workspaceApi";
+import type {
+  Workspace as WorkspaceResponse,
+  WorkspaceGitState,
+} from "@/lib/redux/api/workspaceApi";
 import { LinkResourcesModal } from "@/features/workspace/components/link-resources-modal";
 import { WORKSPACE_BASE_PATH } from "@/lib/route-utils";
 import { getWorkspaceStatusConfig } from "@/lib/workspace-status";
@@ -136,6 +139,7 @@ function WorkspaceGroupSection({
 
 interface WorkspacesListProps {
   workspaces: WorkspaceResponse[];
+  gitStateByWorkspaceId: ReadonlyMap<string, WorkspaceGitState>;
   isLoading: boolean;
   onDeleteWorkspace?: (workspaceId: string, e: MouseEvent) => void;
   onArchiveWorkspace?: (workspaceId: string) => void;
@@ -143,6 +147,7 @@ interface WorkspacesListProps {
 
 export default function WorkspacesList({
   workspaces,
+  gitStateByWorkspaceId,
   isLoading,
   onDeleteWorkspace,
   onArchiveWorkspace,
@@ -330,6 +335,11 @@ export default function WorkspacesList({
     const projectData = workspace.projectId
       ? projectDataMap.get(workspace.projectId)
       : undefined;
+    const branch = gitStateByWorkspaceId.get(workspace.id)?.branch ?? null;
+    const canRenameBranch =
+      branch !== null &&
+      branch !== workspace.baseBranch &&
+      branch !== projectData?.defaultBranch;
     return (
       <WorkspaceItem
         key={workspace.id}
@@ -337,7 +347,7 @@ export default function WorkspacesList({
         name={workspace.name}
         rootPath={workspace.rootPath}
         status={workspace.status}
-        branch={workspace.defaultBranch}
+        branch={branch}
         updatedAt={workspace.updatedAt}
         isActive={isActive}
         projectId={workspace.projectId}
@@ -355,7 +365,7 @@ export default function WorkspacesList({
           updateWorkspace({ id: workspace.id, payload: { status: newStatus } })
         }
         onRenameBranch={
-          workspace.defaultBranch
+          canRenameBranch
             ? (newName) => handleRenameBranch(workspace, newName)
             : undefined
         }

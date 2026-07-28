@@ -37,6 +37,11 @@ export function registerWorkspaceIpc(): void {
   );
 
   ipcMain.handle(
+    CHANNELS.workspace.listGitStates,
+    handle(() => workspaceService.listGitStates()),
+  );
+
+  ipcMain.handle(
     CHANNELS.workspace.getByRootPath,
     handle((accountId: string, rootPath: string) =>
       workspaceService.getByRootPath(accountId, rootPath),
@@ -261,8 +266,10 @@ export function unregisterWorkspaceIpc(): void {
     CHANNELS.workspace.list,
     CHANNELS.workspace.get,
     CHANNELS.workspace.listByAccount,
+    CHANNELS.workspace.listGitStates,
     CHANNELS.workspace.getByRootPath,
     CHANNELS.workspace.create,
+    CHANNELS.workspace.createFromSource,
     CHANNELS.workspace.update,
     CHANNELS.workspace.delete,
     CHANNELS.workspace.archive,
@@ -296,4 +303,5 @@ export function unregisterWorkspaceIpc(): void {
     CHANNELS.workspace.updateFinding,
     CHANNELS.workspace.deleteFinding,
   ].forEach((channel) => ipcMain.removeHandler(channel));
+  workspaceService.stopGitStateWatchers();
 }

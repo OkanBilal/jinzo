@@ -66,6 +66,7 @@ export const baseApi = createApi({
     'ProviderAccountInfo',
     'ToolCalls',
     'Workspaces',
+    'WorkspaceGitStates',
     'Runs',
     'RunContext',
     'RunArtifacts',

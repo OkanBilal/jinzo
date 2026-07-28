@@ -7,6 +7,7 @@ export type {
   GitLogEntry,
   GitRemote,
   WorktreeImportResult,
+  WorktreeImportOptions,
   DirectImportResult,
 } from "./git.service";
 export {

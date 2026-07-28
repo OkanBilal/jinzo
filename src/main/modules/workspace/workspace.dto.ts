@@ -15,7 +15,6 @@ export interface WorktreeMetadata {
   name: string;
   path: string;
   sourcePath: string;
-  branch: string;
 }
 
 /** Stored on workspaces that live in their repo directly (no worktree). */
@@ -34,7 +33,6 @@ export interface WorkspaceMetadata {
   behind?: number;
   worktree?: WorktreeMetadata | NoWorktreeMetadata;
   origin?: OriginMetadata;
-  baseBranch?: string;
   language?: string;
   framework?: string;
   packageManager?: string;
@@ -56,7 +54,7 @@ export interface CreateWorkspacePayload {
   name: string;
   rootPath: string;
   repoUrl?: string;
-  defaultBranch?: string;
+  baseBranch?: string;
   metadata?: WorkspaceMetadata;
   projectId?: string;
 }
@@ -65,7 +63,7 @@ export interface UpdateWorkspacePayload {
   name?: string;
   rootPath?: string;
   repoUrl?: string;
-  defaultBranch?: string;
+  baseBranch?: string;
   metadata?: WorkspaceMetadata;
   status?: WorkspaceStatus;
   projectId?: string;
@@ -96,12 +94,17 @@ export interface WorkspaceResponse {
   name: string;
   rootPath: string;
   repoUrl: string | null;
-  defaultBranch: string | null;
+  baseBranch: string | null;
   metadata: WorkspaceMetadata | null;
   status: WorkspaceStatus;
   isArchived: boolean;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface WorkspaceGitState {
+  workspaceId: string;
+  branch: string | null;
 }
 
 export interface WorkspaceListResponse {
