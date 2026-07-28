@@ -291,7 +291,9 @@ export async function listSkillsForProvider(
     return skills;
   }
 
-  const plugins = await adapter.listPlugins();
+  const plugins = adapter.listInstalledPlugins
+    ? await adapter.listInstalledPlugins()
+    : await adapter.listPlugins();
   return mergeSkillsWithInstalledPlugins(skills, plugins);
 }
 
@@ -325,6 +327,28 @@ export async function listPluginsForProvider(provider: ProviderResponse): Promis
     return { marketplaces: [], marketplaceLoadErrors: [], remoteSyncError: null, featuredPluginIds: [] };
   }
   return adapter.listPlugins();
+}
+
+export async function listInstalledPluginsForProvider(
+  provider: ProviderResponse,
+): Promise<PluginListResponse> {
+  const adapter = createWorkAdapter(provider);
+  const plugins = adapter.listInstalledPlugins
+    ? await adapter.listInstalledPlugins()
+    : adapter.listPlugins
+      ? await adapter.listPlugins()
+      : { marketplaces: [], marketplaceLoadErrors: [], remoteSyncError: null, featuredPluginIds: [] };
+
+  return {
+    ...plugins,
+    featuredPluginIds: [],
+    marketplaces: plugins.marketplaces
+      .map((marketplace) => ({
+        ...marketplace,
+        plugins: marketplace.plugins.filter((plugin) => plugin.installed),
+      }))
+      .filter((marketplace) => marketplace.plugins.length > 0),
+  };
 }
 
 export async function readPluginForProvider(provider: ProviderResponse, pluginName: string, marketplacePath: string): Promise<PluginDetail> {

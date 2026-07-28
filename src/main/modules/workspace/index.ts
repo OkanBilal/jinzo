@@ -19,6 +19,7 @@ export type {
   WorkspaceIntakePayload,
   WorkspaceResponse,
   WorkspaceListResponse,
+  WorkspaceGitState,
   ScriptCompleteEvent,
   // activity
   ActivityType,

@@ -118,12 +118,12 @@ export function useSidebarActions() {
     setIsCreateProjectModalOpen(false);
   };
 
-  const handleCreateProject = async (name: string) => {
+  const handleCreateProject = async (name: string, parentPath?: string) => {
     setIsCreatingProject(true);
     try {
       const workspace = await createWorkspaceFromSource({
         accountId: account?.id || "default",
-        source: { kind: "init", name },
+        source: { kind: "init", name, parentPath },
       }).unwrap();
       toast.success("Project created");
       setIsCreateProjectModalOpen(false);

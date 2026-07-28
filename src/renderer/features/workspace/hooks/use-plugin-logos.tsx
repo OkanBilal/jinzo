@@ -1,5 +1,8 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
-import { useGetProviderPluginsQuery } from "@/lib/redux/api";
+import {
+  useGetProviderInstalledPluginsQuery,
+  type PluginListResponse,
+} from "@/lib/redux/api";
 import { proxiedImageSrc } from "@/lib/proxied-image-src";
 import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 
@@ -31,14 +34,55 @@ const EMPTY_MAP: ReadonlyMap<string, PluginLogo> = new Map();
 const PluginLogoContext =
   createContext<ReadonlyMap<string, PluginLogo>>(EMPTY_MAP);
 
+export function buildPluginLogoMap(
+  data: PluginListResponse | undefined,
+): Map<string, PluginLogo> {
+  const map = new Map<string, PluginLogo>();
+  if (!data) return map;
+
+  for (const marketplace of data.marketplaces) {
+    for (const plugin of marketplace.plugins) {
+      const logo = plugin.interface?.logo;
+      const brandColor = plugin.interface?.brandColor;
+      // Nothing to render → don't shadow the static icon with a blank entry.
+      if (!logo && !brandColor) continue;
+
+      const displayName = plugin.interface?.displayName;
+      // Remote app plugins use opaque names (`app-6945…`) while codex_apps
+      // tool names use the human slug (`skyscanner.…`). Index both forms,
+      // plus the id-base used by ordinary marketplace plugins.
+      const keys = new Set<string>();
+      if (plugin.name) keys.add(normalizeSlug(plugin.name));
+      const idBase = plugin.id?.split("@")[0];
+      if (idBase) keys.add(normalizeSlug(idBase));
+      if (displayName) keys.add(normalizeSlug(displayName));
+
+      for (const slug of keys) {
+        if (slug && !map.has(slug)) {
+          map.set(slug, {
+            slug,
+            name: plugin.name,
+            displayName,
+            logo,
+            brandColor,
+          });
+        }
+      }
+    }
+  }
+
+  return map;
+}
+
 /**
- * Builds a `slug → PluginLogo` map from the codex plugin marketplace so tool /
+ * Builds a `slug → PluginLogo` map from installed codex plugins so tool /
  * skill renderers can swap the generic MCP icon for the plugin's real logo.
  *
  * Only fetches when the active run is codex (the only provider with a plugin
  * marketplace); for every other provider the query is skipped and consumers
- * fall back to their static icons via the empty default context. The query is
- * RTK-cached, so the cost is a single fetch shared with the settings page.
+ * fall back to their static icons via the empty default context. Using
+ * `plugin/installed` here avoids loading the multi-megabyte marketplace
+ * catalog in every workspace.
  */
 export function PluginLogoProvider({
   providerId,
@@ -48,36 +92,13 @@ export function PluginLogoProvider({
   children: ReactNode;
 }) {
   const isCodex = providerId === PROVIDER_IDS.codex;
-  const { data } = useGetProviderPluginsQuery(PROVIDER_IDS.codex, {
+  const { data } = useGetProviderInstalledPluginsQuery(PROVIDER_IDS.codex, {
     skip: !isCodex,
+    refetchOnFocus: false,
+    refetchOnReconnect: false,
   });
 
-  const map = useMemo(() => {
-    const m = new Map<string, PluginLogo>();
-    if (!data) return m;
-    for (const mp of data.marketplaces) {
-      for (const p of mp.plugins) {
-        const logo = p.interface?.logo;
-        const brandColor = p.interface?.brandColor;
-        // Nothing to render → don't shadow the static icon with a blank entry.
-        if (!logo && !brandColor) continue;
-        const displayName = p.interface?.displayName;
-        // The MCP server prefix / skill prefix is the plugin name; index by it
-        // plus the id-base (`netlify@openai` → `netlify`), both normalized so
-        // separator-mismatched spellings still resolve.
-        const keys = new Set<string>();
-        if (p.name) keys.add(normalizeSlug(p.name));
-        const idBase = p.id?.split("@")[0];
-        if (idBase) keys.add(normalizeSlug(idBase));
-        for (const slug of keys) {
-          if (slug && !m.has(slug)) {
-            m.set(slug, { slug, name: p.name, displayName, logo, brandColor });
-          }
-        }
-      }
-    }
-    return m;
-  }, [data]);
+  const map = useMemo(() => buildPluginLogoMap(data), [data]);
 
   return (
     <PluginLogoContext.Provider value={map}>

@@ -169,6 +169,7 @@ export const CHANNELS = {
     /** Push: emitted when async model-capability discovery enriches the model list. */
     modelsUpdated: "providers:modelsUpdated",
     getPlugins: "providers:getPlugins",
+    getInstalledPlugins: "providers:getInstalledPlugins",
     getRateLimits: "providers:getRateLimits",
     /** Push: emitted when the provider streams a fresh rate-limit snapshot mid-run. */
     rateLimitsUpdated: "providers:rateLimitsUpdated",
@@ -311,8 +312,10 @@ export const CHANNELS = {
     delete: "workspace:delete",
     get: "workspace:get",
     getByRootPath: "workspace:getByRootPath",
+    gitStateChanged: "workspace:gitStateChanged",
     list: "workspace:list",
     listByAccount: "workspace:listByAccount",
+    listGitStates: "workspace:listGitStates",
     scriptComplete: "workspace:scriptComplete",
     selectDirectory: "workspace:selectDirectory",
     update: "workspace:update",

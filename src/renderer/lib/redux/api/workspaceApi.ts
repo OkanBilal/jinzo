@@ -36,7 +36,7 @@ export interface Workspace {
   name: string;
   rootPath: string;
   repoUrl: string | null;
-  defaultBranch: string | null;
+  baseBranch: string | null;
   metadata: WorkspaceMetadata | null;
   status: WorkspaceStatus;
   isArchived: boolean;
@@ -50,7 +50,7 @@ export interface CreateWorkspacePayload {
   name: string;
   rootPath: string;
   repoUrl?: string;
-  defaultBranch?: string;
+  baseBranch?: string;
   metadata?: WorkspaceMetadata;
   projectId?: string;
 }
@@ -59,9 +59,14 @@ export interface UpdateWorkspacePayload {
   name?: string;
   rootPath?: string;
   repoUrl?: string;
-  defaultBranch?: string;
+  baseBranch?: string;
   metadata?: WorkspaceMetadata;
   status?: WorkspaceStatus;
+}
+
+export interface WorkspaceGitState {
+  workspaceId: string;
+  branch: string | null;
 }
 
 // Workspace intake — one operation creates a project + workspace from a repo.
@@ -70,7 +75,7 @@ export interface UpdateWorkspacePayload {
 export type WorkspaceIntakeSource =
   | { kind: "folder"; path: string }
   | { kind: "clone"; url: string; targetPath: string }
-  | { kind: "init"; name: string }
+  | { kind: "init"; name: string; parentPath?: string }
   | { kind: "worktree"; projectId: string };
 
 export interface WorkspaceIntakePayload {
@@ -236,6 +241,11 @@ export const workspaceApi = baseApi.injectEndpoints({
       providesTags: ["Workspaces"],
     }),
 
+    listWorkspaceGitStates: builder.query<WorkspaceGitState[], void>({
+      query: () => ({ handler: CHANNELS.workspace.listGitStates }),
+      providesTags: ["WorkspaceGitStates"],
+    }),
+
     getWorkspaceByRootPath: builder.query<
       Workspace | null,
       { accountId: string; rootPath: string }
@@ -252,7 +262,7 @@ export const workspaceApi = baseApi.injectEndpoints({
         handler: CHANNELS.workspace.create,
         args: [payload],
       }),
-      invalidatesTags: ["Workspaces"],
+      invalidatesTags: ["Workspaces", "WorkspaceGitStates"],
     }),
 
     // Create a project + workspace from a repo (picked folder / clone / init).
@@ -262,7 +272,7 @@ export const workspaceApi = baseApi.injectEndpoints({
         handler: CHANNELS.workspace.createFromSource,
         args: [payload],
       }),
-      invalidatesTags: ["Workspaces", "Projects"],
+      invalidatesTags: ["Workspaces", "WorkspaceGitStates", "Projects"],
     }),
 
     updateWorkspace: builder.mutation<
@@ -275,6 +285,7 @@ export const workspaceApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (_result, _error, { id }) => [
         "Workspaces",
+        "WorkspaceGitStates",
         { type: "Workspaces", id },
       ],
     }),
@@ -284,7 +295,7 @@ export const workspaceApi = baseApi.injectEndpoints({
         handler: CHANNELS.workspace.delete,
         args: [id],
       }),
-      invalidatesTags: ["Workspaces"],
+      invalidatesTags: ["Workspaces", "WorkspaceGitStates"],
     }),
 
     archiveWorkspace: builder.mutation<Workspace, string>({
@@ -294,6 +305,7 @@ export const workspaceApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (_result, _error, id) => [
         "Workspaces",
+        "WorkspaceGitStates",
         { type: "Workspaces", id },
       ],
     }),
@@ -303,8 +315,7 @@ export const workspaceApi = baseApi.injectEndpoints({
     }),
 
     // ── Git operations (see CONTEXT.md "Workspace git operations") ──
-    // Renames the branch (against the worktree's source repo when applicable)
-    // and updates defaultBranch + metadata.worktree.branch in one operation.
+    // Renames the branch currently checked out in the workspace.
     renameWorkspaceBranch: builder.mutation<
       Workspace,
       { id: string; newBranchName: string }
@@ -313,10 +324,7 @@ export const workspaceApi = baseApi.injectEndpoints({
         handler: CHANNELS.workspace.renameBranch,
         args: [id, newBranchName],
       }),
-      invalidatesTags: (_result, _error, { id }) => [
-        "Workspaces",
-        { type: "Workspaces", id },
-      ],
+      invalidatesTags: ["WorkspaceGitStates"],
     }),
 
     // Hard-resets the working tree to the recorded diff's baseRef and drops
@@ -561,6 +569,7 @@ export const {
   useLazyGetWorkspaceQuery,
   useListWorkspacesByAccountQuery,
   useLazyListWorkspacesByAccountQuery,
+  useListWorkspaceGitStatesQuery,
   useGetWorkspaceByRootPathQuery,
   useLazyGetWorkspaceByRootPathQuery,
   useCreateWorkspaceMutation,

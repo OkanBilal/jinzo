@@ -6,7 +6,7 @@ import type {
   ProviderResponse,
   DetectedClisResponse,
 } from "./providers.dto";
-import { listModelsForProvider, listCommandsForProvider, listSkillsForProvider, getAccountInfoForProvider, updateCliForProvider, listPluginsForProvider, readPluginForProvider, installPluginForProvider, uninstallPluginForProvider, setPluginEnabledForProvider, updatePluginForProvider, getRateLimitsForProvider, setGoalForProvider, getGoalForProvider, clearGoalForProvider, invalidateWorkAdapter, type ModelInfo, type CommandInfo, type SkillInfo, type PluginListResponse, type PluginDetail, type AccountInfo, type CliUpdateResult } from "./adapters";
+import { listModelsForProvider, listCommandsForProvider, listSkillsForProvider, getAccountInfoForProvider, updateCliForProvider, listPluginsForProvider, listInstalledPluginsForProvider, readPluginForProvider, installPluginForProvider, uninstallPluginForProvider, setPluginEnabledForProvider, updatePluginForProvider, getRateLimitsForProvider, setGoalForProvider, getGoalForProvider, clearGoalForProvider, invalidateWorkAdapter, type ModelInfo, type CommandInfo, type SkillInfo, type PluginListResponse, type PluginDetail, type AccountInfo, type CliUpdateResult } from "./adapters";
 import type { PluginScope } from "../../../shared/adapter.types";
 import type { RateLimitInfo, GoalInfo, GoalSetParams } from "../../../shared/adapter.types";
 
@@ -137,6 +137,11 @@ export const providersService = {
   async getPlugins(id: string): Promise<PluginListResponse> {
     const provider = await requireEnabledProvider(id);
     return listPluginsForProvider(provider);
+  },
+
+  async getInstalledPlugins(id: string): Promise<PluginListResponse> {
+    const provider = await requireEnabledProvider(id);
+    return listInstalledPluginsForProvider(provider);
   },
 
   async readPlugin(

@@ -493,7 +493,8 @@ export function useWorkspaceRuns(
       // AsciiLoader status line, not into the main timeline as an
       // agent-message bubble.
       const kind =
-        se.streamId.startsWith("cursor-think-") ? "thinking"
+        se.kind === "image_generation" ? "image_generation"
+          : se.streamId.startsWith("cursor-think-") ? "thinking"
           : se.streamId.startsWith("codex-cmd-") ? "thinking"
           : se.streamId.startsWith("claude-think-") ? "thinking"
           : "report";
@@ -503,6 +504,7 @@ export function useWorkspaceRuns(
         content: se.content,
         timestamp: new Date(se.timestamp),
         metadata: {
+          ...se.metadata,
           kind,
           streaming: true,
           streamId: se.streamId,

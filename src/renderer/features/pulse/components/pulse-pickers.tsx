@@ -25,7 +25,10 @@ import {
   type ModelIconVariant,
 } from "@/lib/model-icons";
 import { useListProjectsQuery } from "@/lib/redux/api/projectsApi";
-import { useListWorkspacesQuery } from "@/lib/redux/api/workspaceApi";
+import {
+  useListWorkspaceGitStatesQuery,
+  useListWorkspacesQuery,
+} from "@/lib/redux/api/workspaceApi";
 import {
   useGetEnabledProvidersQuery,
   useGetProviderModelsQuery,
@@ -152,39 +155,47 @@ const DAY_OPTIONS: { value: string; label: string }[] = WEEK_DAYS.map((d) => ({
 
 // ── Workspace picker ────────────────────────────────────────────
 
-function workspacePickTitle(w: Pick<Workspace, "name" | "defaultBranch">) {
-  const b = w.defaultBranch?.trim();
-  return b ? `${w.name}\n${b}` : w.name;
+function workspacePickTitle(
+  w: Pick<Workspace, "name">,
+  branch?: string | null,
+) {
+  const currentBranch = branch?.trim();
+  return currentBranch ? `${w.name}\n${currentBranch}` : w.name;
 }
 
 function WorkspacePickRows({
   w,
+  branch,
   title,
   textColumnClassName,
   projectIcon,
   showIcon = true,
 }: {
-  w: Pick<Workspace, "name" | "defaultBranch">;
+  w: Pick<Workspace, "name">;
+  branch?: string | null;
   title?: string;
   textColumnClassName?: string;
   /** Resolved from workspace project when available; falls back to generic Project glyph */
   projectIcon?: ReactNode;
   showIcon?: boolean;
 }) {
-  const branch = w.defaultBranch?.trim();
+  const currentBranch = branch?.trim();
   const textColumn = (
     <div
       className={`min-w-0 flex-1 text-left leading-tight ${textColumnClassName ?? ""}`}
     >
-      <div className="truncate" title={title ?? workspacePickTitle(w)}>
+      <div
+        className="truncate"
+        title={title ?? workspacePickTitle(w, currentBranch)}
+      >
         {w.name}
       </div>
-      {branch ? (
+      {currentBranch ? (
         <div
           className="truncate text-xxs text-primary-500 dark:text-primary-400"
-          title={branch}
+          title={currentBranch}
         >
-          {branch}
+          {currentBranch}
         </div>
       ) : null}
     </div>
@@ -221,7 +232,15 @@ export function WorkspacePicker({
 }) {
   const { open, ref, toggle, close } = usePickerState();
   const { data: workspaces = [] } = useListWorkspacesQuery();
+  const { data: gitStates = [] } = useListWorkspaceGitStatesQuery();
   const { data: projects = [] } = useListProjectsQuery();
+  const branchByWorkspaceId = useMemo(
+    () =>
+      new Map(
+        gitStates.map((state) => [state.workspaceId, state.branch] as const),
+      ),
+    [gitStates],
+  );
   const projectDataMap = useMemo(() => {
     const map = new Map<string, { name: string; icon: string | null }>();
     for (const project of projects) {
@@ -265,6 +284,7 @@ export function WorkspacePicker({
             >
               <WorkspacePickRows
                 w={w}
+                branch={branchByWorkspaceId.get(w.id)}
                 projectIcon={workspaceProjectIcon(w, projectDataMap)}
               />
             </PickerOption>

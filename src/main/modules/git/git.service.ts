@@ -41,6 +41,12 @@ export interface WorktreeImportResult {
   originUrl: string | null;
 }
 
+export interface WorktreeImportOptions {
+  projectName?: string;
+  branchName?: string;
+  baseBranch?: string;
+}
+
 export interface DirectImportResult {
   branchName: string;
   sourcePath: string;
@@ -138,6 +144,40 @@ export const gitService = {
   async getCurrentBranch(rootPath: string): Promise<string> {
     const branch = await getGit(rootPath).revparse(["--abbrev-ref", "HEAD"]);
     return branch.trim();
+  },
+
+  /**
+   * Repository integration branch. Prefer origin/HEAD, then conventional local
+   * branches, and only then the current checkout.
+   */
+  async getDefaultBranch(rootPath: string): Promise<string> {
+    const git = getGit(rootPath);
+    try {
+      const remoteHead = (
+        await git.raw([
+          "symbolic-ref",
+          "--quiet",
+          "--short",
+          "refs/remotes/origin/HEAD",
+        ])
+      ).trim();
+      if (remoteHead.startsWith("origin/")) {
+        return remoteHead.slice("origin/".length);
+      }
+    } catch {
+      // Repositories without an origin/HEAD fall through to local branches.
+    }
+
+    const branches = await git.branchLocal();
+    if (branches.all.includes("main")) return "main";
+    if (branches.all.includes("master")) return "master";
+    return (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
+  },
+
+  /** Absolute git directory; worktrees resolve to their own .git/worktrees entry. */
+  async getGitDirectory(rootPath: string): Promise<string> {
+    const gitDir = await getGit(rootPath).revparse(["--absolute-git-dir"]);
+    return gitDir.trim();
   },
 
   /** Working-tree status. */
@@ -264,28 +304,37 @@ export const gitService = {
    */
   async importLocalRepo(
     sourcePath: string,
-    projectName?: string,
-    customBranchName?: string,
+    options: WorktreeImportOptions = {},
   ): Promise<WorktreeImportResult> {
     const git = getGit(sourcePath);
 
     const isRepo = await git.checkIsRepo();
     if (!isRepo) throw new Error("Not a git repository");
 
-    const baseBranch = (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
+    const baseBranch =
+      options.baseBranch ?? (await this.getDefaultBranch(sourcePath));
     const originUrl = await readOriginUrl(git);
 
     // One name for both the branch and the worktree (or the custom name).
-    const fruitName = customBranchName || generateFruitName();
+    const fruitName = options.branchName || generateFruitName();
     const branchName = fruitName;
     const worktreeName = fruitName;
+    assertRef(baseBranch);
+    assertRef(branchName);
+
+    // Prefer the local integration branch, but allow origin/HEAD to resolve to
+    // a remote-only branch in repos that have never checked it out locally.
+    const localBranches = await git.branchLocal();
+    const baseRef = localBranches.all.includes(baseBranch)
+      ? baseBranch
+      : `origin/${baseBranch}`;
 
     // Create the import branch (staying in the source repo).
-    await git.raw(["branch", branchName]);
+    await git.raw(["branch", branchName, baseRef]);
 
     // Worktree lands under a project subfolder when a projectName is given.
-    const parentDir = projectName
-      ? path.join(worktreesDir(), projectName)
+    const parentDir = options.projectName
+      ? path.join(worktreesDir(), options.projectName)
       : worktreesDir();
     if (!fs.existsSync(parentDir)) {
       fs.mkdirSync(parentDir, { recursive: true });
@@ -318,12 +367,13 @@ export const gitService = {
     const isRepo = await git.checkIsRepo();
     if (!isRepo) throw new Error("Not a git repository");
 
-    const baseBranch = (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
+    const branchName = (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
+    const baseBranch = await this.getDefaultBranch(sourcePath);
     const originUrl = await readOriginUrl(git);
     const status: StatusResult = await git.status();
 
     return {
-      branchName: baseBranch,
+      branchName,
       sourcePath,
       baseBranch,
       tracking: status.tracking,

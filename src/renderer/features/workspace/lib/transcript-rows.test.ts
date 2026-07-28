@@ -79,6 +79,27 @@ describe("buildTurnRenderRows", () => {
     expect(acc.previousMessageCount).toBe(2);
     expect(acc.previousToolSummary).toBe("3 tool calls");
   });
+
+  it("keeps a live image-generation card outside the collapsed accordion", () => {
+    const imageGeneration = grp("response", [
+      ev({
+        type: "artifact",
+        content: "Generating image",
+        metadata: { kind: "image_generation", streaming: true },
+      }),
+    ]);
+    const rows = buildTurnRenderRows([
+      userPrompt(),
+      response("Starting"),
+      imageGeneration,
+      response("Done"),
+    ]);
+
+    const acc = accordion(rows[1]);
+    expect(acc.messageBreakoutIndices).toEqual([2]);
+    expect(acc.previousSegments).toEqual([[1]]);
+    expect(acc.lastSegment).toEqual([3]);
+  });
 });
 
 describe("matchTurnsToGroups", () => {

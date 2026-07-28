@@ -262,6 +262,7 @@ const api = {
     getAccountInfo: (id: string) => ipcRenderer.invoke(CHANNELS.providers.getAccountInfo, id),
     updateCli: (id: string) => ipcRenderer.invoke(CHANNELS.providers.updateCli, id),
     getPlugins: (id: string) => ipcRenderer.invoke(CHANNELS.providers.getPlugins, id),
+    getInstalledPlugins: (id: string) => ipcRenderer.invoke(CHANNELS.providers.getInstalledPlugins, id),
     readPlugin: (id: string, pluginName: string, marketplacePath: string) => ipcRenderer.invoke(CHANNELS.providers.readPlugin, id, pluginName, marketplacePath),
     installPlugin: (id: string, pluginId: string, scope?: string) => ipcRenderer.invoke(CHANNELS.providers.installPlugin, id, pluginId, scope),
     uninstallPlugin: (id: string, pluginId: string) => ipcRenderer.invoke(CHANNELS.providers.uninstallPlugin, id, pluginId),
@@ -294,6 +295,8 @@ const api = {
     get: (id: string) => ipcRenderer.invoke(CHANNELS.workspace.get, id),
     listByAccount: (accountId: string) =>
       ipcRenderer.invoke(CHANNELS.workspace.listByAccount, accountId),
+    listGitStates: () =>
+      ipcRenderer.invoke(CHANNELS.workspace.listGitStates),
     getByRootPath: (accountId: string, rootPath: string) =>
       ipcRenderer.invoke(
         CHANNELS.workspace.getByRootPath,
@@ -338,6 +341,17 @@ const api = {
       return () =>
         ipcRenderer.removeListener(
           CHANNELS.workspace.findingsChanged,
+          listener,
+        );
+    },
+    onGitStateChanged: (
+      callback: (data: { workspaceId: string; branch: string | null }) => void,
+    ) => {
+      const listener = (_: any, data: any) => callback(data);
+      ipcRenderer.on(CHANNELS.workspace.gitStateChanged, listener);
+      return () =>
+        ipcRenderer.removeListener(
+          CHANNELS.workspace.gitStateChanged,
           listener,
         );
     },

@@ -66,6 +66,9 @@ export const appEvents = {
     onFindingsChanged: bind<typeof window.api.workspace.onFindingsChanged>(
       CHANNELS.workspace.findingsChanged,
     ),
+    onGitStateChanged: bind<typeof window.api.workspace.onGitStateChanged>(
+      CHANNELS.workspace.gitStateChanged,
+    ),
   },
   terminal: {
     onData: bind<typeof window.api.terminal.onData>(CHANNELS.terminal.data),

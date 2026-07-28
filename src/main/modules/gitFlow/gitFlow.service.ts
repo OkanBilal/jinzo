@@ -23,7 +23,6 @@ import {
   logWorkspaceActivity,
   emitFindingsChanged,
   recordWorkspaceDiff,
-  type WorkspaceMetadata,
 } from "../workspace";
 import { runSessionRegistry } from "../runs/run-session-registry";
 import { gitService } from "../git";
@@ -39,6 +38,7 @@ const MAX_DIFF_CHARS = 12_000;
 /** Live snapshot the commit panel renders (branch, stats, push state). */
 export interface GitFlowStatus {
   branch: string;
+  baseBranch: string | null;
   ahead: number;
   behind: number;
   hasUpstream: boolean;
@@ -84,15 +84,6 @@ export interface CommitResult {
 
 /** What to stage before committing. */
 type StageMode = "all" | "none" | string[];
-
-function readBaseBranchFromMetadata(
-  metadata: WorkspaceMetadata | null | undefined,
-): string | null {
-  const baseBranch = metadata?.baseBranch;
-  return typeof baseBranch === "string" && baseBranch.trim()
-    ? baseBranch.trim()
-    : null;
-}
 
 /**
  * Normalize a git remote URL so SSH and HTTPS variants match.
@@ -225,16 +216,14 @@ export const gitFlowService = {
   },
 
   /**
-   * The branch a PR should target: the workspace's stored base branch
-   * (`metadata.baseBranch`) first, then the project's default branch. Null when
-   * unknown (let gh fall back to the repo default).
+   * The branch a PR should target: the workspace's explicit base branch first,
+   * then the project's default branch.
    */
   async resolveBaseBranch(workspaceId: string | null): Promise<string | null> {
     if (!workspaceId) return null;
     const workspace = await workspaceService.get(workspaceId);
     if (!workspace) return null;
-    const fromMeta = readBaseBranchFromMetadata(workspace.metadata);
-    if (fromMeta) return fromMeta;
+    if (workspace.baseBranch) return workspace.baseBranch;
     if (workspace.projectId) {
       const project = await projectsService.get(workspace.projectId);
       if (project?.defaultBranch) return project.defaultBranch;
@@ -313,6 +302,7 @@ export const gitFlowService = {
     title: string;
     body?: string;
     base?: string;
+    head?: string;
     draft?: boolean;
     labels?: string[];
   }): Promise<{ url: string; stdout: string; stderr?: string }> {
@@ -323,18 +313,19 @@ export const gitFlowService = {
 
     // Pass --head explicitly: in worktrees upstream tracking may be unset even
     // after push, so gh can't infer the head branch.
-    const currentBranch = await gitService
-      .getCurrentBranch(rootPath)
-      .catch(() => null);
+    const currentBranch =
+      params.head ??
+      (await gitService.getCurrentBranch(rootPath).catch(() => null));
+    if (params.base && params.base === currentBranch) {
+      throw new Error(
+        `Cannot create a pull request from "${currentBranch}" to itself`,
+      );
+    }
 
     const ghArgs = ["pr", "create", "--title", params.title];
     if (currentBranch) ghArgs.push("--head", currentBranch);
     if (params.body) ghArgs.push("--body", params.body);
-    // Only pass --base when it's a real, different branch — base == head is an
-    // invalid PR; omitting it lets gh use the repo default.
-    if (params.base && params.base !== currentBranch) {
-      ghArgs.push("--base", params.base);
-    }
+    if (params.base) ghArgs.push("--base", params.base);
     if (params.draft) ghArgs.push("--draft");
     for (const label of params.labels ?? []) ghArgs.push("--label", label);
 
@@ -555,16 +546,9 @@ export const gitFlowService = {
     const hasRemote = remotes.some((r) => r.name === "origin");
     const branch = branchName ?? status.current ?? "";
 
-    // Worktree workspaces store their working branch in defaultBranch for
-    // historical reasons; metadata.baseBranch is the PR base/default branch.
-    let defaultBranch = readBaseBranchFromMetadata(workspace.metadata);
-    if (!defaultBranch && workspace.projectId) {
-      const project = await projectsService.get(workspace.projectId);
-      defaultBranch = project?.defaultBranch ?? null;
-    }
-    defaultBranch ??= workspace.defaultBranch ?? null;
-    const isDefaultBranch = defaultBranch
-      ? branch === defaultBranch
+    const baseBranch = await this.resolveBaseBranch(workspaceId);
+    const isDefaultBranch = baseBranch
+      ? branch === baseBranch
       : branch === "main" || branch === "master";
 
     // Use the exact same computation the sidebar / Changes tab rely on
@@ -589,6 +573,7 @@ export const gitFlowService = {
 
     return {
       branch,
+      baseBranch,
       ahead: status.ahead,
       behind: status.behind,
       hasUpstream: !!status.tracking,
@@ -613,6 +598,10 @@ export const gitFlowService = {
     push?: boolean;
   }): Promise<CommitResult> {
     const { rootPath } = await this.resolveRoot(params.workspaceId);
+    const branch = await gitService.getCurrentBranch(rootPath);
+    if (!branch || branch === "HEAD") {
+      throw new Error("Cannot commit while HEAD is detached");
+    }
 
     const stageMode: StageMode =
       params.includeUnstaged === false ? "none" : "all";
@@ -647,7 +636,7 @@ export const gitFlowService = {
 
     let pushed = false;
     if (params.push) {
-      await gitService.push(rootPath);
+      await gitService.push(rootPath, { branch });
       pushed = true;
     }
 
@@ -657,7 +646,11 @@ export const gitFlowService = {
   /** Push the current branch (used by the standalone Push action). */
   async push(workspaceId: string): Promise<CommitResult> {
     const { rootPath } = await this.resolveRoot(workspaceId);
-    await gitService.push(rootPath);
+    const branch = await gitService.getCurrentBranch(rootPath);
+    if (!branch || branch === "HEAD") {
+      throw new Error("Cannot push while HEAD is detached");
+    }
+    await gitService.push(rootPath, { branch });
     return { hash: "", summary: "Pushed", pushed: true };
   },
 
@@ -838,15 +831,22 @@ export const gitFlowService = {
       // Verify the remote BEFORE pushing — otherwise a drifted origin would
       // upload commits to the wrong repo before performCreatePR's check aborts.
       await this.assertRemoteMatches(params.workspaceId, rootPath);
+      const head = await gitService.getCurrentBranch(rootPath);
+      if (!head || head === "HEAD") {
+        throw new Error("Cannot create a pull request from a detached HEAD");
+      }
 
       // Resolve the PR base: explicit > workspace base branch > project default.
       const base =
         params.base?.trim() ||
         (await this.resolveBaseBranch(params.workspaceId)) ||
         undefined;
+      if (base === head) {
+        throw new Error(`Cannot create a pull request from "${head}" to itself`);
+      }
 
       // Branch must exist on the remote before `gh pr create`.
-      await gitService.push(rootPath);
+      await gitService.push(rootPath, { branch: head });
 
       const result = await this.performCreatePR({
         workspaceId: params.workspaceId,
@@ -854,6 +854,7 @@ export const gitFlowService = {
         title,
         body,
         base,
+        head,
         draft: params.draft,
       });
       return { url: result.url };

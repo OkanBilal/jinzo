@@ -150,6 +150,7 @@ export {
   useGetProviderAccountInfoQuery,
   useUpdateProviderCliMutation,
   useGetProviderPluginsQuery,
+  useGetProviderInstalledPluginsQuery,
   useReadProviderPluginQuery,
   useInstallProviderPluginMutation,
   useUninstallProviderPluginMutation,
@@ -244,6 +245,7 @@ export {
   // workspace lifecycle
   useListWorkspacesQuery,
   useLazyListWorkspacesQuery,
+  useListWorkspaceGitStatesQuery,
   useGetWorkspaceQuery,
   useLazyGetWorkspaceQuery,
   useListWorkspacesByAccountQuery,
@@ -287,6 +289,7 @@ export {
 } from "./workspaceApi";
 export type {
   Workspace,
+  WorkspaceGitState,
   WorkspaceMetadata,
   WorkspaceStatus,
   CreateWorkspacePayload,
@@ -478,4 +481,3 @@ export type {
   CreatePulseInput,
   UpdatePulseInput,
 } from "./pulseApi";
-

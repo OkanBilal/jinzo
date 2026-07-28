@@ -7,6 +7,7 @@ import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
 export interface GitFlowStatus {
   branch: string;
+  baseBranch: string | null;
   ahead: number;
   behind: number;
   hasUpstream: boolean;

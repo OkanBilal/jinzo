@@ -147,7 +147,9 @@ describe("importLocalRepo", () => {
   it("creates a branch + worktree under the project's worktrees dir", async () => {
     const repo = makeRepo();
 
-    const result = await gitService.importLocalRepo(repo, "myproj");
+    const result = await gitService.importLocalRepo(repo, {
+      projectName: "myproj",
+    });
 
     expect(result.baseBranch).toBe("main");
     expect(result.branchName).toBe(result.worktreeName);
@@ -165,17 +167,41 @@ describe("importLocalRepo", () => {
   it("honors a custom branch name", async () => {
     const repo = makeRepo();
 
-    const result = await gitService.importLocalRepo(repo, "myproj", "my-branch");
+    const result = await gitService.importLocalRepo(repo, {
+      projectName: "myproj",
+      branchName: "my-branch",
+    });
 
     expect(result.branchName).toBe("my-branch");
     expect(result.worktreeName).toBe("my-branch");
+  });
+
+  it("creates the worktree branch from the explicit base, not the source checkout", async () => {
+    const repo = makeRepo();
+    git(repo, "checkout", "-b", "source-feature");
+    write(repo, "feature-only.txt", "feature\n");
+    git(repo, "add", ".");
+    git(repo, "commit", "-m", "feature-only");
+
+    const result = await gitService.importLocalRepo(repo, {
+      projectName: "myproj",
+      branchName: "from-main",
+      baseBranch: "main",
+    });
+
+    expect(result.baseBranch).toBe("main");
+    expect(fs.existsSync(path.join(result.worktreePath, "feature-only.txt"))).toBe(
+      false,
+    );
   });
 
   it("throws for a non-repo path", async () => {
     const dir = path.join(sandbox, "plain-dir");
     fs.mkdirSync(dir, { recursive: true });
 
-    await expect(gitService.importLocalRepo(dir, "p")).rejects.toThrow(
+    await expect(
+      gitService.importLocalRepo(dir, { projectName: "p" }),
+    ).rejects.toThrow(
       "Not a git repository",
     );
   });
@@ -192,6 +218,18 @@ describe("importLocalRepoDirect", () => {
     expect(result.baseBranch).toBe("main");
     expect(result.sourcePath).toBe(repo);
     expect(result.originUrl).toBe("https://github.com/foo/bar.git");
+  });
+
+  it("keeps the live checkout separate from the repository default branch", async () => {
+    const repo = makeRepo();
+    git(repo, "remote", "add", "origin", "https://github.com/foo/bar.git");
+    git(repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main");
+    git(repo, "checkout", "-b", "feature/live");
+
+    const result = await gitService.importLocalRepoDirect(repo);
+
+    expect(result.branchName).toBe("feature/live");
+    expect(result.baseBranch).toBe("main");
   });
 });
 

@@ -1,19 +1,23 @@
-import * as React from "react"
-import { SVGProps } from "react"
-const SvgComponent = (props: SVGProps<SVGSVGElement>) => (
+import { SVGProps } from "react";
+
+const StatusInProgress = (props: SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width={800}
-    height={800}
+    width={16}
+    height={16}
+    viewBox="0 0 16 16"
     fill="none"
-    viewBox="0 0 24 24"
     {...props}
   >
-    <circle cx={12} cy={12} r={10} stroke="currentColor" strokeWidth={1.5} />
-    <path
-      fill="currentColor"
-      d="M12 2a10 10 0 0 1 0 20V2Z"
+    <circle
+      cx={8}
+      cy={8}
+      r={6.25}
+      stroke="currentColor"
+      strokeWidth={1.75}
     />
+    <path fill="currentColor" d="M8 3.75a4.25 4.25 0 0 1 0 8.5V3.75Z" />
   </svg>
-)
-export default SvgComponent
+);
+
+export default StatusInProgress;
