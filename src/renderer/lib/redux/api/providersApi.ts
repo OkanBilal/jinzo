@@ -404,6 +404,18 @@ export const providersApi = baseApi.injectEndpoints({
         args: [id],
       }),
       providesTags: (_result, _error, id) => [{ type: "ProviderPlugins", id }],
+      keepUnusedDataFor: 900,
+    }),
+
+    getProviderInstalledPlugins: builder.query<PluginListResponse, string>({
+      query: (id) => ({
+        handler: CHANNELS.providers.getInstalledPlugins,
+        args: [id],
+      }),
+      providesTags: (_result, _error, id) => [
+        { type: "ProviderInstalledPlugins", id },
+      ],
+      keepUnusedDataFor: 300,
     }),
 
     readProviderPlugin: builder.query<
@@ -426,6 +438,7 @@ export const providersApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (_r, _e, { providerId }) => [
         { type: "ProviderPlugins", id: providerId },
+        { type: "ProviderInstalledPlugins", id: providerId },
         "ProviderSkills",
       ],
     }),
@@ -437,6 +450,7 @@ export const providersApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (_r, _e, { providerId }) => [
         { type: "ProviderPlugins", id: providerId },
+        { type: "ProviderInstalledPlugins", id: providerId },
         "ProviderSkills",
       ],
     }),
@@ -451,6 +465,7 @@ export const providersApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (_r, _e, { providerId }) => [
         { type: "ProviderPlugins", id: providerId },
+        { type: "ProviderInstalledPlugins", id: providerId },
         "ProviderSkills",
       ],
     }),
@@ -462,6 +477,7 @@ export const providersApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (_r, _e, { providerId }) => [
         { type: "ProviderPlugins", id: providerId },
+        { type: "ProviderInstalledPlugins", id: providerId },
         "ProviderSkills",
       ],
     }),
@@ -528,6 +544,7 @@ export const {
   useGetProviderAccountInfoQuery,
   useUpdateProviderCliMutation,
   useGetProviderPluginsQuery,
+  useGetProviderInstalledPluginsQuery,
   useReadProviderPluginQuery,
   useInstallProviderPluginMutation,
   useUninstallProviderPluginMutation,

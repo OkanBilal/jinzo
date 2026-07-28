@@ -10,11 +10,174 @@
 import { describe, it, expect } from "vitest";
 import {
   buildCollaborationMode,
+  mapCodexPluginList,
+  mapImageGenerationLifecycle,
   mapRateLimitSnapshot,
   mapSandboxMode,
   parseCodexReviewFindings,
   relativizeGoalMentions,
 } from "./codex.driver";
+
+describe("codex.driver / mapCodexPluginList", () => {
+  it("maps the installed-only wire response without requiring featured ids", () => {
+    expect(
+      mapCodexPluginList({
+        marketplaces: [
+          {
+            name: "openai-curated-remote",
+            path: null,
+            interface: { displayName: "OpenAI" },
+            plugins: [
+              {
+                id: "figma@openai-curated-remote",
+                name: "figma",
+                source: { type: "remote", path: "" },
+                installed: true,
+                enabled: true,
+                installPolicy: "AVAILABLE",
+                authPolicy: "ON_INSTALL",
+                interface: {
+                  displayName: "Figma",
+                  capabilities: ["apps"],
+                  logoUrl: "https://example.com/figma.png",
+                  screenshotUrls: ["https://example.com/figma-shot.png"],
+                },
+              },
+            ],
+          },
+        ],
+        marketplaceLoadErrors: [],
+        remoteSyncError: null,
+      }),
+    ).toEqual({
+      marketplaces: [
+        {
+          name: "openai-curated-remote",
+          path: "",
+          interface: { displayName: "OpenAI" },
+          plugins: [
+            {
+              id: "figma@openai-curated-remote",
+              name: "figma",
+              source: { type: "remote", path: "" },
+              installed: true,
+              enabled: true,
+              installPolicy: "AVAILABLE",
+              authPolicy: "ON_INSTALL",
+              interface: {
+                displayName: "Figma",
+                shortDescription: undefined,
+                longDescription: undefined,
+                developerName: undefined,
+                category: undefined,
+                capabilities: ["apps"],
+                websiteUrl: undefined,
+                defaultPrompt: undefined,
+                brandColor: undefined,
+                composerIcon: undefined,
+                logo: "https://example.com/figma.png",
+                screenshots: ["https://example.com/figma-shot.png"],
+                privacyPolicyUrl: undefined,
+                termsOfServiceUrl: undefined,
+              },
+            },
+          ],
+        },
+      ],
+      marketplaceLoadErrors: [],
+      remoteSyncError: null,
+      featuredPluginIds: [],
+    });
+  });
+
+  it("returns an empty canonical response for malformed payloads", () => {
+    expect(mapCodexPluginList(undefined)).toEqual({
+      marketplaces: [],
+      marketplaceLoadErrors: [],
+      remoteSyncError: null,
+      featuredPluginIds: [],
+    });
+  });
+});
+
+describe("codex.driver / mapImageGenerationLifecycle", () => {
+  it("opens an ephemeral image-generation stream when the item starts", () => {
+    expect(
+      mapImageGenerationLifecycle(
+        { id: "img-1", status: "inProgress" },
+        "start",
+        "run-1",
+        123,
+      ),
+    ).toEqual([{
+      type: "artifact",
+      kind: "image_generation",
+      content: "Generating image",
+      metadata: {
+        source: "codex_image_generation",
+        itemId: "img-1",
+        status: "inProgress",
+      },
+      ephemeral: true,
+      streamId: "codex-image-generation-run-1-img-1",
+      ts: 123,
+    }]);
+  });
+
+  it("clears the same stream when generation completes", () => {
+    expect(
+      mapImageGenerationLifecycle(
+        { id: "img-1", status: "completed" },
+        "complete",
+        "run-1",
+        456,
+      ),
+    ).toEqual([{
+      type: "artifact",
+      kind: "image_generation",
+      content: "",
+      metadata: {
+        source: "codex_image_generation",
+        itemId: "img-1",
+        status: "completed",
+      },
+      ephemeral: true,
+      streamId: "codex-image-generation-run-1-img-1",
+      ts: 456,
+    }]);
+  });
+
+  it("records a diagnostic error after clearing a failed generation", () => {
+    const events = mapImageGenerationLifecycle(
+      { id: "img-2", status: "failed" },
+      "complete",
+      "run-1",
+      789,
+    );
+
+    expect(events[0]).toMatchObject({
+      type: "artifact",
+      content: "",
+      streamId: "codex-image-generation-run-1-img-2",
+    });
+    expect(events[1]).toMatchObject({
+      type: "log",
+      level: "error",
+      message: "Codex image generation failed",
+    });
+  });
+
+  it("ignores intermediate updates because the protocol has no stage progress", () => {
+    expect(
+      mapImageGenerationLifecycle(
+        { id: "img-1", status: "inProgress" },
+        "update",
+        "run-1",
+        234,
+      ),
+    ).toEqual([]);
+  });
+});
 
 describe("codex.driver / relativizeGoalMentions", () => {
   const root = "/Users/me/Library/Application Support/mains/worktrees/x/coconut";

@@ -515,6 +515,13 @@ export interface WorkRunAdapter {
   listPlugins?(): Promise<PluginListResponse>;
 
   /**
+   * List installed plugins without loading the full remote marketplace.
+   * Providers without a dedicated installed-only surface may fall back to
+   * filtering listPlugins() in the adapter factory.
+   */
+  listInstalledPlugins?(): Promise<PluginListResponse>;
+
+  /**
    * Read detailed plugin info including skills, apps, and MCP servers.
    */
   readPlugin?(pluginName: string, marketplacePath: string): Promise<PluginDetail>;
@@ -633,6 +640,7 @@ export interface ProviderDriver {
   getAccountInfo?(): Promise<AccountInfo>;
   updateCli?(): Promise<CliUpdateResult>;
   listPlugins?(): Promise<PluginListResponse>;
+  listInstalledPlugins?(): Promise<PluginListResponse>;
   readPlugin?(pluginName: string, marketplacePath: string): Promise<PluginDetail>;
   installPlugin?(pluginId: string, scope?: PluginScope): Promise<void>;
   uninstallPlugin?(pluginId: string): Promise<void>;

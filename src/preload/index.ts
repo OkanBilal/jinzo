@@ -262,6 +262,7 @@ const api = {
     getAccountInfo: (id: string) => ipcRenderer.invoke(CHANNELS.providers.getAccountInfo, id),
     updateCli: (id: string) => ipcRenderer.invoke(CHANNELS.providers.updateCli, id),
     getPlugins: (id: string) => ipcRenderer.invoke(CHANNELS.providers.getPlugins, id),
+    getInstalledPlugins: (id: string) => ipcRenderer.invoke(CHANNELS.providers.getInstalledPlugins, id),
     readPlugin: (id: string, pluginName: string, marketplacePath: string) => ipcRenderer.invoke(CHANNELS.providers.readPlugin, id, pluginName, marketplacePath),
     installPlugin: (id: string, pluginId: string, scope?: string) => ipcRenderer.invoke(CHANNELS.providers.installPlugin, id, pluginId, scope),
     uninstallPlugin: (id: string, pluginId: string) => ipcRenderer.invoke(CHANNELS.providers.uninstallPlugin, id, pluginId),

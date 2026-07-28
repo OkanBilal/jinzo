@@ -220,6 +220,8 @@ export function createWorkRunAdapter(driver: ProviderDriver): WorkRunAdapter {
     adapter.getAccountInfo = driver.getAccountInfo.bind(driver);
   if (driver.updateCli) adapter.updateCli = driver.updateCli.bind(driver);
   if (driver.listPlugins) adapter.listPlugins = driver.listPlugins.bind(driver);
+  if (driver.listInstalledPlugins)
+    adapter.listInstalledPlugins = driver.listInstalledPlugins.bind(driver);
   if (driver.readPlugin) adapter.readPlugin = driver.readPlugin.bind(driver);
   if (driver.installPlugin)
     adapter.installPlugin = driver.installPlugin.bind(driver);

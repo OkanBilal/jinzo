@@ -2537,17 +2537,22 @@ describe("workspaceService — createFromSource (workspace intake)", () => {
   it("init: fresh repo — always direct, no import, no origin", async () => {
     setWorktrees(true); // ignored for init
     gitMock.initRepo.mockResolvedValue({
-      rootPath: "/desktop/newproj",
+      rootPath: "/projects/newproj",
       defaultBranch: "main",
     });
 
     const result = await workspaceService.createFromSource({
       accountId: "default",
-      source: { kind: "init", name: "newproj" },
+      source: {
+        kind: "init",
+        name: "newproj",
+        parentPath: "/projects",
+      },
     });
+    expect(gitMock.initRepo).toHaveBeenCalledWith("newproj", "/projects");
     expect(gitMock.importLocalRepo).not.toHaveBeenCalled();
     expect(gitMock.importLocalRepoDirect).not.toHaveBeenCalled();
-    expect(result.rootPath).toBe("/desktop/newproj");
+    expect(result.rootPath).toBe("/projects/newproj");
     expect(result.defaultBranch).toBe("main");
     expect(result.metadata?.worktree).toEqual({ enabled: false });
     expect(result.metadata?.origin).toBeUndefined();

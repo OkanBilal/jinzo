@@ -11,6 +11,7 @@ import {
   Select,
 } from "@/components/ui";
 import {
+  useGetProviderInstalledPluginsQuery,
   useGetProviderPluginsQuery,
   useReadProviderPluginQuery,
   useInstallProviderPluginMutation,
@@ -196,6 +197,53 @@ function HorizontalFadeScroller({
         {children}
       </div>
     </div>
+  );
+}
+
+function InstalledPluginShelf({
+  plugins,
+  isLoading,
+  onSelect,
+}: {
+  plugins: PluginInfo[];
+  isLoading: boolean;
+  onSelect: (pluginId: string) => void;
+}) {
+  if (!isLoading && plugins.length === 0) return null;
+
+  return (
+    <section className="mb-8" aria-label="Installed plugins">
+      <Body className="font-medium mb-3">Installed</Body>
+      <HorizontalFadeScroller contentClassName="flex gap-3 w-max px-0.5 pr-10">
+        {isLoading
+          ? Array.from({ length: 7 }, (_, index) => (
+              <div
+                key={index}
+                className="size-12 shrink-0 rounded-2xl glass-surface animate-pulse"
+                aria-hidden="true"
+              />
+            ))
+          : plugins.map((plugin) => {
+              const name =
+                plugin.interface?.displayName ||
+                humanizePluginName(plugin.name);
+              return (
+                <button
+                  key={plugin.id}
+                  type="button"
+                  title={name}
+                  aria-label={`Open ${name}`}
+                  onClick={() => onSelect(plugin.id)}
+                  className={`size-12 shrink-0 snap-start rounded-2xl glass-surface flex items-center justify-center transition-[transform,opacity] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/70 cursor-pointer ${
+                    plugin.enabled ? "" : "opacity-55"
+                  }`}
+                >
+                  <PluginLogo plugin={plugin} size="md" />
+                </button>
+              );
+            })}
+      </HorizontalFadeScroller>
+    </section>
   );
 }
 
@@ -748,7 +796,19 @@ export default function ProviderPlugins({
     data: pluginData,
     isLoading,
     error,
-  } = useGetProviderPluginsQuery(providerId);
+  } = useGetProviderPluginsQuery(providerId, {
+    refetchOnFocus: false,
+    refetchOnReconnect: false,
+  });
+  const isCodex = providerId === PROVIDER_IDS.codex;
+  const {
+    data: installedPluginData,
+    isLoading: isLoadingInstalledPlugins,
+  } = useGetProviderInstalledPluginsQuery(providerId, {
+    skip: !isCodex,
+    refetchOnFocus: false,
+    refetchOnReconnect: false,
+  });
   const [installPlugin, { isLoading: isInstalling }] =
     useInstallProviderPluginMutation();
   const [uninstallPlugin, { isLoading: isUninstalling }] =
@@ -769,6 +829,17 @@ export default function ProviderPlugins({
     return pluginData.marketplaces.flatMap((mp) => mp.plugins);
     //.filter((p) => p.interface?.developerName === "OpenAI" || p.interface?.developerName === "Vercel Labs" );
   }, [pluginData]);
+
+  const installedPlugins = useMemo(() => {
+    if (isCodex) {
+      return (
+        installedPluginData?.marketplaces.flatMap(
+          (marketplace) => marketplace.plugins,
+        ) ?? []
+      );
+    }
+    return allPlugins.filter((plugin) => plugin.installed);
+  }, [allPlugins, installedPluginData, isCodex]);
 
   // id → rank; the marketplace's featuredPluginIds order is a curated ranking,
   // so keep it instead of falling back to marketplace order.
@@ -928,7 +999,12 @@ export default function ProviderPlugins({
 
   if (isLoading) {
     return (
-      <div>
+      <div className="mb-12">
+        <InstalledPluginShelf
+          plugins={installedPlugins}
+          isLoading={isCodex ? isLoadingInstalledPlugins : true}
+          onSelect={setSelectedPluginId}
+        />
         <Muted>Loading plugins... This may take a moment on first load.</Muted>
       </div>
     );
@@ -936,7 +1012,12 @@ export default function ProviderPlugins({
 
   if (error) {
     return (
-      <div>
+      <div className="mb-12">
+        <InstalledPluginShelf
+          plugins={installedPlugins}
+          isLoading={isCodex && isLoadingInstalledPlugins}
+          onSelect={setSelectedPluginId}
+        />
         <Muted>Failed to load plugins: {extractErrorMessage(error, "Unknown error")}</Muted>
       </div>
     );
@@ -969,6 +1050,12 @@ export default function ProviderPlugins({
   // List view
   return (
     <div className="mb-12">
+      <InstalledPluginShelf
+        plugins={installedPlugins}
+        isLoading={isCodex && isLoadingInstalledPlugins}
+        onSelect={setSelectedPluginId}
+      />
+
       {/* Category filter + search */}
       <div className="flex flex-col gap-3 mb-6 md:flex-row md:items-center md:justify-between md:gap-4">
         <div className="flex gap-1 min-w-0 flex-1 overflow-x-auto noscrollbar">

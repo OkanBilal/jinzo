@@ -28,6 +28,7 @@ import { useLazyGetAppsForFileQuery } from "@/lib/redux/api";
 import { useLocalImageUrl } from "@/hooks/use-local-image-url";
 import { useCapabilities } from "@/lib/platform";
 import { DocumentArtifact } from "@/features/workspace/components/tools/document-artifact";
+import { ImageGenerationLoader } from "@/features/workspace/components/tools/image-generation-loader";
 import { classifyDocType, type DocType } from "@/lib/document-viewer";
 import { useSmoothText } from "../../hooks/use-smooth-text";
 
@@ -445,6 +446,10 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
         )}
       </div>
     );
+  }
+
+  if (event.type === "artifact" && event.metadata?.kind === "image_generation") {
+    return <ImageGenerationLoader startedAt={event.timestamp} />;
   }
 
   if (event.type === "artifact" && event.metadata?.kind === "document") {

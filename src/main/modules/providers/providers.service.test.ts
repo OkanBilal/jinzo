@@ -23,6 +23,19 @@ vi.mock("./adapters", () => ({
   listSkillsForProvider: vi.fn().mockResolvedValue([
     { id: "code", name: "Code" },
   ]),
+  listInstalledPluginsForProvider: vi.fn().mockResolvedValue({
+    marketplaces: [
+      {
+        name: "installed",
+        path: "",
+        interface: null,
+        plugins: [{ id: "figma@installed", name: "figma", installed: true }],
+      },
+    ],
+    marketplaceLoadErrors: [],
+    remoteSyncError: null,
+    featuredPluginIds: [],
+  }),
   invalidateWorkAdapter: vi.fn(),
 }));
 
@@ -207,6 +220,19 @@ describe("providersService", () => {
       createProvider(db, { id: "p1", isEnabled: false });
 
       await expect(providersService.getSkills("p1")).rejects.toThrow("Provider is not enabled");
+    });
+  });
+
+  describe("getInstalledPlugins", () => {
+    it("uses the installed-only adapter surface", async () => {
+      createProvider(db, { id: "p1", isEnabled: true });
+
+      const result = await providersService.getInstalledPlugins("p1");
+
+      expect(result.marketplaces[0].plugins[0]).toMatchObject({
+        id: "figma@installed",
+        installed: true,
+      });
     });
   });
 

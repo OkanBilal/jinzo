@@ -36,7 +36,6 @@ import type {
   DriverOutcome,
   GoalInfo,
   GoalSetParams,
-  MarketplaceInfo,
   ModelInfo,
   PluginDetail,
   PluginInfo,
@@ -122,6 +121,8 @@ interface ThreadItem {
   type: string;
   [key: string]: unknown;
 }
+
+type ThreadItemPhase = "start" | "update" | "complete";
 
 interface Usage {
   input_tokens: number;
@@ -439,6 +440,64 @@ export function relativizeGoalMentions(goal: string, rootPath: string | undefine
   // "Application Support" in the worktree path — are matched correctly.
   const root = rootPath.endsWith("/") ? rootPath : rootPath + "/";
   return goal.split("@" + root).join("@");
+}
+
+/**
+ * Translate Codex's dedicated image-generation item lifecycle into a
+ * renderer-only placeholder stream. The final image remains a normal,
+ * persisted image artifact emitted from the completed item's `savedPath`.
+ */
+export function mapImageGenerationLifecycle(
+  item: Pick<ThreadItem, "id"> & { status?: unknown },
+  phase: ThreadItemPhase,
+  runId: string,
+  ts: number,
+): WorkRunEvent[] {
+  const streamId = `codex-image-generation-${runId}-${item.id}`;
+
+  if (phase === "start") {
+    return [{
+      type: "artifact",
+      kind: "image_generation",
+      content: "Generating image",
+      metadata: {
+        source: "codex_image_generation",
+        itemId: item.id,
+        status: typeof item.status === "string" ? item.status : "inProgress",
+      },
+      ephemeral: true,
+      streamId,
+      ts,
+    }];
+  }
+
+  if (phase !== "complete") return [];
+
+  const events: WorkRunEvent[] = [{
+    type: "artifact",
+    kind: "image_generation",
+    content: "",
+    metadata: {
+      source: "codex_image_generation",
+      itemId: item.id,
+      status: typeof item.status === "string" ? item.status : "completed",
+    },
+    ephemeral: true,
+    streamId,
+    ts,
+  }];
+
+  if (item.status === "failed") {
+    events.push({
+      type: "log",
+      message: "Codex image generation failed",
+      level: "error",
+      ts,
+      metadata: { itemId: item.id },
+    });
+  }
+
+  return events;
 }
 
 /**
@@ -1081,6 +1140,102 @@ function pluginAssetUrl(...candidates: Array<string | undefined | null>): string
   return undefined;
 }
 
+export function mapCodexPluginList(
+  result: Record<string, unknown> | null | undefined,
+): PluginListResponse {
+  const rawMarketplaces = Array.isArray(result?.marketplaces)
+    ? result.marketplaces as Array<Record<string, unknown>>
+    : [];
+
+  return {
+    marketplaces: rawMarketplaces.map((marketplace) => {
+      const rawPlugins = Array.isArray(marketplace.plugins)
+        ? marketplace.plugins as Array<Record<string, unknown>>
+        : [];
+
+      return {
+        name: (marketplace.name as string) ?? "",
+        path: (marketplace.path as string | null | undefined) ?? "",
+        interface:
+          (marketplace.interface as { displayName?: string } | null | undefined) ??
+          null,
+        plugins: rawPlugins.map((plugin): PluginInfo => {
+          const pluginInterface = plugin.interface as Record<string, unknown> | null | undefined;
+          return {
+            id: (plugin.id as string) ?? "",
+            name: (plugin.name as string) ?? "",
+            source:
+              (plugin.source as { type: string; path: string } | undefined) ??
+              { type: "local", path: "" },
+            installed: (plugin.installed as boolean) ?? false,
+            enabled: (plugin.enabled as boolean) ?? false,
+            installPolicy:
+              (plugin.installPolicy as PluginInfo["installPolicy"]) ??
+              "AVAILABLE",
+            authPolicy:
+              (plugin.authPolicy as PluginInfo["authPolicy"]) ?? "ON_INSTALL",
+            interface: pluginInterface
+              ? {
+                  displayName:
+                    (pluginInterface.displayName as string | undefined) ??
+                    undefined,
+                  shortDescription:
+                    (pluginInterface.shortDescription as string | undefined) ??
+                    undefined,
+                  longDescription:
+                    (pluginInterface.longDescription as string | undefined) ??
+                    undefined,
+                  developerName:
+                    (pluginInterface.developerName as string | undefined) ??
+                    undefined,
+                  category:
+                    (pluginInterface.category as string | undefined) ??
+                    undefined,
+                  capabilities:
+                    (pluginInterface.capabilities as string[] | undefined) ?? [],
+                  websiteUrl:
+                    (pluginInterface.websiteUrl as string | undefined) ??
+                    undefined,
+                  defaultPrompt:
+                    (pluginInterface.defaultPrompt as string[] | undefined) ??
+                    undefined,
+                  brandColor:
+                    (pluginInterface.brandColor as string | undefined) ??
+                    undefined,
+                  composerIcon: pluginAssetUrl(
+                    pluginInterface.composerIcon as string | undefined,
+                    pluginInterface.composerIconUrl as string | undefined,
+                  ),
+                  logo: pluginAssetUrl(
+                    pluginInterface.logo as string | undefined,
+                    pluginInterface.logoUrl as string | undefined,
+                  ),
+                  screenshots: [
+                    ...((pluginInterface.screenshots as string[] | undefined) ?? []),
+                    ...((pluginInterface.screenshotUrls as string[] | undefined) ?? []),
+                  ]
+                    .map((screenshot) => pluginAssetUrl(screenshot))
+                    .filter(Boolean) as string[],
+                  privacyPolicyUrl:
+                    (pluginInterface.privacyPolicyUrl as string | undefined) ??
+                    undefined,
+                  termsOfServiceUrl:
+                    (pluginInterface.termsOfServiceUrl as string | undefined) ??
+                    undefined,
+                }
+              : null,
+          };
+        }),
+      };
+    }),
+    marketplaceLoadErrors:
+      (result?.marketplaceLoadErrors as PluginListResponse["marketplaceLoadErrors"] | undefined) ??
+      [],
+    remoteSyncError: (result?.remoteSyncError as string | null | undefined) ?? null,
+    featuredPluginIds: (result?.featuredPluginIds as string[] | undefined) ?? [],
+  };
+}
+
 /**
  * Per-run session state handed back to Core as opaque `session`.
  * The runId is the only thing Core sees; everything else lives on the
@@ -1124,6 +1279,71 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
    * name (used by readPlugin, which never sees the composite id).
    */
   const remotePluginRefCache = new Map<string, { remotePluginId: string; marketplaceName: string }>();
+  const pluginCatalogTtlMs = 15 * 60 * 1000;
+  const installedPluginsTtlMs = 5 * 60 * 1000;
+  let pluginCatalogCache: { value: PluginListResponse; fetchedAt: number } | null = null;
+  let installedPluginsCache: { value: PluginListResponse; fetchedAt: number } | null = null;
+  let pluginCatalogInFlight: Promise<PluginListResponse> | null = null;
+  let installedPluginsInFlight: Promise<PluginListResponse> | null = null;
+  let pluginCacheGeneration = 0;
+
+  function indexPluginReferences(result: Record<string, unknown>): void {
+    const rawMarketplaces = Array.isArray(result.marketplaces)
+      ? result.marketplaces as Array<Record<string, unknown>>
+      : [];
+    for (const marketplace of rawMarketplaces) {
+      const marketplaceName = marketplace.name as string;
+      const marketplacePath = marketplace.path as string | null | undefined;
+      if (marketplacePath) marketplacePathCache.set(marketplaceName, marketplacePath);
+
+      const rawPlugins = Array.isArray(marketplace.plugins)
+        ? marketplace.plugins as Array<Record<string, unknown>>
+        : [];
+      for (const plugin of rawPlugins) {
+        const remotePluginId = plugin.remotePluginId as string | undefined;
+        if (!remotePluginId) continue;
+        const reference = { remotePluginId, marketplaceName };
+        remotePluginRefCache.set(plugin.id as string, reference);
+        remotePluginRefCache.set(plugin.name as string, reference);
+      }
+    }
+  }
+
+  async function fetchPluginList(method: "plugin/list" | "plugin/installed"): Promise<PluginListResponse> {
+    const server = await ensureServer();
+    const result = await server.sendRequest(method, {}, 30000) as Record<string, unknown>;
+    indexPluginReferences(result);
+    return mapCodexPluginList(result);
+  }
+
+  function pluginListFailure(
+    error: unknown,
+    method: "plugin/list" | "plugin/installed",
+    staleValue?: PluginListResponse,
+  ): PluginListResponse {
+    const message = error instanceof Error ? error.message : String(error);
+    logError(`Failed to call ${method}:`, message);
+    if (/method not found|unknown method|not supported/i.test(message)) {
+      logWarn(`${method} not supported by this Codex version`);
+    }
+    if (staleValue) {
+      return { ...staleValue, remoteSyncError: message };
+    }
+    return {
+      marketplaces: [],
+      marketplaceLoadErrors: [],
+      remoteSyncError: message,
+      featuredPluginIds: [],
+    };
+  }
+
+  function invalidatePluginCaches(): void {
+    pluginCacheGeneration += 1;
+    pluginCatalogCache = null;
+    installedPluginsCache = null;
+    pluginCatalogInFlight = null;
+    installedPluginsInFlight = null;
+  }
 
   // Usage accumulation per run
   const usageAccumulator = new Map<string, {
@@ -2252,8 +2472,8 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
    */
   function mapThreadItem(item: ThreadItem, eventMethod: string, ts: number, runId: string): WorkRunEvent[] {
     const events: WorkRunEvent[] = [];
-    const phase = eventMethod.endsWith("/started") ? "start" :
-                  eventMethod.endsWith("/completed") ? "complete" : "update";
+    const phase: ThreadItemPhase = eventMethod.endsWith("/started") ? "start" :
+      eventMethod.endsWith("/completed") ? "complete" : "update";
 
     switch (item.type) {
       case "agent_message":
@@ -2285,6 +2505,12 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       case "userMessage":
         // Internal — no UI event needed.
         break;
+
+      case "image_generation":
+      case "imageGeneration": {
+        events.push(...mapImageGenerationLifecycle(item, phase, runId, ts));
+        break;
+      }
 
       // Plan items appear in collaborationMode "plan" turns. Text streams via
       // item/plan/delta (handled above into runState.planBuffers); on completion
@@ -3893,6 +4119,9 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       activeRuns.clear();
       sessionIdMap.clear();
       usageAccumulator.clear();
+      invalidatePluginCaches();
+      marketplacePathCache.clear();
+      remotePluginRefCache.clear();
 
       if (appServer) {
         await appServer.stop();
@@ -4363,83 +4592,59 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     },
 
     async listPlugins(): Promise<PluginListResponse> {
-      try {
-        const server = await ensureServer();
-
-        const result = await server.sendRequest("plugin/list", {}, 30000) as Record<string, unknown>;
-
-        const rawMarketplaces = result?.marketplaces as Array<Record<string, unknown>> | undefined;
-        if (!rawMarketplaces || !Array.isArray(rawMarketplaces)) {
-          return { marketplaces: [], marketplaceLoadErrors: [], remoteSyncError: null, featuredPluginIds: [] };
-        }
-
-        const marketplaces: MarketplaceInfo[] = rawMarketplaces.map((mp) => {
-          const rawPlugins = mp.plugins as Array<Record<string, unknown>> | undefined;
-          const plugins: PluginInfo[] = (rawPlugins ?? []).map((p) => ({
-            id: p.id as string,
-            name: p.name as string,
-            source: (p.source as { type: string; path: string }) ?? { type: "local", path: "" },
-            installed: (p.installed as boolean) ?? false,
-            enabled: (p.enabled as boolean) ?? false,
-            installPolicy: (p.installPolicy as PluginInfo["installPolicy"]) ?? "AVAILABLE",
-            authPolicy: (p.authPolicy as PluginInfo["authPolicy"]) ?? "ON_INSTALL",
-            interface: p.interface ? {
-              displayName: (p.interface as any).displayName ?? undefined,
-              shortDescription: (p.interface as any).shortDescription ?? undefined,
-              longDescription: (p.interface as any).longDescription ?? undefined,
-              developerName: (p.interface as any).developerName ?? undefined,
-              category: (p.interface as any).category ?? undefined,
-              capabilities: (p.interface as any).capabilities ?? [],
-              websiteUrl: (p.interface as any).websiteUrl ?? undefined,
-              defaultPrompt: (p.interface as any).defaultPrompt ?? undefined,
-              brandColor: (p.interface as any).brandColor ?? undefined,
-              composerIcon: pluginAssetUrl((p.interface as any).composerIcon, (p.interface as any).composerIconUrl),
-              logo: pluginAssetUrl((p.interface as any).logo, (p.interface as any).logoUrl),
-              screenshots: ([...((p.interface as any).screenshots ?? []), ...((p.interface as any).screenshotUrls ?? [])] as string[])
-                .map((s) => pluginAssetUrl(s))
-                .filter(Boolean) as string[],
-              privacyPolicyUrl: (p.interface as any).privacyPolicyUrl ?? undefined,
-              termsOfServiceUrl: (p.interface as any).termsOfServiceUrl ?? undefined,
-            } : null,
-          }));
-
-          return {
-            name: mp.name as string,
-            path: mp.path as string,
-            interface: mp.interface as { displayName?: string } | null,
-            plugins,
-          };
-        });
-
-        // Cache marketplace paths + remote plugin refs for install/uninstall/read
-        for (const mp of rawMarketplaces) {
-          const mpName = mp.name as string;
-          const mpPath = mp.path as string | null;
-          if (mpPath) marketplacePathCache.set(mpName, mpPath);
-          for (const p of (mp.plugins as Array<Record<string, unknown>> | undefined) ?? []) {
-            const remotePluginId = p.remotePluginId as string | undefined;
-            if (!remotePluginId) continue;
-            const ref = { remotePluginId, marketplaceName: mpName };
-            remotePluginRefCache.set(p.id as string, ref);
-            remotePluginRefCache.set(p.name as string, ref);
-          }
-        }
-
-        return {
-          marketplaces,
-          marketplaceLoadErrors: (result.marketplaceLoadErrors as any[]) ?? [],
-          remoteSyncError: (result.remoteSyncError as string) ?? null,
-          featuredPluginIds: (result.featuredPluginIds as string[]) ?? [],
-        };
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        logError("Failed to list plugins:", msg);
-        // If the endpoint doesn't exist, return empty gracefully
-        if (/method not found|unknown method|not supported/i.test(msg)) {
-          logWarn("plugin/list not supported by this Codex version");
-        }
-        return { marketplaces: [], marketplaceLoadErrors: [], remoteSyncError: msg, featuredPluginIds: [] };
+      if (
+        pluginCatalogCache &&
+        Date.now() - pluginCatalogCache.fetchedAt < pluginCatalogTtlMs
+      ) {
+        return pluginCatalogCache.value;
       }
+      if (pluginCatalogInFlight) return pluginCatalogInFlight;
+
+      const staleValue = pluginCatalogCache?.value;
+      const generation = pluginCacheGeneration;
+      const request = fetchPluginList("plugin/list")
+        .then((value) => {
+          if (generation === pluginCacheGeneration) {
+            pluginCatalogCache = { value, fetchedAt: Date.now() };
+          }
+          return value;
+        })
+        .catch((error) => pluginListFailure(error, "plugin/list", staleValue))
+        .finally(() => {
+          if (pluginCatalogInFlight === request) pluginCatalogInFlight = null;
+        });
+      pluginCatalogInFlight = request;
+      return request;
+    },
+
+    async listInstalledPlugins(): Promise<PluginListResponse> {
+      if (
+        installedPluginsCache &&
+        Date.now() - installedPluginsCache.fetchedAt < installedPluginsTtlMs
+      ) {
+        return installedPluginsCache.value;
+      }
+      if (installedPluginsInFlight) return installedPluginsInFlight;
+
+      const staleValue = installedPluginsCache?.value;
+      const generation = pluginCacheGeneration;
+      const request = fetchPluginList("plugin/installed")
+        .then((value) => {
+          if (generation === pluginCacheGeneration) {
+            installedPluginsCache = { value, fetchedAt: Date.now() };
+          }
+          return value;
+        })
+        .catch((error) =>
+          pluginListFailure(error, "plugin/installed", staleValue),
+        )
+        .finally(() => {
+          if (installedPluginsInFlight === request) {
+            installedPluginsInFlight = null;
+          }
+        });
+      installedPluginsInFlight = request;
+      return request;
     },
 
     async readPlugin(pluginName: string, marketplacePath: string): Promise<PluginDetail> {
@@ -4558,6 +4763,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         throw new Error(`Marketplace not found for "${pluginId}". Try browsing plugins first.`);
       }
 
+      invalidatePluginCaches();
       logInfo(`Plugin installed and enabled: ${pluginId}`);
     },
 
@@ -4576,6 +4782,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       } else {
         throw new Error(`Marketplace not found for "${pluginId}". Try browsing plugins first.`);
       }
+      invalidatePluginCaches();
       logInfo(`Plugin uninstalled: ${pluginId}`);
     },
 
@@ -4594,6 +4801,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         value: enabled,
         mergeStrategy: "replace",
       });
+      invalidatePluginCaches();
       logInfo(`Plugin ${enabled ? "enabled" : "disabled"}: ${pluginId}`);
     },
   };

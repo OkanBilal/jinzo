@@ -579,6 +579,16 @@ export function WorkspaceEvents({
     return last ? last.content.slice("[thinking] ".length) : undefined;
   }, [currentEvents]);
 
+  const hasActiveImageGeneration = useMemo(
+    () =>
+      currentEvents.some(
+        (event) =>
+          event.type === "artifact" &&
+          event.metadata?.kind === "image_generation",
+      ),
+    [currentEvents],
+  );
+
   // Run content stays mounted whenever there are events for the active run,
   // just hidden when a non-run tab is active. Preserves accordion open state,
   // scroll position, and other local UI state across tab switches.
@@ -644,7 +654,9 @@ export function WorkspaceEvents({
                   </div>
                 );
               })}
-              {isRunning && <AsciiLoader thinkingText={latestThinking} />}
+              {isRunning && !hasActiveImageGeneration && (
+                <AsciiLoader thinkingText={latestThinking} />
+              )}
               <div ref={eventsEndRef} />
             </div>
           </div>

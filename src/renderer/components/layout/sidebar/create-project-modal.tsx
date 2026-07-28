@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Caption, Button, Body } from "@/components/ui";
+import { useCapabilities } from "@/lib/platform";
 
 interface CreateProjectModalProps {
   isOpen: boolean;
   isCreating: boolean;
-  onCreate: (name: string) => void;
+  onCreate: (name: string, parentPath?: string) => void;
   onClose: () => void;
 }
 
@@ -17,12 +18,15 @@ export default function CreateProjectModal({
   onCreate,
   onClose,
 }: CreateProjectModalProps) {
+  const { nativeDialogs } = useCapabilities();
   const [name, setName] = useState("");
+  const [parentPath, setParentPath] = useState("");
 
   const [prevIsOpen, setPrevIsOpen] = useState(false);
   if (isOpen && !prevIsOpen) {
     setPrevIsOpen(true);
     setName("");
+    setParentPath("");
   }
   if (!isOpen && prevIsOpen) {
     setPrevIsOpen(false);
@@ -40,9 +44,20 @@ export default function CreateProjectModal({
   const trimmed = name.trim();
   const isInvalid = trimmed.length === 0 || INVALID_NAME.test(trimmed);
 
+  const handleBrowse = async () => {
+    try {
+      const result = await window.api.workspace.selectDirectory();
+      if (result?.success && result.data) {
+        setParentPath(result.data);
+      }
+    } catch {
+      // User cancelled
+    }
+  };
+
   const handleSubmit = () => {
     if (isInvalid) return;
-    onCreate(trimmed);
+    onCreate(trimmed, parentPath.trim() || undefined);
   };
 
   if (!isOpen) return null;
@@ -74,13 +89,44 @@ export default function CreateProjectModal({
               onChange={(e) => setName(e.target.value)}
               placeholder="my-new-project"
               autoFocus
-              className="w-full px-3 py-2 rounded-xl bg-primary-100/50 dark:bg-primary-800/30 text-primary-900 dark:text-primary-100 text-sm border border-primary-200/50 dark:border-primary-700/30 outline-none focus:border-primary-400 dark:focus:border-primary-500 transition-colors placeholder:text-primary-400 dark:placeholder:text-primary-600"
+              className="w-full px-3 py-2 rounded-xl bg-primary-100/50 dark:bg-primary-800/30 text-primary-900 dark:text-primary-100 text-sm glass-input outline-none transition-colors placeholder:text-primary-400 dark:placeholder:text-primary-600"
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleSubmit();
               }}
             />
-            <Caption className=" mt-1.5 block">
-              Will be created at ~/Desktop/{trimmed || "<name>"} on the main branch.
+          </div>
+
+          <div>
+            <Caption className="mb-1.5 block">
+              Project Location
+            </Caption>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={parentPath}
+                onChange={(e) => setParentPath(e.target.value)}
+                placeholder="Desktop (default)"
+                className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-primary-100/50 dark:bg-primary-800/30 text-primary-900 dark:text-primary-100 text-sm glass-input outline-none transition-colors placeholder:text-primary-400 dark:placeholder:text-primary-600"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSubmit();
+                }}
+              />
+              <Button
+                variant="secondary"
+                onClick={handleBrowse}
+                disabled={!nativeDialogs || isCreating}
+                tooltip={nativeDialogs ? undefined : "Type a path on the backend"}
+                className="shrink-0 rounded-xl"
+              >
+                Browse
+              </Button>
+            </div>
+            <Caption className="mt-1.5 block break-all">
+              Will be created at{" "}
+              {parentPath.trim()
+                ? `${parentPath.trim()}/${trimmed || "<name>"}`
+                : `~/Desktop/${trimmed || "<name>"}`}{" "}
+              on the main branch.
             </Caption>
           </div>
         </div>
@@ -88,7 +134,7 @@ export default function CreateProjectModal({
         <div className="flex gap-3 mt-5">
           <Button
             className="flex-1"
-            variant="secondary"
+            variant="primary"
             onClick={onClose}
             disabled={isCreating}
           >
@@ -96,7 +142,7 @@ export default function CreateProjectModal({
           </Button>
           <Button
             className="flex-1"
-            variant="primary"
+            variant="submit"
             onClick={handleSubmit}
             disabled={isCreating || isInvalid}
           >

@@ -150,6 +150,7 @@ export {
   useGetProviderAccountInfoQuery,
   useUpdateProviderCliMutation,
   useGetProviderPluginsQuery,
+  useGetProviderInstalledPluginsQuery,
   useReadProviderPluginQuery,
   useInstallProviderPluginMutation,
   useUninstallProviderPluginMutation,
@@ -478,4 +479,3 @@ export type {
   CreatePulseInput,
   UpdatePulseInput,
 } from "./pulseApi";
-

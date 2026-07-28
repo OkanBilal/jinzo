@@ -81,7 +81,7 @@ export interface UpdateWorkspacePayload {
 export type WorkspaceIntakeSource =
   | { kind: "folder"; path: string }
   | { kind: "clone"; url: string; targetPath: string }
-  | { kind: "init"; name: string }
+  | { kind: "init"; name: string; parentPath?: string }
   | { kind: "worktree"; projectId: string };
 
 export interface WorkspaceIntakePayload {

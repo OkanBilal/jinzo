@@ -169,6 +169,7 @@ export const CHANNELS = {
     /** Push: emitted when async model-capability discovery enriches the model list. */
     modelsUpdated: "providers:modelsUpdated",
     getPlugins: "providers:getPlugins",
+    getInstalledPlugins: "providers:getInstalledPlugins",
     getRateLimits: "providers:getRateLimits",
     /** Push: emitted when the provider streams a fresh rate-limit snapshot mid-run. */
     rateLimitsUpdated: "providers:rateLimitsUpdated",

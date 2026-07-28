@@ -107,6 +107,11 @@ export function registerProvidersIpc(): void {
   );
 
   ipcMain.handle(
+    CHANNELS.providers.getInstalledPlugins,
+    handle((id: string) => providersService.getInstalledPlugins(id)),
+  );
+
+  ipcMain.handle(
     CHANNELS.providers.readPlugin,
     handle((id: string, pluginName: string, marketplacePath: string) => providersService.readPlugin(id, pluginName, marketplacePath)),
   );
@@ -158,6 +163,7 @@ export function unregisterProvidersIpc(): void {
     CHANNELS.providers.getAccountInfo,
     CHANNELS.providers.updateCli,
     CHANNELS.providers.getPlugins,
+    CHANNELS.providers.getInstalledPlugins,
     CHANNELS.providers.readPlugin,
     CHANNELS.providers.installPlugin,
     CHANNELS.providers.uninstallPlugin,

@@ -372,7 +372,7 @@ export const workspaceService = {
 
     // ── init: brand-new empty repo. Always direct, no remote. ──
     if (source.kind === "init") {
-      const init = await gitService.initRepo(source.name);
+      const init = await gitService.initRepo(source.name, source.parentPath);
       const project = await findOrCreateProject({
         accountId,
         name: source.name,

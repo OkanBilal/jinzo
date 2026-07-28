@@ -85,6 +85,7 @@ export {
   getAccountInfoForProvider,
   updateCliForProvider,
   listPluginsForProvider,
+  listInstalledPluginsForProvider,
   readPluginForProvider,
   installPluginForProvider,
   uninstallPluginForProvider,

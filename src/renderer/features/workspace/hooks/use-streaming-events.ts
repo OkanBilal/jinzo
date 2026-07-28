@@ -4,13 +4,17 @@ import { appEvents } from "@/lib/transport";
 export interface StreamingEvent {
   id: string;
   type: "artifact";
+  kind: string;
   content: string;
+  metadata?: Record<string, unknown>;
   streamId: string;
   timestamp: number;
 }
 
 interface StreamState {
+  kind: string;
   content: string;
+  metadata?: Record<string, unknown>;
   streamId: string;
   lastTs: number;
 }
@@ -40,7 +44,9 @@ export function useStreamingEvents(activeRunId: string | null) {
         events.push({
           id: `stream-${state.streamId}`,
           type: "artifact",
+          kind: state.kind,
           content: state.content,
+          metadata: state.metadata,
           streamId: state.streamId,
           timestamp: state.lastTs,
         });
@@ -69,7 +75,9 @@ export function useStreamingEvents(activeRunId: string | null) {
       if (!streamId) return;
 
       streamsRef.current.set(streamId, {
+        kind: event.kind,
         content: event.content ?? "",
+        metadata: event.metadata,
         streamId,
         lastTs: ts,
       });

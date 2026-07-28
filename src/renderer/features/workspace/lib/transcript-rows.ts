@@ -252,7 +252,7 @@ export type TurnRenderRow =
       previousSegments: number[][];
       /** Plan tool groups — pulled out of `previousSegments` so they stay outside the collapsed bucket. */
       planBreakoutIndices: number[];
-      /** Groups containing image/document artifacts — kept visible so generated media aren't hidden behind the accordion. */
+      /** Groups containing generated media — kept visible so it isn't hidden behind the accordion. */
       messageBreakoutIndices: number[];
       lastSegment: number[];
       previousMessageCount: number;
@@ -263,7 +263,11 @@ function groupHasMediaArtifact(g: EventGroup): boolean {
   return g.events.some(
     (e) =>
       e.type === "artifact" &&
-      (e.metadata?.kind === "image" || e.metadata?.kind === "document"),
+      (
+        e.metadata?.kind === "image" ||
+        e.metadata?.kind === "image_generation" ||
+        e.metadata?.kind === "document"
+      ),
   );
 }
 

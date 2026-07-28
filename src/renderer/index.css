@@ -979,6 +979,56 @@ html.mains-web.dark #root {
   animation: stream-block-in 0.3s ease-out both;
 }
 
+/* ── Image generation ── */
+@keyframes image-generation-atmosphere {
+  0%, 100% { opacity: 0.35; transform: scale(0.92); }
+  50% { opacity: 0.72; transform: scale(1.08); }
+}
+
+@keyframes image-generation-dot-pulse {
+  0%, 100% {
+    opacity: var(--image-dot-dim-opacity);
+    transform: scale(0.72);
+  }
+  48% {
+    opacity: var(--image-dot-opacity);
+    transform: scale(1.28);
+  }
+}
+
+@keyframes image-generation-stage-in {
+  from { opacity: 0; filter: blur(2px); }
+  to { opacity: 1; filter: blur(0); }
+}
+
+.image-generation-card::before {
+  content: "";
+  position: absolute;
+  inset: 18% 9%;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--color-primary-400) 18%, transparent), transparent 58%);
+  filter: blur(28px);
+  animation: image-generation-atmosphere 5.2s ease-in-out infinite;
+}
+
+.dark .image-generation-card::before {
+  background:
+    radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--color-primary-300) 13%, transparent), transparent 58%);
+}
+
+.image-generation-dot {
+  opacity: var(--image-dot-opacity);
+  animation-name: image-generation-dot-pulse;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  will-change: transform, opacity;
+}
+
+.image-generation-stage {
+  animation: image-generation-stage-in 240ms ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .streaming-text > * {
     animation: none;
@@ -1007,6 +1057,12 @@ html.mains-web.dark #root {
 
   .marquee-track {
     animation-play-state: paused;
+  }
+
+  .image-generation-card::before,
+  .image-generation-dot,
+  .image-generation-stage {
+    animation: none;
   }
 
   .shine-text,
