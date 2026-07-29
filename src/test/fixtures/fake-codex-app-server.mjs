@@ -246,6 +246,16 @@ input.on("line", (line) => {
             delta: prompt,
           });
         }
+        if (prompt.includes("parallel plan")) {
+          notify("turn/plan/updated", {
+            turnId,
+            explanation: `Working on ${prompt}`,
+            plan: [{
+              step: prompt,
+              status: "inProgress",
+            }],
+          });
+        }
         if (prompt.includes("ask user")) {
           send({
             jsonrpc: "2.0",

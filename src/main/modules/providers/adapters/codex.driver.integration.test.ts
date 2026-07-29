@@ -640,9 +640,9 @@ describe("codex.driver / app-server protocol", () => {
     drivers.push(driver);
 
     const requestA = request("run-parallel-a");
-    requestA.goal = "parallel slow A";
+    requestA.goal = "parallel plan slow A";
     const requestB = request("run-parallel-b");
-    requestB.goal = "parallel fast B";
+    requestB.goal = "parallel plan fast B";
     const [acquiredA, acquiredB] = await Promise.all([
       driver.createSession(requestA),
       driver.createSession(requestB),
@@ -673,16 +673,46 @@ describe("codex.driver / app-server protocol", () => {
     expect(outcomeB.status).toBe("succeeded");
     expect(eventsA.some((event) => (
       event as { content?: string }
-    ).content === "parallel slow A")).toBe(true);
+    ).content === "parallel plan slow A")).toBe(true);
     expect(eventsA.some((event) => (
       event as { content?: string }
-    ).content === "parallel fast B")).toBe(false);
+    ).content === "parallel plan fast B")).toBe(false);
     expect(eventsB.some((event) => (
       event as { content?: string }
-    ).content === "parallel fast B")).toBe(true);
+    ).content === "parallel plan fast B")).toBe(true);
     expect(eventsB.some((event) => (
       event as { content?: string }
-    ).content === "parallel slow A")).toBe(false);
+    ).content === "parallel plan slow A")).toBe(false);
+    expect(eventsA).toContainEqual({
+      type: "plan_update",
+      providerTurnId: "turn-thread-1",
+      explanation: "Working on parallel plan slow A",
+      steps: [{
+        step: "parallel plan slow A",
+        status: "in_progress",
+      }],
+    });
+    expect(eventsA).not.toContainEqual(
+      expect.objectContaining({
+        type: "plan_update",
+        providerTurnId: "turn-thread-2",
+      }),
+    );
+    expect(eventsB).toContainEqual({
+      type: "plan_update",
+      providerTurnId: "turn-thread-2",
+      explanation: "Working on parallel plan fast B",
+      steps: [{
+        step: "parallel plan fast B",
+        status: "in_progress",
+      }],
+    });
+    expect(eventsB).not.toContainEqual(
+      expect.objectContaining({
+        type: "plan_update",
+        providerTurnId: "turn-thread-1",
+      }),
+    );
   });
 
   it("waits for the parent turn after a subagent turn completes", async () => {

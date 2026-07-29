@@ -3,6 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import type {
   WorkRunEvent,
+  WorkRunPlanStep,
+  WorkRunPlanUpdateEvent,
   WorkRunUsage,
 } from "../../../../shared/adapter.types";
 import type { MainsToolContext } from "./mains-tools.core";
@@ -49,6 +51,7 @@ export interface CodexEventRunState {
   emittedDocPaths: Set<string>;
   runStartedAt: number;
   planBuffers: Map<string, string>;
+  lastPlanSnapshot: string | null;
   subAgents: Map<
     string,
     { threadId: string; nickname?: string; role?: string }
@@ -74,6 +77,7 @@ export function createCodexEventRunState(
     emittedDocPaths: new Set(),
     runStartedAt,
     planBuffers: new Map(),
+    lastPlanSnapshot: null,
     subAgents: new Map(),
   };
 }
@@ -716,8 +720,72 @@ export function createCodexEventMapper(
         const turnId = (turn?.id ?? p?.turnId) as string | undefined;
         if (turnId) {
           const runState = getRunState(runId);
-          if (runState) runState.turnId = turnId;
+          const threadId = (p?.threadId ?? p?.thread_id) as
+            | string
+            | undefined;
+          if (
+            runState &&
+            (
+              !threadId ||
+              !runState.threadId ||
+              threadId === runState.threadId
+            )
+          ) {
+            runState.turnId = turnId;
+            runState.lastPlanSnapshot = null;
+          }
         }
+        break;
+      }
+
+      case "turn/plan/updated": {
+        const turnId = (p?.turnId ?? p?.turn_id) as
+          | string
+          | undefined;
+        const runState = getRunState(runId);
+        if (
+          !turnId ||
+          (runState?.turnId && turnId !== runState.turnId)
+        ) {
+          break;
+        }
+
+        const plan = Array.isArray(p?.plan) ? p.plan : [];
+        const steps = plan.flatMap((entry) => {
+          if (!entry || typeof entry !== "object") return [];
+          const candidate = entry as Record<string, unknown>;
+          if (typeof candidate.step !== "string") return [];
+
+          let status: WorkRunPlanStep["status"];
+          if (candidate.status === "inProgress") {
+            status = "in_progress";
+          } else if (
+            candidate.status === "pending" ||
+            candidate.status === "in_progress" ||
+            candidate.status === "completed"
+          ) {
+            status = candidate.status;
+          } else {
+            return [];
+          }
+          return [{
+            step: candidate.step,
+            status,
+          }];
+        });
+
+        const event: WorkRunPlanUpdateEvent = {
+          type: "plan_update",
+          providerTurnId: turnId,
+          ...(typeof p?.explanation === "string"
+            ? { explanation: p.explanation }
+            : {}),
+          steps,
+        };
+        const snapshot = JSON.stringify(event);
+        if (runState?.lastPlanSnapshot === snapshot) break;
+        if (runState) runState.lastPlanSnapshot = snapshot;
+        events.push(event);
         break;
       }
 
@@ -1004,7 +1072,6 @@ export function createCodexEventMapper(
       case "item/reasoning/summaryPartAdded":
       case "item/reasoning/summaryTextDelta":
       case "item/reasoning/textDelta":
-      case "item/plan/updated":
       case "item/mcpToolCall/progress":
         break;
 

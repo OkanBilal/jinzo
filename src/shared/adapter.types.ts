@@ -196,6 +196,25 @@ export interface WorkRunContextUsageEvent {
   ts?: number;
 }
 
+export interface WorkRunPlanStep {
+  step: string;
+  status: "pending" | "in_progress" | "completed";
+}
+
+/**
+ * Latest structured execution-plan snapshot for the active provider turn.
+ *
+ * This is intentionally separate from a provider's user-facing plan proposal
+ * item: it represents live execution progress, not content awaiting approval.
+ */
+export interface WorkRunPlanUpdateEvent {
+  type: "plan_update";
+  providerTurnId: string;
+  explanation?: string;
+  steps: WorkRunPlanStep[];
+  ts?: number;
+}
+
 /**
  * Union of all possible events emitted during a work run
  */
@@ -206,7 +225,8 @@ export type WorkRunEvent =
   | WorkRunStatusEvent
   | WorkRunSubagentEvent
   | WorkRunPromptSuggestionEvent
-  | WorkRunContextUsageEvent;
+  | WorkRunContextUsageEvent
+  | WorkRunPlanUpdateEvent;
 
 /**
  * Artifact summary in the result

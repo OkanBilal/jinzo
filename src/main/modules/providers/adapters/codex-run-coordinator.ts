@@ -86,6 +86,7 @@ export function createCodexRunCoordinator(
   const sessionIdMap = new Map<string, string>();
   const runSinks = new Map<string, CodexRunSink>();
   const serverRequestOwners = new Map<string, string>();
+  const turnOwners = new Map<string, string>();
 
   const eventMapper = createCodexEventMapper({
     getRunState: (runId) => activeRuns.get(runId),
@@ -149,6 +150,25 @@ export function createCodexRunCoordinator(
     ) as string | undefined;
   }
 
+  function requestTurnId(params: unknown): string | undefined {
+    const requestParams =
+      params as Record<string, unknown> | undefined;
+    const turn = requestParams?.turn as
+      | Record<string, unknown>
+      | undefined;
+    return (
+      requestParams?.turnId ??
+      requestParams?.turn_id ??
+      turn?.id
+    ) as string | undefined;
+  }
+
+  function deleteTurnOwnersForRun(runId: string): void {
+    for (const [turnId, ownerRunId] of turnOwners) {
+      if (ownerRunId === runId) turnOwners.delete(turnId);
+    }
+  }
+
   function runIdForLiveThread(
     method: string,
     params: unknown,
@@ -165,6 +185,14 @@ export function createCodexRunCoordinator(
       | string
       | null
       | undefined;
+    const directTurnId = requestTurnId(params);
+
+    if (directTurnId) {
+      const ownerRunId = turnOwners.get(directTurnId);
+      if (ownerRunId && runSinks.has(ownerRunId)) {
+        return ownerRunId;
+      }
+    }
 
     for (const runId of runSinks.keys()) {
       const state = activeRuns.get(runId);
@@ -215,6 +243,13 @@ export function createCodexRunCoordinator(
 
       const runId = runIdForLiveThread(method, params);
       if (!runId) return;
+      const turnId = requestTurnId(params);
+      if (method === "turn/started" && turnId) {
+        // Several current notifications (notably turn/plan/updated) carry a
+        // turnId but no threadId. Capture ownership synchronously, before the
+        // per-run async notification queue processes turn/started.
+        turnOwners.set(turnId, runId);
+      }
       const sink = runSinks.get(runId);
       if (!sink) return;
 
@@ -295,6 +330,7 @@ export function createCodexRunCoordinator(
         if (runSinks.get(runId) === sink) {
           runSinks.delete(runId);
         }
+        deleteTurnOwnersForRun(runId);
         for (
           const [requestId, ownerRunId]
           of serverRequestOwners
@@ -560,11 +596,13 @@ export function createCodexRunCoordinator(
       }
     }
     activeRuns.delete(runId);
+    deleteTurnOwnersForRun(runId);
   }
 
   function deleteRun(runId: string): void {
     sessionIdMap.delete(runId);
     activeRuns.delete(runId);
+    deleteTurnOwnersForRun(runId);
     eventMapper.discardRun(runId);
   }
 
@@ -593,6 +631,7 @@ export function createCodexRunCoordinator(
     }
     runSinks.clear();
     serverRequestOwners.clear();
+    turnOwners.clear();
   }
 
   return {

@@ -31,6 +31,7 @@ function createRunState(
     emittedDocPaths: new Set(),
     runStartedAt: Date.now(),
     planBuffers: new Map(),
+    lastPlanSnapshot: null,
     subAgents: new Map(),
   };
 }
@@ -185,6 +186,43 @@ describe("Codex event mapper", () => {
       model: "gpt-fixture-codex",
     });
     expect(mapper.flushUsage("run-1")).toBeUndefined();
+  });
+
+  it("normalizes and deduplicates structured plan snapshots", () => {
+    const { mapper, state } = createHarness();
+    state.turnId = "turn-1";
+    const params = {
+      turnId: "turn-1",
+      explanation: "Executing the agreed plan",
+      plan: [
+        { step: "Inspect", status: "completed" },
+        { step: "Implement", status: "inProgress" },
+        { step: "Verify", status: "pending" },
+      ],
+    };
+
+    const first = mapper.mapNotification(
+      "turn/plan/updated",
+      params,
+      "run-1",
+    );
+    const duplicate = mapper.mapNotification(
+      "turn/plan/updated",
+      params,
+      "run-1",
+    );
+
+    expect(first).toEqual([{
+      type: "plan_update",
+      providerTurnId: "turn-1",
+      explanation: "Executing the agreed plan",
+      steps: [
+        { step: "Inspect", status: "completed" },
+        { step: "Implement", status: "in_progress" },
+        { step: "Verify", status: "pending" },
+      ],
+    }]);
+    expect(duplicate).toEqual([]);
   });
 
   it("filters sub-thread items into one heartbeat event", () => {

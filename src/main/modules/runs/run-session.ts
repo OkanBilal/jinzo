@@ -120,6 +120,7 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   let baseRefCaptured: Promise<void> | null = null;
   let sleepBlockerId: number | null = null;
   let activeTurnId: number | null = null;
+  let initialTurnReady: Promise<void> | null = null;
   let turnCounter: number = ctx.seedTurnIndex ?? -1;
   let liveDiffTimer: NodeJS.Timeout | null = null;
   let liveDiffInFlight = false;
@@ -559,6 +560,29 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
     });
   }
 
+  async function projectPlanUpdate(
+    event: Extract<WorkRunEvent, { type: "plan_update" }>,
+  ): Promise<boolean> {
+    if (activeTurnId === null && initialTurnReady) {
+      await initialTurnReady;
+    }
+    if (activeTurnId === null) {
+      console.warn(
+        `[RunSession ${runId}] Dropping plan update without an active turn`,
+      );
+      return false;
+    }
+    await runsRepo.patchTurnMetadata(activeTurnId, {
+      codexPlan: {
+        providerTurnId: event.providerTurnId,
+        explanation: event.explanation,
+        steps: event.steps,
+        updatedAt: event.ts ?? Date.now(),
+      },
+    });
+    return true;
+  }
+
   // ─── Public methods ───
   async function project(event: WorkRunEvent): Promise<void> {
     if (finalized) return;
@@ -578,6 +602,9 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
       case "prompt_suggestion":
         await projectPromptSuggestion(event);
         didPersist = true;
+        break;
+      case "plan_update":
+        didPersist = await projectPlanUpdate(event);
         break;
       case "status":
         console.log(`[RunSession ${runId}] status event: ${event.status}`);
@@ -668,7 +695,8 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   // Keep the baseRef-capture promise so finalize can await it (see persistFinalDiff).
   baseRefCaptured = captureBaseRef();
   void acquireSleepBlocker();
-  void startNextTurn(ctx.initialPromptContent);
+  initialTurnReady = startNextTurn(ctx.initialPromptContent);
+  void initialTurnReady;
 
   return session;
 }
