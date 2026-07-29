@@ -517,6 +517,117 @@ describe("codex.driver / app-server protocol", () => {
     });
   });
 
+  it("preserves general context when continuing a session", async () => {
+    const tempDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "mains-codex-driver-"),
+    );
+    tempDirs.push(tempDir);
+    const logPath = path.join(tempDir, "protocol.jsonl");
+    process.env.MAINS_CODEX_FIXTURE_LOG = logPath;
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 500,
+    });
+    drivers.push(driver);
+    await driver.createSession(request("run-continue-context"));
+
+    const acquired = await driver.resumeSession?.({
+      runId: "run-continue-context",
+      accountId: "account-1",
+      workspace: {
+        id: "workspace-1",
+        rootPath: process.cwd(),
+      },
+      message: "Continue with this evidence",
+      context: [{
+        kind: "file",
+        ref: "src/auth.ts",
+        content: "export const authEnabled = true;",
+      }],
+    });
+    expect(acquired).toBeDefined();
+    await driver.executePrompt(
+      acquired!.session,
+      acquired!.prompt,
+      async () => undefined,
+      new AbortController().signal,
+    );
+
+    const turnStart = readProtocolLog(logPath).find(
+      (message) => message.method === "turn/start",
+    );
+    const input = (
+      turnStart?.params as {
+        input?: Array<{ type?: string; text?: string }>;
+      } | undefined
+    )?.input;
+    expect(input?.[0]?.text).toContain(
+      "[file: src/auth.ts]\nexport const authEnabled = true;",
+    );
+    expect(input?.[0]?.text).toContain(
+      "Continue with this evidence",
+    );
+  });
+
+  it("preserves general context when forking a session", async () => {
+    const tempDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "mains-codex-driver-"),
+    );
+    tempDirs.push(tempDir);
+    const logPath = path.join(tempDir, "protocol.jsonl");
+    process.env.MAINS_CODEX_FIXTURE_LOG = logPath;
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 500,
+    });
+    drivers.push(driver);
+    await driver.createSession(request("run-fork-context-source"));
+
+    const acquired = await driver.forkSession?.({
+      runId: "run-fork-context-target",
+      sourceRunId: "run-fork-context-source",
+      accountId: "account-1",
+      workspace: {
+        id: "workspace-1",
+        rootPath: process.cwd(),
+      },
+      message: "Fork with this evidence",
+      context: [{
+        kind: "diff",
+        ref: "HEAD~1",
+        content: "+ const enabled = true;",
+      }],
+    });
+    expect(acquired).toBeDefined();
+    await driver.executePrompt(
+      acquired!.session,
+      acquired!.prompt,
+      async () => undefined,
+      new AbortController().signal,
+    );
+
+    const turnStart = readProtocolLog(logPath).find(
+      (message) =>
+        message.method === "turn/start" &&
+        (
+          message.params as { threadId?: string } | undefined
+        )?.threadId === "thread-1-fork",
+    );
+    const input = (
+      turnStart?.params as {
+        input?: Array<{ type?: string; text?: string }>;
+      } | undefined
+    )?.input;
+    expect(input?.[0]?.text).toContain(
+      "[diff: HEAD~1]\n+ const enabled = true;",
+    );
+    expect(input?.[0]?.text).toContain(
+      "Fork with this evidence",
+    );
+  });
+
   it("routes concurrent run events by thread without handler interference", async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mains-codex-driver-"));
     tempDirs.push(tempDir);

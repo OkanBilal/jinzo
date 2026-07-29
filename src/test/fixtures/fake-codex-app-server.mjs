@@ -142,6 +142,28 @@ input.on("line", (line) => {
       break;
     }
 
+    case "thread/resume":
+      respond(id, {
+        thread: {
+          id: params.threadId,
+          preview: "",
+          modelProvider: "openai",
+          createdAt: 1,
+          updatedAt: 1,
+          status: { type: "idle" },
+          path: null,
+          cwd: params.cwd,
+          cliVersion: "0.146.0",
+          source: "appServer",
+          agentNickname: null,
+          agentRole: null,
+          gitInfo: null,
+          name: null,
+          turns: [],
+        },
+      });
+      break;
+
     case "thread/fork": {
       const threadId = `${params.threadId}-fork`;
       respond(id, {

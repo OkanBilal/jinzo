@@ -28,7 +28,6 @@ import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 import { emit } from "../../../ipc-kit";
 import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 import type {
-  AcquiredSession,
   CliUpdateResult,
   AccountInfo,
   CodexAdapterConfig,
@@ -38,11 +37,6 @@ import type {
   ProviderDriver,
   RateLimitInfo,
   WorkRunContextItem,
-  WorkRunContinueRequest,
-  WorkRunEvent,
-  WorkRunForkRequest,
-  WorkRunRequest,
-  WorkRunReviewRequest,
 } from "../../../../shared/adapter.types";
 import { runsRepo } from "../../runs/runs.repo";
 import { logWorkspaceActivity } from "../../workspace";
@@ -50,14 +44,7 @@ import { logWorkspaceActivity } from "../../workspace";
 // "Repos are module-internal"); goes away when review persistence routes
 // through the SaveReview/SaveFinding tools.
 import { workspaceRepo } from "../../workspace/workspace.repo";
-import {
-  createLogger,
-  formatContextSection,
-  appendPromptSections,
-  saveAttachments,
-} from "./adapter.shared";
-import type { MainsToolContext } from "./mains-tools.core";
-import { toCodexDynamicTools } from "./mains-tools.registry";
+import { createLogger } from "./adapter.shared";
 import type { CodexAppServerParams } from "./codex-app-server-protocol/rpc";
 import { CodexAppServer } from "./codex-app-server.client";
 import {
@@ -68,9 +55,20 @@ import {
   createCodexRunCoordinator,
   type CodexRunSession,
 } from "./codex-run-coordinator";
+import {
+  createCodexSessionAcquisition,
+  isCodexUnavailableThreadError,
+} from "./codex-session-acquisition";
 
-export const CODEX_ARCHIVED_CHAT_MESSAGE =
-  "This chat is archived in Codex. Unarchive it in Codex to continue, or archive it in Mains to hide it from this workspace.";
+export {
+  CODEX_ARCHIVED_CHAT_MESSAGE,
+  buildCodexReviewTarget,
+  buildCollaborationMode,
+  isCodexArchivedThreadError,
+  isCodexUnavailableThreadError,
+  mapSandboxMode,
+  normalizeCodexResumeError,
+} from "./codex-session-acquisition";
 
 /** App-server schema version this driver is developed and tested against. */
 export const CODEX_APP_SERVER_PROTOCOL_VERSION = "0.146.0";
@@ -95,158 +93,13 @@ function compareCodexVersions(left: string, right: string): number | null {
   return 0;
 }
 
-function codexErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
-export function isCodexArchivedThreadError(error: unknown): boolean {
-  return /\b(?:session|thread)\b[^\n]*\bis archived\b/i.test(
-    codexErrorMessage(error),
-  );
-}
-
-function isCodexMissingThreadError(error: unknown): boolean {
-  return (
-    /\b(?:session|thread)\b[^\n]*\bnot found\b/i.test(
-      codexErrorMessage(error),
-    ) ||
-    /\b(?:missing|unknown) thread\b|\b(?:session|thread)\b[^\n]*\bdoes not exist\b/i.test(
-      codexErrorMessage(error),
-    )
-  );
-}
-
-export function isCodexUnavailableThreadError(error: unknown): boolean {
-  return (
-    isCodexArchivedThreadError(error) ||
-    isCodexMissingThreadError(error)
-  );
-}
-
-export function normalizeCodexResumeError(error: unknown): Error {
-  if (isCodexArchivedThreadError(error)) {
-    return new Error(CODEX_ARCHIVED_CHAT_MESSAGE);
-  }
-  return error instanceof Error ? error : new Error(String(error));
-}
-
 // ─────────────────────────────────────────────────────────────
 // Thread item types (mirroring SDK types for event mapping)
 // ─────────────────────────────────────────────────────────────
 
-type CodexConfigOverrides = NonNullable<
-  CodexAppServerParams<"thread/start">["config"]
->;
-type CodexOutputSchema = Exclude<
-  CodexAppServerParams<"turn/start">["outputSchema"],
-  null | undefined
->;
 type CodexGoalStatus = NonNullable<
   CodexAppServerParams<"thread/goal/set">["status"]
 >;
-
-// ─────────────────────────────────────────────────────────────
-// Approval mode mapping
-// ─────────────────────────────────────────────────────────────
-
-const VALID_SANDBOX_MODES = new Set(["read-only", "workspace-write", "danger-full-access"]);
-
-export function mapSandboxMode(mode?: string): "read-only" | "workspace-write" | "danger-full-access" {
-  return mode && VALID_SANDBOX_MODES.has(mode)
-    ? (mode as "read-only" | "workspace-write" | "danger-full-access")
-    : "workspace-write";
-}
-
-/**
- * Resolve the JSON Schema selected for structured output. Returns the schema
- * payload Codex's `turn/start` expects via `outputSchema`, or undefined if
- * the user hasn't selected one. Mirrors the wiring in claude.adapter.ts.
- */
-function resolveOutputSchema(
-  config: CodexAdapterConfig,
-): CodexOutputSchema | undefined {
-  const selectedId = config.structuredOutputsSelectedId;
-  if (!selectedId) return undefined;
-  return config.structuredOutputs?.[selectedId]?.schema as
-    | CodexOutputSchema
-    | undefined;
-}
-
-/**
- * Codex's app-server treats ThreadStartParams.config as a TOML override map
- * (codex-rs/config/src/overrides.rs::build_cli_overrides_layer). The key uses
- * dotted-path notation matching ConfigToml fields. Network access lives under
- * `sandbox_workspace_write.network_access` — there is NO top-level
- * `sandbox_network_access` field.
- */
-function buildCodexConfigOverrides(
-  networkAccess: boolean,
-): CodexConfigOverrides {
-  return {
-    sandbox_workspace_write: { network_access: networkAccess },
-  };
-}
-
-/**
- * Build the `collaborationMode` payload for `turn/start`. Codex treats
- * `collaborationMode` as sticky — once a thread enters `mode: "plan"`, it
- * stays there until explicitly reset. So:
- *
- * - `startRun` (new thread): pass `forceReset=false` → only send when plan
- *   is on; omit otherwise so Codex uses its defaults.
- * - `continueRun` / `forkRun` (existing thread): pass `forceReset=true` →
- *   when plan is off, send `mode: "default"` to clear any stuck plan state
- *   from a prior turn. Without this the agent keeps responding "I'm still
- *   in Plan Mode" even after the user toggled it off.
- *
- * Built-in instructions for the selected mode are activated by sending
- * `developer_instructions: null`. The Plan preset uses medium reasoning
- * effort by default; if the caller has an explicit effort, we forward that.
- */
-export function buildCollaborationMode(
-  planEnabled: boolean,
-  model: string | undefined,
-  effort: string | undefined,
-  forceReset: boolean = false,
-): Record<string, unknown> | undefined {
-  if (!planEnabled && !forceReset) return undefined;
-  return {
-    mode: planEnabled ? "plan" : "default",
-    settings: {
-      model: model ?? "",
-      reasoning_effort: effort ?? (planEnabled ? "medium" : null),
-      developer_instructions: null,
-    },
-  };
-}
-
-export function buildCodexReviewTarget(
-  target: WorkRunReviewRequest["target"],
-): CodexAppServerParams<"review/start">["target"] {
-  if (target.type === "uncommittedChanges") {
-    return { type: "uncommittedChanges" };
-  }
-  if (target.type === "baseBranch") {
-    if (!target.branch) {
-      throw new Error("A base branch is required for a base-branch review");
-    }
-    return { type: "baseBranch", branch: target.branch };
-  }
-  if (target.type === "commit") {
-    if (!target.sha) {
-      throw new Error("A commit SHA is required for a commit review");
-    }
-    return {
-      type: "commit",
-      sha: target.sha,
-      title: target.title ?? null,
-    };
-  }
-  if (!target.instructions) {
-    throw new Error("Instructions are required for a custom review");
-  }
-  return { type: "custom", instructions: target.instructions };
-}
 
 // ─────────────────────────────────────────────────────────────
 // Codex review text parser
@@ -318,20 +171,6 @@ export function parseCodexReviewFindings(reviewText: string): ParsedReviewFindin
     return [];
   }
 }
-
-// ─────────────────────────────────────────────────────────────
-// Mains Dynamic Tools (registered per-thread via dynamicTools)
-// ─────────────────────────────────────────────────────────────
-
-const MAINS_DYNAMIC_TOOLS = toCodexDynamicTools();
-
-type CodexThreadStartParams = CodexAppServerParams<"thread/start"> & {
-  dynamicTools?: typeof MAINS_DYNAMIC_TOOLS;
-};
-
-type CodexTurnStartParams = CodexAppServerParams<"turn/start"> & {
-  collaborationMode?: Record<string, unknown>;
-};
 
 // Track saved review item IDs to prevent duplicate persistence
 const savedReviewItems = new Set<string>();
@@ -518,6 +357,19 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
   const runCoordinator = createCodexRunCoordinator({
     defaultModel: config.defaultModel,
     onReviewCompleted: persistCodexReviewFindings,
+    logger: codexLogger,
+  });
+  const sessionAcquisition = createCodexSessionAcquisition({
+    config,
+    ensureServer: (cwd) => ensureServer(cwd),
+    runCoordinator,
+    findPersistedSession: async (runId) =>
+      (await runsRepo.findRunById(runId))?.sessionId ??
+      undefined,
+    persistSession: async (runId, threadId) => {
+      await runsRepo.updateRun(runId, { sessionId: threadId });
+    },
+    establishGoal: maybeSetThreadGoal,
     logger: codexLogger,
   });
   const capabilities = createCodexCapabilities({
@@ -810,479 +662,14 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
   }
 
   // ─────────────────────────────────────────────────────────────
-  // Input building
-  // ─────────────────────────────────────────────────────────────
-
-  type TurnInput = CodexAppServerParams<"turn/start">["input"];
-
-  function buildTurnInput(request: WorkRunRequest): TurnInput {
-    let prompt: string;
-
-    if (request.context && request.context.length > 0) {
-      const contextParts = formatContextSection(request.context);
-      prompt = `Context:\n${contextParts}\n\n---\n\n ${request.goal}`;
-    } else {
-      prompt = request.goal;
-    }
-
-    prompt = appendPromptSections(prompt, {
-      contextIssues: request.contextIssues,
-      contextSignals: request.contextSignals,
-      contextFiles: request.contextFiles,
-      runId: request.runId,
-    });
-
-    const input: TurnInput = [{ type: "text", text: prompt, text_elements: [] }];
-
-    if (request.skills) {
-      for (const s of request.skills) {
-        if (s.name && s.path) {
-          input.push({ type: "skill", name: s.name, path: s.path });
-        }
-      }
-    }
-
-    // Handle image attachments
-    if (request.attachments && request.attachments.length > 0) {
-      const { savedPaths, inlineTexts } = saveAttachments(request.attachments, request.runId);
-
-      if (inlineTexts.length > 0 && input[0].type === "text") {
-        input[0].text = `${prompt}\n\n---\n\nAttached documents:\n${inlineTexts.join("\n\n")}`;
-      }
-
-      const imagePaths = savedPaths.filter((p) => {
-        const ext = p.toLowerCase();
-        return ext.endsWith(".png") || ext.endsWith(".jpg") || ext.endsWith(".jpeg") ||
-               ext.endsWith(".gif") || ext.endsWith(".webp") || ext.endsWith(".bmp");
-      });
-
-      for (const imgPath of imagePaths) {
-        input.push({ type: "localImage", path: imgPath });
-      }
-    }
-
-    return input;
-  }
-
-  function buildContinueTurnInput(message: string, request: WorkRunContinueRequest): TurnInput {
-    let prompt = message;
-
-    prompt = appendPromptSections(prompt, {
-      contextIssues: request.contextIssues,
-      contextSignals: request.contextSignals,
-      contextFiles: request.contextFiles,
-      runId: request.runId,
-    });
-
-    const input: TurnInput = [{ type: "text", text: prompt, text_elements: [] }];
-
-    if (request.skills) {
-      for (const s of request.skills) {
-        if (s.name && s.path) {
-          input.push({ type: "skill", name: s.name, path: s.path });
-        }
-      }
-    }
-
-    if (request.attachments && request.attachments.length > 0) {
-      const { savedPaths, inlineTexts } = saveAttachments(request.attachments, request.runId);
-
-      if (inlineTexts.length > 0 && input[0].type === "text") {
-        input[0].text = `${prompt}\n\n---\n\nAttached documents:\n${inlineTexts.join("\n\n")}`;
-      }
-
-      const imagePaths = savedPaths.filter((p) => {
-        const ext = p.toLowerCase();
-        return ext.endsWith(".png") || ext.endsWith(".jpg") || ext.endsWith(".jpeg") ||
-               ext.endsWith(".gif") || ext.endsWith(".webp") || ext.endsWith(".bmp");
-      });
-
-      for (const imgPath of imagePaths) {
-        input.push({ type: "localImage", path: imgPath });
-      }
-    }
-
-    return input;
-  }
-
-  // ─────────────────────────────────────────────────────────────
   // WorkRunAdapter implementation
   // ─────────────────────────────────────────────────────────────
 
   return {
-    async createSession(request: WorkRunRequest): Promise<AcquiredSession> {
-      const { runId, model } = request;
-      const resolvedModel = model || config.defaultModel || undefined;
-      const timeout = config.timeout ?? 3_600_000;
-
-      const server = await ensureServer();
-
-      const approvalPolicy = config.approvalMode ?? "on-request";
-      const overrides = (request.configSnapshot ?? {}) as Record<string, unknown>;
-      const overrideSandboxMode = typeof overrides.sandboxMode === "string"
-        ? (overrides.sandboxMode as CodexAdapterConfig["sandboxMode"])
-        : undefined;
-      const overrideEffort = typeof overrides.modelReasoningEffort === "string"
-        ? (overrides.modelReasoningEffort as string)
-        : typeof overrides.effortLevel === "string" && overrides.effortLevel
-          ? (overrides.effortLevel as string)
-          : undefined;
-      const outputSchema = resolveOutputSchema(config);
-      const overrideServiceTier = typeof overrides.serviceTier === "string" && overrides.serviceTier
-        ? (overrides.serviceTier as string)
-        : undefined;
-      const overridePlanMode = typeof overrides.planMode === "boolean"
-        ? (overrides.planMode as boolean)
-        : undefined;
-      const overrideGoalMode = typeof overrides.goalMode === "boolean"
-        ? (overrides.goalMode as boolean)
-        : undefined;
-      const sandbox = mapSandboxMode(overrideSandboxMode ?? config.sandboxMode);
-      const personality = config.personality ?? "none";
-
-      const networkAccess = config.networkAccessEnabled !== false;
-      const threadStartParams: CodexThreadStartParams = {
-        cwd: request.workspace.rootPath,
-        approvalPolicy,
-        sandbox,
-        personality,
-        ...(resolvedModel ? { model: resolvedModel } : {}),
-        config: buildCodexConfigOverrides(networkAccess),
-        dynamicTools: MAINS_DYNAMIC_TOOLS,
-      };
-
-      logInfo(`Starting thread (model: ${resolvedModel || "default"}, cwd: ${request.workspace.rootPath})`);
-      const threadResult = await server.sendRequest(
-        "thread/start",
-        threadStartParams,
-      );
-      const threadId = threadResult.thread.id;
-      if (threadId) {
-        runCoordinator.attachThread(runId, threadId);
-      }
-
-      // Goal mode: register the prompt as the thread's goal so Codex tracks
-      // token/time usage against it and reports completion ("Goal achieved").
-      // Best-effort — older Codex builds without `thread/goal/*` shouldn't fail
-      // the run. The goal stays active across follow-up turns until cleared.
-      const goalMode = overrideGoalMode ?? config.goalMode ?? false;
-      await maybeSetThreadGoal(server, threadId, goalMode, request.goal, request.workspace.rootPath, /*overwrite*/ true);
-
-      const mainsCtx: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-      runCoordinator.registerRun({
-        runId,
-        threadId: threadId ?? null,
-        mainsCtx,
-      });
-
-      const turnInput = buildTurnInput(request);
-      const effort = overrideEffort ?? config.modelReasoningEffort;
-      const serviceTier = overrideServiceTier ?? config.serviceTier;
-      const planEnabled = overridePlanMode ?? config.planMode ?? false;
-      const collaborationMode = buildCollaborationMode(planEnabled, resolvedModel, effort);
-      const turnStartParams: CodexTurnStartParams = {
-        threadId: threadId ?? "",
-        input: turnInput,
-        ...(resolvedModel ? { model: resolvedModel } : {}),
-        ...(effort ? { effort } : {}),
-        ...(serviceTier ? { serviceTier } : {}),
-        ...(outputSchema ? { outputSchema } : {}),
-        ...(collaborationMode ? { collaborationMode } : {}),
-      };
-
-      const startTurn = async () => {
-        await server.sendRequest("turn/start", turnStartParams);
-      };
-
-      const session: CodexRunSession = { runId, startTurn, model: resolvedModel, timeout };
-      return { session, prompt: request.goal, sessionId: threadId };
-    },
-
-    async resumeSession(request: WorkRunContinueRequest): Promise<AcquiredSession> {
-      const { runId, message } = request;
-      const resolvedModel = request.model || config.defaultModel || undefined;
-      const timeout = config.timeout ?? 3_600_000;
-
-      const server = await ensureServer();
-
-      let threadId = runCoordinator.getSessionThread(runId);
-      if (!threadId) {
-        // DB fallback: session may have been lost from memory (app restart)
-        const run = await runsRepo.findRunById(runId);
-        if (run?.sessionId) {
-          threadId = run.sessionId;
-          runCoordinator.attachThread(runId, threadId);
-        }
-      }
-      if (!threadId) {
-        throw new Error(`No session found for run ${runId}. Cannot resume.`);
-      }
-
-      const approvalPolicy = config.approvalMode ?? "on-request";
-      const sandbox = mapSandboxMode(config.sandboxMode);
-      const personality = config.personality ?? "none";
-      const networkAccess = config.networkAccessEnabled !== false;
-
-      try {
-        await server.sendRequest("thread/resume", {
-          threadId,
-          cwd: request.workspace.rootPath,
-          approvalPolicy,
-          sandbox,
-          personality,
-          ...(resolvedModel ? { model: resolvedModel } : {}),
-          config: buildCodexConfigOverrides(networkAccess),
-        });
-      } catch (resumeError) {
-        if (isCodexArchivedThreadError(resumeError)) {
-          throw normalizeCodexResumeError(resumeError);
-        }
-        const errMsg = codexErrorMessage(resumeError);
-        if (isCodexMissingThreadError(resumeError)) {
-          logWarn(`Thread resume failed (${errMsg}), starting new thread`);
-          const fallbackStartParams: CodexThreadStartParams = {
-            cwd: request.workspace.rootPath,
-            approvalPolicy,
-            sandbox,
-            personality,
-            ...(resolvedModel ? { model: resolvedModel } : {}),
-            config: buildCodexConfigOverrides(networkAccess),
-            dynamicTools: MAINS_DYNAMIC_TOOLS,
-          };
-          const threadResult = await server.sendRequest(
-            "thread/start",
-            fallbackStartParams,
-          );
-          const newThreadId = threadResult.thread.id;
-          runCoordinator.attachThread(runId, newThreadId);
-          threadId = newThreadId;
-        } else {
-          throw resumeError;
-        }
-      }
-
-      const mainsCtxContinue: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-      runCoordinator.registerRun({
-        runId,
-        threadId,
-        mainsCtx: mainsCtxContinue,
-      });
-
-      const currentThreadId =
-        runCoordinator.getSessionThread(runId) ?? threadId;
-
-      // Goal mode on a continue: only establish a goal if the thread doesn't
-      // already have an in-progress one (don't reset a multi-turn goal).
-      await maybeSetThreadGoal(server, currentThreadId, config.goalMode ?? false, message, request.workspace.rootPath, /*overwrite*/ false);
-
-      const turnInput = buildContinueTurnInput(message, request);
-
-      const continueOutputSchema = resolveOutputSchema(config);
-      const continueCollaborationMode = buildCollaborationMode(
-        config.planMode ?? false,
-        resolvedModel,
-        config.modelReasoningEffort,
-        /*forceReset*/ true,
-      );
-      const turnStartParams: CodexTurnStartParams = {
-        threadId: currentThreadId,
-        input: turnInput,
-        ...(resolvedModel ? { model: resolvedModel } : {}),
-        ...(config.modelReasoningEffort ? { effort: config.modelReasoningEffort } : {}),
-        ...(config.serviceTier ? { serviceTier: config.serviceTier } : {}),
-        ...(continueOutputSchema ? { outputSchema: continueOutputSchema } : {}),
-        ...(continueCollaborationMode ? { collaborationMode: continueCollaborationMode } : {}),
-      };
-      const startTurn = async () => {
-        await server.sendRequest("turn/start", turnStartParams);
-      };
-
-      const session: CodexRunSession = { runId, startTurn, model: resolvedModel, timeout };
-      return { session, prompt: message, sessionId: threadId };
-    },
-
-    async forkSession(request: WorkRunForkRequest): Promise<AcquiredSession> {
-      const { runId, sourceRunId, message } = request;
-      const resolvedModel = request.model || config.defaultModel || undefined;
-      const timeout = config.timeout ?? 3_600_000;
-
-      logInfo(`Forking session from run ${sourceRunId} into new run ${runId}`);
-
-      const server = await ensureServer();
-
-      let sourceThreadId =
-        runCoordinator.getSessionThread(sourceRunId);
-      if (!sourceThreadId) {
-        const sourceRun = await runsRepo.findRunById(sourceRunId);
-        if (sourceRun?.sessionId) {
-          sourceThreadId = sourceRun.sessionId;
-          runCoordinator.attachThread(
-            sourceRunId,
-            sourceThreadId,
-          );
-        }
-      }
-      if (!sourceThreadId) {
-        throw new Error(`No session found for source run ${sourceRunId}. Cannot fork.`);
-      }
-
-      const approvalPolicy = config.approvalMode ?? "on-request";
-      const sandbox = mapSandboxMode(config.sandboxMode);
-      const networkAccess = config.networkAccessEnabled !== false;
-
-      const forkResult = await server.sendRequest("thread/fork", {
-        threadId: sourceThreadId,
-        cwd: request.workspace.rootPath,
-        approvalPolicy,
-        sandbox,
-        ...(resolvedModel ? { model: resolvedModel } : {}),
-        config: buildCodexConfigOverrides(networkAccess),
-      });
-
-      const forkedThreadId = forkResult.thread.id;
-
-      runCoordinator.attachThread(runId, forkedThreadId);
-
-      // Goal mode on a fork: the fork inherits the source thread's goal, so
-      // only set one if there's none in progress (mirrors continue).
-      await maybeSetThreadGoal(server, forkedThreadId, config.goalMode ?? false, message, request.workspace.rootPath, /*overwrite*/ false);
-
-      const mainsCtxFork: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-      runCoordinator.registerRun({
-        runId,
-        threadId: forkedThreadId,
-        mainsCtx: mainsCtxFork,
-      });
-
-      const turnInput = buildContinueTurnInput(message, {
-        runId,
-        message,
-        workspace: request.workspace,
-        attachments: request.attachments,
-      } as WorkRunContinueRequest);
-
-      const forkOutputSchema = resolveOutputSchema(config);
-      const forkCollaborationMode = buildCollaborationMode(
-        config.planMode ?? false,
-        resolvedModel,
-        config.modelReasoningEffort,
-        /*forceReset*/ true,
-      );
-      const turnStartParams: CodexTurnStartParams = {
-        threadId: forkedThreadId,
-        input: turnInput,
-        ...(resolvedModel ? { model: resolvedModel } : {}),
-        ...(config.modelReasoningEffort ? { effort: config.modelReasoningEffort } : {}),
-        ...(config.serviceTier ? { serviceTier: config.serviceTier } : {}),
-        ...(forkOutputSchema ? { outputSchema: forkOutputSchema } : {}),
-        ...(forkCollaborationMode ? { collaborationMode: forkCollaborationMode } : {}),
-      };
-      const startTurn = async () => {
-        await server.sendRequest("turn/start", turnStartParams);
-      };
-
-      const session: CodexRunSession = { runId, startTurn, model: resolvedModel, timeout };
-      return { session, prompt: message, sessionId: forkedThreadId };
-    },
-
-    async reviewSession(request: WorkRunReviewRequest): Promise<AcquiredSession> {
-      const { runId } = request;
-      const target = buildCodexReviewTarget(request.target);
-      const resolvedModel = request.model || config.defaultModel || undefined;
-      const timeout = config.timeout ?? 3_600_000;
-
-      const server = await ensureServer();
-
-      const approvalPolicy = config.approvalMode ?? "on-request";
-      const sandbox = mapSandboxMode(config.sandboxMode);
-      const personality = config.personality ?? "none";
-
-      const networkAccess = config.networkAccessEnabled !== false;
-      const threadStartParams: CodexThreadStartParams = {
-        cwd: request.workspace.rootPath,
-        approvalPolicy,
-        sandbox,
-        personality,
-        ...(resolvedModel ? { model: resolvedModel } : {}),
-        config: buildCodexConfigOverrides(networkAccess),
-        dynamicTools: MAINS_DYNAMIC_TOOLS,
-      };
-
-      logInfo(`Starting review thread (model: ${resolvedModel || "default"}, cwd: ${request.workspace.rootPath})`);
-      const threadResult = await server.sendRequest(
-        "thread/start",
-        threadStartParams,
-      );
-      const threadId = threadResult.thread.id;
-
-      const mainsCtxReview: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-      runCoordinator.registerRun({
-        runId,
-        threadId: threadId ?? null,
-        mainsCtx: mainsCtxReview,
-      });
-
-      const reviewStartParams: CodexAppServerParams<"review/start"> = {
-        threadId,
-        target,
-        ...(request.delivery ? { delivery: request.delivery } : {}),
-      };
-
-      const startTurn = async () => {
-        logInfo(`Starting review: target=${request.target.type}, delivery=${request.delivery ?? "inline"}`);
-        const result = await server.sendRequest(
-          "review/start",
-          reviewStartParams,
-        );
-        const reviewThreadId = result.reviewThreadId;
-
-        runCoordinator.attachThread(
-          runId,
-          reviewThreadId,
-          result.turn.id,
-        );
-        if (reviewThreadId !== threadId) {
-          runsRepo.updateRun(runId, { sessionId: reviewThreadId }).catch((error) =>
-            logWarn(
-                "Failed to persist detached review thread:",
-                error instanceof Error ? error.message : error,
-              ),
-          );
-        }
-      };
-
-      // Review verbs don't carry a user-message string, so Core skips the
-      // generic user-prompt artifact. Emit a custom one carrying the review
-      // target description right before startTurn.
-      const targetLabel =
-        request.target.type === "uncommittedChanges"
-          ? "Review uncommitted changes"
-          : request.target.type === "baseBranch"
-            ? `Changes vs ${request.target.branch ?? "base branch"}`
-            : request.target.type === "commit"
-              ? `Commit ${request.target.sha?.substring(0, 7) ?? ""}${request.target.title ? ` — ${request.target.title}` : ""}`
-              : "Code Changes";
-      const preExecuteEvent: WorkRunEvent = {
-        type: "artifact",
-        kind: "user-prompt",
-        content: targetLabel,
-        metadata: {
-          source: "user",
-          isReview: true,
-          reviewTarget: request.target.type,
-          delivery: request.delivery ?? "inline",
-        },
-      };
-
-      const session: CodexRunSession = {
-        runId,
-        startTurn,
-        model: resolvedModel,
-        timeout,
-        preExecuteEvent,
-      };
-      return { session, prompt: "", sessionId: threadId };
-    },
+    createSession: sessionAcquisition.createSession,
+    resumeSession: sessionAcquisition.resumeSession,
+    forkSession: sessionAcquisition.forkSession,
+    reviewSession: sessionAcquisition.reviewSession,
 
     async executePrompt(
       sessionParam,
