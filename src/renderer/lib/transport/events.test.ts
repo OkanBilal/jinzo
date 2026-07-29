@@ -28,6 +28,7 @@ describe("appEvents", () => {
       appEvents.runs.onStreamingEvent(cb),
       appEvents.runs.onContextUsage(cb),
       appEvents.runs.onToolApprovalRequest(cb),
+      appEvents.runs.onToolApprovalResolved(cb),
       appEvents.providers.onModelsUpdated(cb),
       appEvents.workspace.onScriptComplete(cb),
       appEvents.workspace.onGitStateChanged(cb),
@@ -38,6 +39,7 @@ describe("appEvents", () => {
     expect(subscribe).toHaveBeenCalledWith(CHANNELS.runs.ephemeralEvent, cb);
     expect(subscribe).toHaveBeenCalledWith(CHANNELS.runs.contextUsage, cb);
     expect(subscribe).toHaveBeenCalledWith(CHANNELS.runs.toolApprovalRequest, cb);
+    expect(subscribe).toHaveBeenCalledWith(CHANNELS.runs.toolApprovalResolved, cb);
     expect(subscribe).toHaveBeenCalledWith(CHANNELS.providers.modelsUpdated, cb);
     expect(subscribe).toHaveBeenCalledWith(CHANNELS.workspace.scriptComplete, cb);
     expect(subscribe).toHaveBeenCalledWith(CHANNELS.workspace.gitStateChanged, cb);

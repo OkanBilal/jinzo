@@ -754,7 +754,7 @@ export interface CodexAdapterConfig {
   baseUrl?: string;
   /** Additional Codex CLI config overrides (passed as --config key=value) */
   config?: Record<string, unknown>;
-  /** Saved JSON Schema definitions for structured output (forwarded as `output_schema` on `turn/start`). */
+  /** Saved JSON Schema definitions for structured output (forwarded as `outputSchema` on `turn/start`). */
   structuredOutputs?: Record<string, StructuredOutputEntry>;
   /** ID of the currently selected structured output schema (null = disabled). */
   structuredOutputsSelectedId?: string | null;

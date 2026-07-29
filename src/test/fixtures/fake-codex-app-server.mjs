@@ -1,0 +1,293 @@
+#!/usr/bin/env node
+
+import fs from "node:fs";
+import readline from "node:readline";
+import process from "node:process";
+import { setTimeout } from "node:timers";
+
+const logPath = process.env.MAINS_CODEX_FIXTURE_LOG;
+let nextThreadId = 1;
+
+function log(message) {
+  if (!logPath) return;
+  fs.appendFileSync(logPath, `${JSON.stringify(message)}\n`);
+}
+
+function send(message) {
+  process.stdout.write(`${JSON.stringify(message)}\n`);
+}
+
+function respond(id, result) {
+  send({ jsonrpc: "2.0", id, result });
+}
+
+function notify(method, params) {
+  send({ jsonrpc: "2.0", method, params });
+}
+
+const input = readline.createInterface({
+  input: process.stdin,
+  crlfDelay: Infinity,
+});
+
+input.on("line", (line) => {
+  if (!line.trim()) return;
+
+  const message = JSON.parse(line);
+  log(message);
+
+  if (!("method" in message) || !("id" in message)) return;
+
+  const { id, method, params = {} } = message;
+  switch (method) {
+    case "initialize":
+      respond(id, { userAgent: "mains-test-codex-app-server" });
+      break;
+
+    case "thread/start": {
+      const threadId = `thread-${nextThreadId++}`;
+      respond(id, {
+        thread: {
+          id: threadId,
+          preview: "",
+          modelProvider: "openai",
+          createdAt: 1,
+          updatedAt: 1,
+          status: { type: "idle" },
+          path: null,
+          cwd: params.cwd,
+          cliVersion: "0.146.0",
+          source: "appServer",
+          agentNickname: null,
+          agentRole: null,
+          gitInfo: null,
+          name: null,
+          turns: [],
+        },
+      });
+      break;
+    }
+
+    case "turn/start": {
+      const turnId = `turn-${params.threadId}`;
+      const prompt = Array.isArray(params.input)
+        ? params.input.find((item) => item?.type === "text")?.text ?? ""
+        : "";
+      if (prompt.includes("crash before response")) {
+        setTimeout(() => process.exit(17), 10);
+        break;
+      }
+      respond(id, {
+        turn: {
+          id: turnId,
+          items: [],
+          status: "inProgress",
+          error: null,
+        },
+      });
+      setTimeout(() => {
+        notify("turn/started", {
+          threadId: params.threadId,
+          turn: { id: turnId, items: [], status: "inProgress", error: null },
+        });
+        if (prompt.includes("parallel")) {
+          notify("item/agentMessage/delta", {
+            threadId: params.threadId,
+            turnId,
+            itemId: `message-${params.threadId}`,
+            delta: prompt,
+          });
+        }
+        if (prompt.includes("ask user")) {
+          send({
+            jsonrpc: "2.0",
+            id: 900,
+            method: "item/tool/requestUserInput",
+            params: {
+              threadId: params.threadId,
+              turnId,
+              itemId: "question-1",
+              autoResolutionMs: 60_000,
+              questions: [{
+                id: "confirm",
+                header: "Confirm",
+                question: "Proceed with the plan?",
+                isOther: true,
+                isSecret: true,
+                options: [{
+                  label: "Yes",
+                  description: "Continue the plan.",
+                }],
+              }],
+            },
+          });
+        }
+        if (prompt.includes("network approval")) {
+          send({
+            jsonrpc: "2.0",
+            id: 902,
+            method: "item/commandExecution/requestApproval",
+            params: {
+              threadId: params.threadId,
+              turnId,
+              itemId: "network-command-1",
+              startedAtMs: Date.now(),
+              environmentId: null,
+              reason: "Network access is required.",
+              networkApprovalContext: {
+                host: "api.example.com",
+                protocol: "https",
+              },
+              command: null,
+              cwd: null,
+              commandActions: null,
+              proposedExecpolicyAmendment: null,
+              proposedNetworkPolicyAmendments: [{
+                host: "api.example.com",
+                action: "allow",
+              }],
+            },
+          });
+        }
+        if (prompt.includes("mcp required form")) {
+          send({
+            jsonrpc: "2.0",
+            id: 903,
+            method: "mcpServer/elicitation/request",
+            params: {
+              threadId: params.threadId,
+              turnId,
+              serverName: "calendar",
+              mode: "form",
+              _meta: null,
+              message: "Choose a calendar.",
+              requestedSchema: {
+                type: "object",
+                properties: {
+                  calendarId: { type: "string" },
+                },
+                required: ["calendarId"],
+              },
+            },
+          });
+        }
+        if (prompt.includes("current time")) {
+          send({
+            jsonrpc: "2.0",
+            id: 904,
+            method: "currentTime/read",
+            params: {
+              threadId: params.threadId,
+              turnId,
+            },
+          });
+        }
+        notify("thread/tokenUsage/updated", {
+          threadId: params.threadId,
+          turnId,
+          tokenUsage: {
+            total: {
+              totalTokens: 15,
+              inputTokens: 10,
+              cachedInputTokens: 2,
+              cacheWriteInputTokens: 1,
+              outputTokens: 5,
+              reasoningOutputTokens: 1,
+            },
+            last: {
+              totalTokens: 15,
+              inputTokens: 10,
+              cachedInputTokens: 2,
+              cacheWriteInputTokens: 1,
+              outputTokens: 5,
+              reasoningOutputTokens: 1,
+            },
+            modelContextWindow: 1000,
+          },
+        });
+        if (!prompt.includes("ask user") && !prompt.includes("parallel")) {
+          notify("turn/completed", {
+            threadId: params.threadId,
+            turn: { id: turnId, items: [], status: "completed", error: null },
+          });
+        }
+      }, 10);
+      if (prompt.includes("ask user")) {
+        setTimeout(() => {
+          notify("turn/completed", {
+            threadId: params.threadId,
+            turn: { id: turnId, items: [], status: "completed", error: null },
+          });
+        }, 30);
+      }
+      if (prompt.includes("parallel")) {
+        setTimeout(() => {
+          notify("turn/completed", {
+            threadId: params.threadId,
+            turn: { id: turnId, items: [], status: "completed", error: null },
+          });
+        }, prompt.includes("slow") ? 80 : 30);
+      }
+      if (prompt.includes("late permission")) {
+        setTimeout(() => {
+          send({
+            jsonrpc: "2.0",
+            id: 901,
+            method: "item/permissions/requestApproval",
+            params: {
+              threadId: params.threadId,
+              turnId,
+              itemId: "permission-1",
+              environmentId: null,
+              permissions: { network: { enabled: true } },
+              reason: "Late request",
+            },
+          });
+        }, 25);
+      }
+      break;
+    }
+
+    case "review/start": {
+      const reviewThreadId =
+        params.delivery === "detached"
+          ? `${params.threadId}-review`
+          : params.threadId;
+      const turnId = `review-turn-${reviewThreadId}`;
+      respond(id, {
+        reviewThreadId,
+        turn: {
+          id: turnId,
+          items: [],
+          status: "inProgress",
+          error: null,
+        },
+      });
+      setTimeout(() => {
+        notify("turn/started", {
+          threadId: reviewThreadId,
+          turn: { id: turnId, items: [], status: "inProgress", error: null },
+        });
+        notify("item/agentMessage/delta", {
+          threadId: reviewThreadId,
+          turnId,
+          itemId: `review-message-${reviewThreadId}`,
+          delta: "Review complete.",
+        });
+        notify("turn/completed", {
+          threadId: reviewThreadId,
+          turn: { id: turnId, items: [], status: "completed", error: null },
+        });
+      }, 10);
+      break;
+    }
+
+    case "thread/unsubscribe":
+      respond(id, { status: "unsubscribed" });
+      break;
+
+    default:
+      respond(id, {});
+      break;
+  }
+});

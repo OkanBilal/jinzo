@@ -52,6 +52,7 @@ import type {
   WorkRunUsage,
 } from "../../../../shared/adapter.types";
 import {
+  cancelPendingRequest,
   cancelPendingRequests,
   requestToolApproval,
 } from "../../runs/user-input-broker";
@@ -163,9 +164,16 @@ interface ThreadItem {
 type ThreadItemPhase = "start" | "update" | "complete";
 
 interface Usage {
-  input_tokens: number;
-  cached_input_tokens: number;
-  output_tokens: number;
+  inputTokens?: number;
+  cachedInputTokens?: number;
+  cacheWriteInputTokens?: number;
+  outputTokens?: number;
+  reasoningOutputTokens?: number;
+  input_tokens?: number;
+  cached_input_tokens?: number;
+  cache_write_input_tokens?: number;
+  output_tokens?: number;
+  reasoning_output_tokens?: number;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -182,7 +190,7 @@ export function mapSandboxMode(mode?: string): "read-only" | "workspace-write" |
 
 /**
  * Resolve the JSON Schema selected for structured output. Returns the schema
- * payload Codex's `turn/start` expects via `output_schema`, or undefined if
+ * payload Codex's `turn/start` expects via `outputSchema`, or undefined if
  * the user hasn't selected one. Mirrors the wiring in claude.adapter.ts.
  */
 function resolveOutputSchema(
@@ -324,6 +332,8 @@ const MAINS_TOOL_NAMES = new Set(MAINS_DYNAMIC_TOOLS.map((t) => t.name));
 
 const activeRuns = new Map<string, {
   threadId: string | null;
+  /** Threads this run subscribed to and must release during cleanup. */
+  subscribedThreadIds: Set<string>;
   turnId: string | null;
   aborted: boolean;
   /** Current agent message item being accumulated */
@@ -381,18 +391,6 @@ const sessionIdMap = new Map<string, string>();
 
 // Track saved review item IDs to prevent duplicate persistence
 const savedReviewItems = new Set<string>();
-
-// No-op handlers installed when waitForTurnCompletion finishes, so any late
-// notifications/requests from a long-running codex turn don't fall back into
-// stale closures that still reference a finished run's onEvent.
-const noopNotificationHandler = (_method: string, _params: unknown): void => undefined;
-const noopServerRequestHandler = (id: number | string, _method: string, _params: unknown): void => {
-  // Best-effort: nothing to do here. The next active run will replace this
-  // handler before the caller observes any side effect; until then any inbound
-  // request will simply time out on codex's side, which is the correct
-  // behavior when there's no live run to respond from.
-  void id;
-};
 
 const { info: logInfo, error: logError, warn: logWarn } = createLogger("[CodexDriver]");
 
@@ -651,13 +649,13 @@ class CodexAppServer {
 
     this.child.on("close", (code) => {
       logInfo(`App-server process exited with code ${code}`);
-      this.cleanup();
+      this.cleanup(new Error(`Codex app-server exited with code ${code}`));
       this.onClose?.();
     });
 
     this.child.on("error", (err) => {
       logError("App-server process error:", err.message);
-      this.cleanup();
+      this.cleanup(new Error(`Codex app-server process error: ${err.message}`));
     });
   }
 
@@ -854,7 +852,14 @@ class CodexAppServer {
     }
   }
 
-  private cleanup(): void {
+  private cleanup(pendingError?: Error): void {
+    if (pendingError) {
+      for (const pending of this.pendingRequests.values()) {
+        clearTimeout(pending.timer);
+        pending.reject(pendingError);
+      }
+      this.pendingRequests.clear();
+    }
     this.output?.close();
     this.output = null;
     this.child = null;
@@ -1295,6 +1300,22 @@ interface CodexSession {
   preExecuteEvent?: WorkRunEvent;
 }
 
+type TurnCompletion = {
+  status: "succeeded" | "failed" | "canceled";
+  error?: string;
+};
+
+interface CodexRunSink {
+  handleNotification: (method: string, params: unknown) => Promise<void>;
+  handleServerRequest: (
+    id: number | string,
+    method: string,
+    params: unknown,
+  ) => Promise<void>;
+  notificationQueue: Promise<void>;
+  finalize: (result: TurnCompletion) => void;
+}
+
 /**
  * Creates a Codex driver using `codex app-server` JSON-RPC protocol.
  * Spawns `codex app-server` as a subprocess and communicates via
@@ -1305,6 +1326,9 @@ interface CodexSession {
  */
 export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
   let appServer: CodexAppServer | null = null;
+  let appServerStartPromise: Promise<CodexAppServer> | null = null;
+  const runSinks = new Map<string, CodexRunSink>();
+  const serverRequestOwners = new Map<string, string>();
   const titleGenerationModel = "gpt-5.4-mini";
 
   // Marketplace path cache: marketplace name → path
@@ -1394,6 +1418,12 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     model: string;
     modelUsage: Record<string, { costUSD: number; inputTokens: number; outputTokens: number; cacheReadInputTokens: number; cacheCreationInputTokens: number }>;
   }>();
+  const usageSnapshots = new Map<string, Map<string, {
+    inputTokens: number;
+    outputTokens: number;
+    cachedInputTokens: number;
+    cacheWriteTokens: number;
+  }>>();
 
   function getOrCreateUsage(runId: string) {
     if (!usageAccumulator.has(runId)) {
@@ -1414,6 +1444,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
   function flushUsage(runId: string): WorkRunUsage | undefined {
     const acc = usageAccumulator.get(runId);
     usageAccumulator.delete(runId);
+    usageSnapshots.delete(runId);
     if (!acc || (acc.inputTokens === 0 && acc.outputTokens === 0)) {
       return undefined;
     }
@@ -1421,42 +1452,98 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       inputTokens: acc.inputTokens,
       outputTokens: acc.outputTokens,
       cacheReadTokens: acc.cachedInputTokens,
+      cacheWriteTokens: acc.cacheWriteTokens,
       numTurns: acc.numTurns,
       model: acc.model || undefined,
       modelUsage: Object.keys(acc.modelUsage).length > 0 ? acc.modelUsage : undefined,
     };
   }
 
-  /**
-   * Track usage from turn/completed notification
-   */
-  function trackUsage(runId: string, params: unknown, model?: string): void {
-    const p = params as Record<string, unknown> | undefined;
-    if (!p) return;
+  function usageNumber(
+    usage: Usage,
+    camelCaseKey: keyof Usage,
+    snakeCaseKey: keyof Usage,
+  ): number {
+    const value = usage[camelCaseKey] ?? usage[snakeCaseKey];
+    return typeof value === "number" ? value : 0;
+  }
 
-    // Usage can be at params.usage or params.turn.usage
-    const turnObj = p.turn as Record<string, unknown> | undefined;
-    const usage = (turnObj?.usage ?? p.usage) as Usage | undefined;
-    if (!usage) return;
+  /**
+   * Keep the latest usage snapshot for a turn and apply only its delta. Codex
+   * may publish thread/tokenUsage/updated more than once while a turn runs;
+   * treating every notification as a new turn would double-count usage.
+   */
+  function trackUsageSnapshot(
+    runId: string,
+    turnId: string,
+    usage: Usage,
+    model?: string,
+  ): void {
+    const next = {
+      inputTokens: usageNumber(usage, "inputTokens", "input_tokens"),
+      outputTokens: usageNumber(usage, "outputTokens", "output_tokens"),
+      cachedInputTokens: usageNumber(
+        usage,
+        "cachedInputTokens",
+        "cached_input_tokens",
+      ),
+      cacheWriteTokens: usageNumber(
+        usage,
+        "cacheWriteInputTokens",
+        "cache_write_input_tokens",
+      ),
+    };
+
+    let runSnapshots = usageSnapshots.get(runId);
+    if (!runSnapshots) {
+      runSnapshots = new Map();
+      usageSnapshots.set(runId, runSnapshots);
+    }
+    const previous = runSnapshots.get(turnId);
+    runSnapshots.set(turnId, next);
 
     const acc = getOrCreateUsage(runId);
-    const input = usage.input_tokens ?? 0;
-    const output = usage.output_tokens ?? 0;
-    const cacheRead = usage.cached_input_tokens ?? 0;
+    const inputDelta = next.inputTokens - (previous?.inputTokens ?? 0);
+    const outputDelta = next.outputTokens - (previous?.outputTokens ?? 0);
+    const cacheReadDelta =
+      next.cachedInputTokens - (previous?.cachedInputTokens ?? 0);
+    const cacheWriteDelta =
+      next.cacheWriteTokens - (previous?.cacheWriteTokens ?? 0);
 
-    acc.inputTokens += input;
-    acc.outputTokens += output;
-    acc.cachedInputTokens += cacheRead;
-    acc.numTurns++;
+    acc.inputTokens += inputDelta;
+    acc.outputTokens += outputDelta;
+    acc.cachedInputTokens += cacheReadDelta;
+    acc.cacheWriteTokens += cacheWriteDelta;
+    if (!previous) acc.numTurns++;
 
     const modelName = model || config.defaultModel || "codex";
     acc.model = modelName;
     if (!acc.modelUsage[modelName]) {
-      acc.modelUsage[modelName] = { costUSD: 0, inputTokens: 0, outputTokens: 0, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 };
+      acc.modelUsage[modelName] = {
+        costUSD: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        cacheReadInputTokens: 0,
+        cacheCreationInputTokens: 0,
+      };
     }
-    acc.modelUsage[modelName].inputTokens += input;
-    acc.modelUsage[modelName].outputTokens += output;
-    acc.modelUsage[modelName].cacheReadInputTokens += cacheRead;
+    acc.modelUsage[modelName].inputTokens += inputDelta;
+    acc.modelUsage[modelName].outputTokens += outputDelta;
+    acc.modelUsage[modelName].cacheReadInputTokens += cacheReadDelta;
+    acc.modelUsage[modelName].cacheCreationInputTokens += cacheWriteDelta;
+  }
+
+  /** Compatibility fallback for older app-server turn/completed payloads. */
+  function trackUsage(runId: string, params: unknown, model?: string): void {
+    const p = params as Record<string, unknown> | undefined;
+    if (!p) return;
+
+    const turnObj = p.turn as Record<string, unknown> | undefined;
+    const usage = (turnObj?.usage ?? p.usage) as Usage | undefined;
+    if (!usage) return;
+    const turnId = ((turnObj?.id ?? p.turnId ?? p.turn_id) as string | undefined)
+      ?? `legacy-${runId}`;
+    trackUsageSnapshot(runId, turnId, usage, model);
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -1544,13 +1631,148 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     }
   }
 
+  function requestThreadId(params: unknown): string | undefined {
+    const p = params as Record<string, unknown> | undefined;
+    return (p?.threadId ?? p?.thread_id) as string | undefined;
+  }
+
+  function runIdForLiveThread(
+    method: string,
+    params: unknown,
+  ): string | undefined {
+    const p = params as Record<string, unknown> | undefined;
+    const thread = p?.thread as Record<string, unknown> | undefined;
+    const directThreadId =
+      requestThreadId(params) ??
+      (thread?.id as string | undefined);
+    const parentThreadId = thread?.parentThreadId as string | null | undefined;
+
+    for (const runId of runSinks.keys()) {
+      const state = activeRuns.get(runId);
+      if (!state) continue;
+      if (
+        directThreadId &&
+        (state.threadId === directThreadId ||
+          state.subAgents.has(directThreadId))
+      ) {
+        return runId;
+      }
+      if (
+        method === "thread/started" &&
+        parentThreadId &&
+        (state.threadId === parentThreadId ||
+          state.subAgents.has(parentThreadId))
+      ) {
+        return runId;
+      }
+    }
+
+    // Global requests without thread context are unambiguous only while one
+    // run is live. Thread-scoped approvals always take the branch above.
+    if (!directThreadId && runSinks.size === 1) {
+      return runSinks.keys().next().value as string | undefined;
+    }
+    return undefined;
+  }
+
+  function rejectInactiveServerRequest(
+    server: CodexAppServer,
+    id: number | string,
+    method: string,
+  ): void {
+    switch (method) {
+      case "item/commandExecution/requestApproval":
+      case "item/fileChange/requestApproval":
+        server.respondToRequest(id, { decision: "decline" });
+        return;
+      case "item/permissions/requestApproval":
+        server.respondToRequest(id, { permissions: {}, scope: "turn" });
+        return;
+      case "item/tool/requestUserInput":
+        server.respondToRequest(id, { answers: {} });
+        return;
+      case "mcpServer/elicitation/request":
+        server.respondToRequest(id, {
+          action: "cancel",
+          content: null,
+          _meta: null,
+        });
+        return;
+      case "currentTime/read":
+        server.respondToRequest(id, {
+          currentTimeAt: Math.floor(Date.now() / 1000),
+        });
+        return;
+      case "account/chatgptAuthTokens/refresh":
+        server.respondToRequestError(
+          id,
+          -32601,
+          "Client does not manage ChatGPT tokens; use auth.json fallback",
+        );
+        return;
+      default:
+        server.respondToRequestError(
+          id,
+          -32601,
+          `No active run for server request: ${method}`,
+        );
+    }
+  }
+
+  function installRunDispatcher(server: CodexAppServer): void {
+    server.setNotificationHandler((method, params) => {
+      if (method === "serverRequest/resolved") {
+        const requestId = (
+          params as Record<string, unknown> | undefined
+        )?.requestId;
+        if (
+          typeof requestId === "string" ||
+          typeof requestId === "number"
+        ) {
+          cancelPendingRequest(String(requestId));
+          serverRequestOwners.delete(String(requestId));
+        }
+      }
+
+      const runId = runIdForLiveThread(method, params);
+      if (!runId) return;
+      const sink = runSinks.get(runId);
+      if (!sink) return;
+
+      sink.notificationQueue = sink.notificationQueue
+        .then(() => sink.handleNotification(method, params))
+        .catch((error) => {
+          const message = error instanceof Error ? error.message : String(error);
+          logError(`Notification handler failed for ${runId}:`, message);
+          sink.finalize({
+            status: "failed",
+            error: `Codex event handling failed: ${message}`,
+          });
+        });
+    });
+
+    server.setServerRequestHandler((id, method, params) => {
+      const runId = runIdForLiveThread(method, params);
+      const sink = runId ? runSinks.get(runId) : undefined;
+      if (!runId || !sink) {
+        rejectInactiveServerRequest(server, id, method);
+        return;
+      }
+
+      serverRequestOwners.set(String(id), runId);
+      void sink.handleServerRequest(id, method, params).catch((error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        logError(`Server request handler failed for ${runId}:`, message);
+        server.respondToRequestError(id, -32603, message);
+      });
+    });
+  }
+
   // ─────────────────────────────────────────────────────────────
   // Ensure app-server is running
   // ─────────────────────────────────────────────────────────────
 
-  async function ensureServer(cwd?: string): Promise<CodexAppServer> {
-    if (appServer?.isRunning) return appServer;
-
+  async function startServer(cwd?: string): Promise<CodexAppServer> {
     const binaryPath = findCodexBinary();
     const spawnCwd = cwd ?? os.homedir();
     logInfo(`Starting app-server: ${binaryPath} app-server (cwd: ${spawnCwd}, HOME=${process.env.HOME}, homedir=${os.homedir()})`);
@@ -1560,10 +1782,17 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
 
     await server.start(binaryPath, spawnCwd, env);
     appServer = server;
+    installRunDispatcher(server);
 
     server.setOnClose(() => {
       if (appServer === server) {
         appServer = null;
+      }
+      for (const sink of [...runSinks.values()]) {
+        sink.finalize({
+          status: "failed",
+          error: "Codex app-server exited unexpectedly",
+        });
       }
     });
 
@@ -1627,8 +1856,32 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       }
     });
 
-    logInfo("App-server initialized successfully")
+    logInfo("App-server initialized successfully");
     return server;
+  }
+
+  async function ensureServer(cwd?: string): Promise<CodexAppServer> {
+    if (appServer?.isRunning) return appServer;
+    if (appServerStartPromise) return appServerStartPromise;
+
+    const startPromise = startServer(cwd);
+    appServerStartPromise = startPromise;
+    try {
+      return await startPromise;
+    } catch (error) {
+      const failedServer = appServer;
+      if (failedServer) {
+        await failedServer.stop().catch(() => undefined);
+        if (appServer === failedServer) {
+          appServer = null;
+        }
+      }
+      throw error;
+    } finally {
+      if (appServerStartPromise === startPromise) {
+        appServerStartPromise = null;
+      }
+    }
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -2137,11 +2390,15 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         // `input_tokens`/`output_tokens`/`cached_input_tokens`). Accept either.
         const tokenUsage = (p?.tokenUsage ?? p?.token_usage) as
           | {
-              last?: { totalTokens?: number; total_tokens?: number };
+              last?: Usage & { totalTokens?: number; total_tokens?: number };
               modelContextWindow?: number | null;
               model_context_window?: number | null;
             }
           | undefined;
+        const usageTurnId = (p?.turnId ?? p?.turn_id) as string | undefined;
+        if (tokenUsage?.last && usageTurnId) {
+          trackUsageSnapshot(runId, usageTurnId, tokenUsage.last, model);
+        }
         const rawMax = tokenUsage?.modelContextWindow ?? tokenUsage?.model_context_window;
         const maxTokens = typeof rawMax === "number" ? rawMax : 0;
         const rawOccupied = tokenUsage?.last?.totalTokens ?? tokenUsage?.last?.total_tokens;
@@ -3223,28 +3480,23 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     model: string | undefined,
     onEvent: WorkRunEventHandler,
     timeout: number,
-  ): Promise<{ status: "succeeded" | "failed" | "canceled"; error?: string }> {
+  ): Promise<TurnCompletion> {
     return new Promise((resolve) => {
       let resolved = false;
 
-      // Detach codex callbacks so notifications/requests for an already-
-      // finished turn don't fall back into stale closures (which would still
-      // reference this run's onEvent and could pop up dialogs/toolcalls long
-      // after the user thinks the run is done).
-      const detachHandlers = () => {
-        try {
-          server.setNotificationHandler(noopNotificationHandler);
-          server.setServerRequestHandler(noopServerRequestHandler);
-        } catch {
-          // ignore — server may already be torn down
-        }
-      };
-
-      const finalize = (result: { status: "succeeded" | "failed" | "canceled"; error?: string }) => {
+      const finalize = (result: TurnCompletion) => {
         if (resolved) return;
         resolved = true;
         clearTimeout(timeoutTimer);
-        detachHandlers();
+        if (runSinks.get(runId) === sink) {
+          runSinks.delete(runId);
+        }
+        for (const [requestId, ownerRunId] of serverRequestOwners) {
+          if (ownerRunId === runId) {
+            serverRequestOwners.delete(requestId);
+          }
+        }
+        cancelPendingRequests(runId);
         resolve(result);
       };
 
@@ -3342,10 +3594,13 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         if (runIsDead) {
           if (
             method === "item/commandExecution/requestApproval" ||
-            method === "item/fileChange/requestApproval" ||
-            method === "item/permissions/requestApproval"
+            method === "item/fileChange/requestApproval"
           ) {
             server.respondToRequest(id, { decision: "decline" });
+            return;
+          }
+          if (method === "item/permissions/requestApproval") {
+            server.respondToRequest(id, { permissions: {}, scope: "turn" });
             return;
           }
           if (method === "item/tool/requestUserInput") {
@@ -3354,7 +3609,11 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
             return;
           }
           if (method === "mcpServer/elicitation/request") {
-            server.respondToRequest(id, { action: "cancel" });
+            server.respondToRequest(id, {
+              action: "cancel",
+              content: null,
+              _meta: null,
+            });
             return;
           }
           // Pass through auth/tool-call requests; refusing them mid-flight can
@@ -3370,9 +3629,22 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
             const command = (p?.command as string) ?? "";
             const cwd = (p?.cwd as string) ?? undefined;
             const reason = (p?.reason as string) ?? undefined;
+            const networkApprovalContext = p?.networkApprovalContext as
+              | { host?: string; protocol?: string }
+              | null
+              | undefined;
+            const displayCommand =
+              command ||
+              (
+                networkApprovalContext?.host
+                  ? `Network access: ${networkApprovalContext.protocol ?? "https"}://${networkApprovalContext.host}`
+                  : "Command approval"
+              );
 
             // Dependency guard check — intercept install commands before approval
-            const guardResult = await guardsService.checkCommand(command);
+            const guardResult = command
+              ? await guardsService.checkCommand(command)
+              : { blocked: false };
             if (guardResult.blocked) {
               server.respondToRequest(id, { decision: "decline" });
               break;
@@ -3384,9 +3656,30 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
                 runId,
                 toolName: "Bash",
                 toolInput: {
-                  command,
+                  command: displayCommand,
                   ...(cwd ? { cwd } : {}),
                   ...(reason ? { description: reason } : {}),
+                  ...(networkApprovalContext
+                    ? { networkApprovalContext }
+                    : {}),
+                  ...(p?.commandActions
+                    ? { commandActions: p.commandActions }
+                    : {}),
+                  ...(p?.proposedExecpolicyAmendment
+                    ? {
+                        proposedExecpolicyAmendment:
+                          p.proposedExecpolicyAmendment,
+                      }
+                    : {}),
+                  ...(p?.proposedNetworkPolicyAmendments
+                    ? {
+                        proposedNetworkPolicyAmendments:
+                          p.proposedNetworkPolicyAmendments,
+                      }
+                    : {}),
+                  ...(p?.environmentId
+                    ? { environmentId: p.environmentId }
+                    : {}),
                 },
                 kind: "tool_approval",
                 timestamp: Date.now(),
@@ -3492,7 +3785,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
           }
 
           // User input requests — Codex's structured Q&A (one or more questions
-          // with options + multiSelect). The approval dialog only renders ONE
+          // with optional choices). The approval dialog only renders ONE
           // question at a time, so we dispatch each question sequentially with
           // its own dialog, collect all answers, then send a single batched
           // response back to codex. If the user dismisses any question, the
@@ -3515,6 +3808,10 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
 
             const answers: Record<string, { answers: string[] }> = {};
             let aborted = false;
+            const autoResolutionMs =
+              typeof p?.autoResolutionMs === "number"
+                ? p.autoResolutionMs
+                : undefined;
 
             for (let i = 0; i < questions.length; i++) {
               const q = questions[i];
@@ -3526,7 +3823,11 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
                 continue;
               }
 
-              const text = (q.text as string) ?? (q.description as string) ?? "";
+              const text =
+                (q.question as string) ??
+                (q.text as string) ??
+                (q.description as string) ??
+                "";
               const opts = normalizeOptions(q);
               try {
                 const result = await requestToolApproval({
@@ -3536,9 +3837,13 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
                   runId,
                   toolName: "UserInput",
                   kind: "ask_user",
+                  header: (q.header as string) || undefined,
                   question: text,
                   options: opts,
-                  multiSelect: !!q.multiSelect,
+                  multiSelect: false,
+                  isOther: q.isOther === true,
+                  isSecret: q.isSecret === true,
+                  autoResolutionMs,
                   timestamp: Date.now(),
                 });
                 if (!result.approved) {
@@ -3573,6 +3878,13 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
               -32601,
               "Client does not manage ChatGPT tokens; use auth.json fallback",
             );
+            break;
+          }
+
+          case "currentTime/read": {
+            server.respondToRequest(id, {
+              currentTimeAt: Math.floor(Date.now() / 1000),
+            });
             break;
           }
 
@@ -3631,6 +3943,16 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
             const mode = (p?.mode as string) ?? "form";
             const url = p?.url as string | undefined;
             const sessionKey = serverName.toLowerCase();
+            const requestedSchema = p?.requestedSchema as
+              | Record<string, unknown>
+              | undefined;
+            const requiredFields = Array.isArray(requestedSchema?.required)
+              ? requestedSchema.required.filter(
+                  (field): field is string => typeof field === "string",
+                )
+              : [];
+            const canAcceptWithoutFormValues =
+              mode === "url" || requiredFields.length === 0;
 
             // "Allow for this run" for a form-mode app approval: skip the dialog
             // if the user already opted this server in for the run. url-mode
@@ -3639,13 +3961,15 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
               mode !== "url" &&
               activeRuns.get(runId)?.approvedElicitationServers?.has(sessionKey)
             ) {
-              server.respondToRequest(id, { action: "accept", content: {} });
+              server.respondToRequest(id, canAcceptWithoutFormValues
+                ? { action: "accept", content: {}, _meta: null }
+                : { action: "decline", content: null, _meta: null });
               break;
             }
 
-            // Dump the full payload — proposed action args may live in `_meta`
-            // or a sibling field whose shape is still being mapped.
-            logInfo(`[mcpServer/elicitation/request] ${JSON.stringify(p, null, 2)}`);
+            logInfo(
+              `[mcpServer/elicitation/request] server=${serverName}, mode=${mode}`,
+            );
 
             try {
               const result = await requestToolApproval({
@@ -3661,7 +3985,20 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
               });
 
               if (!result.approved) {
-                server.respondToRequest(id, { action: "decline" });
+                server.respondToRequest(id, {
+                  action: "decline",
+                  content: null,
+                  _meta: null,
+                });
+              } else if (!canAcceptWithoutFormValues) {
+                // The current approval UI can consent to an action but cannot
+                // collect schema-defined form values. Never claim acceptance
+                // with an invalid empty object when required fields exist.
+                server.respondToRequest(id, {
+                  action: "decline",
+                  content: null,
+                  _meta: null,
+                });
               } else {
                 if (mode === "url" && url) {
                   shell.openExternal(url).catch((err) =>
@@ -3676,10 +4013,18 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
                     (rs.approvedElicitationServers ??= new Set()).add(sessionKey);
                   }
                 }
-                server.respondToRequest(id, { action: "accept", content: {} });
+                server.respondToRequest(id, {
+                  action: "accept",
+                  content: mode === "url" ? null : {},
+                  _meta: null,
+                });
               }
             } catch {
-              server.respondToRequest(id, { action: "decline" });
+              server.respondToRequest(id, {
+                action: "decline",
+                content: null,
+                _meta: null,
+              });
             }
             break;
           }
@@ -3693,8 +4038,20 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         }
       };
 
-      server.setNotificationHandler(handleNotification);
-      server.setServerRequestHandler(handleServerRequest);
+      const sink: CodexRunSink = {
+        handleNotification,
+        handleServerRequest,
+        notificationQueue: Promise.resolve(),
+        finalize,
+      };
+      const previous = runSinks.get(runId);
+      if (previous) {
+        previous.finalize({
+          status: "failed",
+          error: "A newer Codex turn replaced this run",
+        });
+      }
+      runSinks.set(runId, sink);
     });
   }
 
@@ -3759,7 +4116,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       await maybeSetThreadGoal(server, threadId, goalMode, request.goal, request.workspace.rootPath, /*overwrite*/ true);
 
       const mainsCtx: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-      activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set(), emittedDocPaths: new Set(), runStartedAt: Date.now(), planBuffers: new Map(), subAgents: new Map() });
+      activeRuns.set(runId, { threadId: threadId ?? null, subscribedThreadIds: new Set(threadId ? [threadId] : []), turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set(), emittedDocPaths: new Set(), runStartedAt: Date.now(), planBuffers: new Map(), subAgents: new Map() });
 
       const turnInput = buildTurnInput(request);
       const effort = overrideEffort ?? config.modelReasoningEffort;
@@ -3772,7 +4129,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         ...(resolvedModel ? { model: resolvedModel } : {}),
         ...(effort ? { effort } : {}),
         ...(serviceTier ? { serviceTier } : {}),
-        ...(outputSchema ? { output_schema: outputSchema } : {}),
+        ...(outputSchema ? { outputSchema } : {}),
         ...(collaborationMode ? { collaborationMode } : {}),
       };
 
@@ -3847,7 +4204,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       }
 
       const mainsCtxContinue: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-      activeRuns.set(runId, { threadId, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxContinue, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set(), emittedDocPaths: new Set(), runStartedAt: Date.now(), planBuffers: new Map(), subAgents: new Map() });
+      activeRuns.set(runId, { threadId, subscribedThreadIds: new Set(threadId ? [threadId] : []), turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxContinue, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set(), emittedDocPaths: new Set(), runStartedAt: Date.now(), planBuffers: new Map(), subAgents: new Map() });
 
       const currentThreadId = sessionIdMap.get(runId) ?? threadId;
 
@@ -3870,7 +4227,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         ...(resolvedModel ? { model: resolvedModel } : {}),
         ...(config.modelReasoningEffort ? { effort: config.modelReasoningEffort } : {}),
         ...(config.serviceTier ? { serviceTier: config.serviceTier } : {}),
-        ...(continueOutputSchema ? { output_schema: continueOutputSchema } : {}),
+        ...(continueOutputSchema ? { outputSchema: continueOutputSchema } : {}),
         ...(continueCollaborationMode ? { collaborationMode: continueCollaborationMode } : {}),
       };
       const startTurn = async () => {
@@ -3933,6 +4290,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       const mainsCtxFork: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
       activeRuns.set(runId, {
         threadId: forkedThreadId,
+        subscribedThreadIds: new Set([forkedThreadId]),
         turnId: null,
         aborted: false,
         currentMessageItemId: null,
@@ -3969,7 +4327,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         ...(resolvedModel ? { model: resolvedModel } : {}),
         ...(config.modelReasoningEffort ? { effort: config.modelReasoningEffort } : {}),
         ...(config.serviceTier ? { serviceTier: config.serviceTier } : {}),
-        ...(forkOutputSchema ? { output_schema: forkOutputSchema } : {}),
+        ...(forkOutputSchema ? { outputSchema: forkOutputSchema } : {}),
         ...(forkCollaborationMode ? { collaborationMode: forkCollaborationMode } : {}),
       };
       const startTurn = async () => {
@@ -4010,7 +4368,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       if (threadId) sessionIdMap.set(runId, threadId);
 
       const mainsCtxReview: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-      activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxReview, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set(), emittedDocPaths: new Set(), runStartedAt: Date.now(), planBuffers: new Map(), subAgents: new Map() });
+      activeRuns.set(runId, { threadId: threadId ?? null, subscribedThreadIds: new Set(threadId ? [threadId] : []), turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxReview, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set(), emittedDocPaths: new Set(), runStartedAt: Date.now(), planBuffers: new Map(), subAgents: new Map() });
 
       const target: Record<string, unknown> = { type: request.target.type };
       if (request.target.type === "baseBranch" && request.target.branch) {
@@ -4026,12 +4384,34 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         threadId: threadId ?? "",
         target,
         ...(request.delivery ? { delivery: request.delivery } : {}),
-        ...(resolvedModel ? { model: resolvedModel } : {}),
       };
 
       const startTurn = async () => {
         logInfo(`Starting review: target=${request.target.type}, delivery=${request.delivery ?? "inline"}`);
-        await server.sendRequest("review/start", reviewStartParams);
+        const result = await server.sendRequest(
+          "review/start",
+          reviewStartParams,
+        ) as Record<string, unknown>;
+        const reviewThreadId = result.reviewThreadId as string | undefined;
+        const reviewTurn = result.turn as Record<string, unknown> | undefined;
+
+        if (reviewThreadId) {
+          sessionIdMap.set(runId, reviewThreadId);
+          const state = activeRuns.get(runId);
+          if (state) {
+            state.subscribedThreadIds.add(reviewThreadId);
+            state.threadId = reviewThreadId;
+            state.turnId = (reviewTurn?.id as string | undefined) ?? state.turnId;
+          }
+          if (reviewThreadId !== threadId) {
+            runsRepo.updateRun(runId, { sessionId: reviewThreadId }).catch((error) =>
+              logWarn(
+                "Failed to persist detached review thread:",
+                error instanceof Error ? error.message : error,
+              ),
+            );
+          }
+        }
       };
 
       // Review verbs don't carry a user-message string, so Core skips the
@@ -4103,14 +4483,26 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
           await onEvent(cs.preExecuteEvent);
         }
 
-        await cs.startTurn();
-        const result = await waitForTurnCompletion(
+        // Register the thread-aware sink before starting the turn. App-server
+        // is allowed to emit notifications immediately after its response.
+        const completion = waitForTurnCompletion(
           appServer,
           cs.runId,
           cs.model,
           onEvent,
           cs.timeout,
         );
+        try {
+          await cs.startTurn();
+        } catch (error) {
+          runSinks.get(cs.runId)?.finalize({
+            status: "failed",
+            error: error instanceof Error ? error.message : String(error),
+          });
+          await completion;
+          throw error;
+        }
+        const result = await completion;
 
         return {
           status: result.status,
@@ -4129,6 +4521,19 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
 
     async cleanup(sessionParam): Promise<void> {
       const cs = sessionParam as CodexSession;
+      const state = activeRuns.get(cs.runId);
+      if (appServer?.isRunning && state) {
+        for (const threadId of state.subscribedThreadIds) {
+          try {
+            await appServer.sendRequest("thread/unsubscribe", { threadId });
+          } catch (error) {
+            logWarn(
+              `Failed to unsubscribe Codex thread ${threadId}:`,
+              error instanceof Error ? error.message : error,
+            );
+          }
+        }
+      }
       activeRuns.delete(cs.runId);
     },
 
@@ -4147,6 +4552,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       sessionIdMap.delete(runId);
       activeRuns.delete(runId);
       usageAccumulator.delete(runId);
+      usageSnapshots.delete(runId);
     },
 
     async shutdown(): Promise<void> {
@@ -4158,6 +4564,15 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       activeRuns.clear();
       sessionIdMap.clear();
       usageAccumulator.clear();
+      usageSnapshots.clear();
+      for (const sink of [...runSinks.values()]) {
+        sink.finalize({
+          status: "canceled",
+          error: "Codex driver is shutting down",
+        });
+      }
+      runSinks.clear();
+      serverRequestOwners.clear();
       invalidatePluginCaches();
       marketplacePathCache.clear();
       remotePluginRefCache.clear();

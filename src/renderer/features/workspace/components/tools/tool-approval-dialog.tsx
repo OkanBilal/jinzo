@@ -253,6 +253,11 @@ export function ToolApprovalDialog({
           <div className="flex gap-3 px-3.5 pb-2 pt-3.5 sm:px-4 sm:pt-4">
             <Question className="mt-0.5 size-4 shrink-0 text-primary-600 dark:text-primary-400" />
             <div className="min-w-0 flex-1 space-y-2">
+              {request.header && (
+                <div className="text-xxs font-semibold uppercase tracking-wide text-primary-500 dark:text-primary-400">
+                  {request.header}
+                </div>
+              )}
               {request.multiSelect && (
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-lg bg-primary-100/50 px-1.5 py-0.5 text-xxs font-medium text-primary-600 dark:bg-primary-900/40 dark:text-primary-400">
@@ -325,7 +330,8 @@ export function ToolApprovalDialog({
                 <label className="min-w-0 flex-1">
                   <span className="sr-only">Custom answer</span>
                   <input
-                    type="text"
+                    type={request.isSecret ? "password" : "text"}
+                    autoComplete={request.isSecret ? "new-password" : undefined}
                     value={freeText}
                     onChange={(e) => setFreeText(e.target.value)}
                     onKeyDown={(e) => {
