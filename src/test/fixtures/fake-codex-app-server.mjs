@@ -188,6 +188,34 @@ input.on("line", (line) => {
           threadId: params.threadId,
           turn: { id: turnId, items: [], status: "inProgress", error: null },
         });
+        if (prompt.includes("subagent completion")) {
+          const childThreadId = `${params.threadId}-child`;
+          notify("thread/started", {
+            thread: {
+              id: childThreadId,
+              parentThreadId: params.threadId,
+              agentNickname: "Scout",
+              agentRole: "worker",
+            },
+          });
+          notify("turn/completed", {
+            threadId: childThreadId,
+            turn: {
+              id: `turn-${childThreadId}`,
+              items: [],
+              status: "completed",
+              error: null,
+            },
+          });
+        }
+        if (prompt.includes("duplicate completion")) {
+          notify("item/agentMessage/delta", {
+            threadId: params.threadId,
+            turnId,
+            itemId: `message-${params.threadId}`,
+            delta: "Final answer",
+          });
+        }
         if (prompt.includes("parallel")) {
           notify("item/agentMessage/delta", {
             threadId: params.threadId,
@@ -303,11 +331,27 @@ input.on("line", (line) => {
             modelContextWindow: 1000,
           },
         });
-        if (!prompt.includes("ask user") && !prompt.includes("parallel")) {
+        if (
+          !prompt.includes("ask user") &&
+          !prompt.includes("parallel") &&
+          !prompt.includes("timeout turn") &&
+          !prompt.includes("subagent completion")
+        ) {
           notify("turn/completed", {
             threadId: params.threadId,
             turn: { id: turnId, items: [], status: "completed", error: null },
           });
+          if (prompt.includes("duplicate completion")) {
+            notify("turn/completed", {
+              threadId: params.threadId,
+              turn: {
+                id: turnId,
+                items: [],
+                status: "completed",
+                error: null,
+              },
+            });
+          }
         }
       }, 10);
       if (prompt.includes("ask user")) {
@@ -325,6 +369,19 @@ input.on("line", (line) => {
             turn: { id: turnId, items: [], status: "completed", error: null },
           });
         }, prompt.includes("slow") ? 80 : 30);
+      }
+      if (prompt.includes("subagent completion")) {
+        setTimeout(() => {
+          notify("turn/completed", {
+            threadId: params.threadId,
+            turn: {
+              id: turnId,
+              items: [],
+              status: "completed",
+              error: null,
+            },
+          });
+        }, 70);
       }
       if (prompt.includes("late permission")) {
         setTimeout(() => {
@@ -345,6 +402,10 @@ input.on("line", (line) => {
       }
       break;
     }
+
+    case "turn/interrupt":
+      respond(id, {});
+      break;
 
     case "review/start": {
       const reviewThreadId =

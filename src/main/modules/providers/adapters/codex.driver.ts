@@ -9,11 +9,11 @@
 // (createSession + resumeSession + forkSession + reviewSession). Each acquires
 // a thread via `thread/start|resume|fork`; `executePrompt` then sends the
 // turn (`turn/start` for chat, `review/start` for review) and awaits
-// completion via `waitForTurnCompletion`.
+// completion through the Codex run coordinator.
 //
 // Per-run state (streaming buffers, fileChange tracking, sub-agent metadata)
-// stays in the factory-closure `activeRuns` Map keyed by runId — the
-// notification handler reads it via runId from the closure. CodexSession is
+// stays inside the per-driver Codex run coordinator keyed by runId.
+// CodexRunSession is
 // a thin wrapper carrying runId + a `startTurn` callback that fires the
 // right `turn/start` or `review/start` request.
 // ─────────────────────────────────────────────────────────────
@@ -40,15 +40,10 @@ import type {
   WorkRunContextItem,
   WorkRunContinueRequest,
   WorkRunEvent,
-  WorkRunEventHandler,
   WorkRunForkRequest,
   WorkRunRequest,
   WorkRunReviewRequest,
 } from "../../../../shared/adapter.types";
-import {
-  cancelPendingRequest,
-  cancelPendingRequests,
-} from "../../runs/user-input-broker";
 import { runsRepo } from "../../runs/runs.repo";
 import { logWorkspaceActivity } from "../../workspace";
 // Direct repo import — a known driver egress-seam leak (see CONTEXT.md
@@ -57,7 +52,6 @@ import { logWorkspaceActivity } from "../../workspace";
 import { workspaceRepo } from "../../workspace/workspace.repo";
 import {
   createLogger,
-  extractArtifactsFromToolOutput,
   formatContextSection,
   appendPromptSections,
   saveAttachments,
@@ -71,11 +65,9 @@ import {
   mapRateLimitSnapshot,
 } from "./codex-capabilities";
 import {
-  createCodexEventRunState,
-  createCodexEventMapper,
-  type CodexEventRunState,
-} from "./codex-event-mapper";
-import { createCodexRequestBroker } from "./codex-request-broker";
+  createCodexRunCoordinator,
+  type CodexRunSession,
+} from "./codex-run-coordinator";
 
 export const CODEX_ARCHIVED_CHAT_MESSAGE =
   "This chat is archived in Codex. Unarchive it in Codex to continue, or archive it in Mains to hide it from this workspace.";
@@ -341,44 +333,6 @@ type CodexTurnStartParams = CodexAppServerParams<"turn/start"> & {
   collaborationMode?: Record<string, unknown>;
 };
 
-// ─────────────────────────────────────────────────────────────
-// Active run tracking
-// ─────────────────────────────────────────────────────────────
-
-type CodexActiveRunState = CodexEventRunState & {
-  /** Threads this run subscribed to and must release during cleanup. */
-  subscribedThreadIds: Set<string>;
-  aborted: boolean;
-  /**
-   * App/connector elicitation servers the user approved "for this run". The MCP
-   * elicitation response only speaks accept/decline/cancel (no session scope
-   * like command-exec's `acceptForSession`), so we honor "Allow for this run"
-   * on the Mains side: once a form-mode elicitation is approved for the run,
-   * later elicitations from the same `serverName` auto-accept without prompting.
-   * Lazily created; cleared automatically when the run's activeRuns entry is
-   * deleted. url-mode elicitations are never cached (they need a browser step).
-   */
-  approvedElicitationServers?: Set<string>;
-};
-
-const activeRuns = new Map<string, CodexActiveRunState>();
-
-function createActiveRunState(
-  threadId: string | null,
-  mainsCtx: MainsToolContext,
-): CodexActiveRunState {
-  return {
-    ...createCodexEventRunState(threadId, mainsCtx),
-    subscribedThreadIds: new Set(
-      threadId ? [threadId] : [],
-    ),
-    aborted: false,
-  };
-}
-
-// Session ID mapping: runId → threadId (for resume support)
-const sessionIdMap = new Map<string, string>();
-
 // Track saved review item IDs to prevent duplicate persistence
 const savedReviewItems = new Set<string>();
 
@@ -543,55 +497,9 @@ async function maybeSetThreadGoal(
     .catch((err) => logWarn("thread/goal/set failed:", err instanceof Error ? err.message : err));
 }
 
-/** Reverse-lookup the runId that owns a Codex threadId (for goal notifications). */
-function runIdForThread(threadId: string | undefined): string | null {
-  if (!threadId) return null;
-  for (const [runId, tid] of sessionIdMap) {
-    if (tid === threadId) return runId;
-  }
-  return null;
-}
-
 // ─────────────────────────────────────────────────────────────
 // Adapter factory
 // ─────────────────────────────────────────────────────────────
-
-/**
- * Per-run session state handed back to Core as opaque `session`.
- * The runId is the only thing Core sees; everything else lives on the
- * factory-closure `activeRuns` map under the same runId.
- */
-interface CodexSession {
-  runId: string;
-  /** Send the SDK request that kicks off the turn (`turn/start` or `review/start`). */
-  startTurn: () => Promise<void>;
-  /** Optional model name used for usage tracking inside `waitForTurnCompletion`. */
-  model: string | undefined;
-  /** Per-call timeout passed through to `waitForTurnCompletion`. */
-  timeout: number;
-  /**
-   * Optional event the driver wants emitted right before `startTurn`. Used by
-   * `reviewSession` to surface a custom user-prompt artifact (Core skips the
-   * generic one for review verbs since `WorkRunReviewRequest` has no message).
-   */
-  preExecuteEvent?: WorkRunEvent;
-}
-
-type TurnCompletion = {
-  status: "succeeded" | "failed" | "canceled";
-  error?: string;
-};
-
-interface CodexRunSink {
-  handleNotification: (method: string, params: unknown) => Promise<void>;
-  handleServerRequest: (
-    id: number | string,
-    method: string,
-    params: unknown,
-  ) => Promise<void>;
-  notificationQueue: Promise<void>;
-  finalize: (result: TurnCompletion) => void;
-}
 
 /**
  * Creates a Codex driver using `codex app-server` JSON-RPC protocol.
@@ -606,29 +514,18 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
   let appServerStartPromise: Promise<CodexAppServer> | null = null;
   let codexVersionPromise: Promise<string | null> | null = null;
   let codexCompatibilityPromise: Promise<void> | null = null;
-  const runSinks = new Map<string, CodexRunSink>();
-  const serverRequestOwners = new Map<string, string>();
   const titleGenerationModel = "gpt-5.4-mini";
+  const runCoordinator = createCodexRunCoordinator({
+    defaultModel: config.defaultModel,
+    onReviewCompleted: persistCodexReviewFindings,
+    logger: codexLogger,
+  });
   const capabilities = createCodexCapabilities({
     defaultModel: config.defaultModel,
     ensureServer: (cwd) => ensureServer(cwd),
     getRunningServer: () =>
       appServer?.isRunning ? appServer : null,
     getCliHealth: () => getCodexCliHealth(),
-    logger: codexLogger,
-  });
-  const eventMapper = createCodexEventMapper({
-    getRunState: (runId) => activeRuns.get(runId),
-    onReviewCompleted: persistCodexReviewFindings,
-    onParentThreadStarted: (runId, threadId) => {
-      sessionIdMap.set(runId, threadId);
-    },
-    defaultModel: config.defaultModel,
-  });
-  const requestBroker = createCodexRequestBroker({
-    getRunState: (runId) => activeRuns.get(runId),
-    getMainsToolContext: (runId) =>
-      activeRuns.get(runId)?.mainsCtx,
     logger: codexLogger,
   });
 
@@ -781,99 +678,6 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     };
   }
 
-  function requestThreadId(params: unknown): string | undefined {
-    const p = params as Record<string, unknown> | undefined;
-    return (p?.threadId ?? p?.thread_id) as string | undefined;
-  }
-
-  function runIdForLiveThread(
-    method: string,
-    params: unknown,
-  ): string | undefined {
-    const p = params as Record<string, unknown> | undefined;
-    const thread = p?.thread as Record<string, unknown> | undefined;
-    const directThreadId =
-      requestThreadId(params) ??
-      (thread?.id as string | undefined);
-    const parentThreadId = thread?.parentThreadId as string | null | undefined;
-
-    for (const runId of runSinks.keys()) {
-      const state = activeRuns.get(runId);
-      if (!state) continue;
-      if (
-        directThreadId &&
-        (state.threadId === directThreadId ||
-          state.subAgents.has(directThreadId))
-      ) {
-        return runId;
-      }
-      if (
-        method === "thread/started" &&
-        parentThreadId &&
-        (state.threadId === parentThreadId ||
-          state.subAgents.has(parentThreadId))
-      ) {
-        return runId;
-      }
-    }
-
-    // Global requests without thread context are unambiguous only while one
-    // run is live. Thread-scoped approvals always take the branch above.
-    if (!directThreadId && runSinks.size === 1) {
-      return runSinks.keys().next().value as string | undefined;
-    }
-    return undefined;
-  }
-
-  function installRunDispatcher(server: CodexAppServer): void {
-    server.setNotificationHandler((method, params) => {
-      if (method === "serverRequest/resolved") {
-        const requestId = (
-          params as Record<string, unknown> | undefined
-        )?.requestId;
-        if (
-          typeof requestId === "string" ||
-          typeof requestId === "number"
-        ) {
-          cancelPendingRequest(String(requestId));
-          serverRequestOwners.delete(String(requestId));
-        }
-      }
-
-      const runId = runIdForLiveThread(method, params);
-      if (!runId) return;
-      const sink = runSinks.get(runId);
-      if (!sink) return;
-
-      sink.notificationQueue = sink.notificationQueue
-        .then(() => sink.handleNotification(method, params))
-        .catch((error) => {
-          const message = error instanceof Error ? error.message : String(error);
-          logError(`Notification handler failed for ${runId}:`, message);
-          sink.finalize({
-            status: "failed",
-            error: `Codex event handling failed: ${message}`,
-          });
-        });
-    });
-
-    server.setServerRequestHandler((id, method, params) => {
-      const runId = runIdForLiveThread(method, params);
-      const sink = runId ? runSinks.get(runId) : undefined;
-      if (!runId || !sink) {
-        requestBroker.rejectInactive(server, id, method);
-        return;
-      }
-
-      serverRequestOwners.set(String(id), runId);
-      void sink.handleServerRequest(id, method, params).catch((error) => {
-        const message = error instanceof Error ? error.message : String(error);
-        logError(`Server request handler failed for ${runId}:`, message);
-        server.respondToRequestError(id, -32603, message);
-      });
-    });
-  }
-
   // ─────────────────────────────────────────────────────────────
   // Ensure app-server is running
   // ─────────────────────────────────────────────────────────────
@@ -888,19 +692,14 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
 
     await server.start(binaryPath, spawnCwd, env);
     appServer = server;
-    installRunDispatcher(server);
+    runCoordinator.installDispatcher(server);
 
     server.setOnClose(() => {
       if (appServer === server) {
         appServer = null;
       }
       capabilities.onServerClosed();
-      for (const sink of [...runSinks.values()]) {
-        sink.finalize({
-          status: "failed",
-          error: "Codex app-server exited unexpectedly",
-        });
-      }
+      runCoordinator.handleServerClose();
     });
 
     // Handshake: initialize → initialized (required before any other RPC)
@@ -935,14 +734,12 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         const threadName = p?.threadName as string | undefined;
         const threadId = p?.threadId as string | undefined;
         if (threadName && threadId) {
-          // Find runId by threadId and update title
-          for (const [runId, tid] of sessionIdMap) {
-            if (tid === threadId) {
-              runsRepo.updateRun(runId, { title: threadName }).catch((err) =>
-                logError("Failed to update run title:", err),
-              );
-              break;
-            }
+          const runId =
+            runCoordinator.findRunIdForThread(threadId);
+          if (runId) {
+            runsRepo.updateRun(runId, { title: threadName }).catch((err) =>
+              logError("Failed to update run title:", err),
+            );
           }
         }
       }
@@ -965,12 +762,20 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         const p = params as Record<string, unknown> | undefined;
         const goal = mapGoalSnapshot(p?.goal as Record<string, unknown> | undefined);
         const threadId = (p?.threadId ?? goal?.threadId) as string | undefined;
-        broadcastGoal(PROVIDER_IDS.codex, runIdForThread(threadId), goal);
+        broadcastGoal(
+          PROVIDER_IDS.codex,
+          runCoordinator.findRunIdForThread(threadId),
+          goal,
+        );
       }
       if (method === "thread/goal/cleared") {
         const p = params as Record<string, unknown> | undefined;
         const threadId = p?.threadId as string | undefined;
-        broadcastGoal(PROVIDER_IDS.codex, runIdForThread(threadId), null);
+        broadcastGoal(
+          PROVIDER_IDS.codex,
+          runCoordinator.findRunIdForThread(threadId),
+          null,
+        );
       }
     });
 
@@ -1101,167 +906,6 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
   }
 
   // ─────────────────────────────────────────────────────────────
-  // Run execution helper
-  // ─────────────────────────────────────────────────────────────
-
-  /**
-   * Set up notification/request handlers for a run, wait for turn completion.
-   * Returns a promise that resolves when the turn is done.
-   */
-  function waitForTurnCompletion(
-    server: CodexAppServer,
-    runId: string,
-    model: string | undefined,
-    onEvent: WorkRunEventHandler,
-    timeout: number,
-  ): Promise<TurnCompletion> {
-    return new Promise((resolve) => {
-      let resolved = false;
-
-      const finalize = (result: TurnCompletion) => {
-        if (resolved) return;
-        resolved = true;
-        clearTimeout(timeoutTimer);
-        if (runSinks.get(runId) === sink) {
-          runSinks.delete(runId);
-        }
-        for (const [requestId, ownerRunId] of serverRequestOwners) {
-          if (ownerRunId === runId) {
-            serverRequestOwners.delete(requestId);
-          }
-        }
-        cancelPendingRequests(runId);
-        resolve(result);
-      };
-
-      const timeoutTimer = setTimeout(() => {
-        finalize({ status: "failed", error: `Codex run timed out after ${timeout}ms` });
-      }, timeout);
-
-      const handleNotification = async (method: string, params: unknown) => {
-        const runState = activeRuns.get(runId);
-        if (runState?.aborted) {
-          finalize({ status: "canceled" });
-          return;
-        }
-
-        // Emit any pending flushed messages (from itemId changes in agentMessage/delta).
-        // Artifact collection happens at the Core layer (wrapped onEvent) — we just emit.
-        const currentRunState = activeRuns.get(runId);
-        if (currentRunState && currentRunState.pendingFlush.length > 0) {
-          const flushed = currentRunState.pendingFlush.splice(0);
-          for (const evt of flushed) {
-            await onEvent(evt);
-          }
-        }
-
-        // Resolve nicknames for collab spawn ends BEFORE mapNotification emits.
-        // App-server's `collabAgentToolCall` item carries thread IDs only; the
-        // sub-thread's `agentNickname`/`agentRole` live on the Thread object,
-        // so we fetch via `thread/read` to populate runState.subAgents up-front.
-        if (method === "item/completed") {
-          await eventMapper.maybeResolveCollabSubAgents(
-            server,
-            params,
-            runId,
-          );
-        }
-
-        const mappedEvents = eventMapper.mapNotification(
-          method,
-          params,
-          runId,
-          model,
-        );
-        for (const mapped of mappedEvents) {
-          await onEvent(mapped);
-
-          // Tool-completion outputs may carry file/patch artifacts — extract and re-emit.
-          // Core's wrapped onEvent collects them.
-          if (mapped.type === "tool_call" && mapped.output && mapped.metadata?.phase === "complete") {
-            const extracted = extractArtifactsFromToolOutput(mapped.toolName, mapped.output);
-            for (const art of extracted) {
-              await onEvent(art);
-            }
-          }
-        }
-
-        // Check for turn completion. TurnStatus = completed | interrupted | failed | inProgress
-        // (v2.rs::TurnStatus). interrupted == user called turn/interrupt, must surface as canceled.
-        if (method === "turn/completed") {
-          const p = params as Record<string, unknown> | undefined;
-          // Subagent turns stream their own turn/completed into the same handler.
-          // Finalizing on those would mark the run "succeeded" while the parent
-          // thread is still running (the user-visible "çat diye bitti" bug),
-          // so wait for the parent thread's own turn/completed.
-          const tcThreadId = (p?.threadId ?? p?.thread_id) as string | undefined;
-          const tcParentRs = activeRuns.get(runId);
-          if (
-            tcThreadId &&
-            tcParentRs?.threadId &&
-            tcThreadId !== tcParentRs.threadId
-          ) {
-            return;
-          }
-
-          const turn = p?.turn as Record<string, unknown> | undefined;
-          const status = (turn?.status ?? p?.status) as string | undefined;
-
-          const resolvedStatus: "succeeded" | "failed" | "canceled" =
-            status === "failed" ? "failed"
-            : status === "interrupted" ? "canceled"
-            : "succeeded";
-          finalize({
-            status: resolvedStatus,
-            error: resolvedStatus === "failed"
-              ? ((turn?.error as { message?: string })?.message ?? "Turn failed")
-              : undefined,
-          });
-        } else if (method === "error") {
-          const p = params as Record<string, unknown> | undefined;
-          const willRetry = (p as any)?.willRetry as boolean | undefined;
-          if (!willRetry) {
-            const msg = (p?.error as { message?: string })?.message ?? (p?.message as string) ?? "Error";
-            finalize({ status: "failed", error: msg });
-          }
-        }
-      };
-
-      // Server-request response policy lives behind the request-broker seam.
-      const handleServerRequest = (
-        id: number | string,
-        method: string,
-        params: unknown,
-      ) =>
-        requestBroker.handleRequest({
-          server,
-          id,
-          method,
-          params,
-          runId,
-          runIsDead:
-            resolved ||
-            activeRuns.get(runId)?.aborted === true,
-        });
-
-      const sink: CodexRunSink = {
-        handleNotification,
-        handleServerRequest,
-        notificationQueue: Promise.resolve(),
-        finalize,
-      };
-      const previous = runSinks.get(runId);
-      if (previous) {
-        previous.finalize({
-          status: "failed",
-          error: "A newer Codex turn replaced this run",
-        });
-      }
-      runSinks.set(runId, sink);
-    });
-  }
-
-  // ─────────────────────────────────────────────────────────────
   // WorkRunAdapter implementation
   // ─────────────────────────────────────────────────────────────
 
@@ -1313,8 +957,9 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         threadStartParams,
       );
       const threadId = threadResult.thread.id;
-
-      if (threadId) sessionIdMap.set(runId, threadId);
+      if (threadId) {
+        runCoordinator.attachThread(runId, threadId);
+      }
 
       // Goal mode: register the prompt as the thread's goal so Codex tracks
       // token/time usage against it and reports completion ("Goal achieved").
@@ -1324,10 +969,11 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       await maybeSetThreadGoal(server, threadId, goalMode, request.goal, request.workspace.rootPath, /*overwrite*/ true);
 
       const mainsCtx: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-      activeRuns.set(
+      runCoordinator.registerRun({
         runId,
-        createActiveRunState(threadId ?? null, mainsCtx),
-      );
+        threadId: threadId ?? null,
+        mainsCtx,
+      });
 
       const turnInput = buildTurnInput(request);
       const effort = overrideEffort ?? config.modelReasoningEffort;
@@ -1348,7 +994,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         await server.sendRequest("turn/start", turnStartParams);
       };
 
-      const session: CodexSession = { runId, startTurn, model: resolvedModel, timeout };
+      const session: CodexRunSession = { runId, startTurn, model: resolvedModel, timeout };
       return { session, prompt: request.goal, sessionId: threadId };
     },
 
@@ -1359,13 +1005,13 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
 
       const server = await ensureServer();
 
-      let threadId = sessionIdMap.get(runId);
+      let threadId = runCoordinator.getSessionThread(runId);
       if (!threadId) {
         // DB fallback: session may have been lost from memory (app restart)
         const run = await runsRepo.findRunById(runId);
         if (run?.sessionId) {
           threadId = run.sessionId;
-          sessionIdMap.set(runId, threadId);
+          runCoordinator.attachThread(runId, threadId);
         }
       }
       if (!threadId) {
@@ -1408,7 +1054,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
             fallbackStartParams,
           );
           const newThreadId = threadResult.thread.id;
-          sessionIdMap.set(runId, newThreadId);
+          runCoordinator.attachThread(runId, newThreadId);
           threadId = newThreadId;
         } else {
           throw resumeError;
@@ -1416,12 +1062,14 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       }
 
       const mainsCtxContinue: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-      activeRuns.set(
+      runCoordinator.registerRun({
         runId,
-        createActiveRunState(threadId, mainsCtxContinue),
-      );
+        threadId,
+        mainsCtx: mainsCtxContinue,
+      });
 
-      const currentThreadId = sessionIdMap.get(runId) ?? threadId;
+      const currentThreadId =
+        runCoordinator.getSessionThread(runId) ?? threadId;
 
       // Goal mode on a continue: only establish a goal if the thread doesn't
       // already have an in-progress one (don't reset a multi-turn goal).
@@ -1449,7 +1097,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         await server.sendRequest("turn/start", turnStartParams);
       };
 
-      const session: CodexSession = { runId, startTurn, model: resolvedModel, timeout };
+      const session: CodexRunSession = { runId, startTurn, model: resolvedModel, timeout };
       return { session, prompt: message, sessionId: threadId };
     },
 
@@ -1462,12 +1110,16 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
 
       const server = await ensureServer();
 
-      let sourceThreadId = sessionIdMap.get(sourceRunId);
+      let sourceThreadId =
+        runCoordinator.getSessionThread(sourceRunId);
       if (!sourceThreadId) {
         const sourceRun = await runsRepo.findRunById(sourceRunId);
         if (sourceRun?.sessionId) {
           sourceThreadId = sourceRun.sessionId;
-          sessionIdMap.set(sourceRunId, sourceThreadId);
+          runCoordinator.attachThread(
+            sourceRunId,
+            sourceThreadId,
+          );
         }
       }
       if (!sourceThreadId) {
@@ -1489,17 +1141,18 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
 
       const forkedThreadId = forkResult.thread.id;
 
-      sessionIdMap.set(runId, forkedThreadId);
+      runCoordinator.attachThread(runId, forkedThreadId);
 
       // Goal mode on a fork: the fork inherits the source thread's goal, so
       // only set one if there's none in progress (mirrors continue).
       await maybeSetThreadGoal(server, forkedThreadId, config.goalMode ?? false, message, request.workspace.rootPath, /*overwrite*/ false);
 
       const mainsCtxFork: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-      activeRuns.set(
+      runCoordinator.registerRun({
         runId,
-        createActiveRunState(forkedThreadId, mainsCtxFork),
-      );
+        threadId: forkedThreadId,
+        mainsCtx: mainsCtxFork,
+      });
 
       const turnInput = buildContinueTurnInput(message, {
         runId,
@@ -1528,7 +1181,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         await server.sendRequest("turn/start", turnStartParams);
       };
 
-      const session: CodexSession = { runId, startTurn, model: resolvedModel, timeout };
+      const session: CodexRunSession = { runId, startTurn, model: resolvedModel, timeout };
       return { session, prompt: message, sessionId: forkedThreadId };
     },
 
@@ -1562,13 +1215,12 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       );
       const threadId = threadResult.thread.id;
 
-      if (threadId) sessionIdMap.set(runId, threadId);
-
       const mainsCtxReview: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-      activeRuns.set(
+      runCoordinator.registerRun({
         runId,
-        createActiveRunState(threadId ?? null, mainsCtxReview),
-      );
+        threadId: threadId ?? null,
+        mainsCtx: mainsCtxReview,
+      });
 
       const reviewStartParams: CodexAppServerParams<"review/start"> = {
         threadId,
@@ -1584,13 +1236,11 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         );
         const reviewThreadId = result.reviewThreadId;
 
-        sessionIdMap.set(runId, reviewThreadId);
-        const state = activeRuns.get(runId);
-        if (state) {
-          state.subscribedThreadIds.add(reviewThreadId);
-          state.threadId = reviewThreadId;
-          state.turnId = result.turn.id;
-        }
+        runCoordinator.attachThread(
+          runId,
+          reviewThreadId,
+          result.turn.id,
+        );
         if (reviewThreadId !== threadId) {
           runsRepo.updateRun(runId, { sessionId: reviewThreadId }).catch((error) =>
             logWarn(
@@ -1624,7 +1274,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         },
       };
 
-      const session: CodexSession = {
+      const session: CodexRunSession = {
         runId,
         startTurn,
         model: resolvedModel,
@@ -1640,124 +1290,39 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       onEvent,
       signal,
     ): Promise<DriverOutcome> {
-      const cs = sessionParam as CodexSession;
-
-      // Wire abort: when signal fires, interrupt the current turn via the SDK.
-      const onAbort = () => {
-        const runState = activeRuns.get(cs.runId);
-        if (runState) runState.aborted = true;
-        if (
-          appServer?.isRunning &&
-          runState?.threadId &&
-          runState?.turnId
-        ) {
-          appServer
-            .sendRequest("turn/interrupt", {
-              threadId: runState.threadId,
-              turnId: runState.turnId,
-            })
-            .catch((err) => logError("Failed to interrupt turn:", err));
-        }
-      };
-      signal.addEventListener("abort", onAbort, { once: true });
-
-      try {
-        if (!appServer?.isRunning) {
-          throw new Error("Codex app-server is not running");
-        }
-
-        if (cs.preExecuteEvent) {
-          await onEvent(cs.preExecuteEvent);
-        }
-
-        // Register the thread-aware sink before starting the turn. App-server
-        // is allowed to emit notifications immediately after its response.
-        const completion = waitForTurnCompletion(
-          appServer,
-          cs.runId,
-          cs.model,
-          onEvent,
-          cs.timeout,
-        );
-        try {
-          await cs.startTurn();
-        } catch (error) {
-          runSinks.get(cs.runId)?.finalize({
-            status: "failed",
-            error: error instanceof Error ? error.message : String(error),
-          });
-          await completion;
-          throw error;
-        }
-        const result = await completion;
-
-        return {
-          status: result.status,
-          summary: result.error,
-          usage: eventMapper.flushUsage(cs.runId),
-        };
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        logError("executePrompt failed:", msg);
-        eventMapper.flushUsage(cs.runId);
-        return { status: "failed", summary: msg };
-      } finally {
-        signal.removeEventListener("abort", onAbort);
-      }
+      return runCoordinator.executeTurn(
+        appServer,
+        sessionParam as CodexRunSession,
+        onEvent,
+        signal,
+      );
     },
 
     async cleanup(sessionParam): Promise<void> {
-      const cs = sessionParam as CodexSession;
-      const state = activeRuns.get(cs.runId);
-      if (appServer?.isRunning && state) {
-        for (const threadId of state.subscribedThreadIds) {
-          try {
-            await appServer.sendRequest("thread/unsubscribe", { threadId });
-          } catch (error) {
-            logWarn(
-              `Failed to unsubscribe Codex thread ${threadId}:`,
-              error instanceof Error ? error.message : error,
-            );
-          }
-        }
-      }
-      activeRuns.delete(cs.runId);
+      const session = sessionParam as CodexRunSession;
+      await runCoordinator.cleanupRun(
+        appServer,
+        session.runId,
+      );
     },
 
     async canResumeSession(runId: string): Promise<boolean> {
-      if (sessionIdMap.has(runId)) return true;
+      if (runCoordinator.getSessionThread(runId)) return true;
       // DB fallback
       const run = await runsRepo.findRunById(runId);
       if (run?.sessionId) {
-        sessionIdMap.set(runId, run.sessionId);
+        runCoordinator.attachThread(runId, run.sessionId);
         return true;
       }
       return false;
     },
 
     async deleteSession(runId: string): Promise<void> {
-      sessionIdMap.delete(runId);
-      activeRuns.delete(runId);
-      eventMapper.discardRun(runId);
+      runCoordinator.deleteRun(runId);
     },
 
     async shutdown(): Promise<void> {
-      // Abort all active runs
-      for (const [runId, state] of activeRuns) {
-        state.aborted = true;
-        cancelPendingRequests(runId);
-      }
-      activeRuns.clear();
-      sessionIdMap.clear();
-      eventMapper.clear();
-      for (const sink of [...runSinks.values()]) {
-        sink.finalize({
-          status: "canceled",
-          error: "Codex driver is shutting down",
-        });
-      }
-      runSinks.clear();
-      serverRequestOwners.clear();
+      runCoordinator.shutdown();
       capabilities.shutdown();
 
       if (appServer) {
@@ -1780,14 +1345,17 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     getRateLimits: capabilities.getRateLimits,
 
     // ── Thread goal controls (Codex `thread/goal/*`) ──
-    // threadId is resolved from the in-memory sessionIdMap, falling back to the
+    // threadId is resolved from the coordinator, falling back to the
     // run's persisted sessionId (survives an app restart). We also broadcast the
     // result directly so the caller's card converges even if the matching
     // `thread/goal/updated` notification races or is missed.
 
     async setGoal(runId: string, params: GoalSetParams): Promise<GoalInfo | null> {
       try {
-        const threadId = sessionIdMap.get(runId) ?? (await runsRepo.findRunById(runId))?.sessionId ?? undefined;
+        const threadId =
+          runCoordinator.getSessionThread(runId) ??
+          (await runsRepo.findRunById(runId))?.sessionId ??
+          undefined;
         if (!threadId) {
           logWarn(`setGoal: no thread for run ${runId}`);
           return null;
@@ -1818,7 +1386,10 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
 
     async getGoal(runId: string): Promise<GoalInfo | null> {
       try {
-        const threadId = sessionIdMap.get(runId) ?? (await runsRepo.findRunById(runId))?.sessionId ?? undefined;
+        const threadId =
+          runCoordinator.getSessionThread(runId) ??
+          (await runsRepo.findRunById(runId))?.sessionId ??
+          undefined;
         if (!threadId || !appServer?.isRunning) return null;
         const result = await appServer.sendRequest("thread/goal/get", {
           threadId,
@@ -1835,7 +1406,10 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
 
     async clearGoal(runId: string): Promise<boolean> {
       try {
-        const threadId = sessionIdMap.get(runId) ?? (await runsRepo.findRunById(runId))?.sessionId ?? undefined;
+        const threadId =
+          runCoordinator.getSessionThread(runId) ??
+          (await runsRepo.findRunById(runId))?.sessionId ??
+          undefined;
         if (!threadId) return false;
         const server = await ensureServer();
         const result = await server.sendRequest("thread/goal/clear", {

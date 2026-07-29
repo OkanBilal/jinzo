@@ -574,6 +574,233 @@ describe("codex.driver / app-server protocol", () => {
     ).content === "parallel slow A")).toBe(false);
   });
 
+  it("waits for the parent turn after a subagent turn completes", async () => {
+    const tempDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "mains-codex-driver-"),
+    );
+    tempDirs.push(tempDir);
+    process.env.MAINS_CODEX_FIXTURE_LOG = path.join(
+      tempDir,
+      "protocol.jsonl",
+    );
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 500,
+    });
+    drivers.push(driver);
+    const subagentRequest = request("run-subagent-completion");
+    subagentRequest.goal = "subagent completion";
+    const acquired = await driver.createSession(subagentRequest);
+    let settled = false;
+    const outcomePromise = driver
+      .executePrompt(
+        acquired.session,
+        acquired.prompt,
+        async () => undefined,
+        new AbortController().signal,
+      )
+      .finally(() => {
+        settled = true;
+      });
+
+    await new Promise((resolve) => setTimeout(resolve, 35));
+    expect(settled).toBe(false);
+    await expect(outcomePromise).resolves.toMatchObject({
+      status: "succeeded",
+    });
+  });
+
+  it("finalizes duplicate parent completion notifications once", async () => {
+    const tempDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "mains-codex-driver-"),
+    );
+    tempDirs.push(tempDir);
+    process.env.MAINS_CODEX_FIXTURE_LOG = path.join(
+      tempDir,
+      "protocol.jsonl",
+    );
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 500,
+    });
+    drivers.push(driver);
+    const duplicateRequest = request("run-duplicate-completion");
+    duplicateRequest.goal = "duplicate completion";
+    const acquired = await driver.createSession(duplicateRequest);
+    const events: Array<Record<string, unknown>> = [];
+
+    const outcome = await driver.executePrompt(
+      acquired.session,
+      acquired.prompt,
+      async (event) => {
+        events.push(event as unknown as Record<string, unknown>);
+      },
+      new AbortController().signal,
+    );
+
+    expect(outcome.status).toBe("succeeded");
+    expect(
+      events.filter(
+        (event) =>
+          event.content === "Final answer" &&
+          event.ephemeral !== true,
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("keeps a replacement driver session alive when the previous driver shuts down", async () => {
+    const tempDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "mains-codex-driver-"),
+    );
+    tempDirs.push(tempDir);
+    process.env.MAINS_CODEX_FIXTURE_LOG = path.join(
+      tempDir,
+      "protocol.jsonl",
+    );
+
+    const previousDriver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 500,
+    });
+    const replacementDriver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 500,
+    });
+    drivers.push(previousDriver, replacementDriver);
+
+    await previousDriver.createSession(
+      request("run-previous-driver"),
+    );
+    await replacementDriver.createSession(
+      request("run-replacement-driver"),
+    );
+
+    await previousDriver.shutdown?.();
+
+    await expect(
+      replacementDriver.canResumeSession?.(
+        "run-replacement-driver",
+      ),
+    ).resolves.toBe(true);
+  });
+
+  it("does not start a turn when execution is already aborted", async () => {
+    const tempDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "mains-codex-driver-"),
+    );
+    tempDirs.push(tempDir);
+    const logPath = path.join(tempDir, "protocol.jsonl");
+    process.env.MAINS_CODEX_FIXTURE_LOG = logPath;
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 500,
+    });
+    drivers.push(driver);
+
+    const acquired = await driver.createSession(
+      request("run-already-aborted"),
+    );
+    const abortController = new AbortController();
+    abortController.abort();
+
+    const outcome = await driver.executePrompt(
+      acquired.session,
+      acquired.prompt,
+      async () => undefined,
+      abortController.signal,
+    );
+
+    expect(outcome.status).toBe("canceled");
+    expect(
+      readProtocolLog(logPath).filter(
+        (message) => message.method === "turn/start",
+      ),
+    ).toHaveLength(0);
+  });
+
+  it("interrupts the Codex turn when execution times out", async () => {
+    const tempDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "mains-codex-driver-"),
+    );
+    tempDirs.push(tempDir);
+    const logPath = path.join(tempDir, "protocol.jsonl");
+    process.env.MAINS_CODEX_FIXTURE_LOG = logPath;
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 40,
+    });
+    drivers.push(driver);
+    const timeoutRequest = request("run-timeout-interrupt");
+    timeoutRequest.goal = "timeout turn";
+    const acquired = await driver.createSession(timeoutRequest);
+
+    const outcome = await driver.executePrompt(
+      acquired.session,
+      acquired.prompt,
+      async () => undefined,
+      new AbortController().signal,
+    );
+
+    expect(outcome).toMatchObject({
+      status: "failed",
+      summary: "Codex run timed out after 40ms",
+    });
+    expect(
+      readProtocolLog(logPath).find(
+        (message) => message.method === "turn/interrupt",
+      )?.params,
+    ).toEqual({
+      threadId: "thread-1",
+      turnId: "turn-thread-1",
+    });
+  });
+
+  it("finalizes an aborted active turn without waiting for timeout", async () => {
+    const tempDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "mains-codex-driver-"),
+    );
+    tempDirs.push(tempDir);
+    const logPath = path.join(tempDir, "protocol.jsonl");
+    process.env.MAINS_CODEX_FIXTURE_LOG = logPath;
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 500,
+    });
+    drivers.push(driver);
+    const abortRequest = request("run-active-abort");
+    abortRequest.goal = "timeout turn";
+    const acquired = await driver.createSession(abortRequest);
+    const abortController = new AbortController();
+    const startedAt = Date.now();
+    const outcomePromise = driver.executePrompt(
+      acquired.session,
+      acquired.prompt,
+      async () => undefined,
+      abortController.signal,
+    );
+
+    await waitForProtocolMessage(
+      logPath,
+      (message) => message.method === "turn/start",
+    );
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    abortController.abort();
+    const outcome = await outcomePromise;
+
+    expect(outcome.status).toBe("canceled");
+    expect(Date.now() - startedAt).toBeLessThan(300);
+    expect(
+      readProtocolLog(logPath).some(
+        (message) => message.method === "turn/interrupt",
+      ),
+    ).toBe(true);
+  });
+
   it(
     "fails pending RPCs immediately when app-server exits",
     async () => {
