@@ -17,15 +17,17 @@ import {
   CODEX_ARCHIVED_CHAT_MESSAGE,
   isCodexArchivedThreadError,
   isCodexUnavailableThreadError,
-  mapCodexPluginList,
   mapImageGenerationLifecycle,
-  mapRateLimitResponse,
-  mapRateLimitSnapshot,
   mapSandboxMode,
   normalizeCodexResumeError,
   parseCodexReviewFindings,
   relativizeGoalMentions,
 } from "./codex.driver";
+import {
+  mapCodexPluginList,
+  mapRateLimitResponse,
+  mapRateLimitSnapshot,
+} from "./codex-capabilities";
 
 describe("codex.driver / generated protocol snapshot", () => {
   it("keeps the runtime contract version aligned with generated bindings", () => {

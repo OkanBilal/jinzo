@@ -35,10 +35,6 @@ import type {
   DriverOutcome,
   GoalInfo,
   GoalSetParams,
-  ModelInfo,
-  PluginDetail,
-  PluginInfo,
-  PluginListResponse,
   ProviderDriver,
   RateLimitInfo,
   WorkRunContextItem,
@@ -75,11 +71,12 @@ import {
   dispatchMainsTool,
 } from "./mains-tools.registry";
 import { guardsService } from "../../guards/guards.service";
-import type {
-  CodexAppServerParams,
-  CodexAppServerResult,
-} from "./codex-app-server-protocol/rpc";
+import type { CodexAppServerParams } from "./codex-app-server-protocol/rpc";
 import { CodexAppServer } from "./codex-app-server.client";
+import {
+  createCodexCapabilities,
+  mapRateLimitSnapshot,
+} from "./codex-capabilities";
 
 export const CODEX_ARCHIVED_CHAT_MESSAGE =
   "This chat is archived in Codex. Unarchive it in Codex to continue, or archive it in Mains to hide it from this workspace.";
@@ -438,137 +435,8 @@ const codexLogger = createLogger("[CodexDriver]");
 const { info: logInfo, error: logError, warn: logWarn } = codexLogger;
 
 // ─────────────────────────────────────────────────────────────
-// Rate-limit snapshot mapping + live push
+// Rate-limit live push
 // ─────────────────────────────────────────────────────────────
-
-/**
- * Map a Codex `RateLimitSnapshot` (from `account/rateLimits/read` or the
- * `account/rateLimits/updated` notification — identical wire shape) into mains'
- * `RateLimitInfo`. Shared by the pull path (`getRateLimits`) and the live push.
- */
-export function mapRateLimitSnapshot(rl: Record<string, unknown> | undefined): RateLimitInfo | null {
-  if (!rl) return null;
-  const primary = rl.primary as Record<string, unknown> | undefined;
-  const secondary = rl.secondary as Record<string, unknown> | undefined;
-  const credits = rl.credits as Record<string, unknown> | undefined;
-  const individualLimit = rl.individualLimit as
-    | Record<string, unknown>
-    | undefined;
-  return {
-    ...(typeof rl.limitId === "string" ? { limitId: rl.limitId } : {}),
-    ...(typeof rl.limitName === "string" ? { limitName: rl.limitName } : {}),
-    planType: typeof rl.planType === "string" ? rl.planType : undefined,
-    primary: primary ? {
-      usedPercent: primary.usedPercent as number,
-      windowDurationMins:
-        typeof primary.windowDurationMins === "number"
-          ? primary.windowDurationMins
-          : undefined,
-      resetsAt:
-        typeof primary.resetsAt === "number"
-          ? primary.resetsAt
-          : undefined,
-    } : undefined,
-    secondary: secondary ? {
-      usedPercent: secondary.usedPercent as number,
-      windowDurationMins:
-        typeof secondary.windowDurationMins === "number"
-          ? secondary.windowDurationMins
-          : undefined,
-      resetsAt:
-        typeof secondary.resetsAt === "number"
-          ? secondary.resetsAt
-          : undefined,
-    } : undefined,
-    credits: credits ? {
-      hasCredits: credits.hasCredits as boolean,
-      balance: typeof credits.balance === "string" ? credits.balance : undefined,
-      unlimited: credits.unlimited as boolean,
-    } : undefined,
-    ...(individualLimit
-      ? {
-          individualLimit: {
-            limit: individualLimit.limit as string,
-            used: individualLimit.used as string,
-            remainingPercent: individualLimit.remainingPercent as number,
-            resetsAt: individualLimit.resetsAt as number,
-          },
-        }
-      : {}),
-    ...(typeof rl.spendControlReached === "boolean"
-      ? { spendControlReached: rl.spendControlReached }
-      : {}),
-    ...(typeof rl.rateLimitReachedType === "string"
-      ? { rateLimitReachedType: rl.rateLimitReachedType }
-      : {}),
-  };
-}
-
-/** Map the complete `account/rateLimits/read` response, including new buckets. */
-export function mapRateLimitResponse(
-  response: Record<string, unknown> | undefined,
-): RateLimitInfo | null {
-  if (!response) return null;
-  const rateLimits = mapRateLimitSnapshot(
-    response.rateLimits as Record<string, unknown> | undefined,
-  );
-  if (!rateLimits) return null;
-
-  const rawBuckets = response.rateLimitsByLimitId as
-    | Record<string, unknown>
-    | null
-    | undefined;
-  const rateLimitsByLimitId: NonNullable<
-    RateLimitInfo["rateLimitsByLimitId"]
-  > = {};
-  for (const [limitId, rawSnapshot] of Object.entries(rawBuckets ?? {})) {
-    const snapshot = mapRateLimitSnapshot(
-      rawSnapshot as Record<string, unknown> | undefined,
-    );
-    if (snapshot) rateLimitsByLimitId[limitId] = snapshot;
-  }
-
-  const rawResetCredits = response.rateLimitResetCredits as
-    | Record<string, unknown>
-    | null
-    | undefined;
-  const rawCredits = rawResetCredits?.credits;
-  const resetCredits = Array.isArray(rawCredits)
-    ? rawCredits.map((rawCredit) => {
-        const credit = rawCredit as Record<string, unknown>;
-        return {
-          id: credit.id as string,
-          resetType: credit.resetType as string,
-          status: credit.status as string,
-          grantedAt: credit.grantedAt as number,
-          ...(typeof credit.expiresAt === "number"
-            ? { expiresAt: credit.expiresAt }
-            : {}),
-          ...(typeof credit.title === "string"
-            ? { title: credit.title }
-            : {}),
-          ...(typeof credit.description === "string"
-            ? { description: credit.description }
-            : {}),
-        };
-      })
-    : undefined;
-
-  return {
-    ...rateLimits,
-    ...(Object.keys(rateLimitsByLimitId).length > 0
-      ? { rateLimitsByLimitId }
-      : {}),
-    ...(rawResetCredits
-      ? {
-          rateLimitResetCredits: {
-            availableCount: Number(rawResetCredits.availableCount ?? 0),
-            ...(resetCredits ? { credits: resetCredits } : {}),
-          },
-        }
-      : {}),
-  };
-}
 
 /** Push a fresh rate-limit snapshot to every client via the event bus. */
 function broadcastRateLimits(providerId: string, rateLimits: RateLimitInfo | null): void {
@@ -947,194 +815,6 @@ function emitDocumentArtifactsFromText(
   }
 }
 
-/** Convert a local file path to a data URL. Returns undefined if the file doesn't exist. */
-function fileToDataUrl(filePath: string | undefined | null): string | undefined {
-  if (!filePath) return undefined;
-  try {
-    const data = fs.readFileSync(filePath);
-    const ext = path.extname(filePath).toLowerCase().slice(1);
-    const mime = ext === "svg" ? "image/svg+xml"
-      : ext === "png" ? "image/png"
-      : ext === "jpg" || ext === "jpeg" ? "image/jpeg"
-      : ext === "gif" ? "image/gif"
-      : ext === "webp" ? "image/webp"
-      : "application/octet-stream";
-    return `data:${mime};base64,${data.toString("base64")}`;
-  } catch {
-    return undefined;
-  }
-}
-
-interface AppDirectoryEntry {
-  name?: string;
-  description?: string;
-  logoUrl?: string;
-  installUrl?: string;
-  isAccessible?: boolean;
-  isEnabled?: boolean;
-}
-
-let appDirectoryMemo: { mtimeMs: number; map: Map<string, AppDirectoryEntry> } | null = null;
-
-/**
- * App/connector id → directory entry from codex's cached ChatGPT connector
- * directory (`~/.codex/cache/codex_app_directory/*.json`). This is what gives
- * plugin apps their real logos and Connected state — `plugin/read` returns
- * only id/name/description/category for remote plugins. Best-effort: returns
- * an empty map when the cache is missing, and the auth state is only as fresh
- * as codex's last directory sync.
- */
-function loadAppDirectory(): Map<string, AppDirectoryEntry> {
-  try {
-    const dir = path.join(os.homedir(), ".codex", "cache", "codex_app_directory");
-    let newestPath: string | null = null;
-    let newestMtime = 0;
-    for (const f of fs.readdirSync(dir)) {
-      if (!f.endsWith(".json")) continue;
-      const stat = fs.statSync(path.join(dir, f));
-      if (stat.mtimeMs > newestMtime) {
-        newestMtime = stat.mtimeMs;
-        newestPath = path.join(dir, f);
-      }
-    }
-    if (!newestPath) return new Map();
-    if (appDirectoryMemo && appDirectoryMemo.mtimeMs === newestMtime) return appDirectoryMemo.map;
-
-    const data = JSON.parse(fs.readFileSync(newestPath, "utf8")) as {
-      connectors?: Array<Record<string, unknown>>;
-    };
-    const map = new Map<string, AppDirectoryEntry>();
-    for (const c of data.connectors ?? []) {
-      const id = c?.id as string | undefined;
-      if (!id) continue;
-      map.set(id, {
-        name: (c.name as string) ?? undefined,
-        description: (c.description as string) ?? undefined,
-        logoUrl: (c.logoUrl as string) ?? undefined,
-        installUrl: (c.installUrl as string) ?? undefined,
-        isAccessible: (c.isAccessible as boolean) ?? undefined,
-        isEnabled: (c.isEnabled as boolean) ?? undefined,
-      });
-    }
-    appDirectoryMemo = { mtimeMs: newestMtime, map };
-    return map;
-  } catch {
-    return new Map();
-  }
-}
-
-/**
- * Resolve a plugin asset to something the renderer can display. Older Codex
- * releases return local file paths (converted to data URLs); the remote plugin
- * catalog (openai-curated-remote) returns https/data URLs in the `*Url` fields
- * instead, with the path fields null. Tries each candidate in order.
- */
-function pluginAssetUrl(...candidates: Array<string | undefined | null>): string | undefined {
-  for (const candidate of candidates) {
-    if (!candidate) continue;
-    if (/^(https?:|data:)/i.test(candidate)) return candidate;
-    const dataUrl = fileToDataUrl(candidate);
-    if (dataUrl) return dataUrl;
-  }
-  return undefined;
-}
-
-export function mapCodexPluginList(
-  result: Record<string, unknown> | null | undefined,
-): PluginListResponse {
-  const rawMarketplaces = Array.isArray(result?.marketplaces)
-    ? result.marketplaces as Array<Record<string, unknown>>
-    : [];
-
-  return {
-    marketplaces: rawMarketplaces.map((marketplace) => {
-      const rawPlugins = Array.isArray(marketplace.plugins)
-        ? marketplace.plugins as Array<Record<string, unknown>>
-        : [];
-
-      return {
-        name: (marketplace.name as string) ?? "",
-        path: (marketplace.path as string | null | undefined) ?? "",
-        interface:
-          (marketplace.interface as { displayName?: string } | null | undefined) ??
-          null,
-        plugins: rawPlugins.map((plugin): PluginInfo => {
-          const pluginInterface = plugin.interface as Record<string, unknown> | null | undefined;
-          return {
-            id: (plugin.id as string) ?? "",
-            name: (plugin.name as string) ?? "",
-            source:
-              (plugin.source as { type: string; path: string } | undefined) ??
-              { type: "local", path: "" },
-            installed: (plugin.installed as boolean) ?? false,
-            enabled: (plugin.enabled as boolean) ?? false,
-            installPolicy:
-              (plugin.installPolicy as PluginInfo["installPolicy"]) ??
-              "AVAILABLE",
-            authPolicy:
-              (plugin.authPolicy as PluginInfo["authPolicy"]) ?? "ON_INSTALL",
-            interface: pluginInterface
-              ? {
-                  displayName:
-                    (pluginInterface.displayName as string | undefined) ??
-                    undefined,
-                  shortDescription:
-                    (pluginInterface.shortDescription as string | undefined) ??
-                    undefined,
-                  longDescription:
-                    (pluginInterface.longDescription as string | undefined) ??
-                    undefined,
-                  developerName:
-                    (pluginInterface.developerName as string | undefined) ??
-                    undefined,
-                  category:
-                    (pluginInterface.category as string | undefined) ??
-                    undefined,
-                  capabilities:
-                    (pluginInterface.capabilities as string[] | undefined) ?? [],
-                  websiteUrl:
-                    (pluginInterface.websiteUrl as string | undefined) ??
-                    undefined,
-                  defaultPrompt:
-                    (pluginInterface.defaultPrompt as string[] | undefined) ??
-                    undefined,
-                  brandColor:
-                    (pluginInterface.brandColor as string | undefined) ??
-                    undefined,
-                  composerIcon: pluginAssetUrl(
-                    pluginInterface.composerIcon as string | undefined,
-                    pluginInterface.composerIconUrl as string | undefined,
-                  ),
-                  logo: pluginAssetUrl(
-                    pluginInterface.logo as string | undefined,
-                    pluginInterface.logoUrl as string | undefined,
-                  ),
-                  screenshots: [
-                    ...((pluginInterface.screenshots as string[] | undefined) ?? []),
-                    ...((pluginInterface.screenshotUrls as string[] | undefined) ?? []),
-                  ]
-                    .map((screenshot) => pluginAssetUrl(screenshot))
-                    .filter(Boolean) as string[],
-                  privacyPolicyUrl:
-                    (pluginInterface.privacyPolicyUrl as string | undefined) ??
-                    undefined,
-                  termsOfServiceUrl:
-                    (pluginInterface.termsOfServiceUrl as string | undefined) ??
-                    undefined,
-                }
-              : null,
-          };
-        }),
-      };
-    }),
-    marketplaceLoadErrors:
-      (result?.marketplaceLoadErrors as PluginListResponse["marketplaceLoadErrors"] | undefined) ??
-      [],
-    remoteSyncError: (result?.remoteSyncError as string | null | undefined) ?? null,
-    featuredPluginIds: (result?.featuredPluginIds as string[] | undefined) ?? [],
-  };
-}
-
 /**
  * Per-run session state handed back to Core as opaque `session`.
  * The runId is the only thing Core sees; everything else lives on the
@@ -1188,110 +868,14 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
   const runSinks = new Map<string, CodexRunSink>();
   const serverRequestOwners = new Map<string, string>();
   const titleGenerationModel = "gpt-5.4-mini";
-
-  // Marketplace path cache: marketplace name → path
-  const marketplacePathCache = new Map<string, string>();
-  /**
-   * Remote-catalog marketplaces (openai-curated-remote) have no on-disk path —
-   * their plugins are addressed by backend id (`remotePluginId`) via the
-   * `remoteMarketplaceName` param instead. Keyed by both the composite plugin
-   * id (`name@marketplace`, used by install/uninstall) and the bare plugin
-   * name (used by readPlugin, which never sees the composite id).
-   */
-  const remotePluginRefCache = new Map<string, { remotePluginId: string; marketplaceName: string }>();
-  const pluginCatalogTtlMs = 15 * 60 * 1000;
-  const installedPluginsTtlMs = 5 * 60 * 1000;
-  let pluginCatalogCache: { value: PluginListResponse; fetchedAt: number } | null = null;
-  let installedPluginsCache: { value: PluginListResponse; fetchedAt: number } | null = null;
-  let pluginCatalogInFlight: Promise<PluginListResponse> | null = null;
-  let installedPluginsInFlight: Promise<PluginListResponse> | null = null;
-  let pluginCapabilityPromise: Promise<void> | null = null;
-  let pluginCacheGeneration = 0;
-
-  function indexPluginReferences(result: Record<string, unknown>): void {
-    const rawMarketplaces = Array.isArray(result.marketplaces)
-      ? result.marketplaces as Array<Record<string, unknown>>
-      : [];
-    for (const marketplace of rawMarketplaces) {
-      const marketplaceName = marketplace.name as string;
-      const marketplacePath = marketplace.path as string | null | undefined;
-      if (marketplacePath) marketplacePathCache.set(marketplaceName, marketplacePath);
-
-      const rawPlugins = Array.isArray(marketplace.plugins)
-        ? marketplace.plugins as Array<Record<string, unknown>>
-        : [];
-      for (const plugin of rawPlugins) {
-        const remotePluginId = plugin.remotePluginId as string | undefined;
-        if (!remotePluginId) continue;
-        const reference = { remotePluginId, marketplaceName };
-        remotePluginRefCache.set(plugin.id as string, reference);
-        remotePluginRefCache.set(plugin.name as string, reference);
-      }
-    }
-  }
-
-  async function assertPluginCapability(server: CodexAppServer): Promise<void> {
-    pluginCapabilityPromise ??= (async () => {
-      let cursor: string | null = null;
-      do {
-        const result: CodexAppServerResult<"experimentalFeature/list"> =
-          await server.sendRequest("experimentalFeature/list", {
-            cursor,
-            limit: 100,
-          });
-        const feature = result.data.find(({ name }) => name === "plugins");
-        if (feature) {
-          if (!feature.enabled || feature.stage === "removed") {
-            throw new Error(
-              "Codex plugins feature is disabled or unavailable.",
-            );
-          }
-          return;
-        }
-        cursor = result.nextCursor;
-      } while (cursor);
-
-      throw new Error("Codex plugins feature is disabled or unavailable.");
-    })();
-    return pluginCapabilityPromise;
-  }
-
-  async function fetchPluginList(method: "plugin/list" | "plugin/installed"): Promise<PluginListResponse> {
-    const server = await ensureServer();
-    await assertPluginCapability(server);
-    const result = await server.sendRequest(method, {}, 30000) as Record<string, unknown>;
-    indexPluginReferences(result);
-    return mapCodexPluginList(result);
-  }
-
-  function pluginListFailure(
-    error: unknown,
-    method: "plugin/list" | "plugin/installed",
-    staleValue?: PluginListResponse,
-  ): PluginListResponse {
-    const message = error instanceof Error ? error.message : String(error);
-    logError(`Failed to call ${method}:`, message);
-    if (/method not found|unknown method|not supported/i.test(message)) {
-      logWarn(`${method} not supported by this Codex version`);
-    }
-    if (staleValue) {
-      return { ...staleValue, remoteSyncError: message };
-    }
-    return {
-      marketplaces: [],
-      marketplaceLoadErrors: [],
-      remoteSyncError: message,
-      featuredPluginIds: [],
-    };
-  }
-
-  function invalidatePluginCaches(): void {
-    pluginCacheGeneration += 1;
-    pluginCatalogCache = null;
-    installedPluginsCache = null;
-    pluginCatalogInFlight = null;
-    installedPluginsInFlight = null;
-  }
+  const capabilities = createCodexCapabilities({
+    defaultModel: config.defaultModel,
+    ensureServer: (cwd) => ensureServer(cwd),
+    getRunningServer: () =>
+      appServer?.isRunning ? appServer : null,
+    getCliHealth: () => getCodexCliHealth(),
+    logger: codexLogger,
+  });
 
   // Usage accumulation per run
   const usageAccumulator = new Map<string, {
@@ -1738,7 +1322,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       if (appServer === server) {
         appServer = null;
       }
-      pluginCapabilityPromise = null;
+      capabilities.onServerClosed();
       for (const sink of [...runSinks.values()]) {
         sink.finalize({
           status: "failed",
@@ -4519,9 +4103,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       }
       runSinks.clear();
       serverRequestOwners.clear();
-      invalidatePluginCaches();
-      marketplacePathCache.clear();
-      remotePluginRefCache.clear();
+      capabilities.shutdown();
 
       if (appServer) {
         await appServer.stop();
@@ -4531,113 +4113,16 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       logInfo("Shutdown complete");
     },
 
-    async listModels(): Promise<ModelInfo[]> {
-      try {
-        // Use existing server or start with homedir (neutral CWD that won't trigger restart)
-        const server = await ensureServer();
+    listModels: capabilities.listModels,
 
-        const result = await server.sendRequest("model/list", {});
-        const data = result.data;
-
-        if (!data || !Array.isArray(data)) {
-          logWarn("Invalid models response from app-server");
-          return [];
-        }
-
-        return data
-          .filter((m) => !m.hidden)
-          .map((m): ModelInfo => {
-            const inputModalities = m.inputModalities;
-            const effortLevels = m.supportedReasoningEfforts.map(
-              (option) => option.reasoningEffort,
-            ) as ("low" | "medium" | "high" | "xhigh")[];
-
-            // serviceTiers (preferred) or legacy additionalSpeedTiers (string[]).
-            // Codex returns { id, name, description } per tier; the older
-            // additionalSpeedTiers array carries only ids, so we lift them
-            // into the same shape with id==name as a fallback.
-            const tiersRaw = m.serviceTiers;
-            const legacyTiers = m.additionalSpeedTiers;
-            const serviceTiers = tiersRaw && tiersRaw.length > 0
-              ? tiersRaw.map((t) => ({ id: t.id, name: t.name ?? t.id, description: t.description }))
-              : legacyTiers && legacyTiers.length > 0
-                ? legacyTiers.map((id) => ({ id, name: id }))
-                : undefined;
-
-            const rawName = m.displayName || m.id;
-            // Format display name: "gpt-5.4" → "GPT-5.4", "gpt-5.1-codex-mini" → "GPT-5.1 Codex Mini"
-            const displayName = rawName
-              .replace(/^gpt-/i, "GPT-")
-              .replace(/-codex/i, " Codex")
-              .replace(/-mini$/i, " Mini")
-              .replace(/-max$/i, " Max")
-              .replace(/-spark$/i, " Spark");
-
-            // Codex's "fast" speed tier (id = SPEED_TIER_FAST = "fast" in
-            // codex-rs/protocol/src/openai_models.rs; Codex internally maps it
-            // to OpenAI's "priority" service tier). Some legacy responses still
-            // surface it as "priority", so accept either.
-            const supportsFastMode =
-              serviceTiers?.some((t) => t.id === "fast" || t.id === "priority") ?? false;
-
-            return {
-              id: m.id,
-              displayName,
-              isDefault: m.isDefault || m.id === config.defaultModel,
-              description: m.description,
-              capabilities: {
-                vision: inputModalities?.includes("image"),
-              },
-              supportsEffort: (effortLevels && effortLevels.length > 0) ?? false,
-              supportedEffortLevels: effortLevels,
-              supportsFastMode,
-              serviceTiers,
-            };
-          });
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        if (/not authenticated/i.test(msg)) throw error;
-        logError("Failed to list models:", error);
-        return [];
-      }
-    },
-
-    async getAccountInfo(): Promise<AccountInfo> {
-      const cli = await getCodexCliHealth();
-      try {
-        const server = await ensureServer();
-        const result = await server.sendRequest("account/read", {});
-        return {
-          account: result.account,
-          requiresOpenaiAuth: result.requiresOpenaiAuth,
-          cli,
-        };
-      } catch (error) {
-        logError("Failed to read account:", error);
-        return { account: null, requiresOpenaiAuth: true, cli };
-      }
-    },
+    getAccountInfo: capabilities.getAccountInfo,
 
     async updateCli(): Promise<CliUpdateResult> {
       const { stdout, stderr, code } = await runCodexCli(["update"], 120000);
       return { success: code === 0, output: `${stdout}${stderr}`.trim() };
     },
 
-    async getRateLimits(): Promise<import("../../../../shared/adapter.types").RateLimitInfo | null> {
-      try {
-        if (!appServer?.isRunning) return null;
-        const result = await appServer.sendRequest(
-          "account/rateLimits/read",
-          undefined,
-        );
-        return mapRateLimitResponse(
-          result as unknown as Record<string, unknown>,
-        );
-      } catch (error) {
-        logError("Failed to get rate limits:", error);
-        return null;
-      }
-    },
+    getRateLimits: capabilities.getRateLimits,
 
     // ── Thread goal controls (Codex `thread/goal/*`) ──
     // threadId is resolved from the in-memory sessionIdMap, falling back to the
@@ -4710,56 +4195,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       }
     },
 
-    async listSkills(
-      workspacePath?: string,
-    ): Promise<import("../../../../shared/adapter.types").SkillInfo[]> {
-      try {
-        const server = await ensureServer(workspacePath);
-        const result = await server.sendRequest("skills/list", {
-          ...(workspacePath ? { cwds: [workspacePath] } : {}),
-          forceReload: true,
-        });
-        const entries = result?.data as Array<Record<string, unknown>> | undefined;
-
-        const skills: import("../../../../shared/adapter.types").SkillInfo[] = [];
-        if (entries && Array.isArray(entries)) {
-          for (const entry of entries) {
-            const entrySkills = entry.skills as Array<Record<string, unknown>> | undefined;
-            if (!entrySkills) continue;
-            for (const s of entrySkills) {
-              if (!s.enabled) continue;
-              const iface = s.interface as Record<string, unknown> | undefined;
-              const scopeRaw = s.scope as string | undefined;
-              const source = scopeRaw === "user"
-                ? "user"
-                : scopeRaw === "repo" || scopeRaw === "project"
-                  ? "project"
-                  : undefined;
-              skills.push({
-                name: s.name as string,
-                description: (iface?.shortDescription as string) || (s.shortDescription as string) || (s.description as string) || "",
-                source: source as "user" | "project" | undefined,
-                path: s.path as string | undefined,
-                userInvokable: true,
-                displayName: (iface?.displayName as string) || undefined,
-                shortDescription: (iface?.shortDescription as string) || (s.shortDescription as string) || undefined,
-                iconSmall: (iface?.iconSmall as string) || undefined,
-                iconLarge: (iface?.iconLarge as string) || undefined,
-                brandColor: (iface?.brandColor as string) || undefined,
-                defaultPrompt: (iface?.defaultPrompt as string) || undefined,
-                scope: scopeRaw,
-                enabled: s.enabled as boolean | undefined,
-              });
-            }
-          }
-        }
-
-        return skills;
-      } catch (error) {
-        logError("Failed to list skills:", error);
-        return [];
-      }
-    },
+    listSkills: capabilities.listSkills,
 
     async generateTitle(goal: string, context?: WorkRunContextItem[]): Promise<string> {
       try {
@@ -5017,221 +4453,11 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       });
     },
 
-    async listPlugins(): Promise<PluginListResponse> {
-      if (
-        pluginCatalogCache &&
-        Date.now() - pluginCatalogCache.fetchedAt < pluginCatalogTtlMs
-      ) {
-        return pluginCatalogCache.value;
-      }
-      if (pluginCatalogInFlight) return pluginCatalogInFlight;
-
-      const staleValue = pluginCatalogCache?.value;
-      const generation = pluginCacheGeneration;
-      const request = fetchPluginList("plugin/list")
-        .then((value) => {
-          if (generation === pluginCacheGeneration) {
-            pluginCatalogCache = { value, fetchedAt: Date.now() };
-          }
-          return value;
-        })
-        .catch((error) => pluginListFailure(error, "plugin/list", staleValue))
-        .finally(() => {
-          if (pluginCatalogInFlight === request) pluginCatalogInFlight = null;
-        });
-      pluginCatalogInFlight = request;
-      return request;
-    },
-
-    async listInstalledPlugins(): Promise<PluginListResponse> {
-      if (
-        installedPluginsCache &&
-        Date.now() - installedPluginsCache.fetchedAt < installedPluginsTtlMs
-      ) {
-        return installedPluginsCache.value;
-      }
-      if (installedPluginsInFlight) return installedPluginsInFlight;
-
-      const staleValue = installedPluginsCache?.value;
-      const generation = pluginCacheGeneration;
-      const request = fetchPluginList("plugin/installed")
-        .then((value) => {
-          if (generation === pluginCacheGeneration) {
-            installedPluginsCache = { value, fetchedAt: Date.now() };
-          }
-          return value;
-        })
-        .catch((error) =>
-          pluginListFailure(error, "plugin/installed", staleValue),
-        )
-        .finally(() => {
-          if (installedPluginsInFlight === request) {
-            installedPluginsInFlight = null;
-          }
-        });
-      installedPluginsInFlight = request;
-      return request;
-    },
-
-    async readPlugin(pluginName: string, marketplacePath: string): Promise<PluginDetail> {
-      const server = await ensureServer();
-      await assertPluginCapability(server);
-      // Local marketplaces read by path; remote-catalog plugins (path-less) by backend id.
-      const remoteRef = !marketplacePath ? remotePluginRefCache.get(pluginName) : undefined;
-      if (!marketplacePath && !remoteRef) {
-        throw new Error(`Marketplace not found for plugin "${pluginName}". Try browsing plugins first.`);
-      }
-      const params = marketplacePath
-        ? { pluginName, marketplacePath }
-        : { pluginName: remoteRef!.remotePluginId, remoteMarketplaceName: remoteRef!.marketplaceName };
-      const result = await server.sendRequest("plugin/read", params, 30000);
-      const p = result.plugin as unknown as Record<string, unknown>;
-
-      const summary = p.summary as Record<string, unknown>;
-      const iface = summary?.interface as Record<string, unknown> | undefined;
-      const skills = (p.skills as Array<Record<string, unknown>>) ?? [];
-      const apps = (p.apps as Array<Record<string, unknown>>) ?? [];
-      const appDirectory = loadAppDirectory();
-
-      return {
-        marketplaceName: p.marketplaceName as string,
-        marketplacePath: p.marketplacePath as string,
-        summary: {
-          id: summary.id as string,
-          name: summary.name as string,
-          source: (summary.source as { type: string; path: string }) ?? { type: "local", path: "" },
-          installed: (summary.installed as boolean) ?? false,
-          enabled: (summary.enabled as boolean) ?? false,
-          installPolicy: (summary.installPolicy as PluginInfo["installPolicy"]) ?? "AVAILABLE",
-          authPolicy: (summary.authPolicy as PluginInfo["authPolicy"]) ?? "ON_INSTALL",
-          interface: iface ? {
-            displayName: iface.displayName as string | undefined,
-            shortDescription: iface.shortDescription as string | undefined,
-            longDescription: iface.longDescription as string | undefined,
-            developerName: iface.developerName as string | undefined,
-            category: iface.category as string | undefined,
-            capabilities: (iface.capabilities as string[]) ?? [],
-            websiteUrl: iface.websiteUrl as string | undefined,
-            defaultPrompt: iface.defaultPrompt as string[] | undefined,
-            brandColor: iface.brandColor as string | undefined,
-            composerIcon: pluginAssetUrl(iface.composerIcon as string | undefined, iface.composerIconUrl as string | undefined),
-            logo: pluginAssetUrl(iface.logo as string | undefined, iface.logoUrl as string | undefined),
-            screenshots: ([...((iface.screenshots as string[]) ?? []), ...((iface.screenshotUrls as string[]) ?? [])])
-              .map((s) => pluginAssetUrl(s))
-              .filter(Boolean) as string[],
-            privacyPolicyUrl: iface.privacyPolicyUrl as string | undefined,
-            termsOfServiceUrl: iface.termsOfServiceUrl as string | undefined,
-          } : null,
-        },
-        description: (p.description as string) ?? null,
-        skills: skills.map((s) => {
-          const sIface = s.interface as Record<string, unknown> | undefined;
-          return {
-            name: s.name as string,
-            displayName: (sIface?.displayName as string | undefined) ?? undefined,
-            path: s.path as string | undefined,
-            description: (sIface?.longDescription as string | undefined) ?? (s.description as string | undefined),
-            shortDescription: (sIface?.shortDescription as string | undefined) ?? (s.shortDescription as string | undefined),
-            enabled: (s.enabled as boolean) ?? false,
-          };
-        }),
-        apps: apps.map((a) => {
-          // plugin/read only carries id/name/description/category for remote
-          // plugins; logos and Connected state come from the directory cache.
-          const dirEntry = appDirectory.get(a.id as string);
-          return {
-            id: a.id as string,
-            name: (a.name as string) || dirEntry?.name || (a.id as string),
-            needsAuth: (a.needsAuth as boolean) ?? false,
-            description: (a.description as string | undefined) ?? dirEntry?.description,
-            installUrl: (a.installUrl as string | undefined) ?? dirEntry?.installUrl,
-            isAccessible: (a.isAccessible as boolean | undefined) ?? dirEntry?.isAccessible,
-            isEnabled: (a.isEnabled as boolean | undefined) ?? dirEntry?.isEnabled,
-            category: a.category as string | undefined,
-            iconUrl: dirEntry?.logoUrl,
-          };
-        }),
-        mcpServers: (p.mcpServers as string[]) ?? [],
-      };
-    },
-
-    async installPlugin(pluginId: string, _scope?: "user" | "project" | "local"): Promise<void> {
-      // Codex has no install-scope concept; _scope exists only for interface parity.
-      const server = await ensureServer();
-      await assertPluginCapability(server);
-      // pluginId format: "name@marketplace" e.g. "github@openai-curated-remote"
-      const atIdx = pluginId.lastIndexOf("@");
-      const marketplaceName = atIdx !== -1 ? pluginId.slice(atIdx + 1) : "";
-      const pluginName = atIdx !== -1 ? pluginId.slice(0, atIdx) : pluginId;
-      const marketplacePath = marketplacePathCache.get(marketplaceName);
-      const remoteRef = remotePluginRefCache.get(pluginId);
-
-      if (marketplacePath) {
-        await server.sendRequest("plugin/install", { pluginName, marketplacePath }, 120000);
-
-        // Enable the plugin after install via config
-        try {
-          await server.sendRequest("config/value/write", {
-            keyPath: `plugins.${pluginId}.enabled`,
-            value: true,
-            mergeStrategy: "replace",
-          });
-        } catch (err) {
-          logWarn("Failed to auto-enable plugin via config:", err);
-        }
-      } else if (remoteRef) {
-        // Remote catalog: install goes by backend id and downloads the bundle
-        // (hence the long timeout); the server enables it as part of install.
-        await server.sendRequest("plugin/install", {
-          pluginName: remoteRef.remotePluginId,
-          remoteMarketplaceName: remoteRef.marketplaceName,
-        }, 120000);
-      } else {
-        throw new Error(`Marketplace not found for "${pluginId}". Try browsing plugins first.`);
-      }
-
-      invalidatePluginCaches();
-      logInfo(`Plugin installed and enabled: ${pluginId}`);
-    },
-
-    async uninstallPlugin(pluginId: string): Promise<void> {
-      const server = await ensureServer();
-      await assertPluginCapability(server);
-      const atIdx = pluginId.lastIndexOf("@");
-      const marketplaceName = atIdx !== -1 ? pluginId.slice(atIdx + 1) : "";
-      const marketplacePath = marketplacePathCache.get(marketplaceName);
-      const remoteRef = remotePluginRefCache.get(pluginId);
-
-      if (marketplacePath) {
-        await server.sendRequest("plugin/uninstall", { pluginId });
-      } else if (remoteRef) {
-        // Remote plugins uninstall by backend id — the composite id silently no-ops.
-        await server.sendRequest("plugin/uninstall", { pluginId: remoteRef.remotePluginId });
-      } else {
-        throw new Error(`Marketplace not found for "${pluginId}". Try browsing plugins first.`);
-      }
-      invalidatePluginCaches();
-      logInfo(`Plugin uninstalled: ${pluginId}`);
-    },
-
-    async setPluginEnabled(pluginId: string, enabled: boolean): Promise<void> {
-      const server = await ensureServer();
-      await assertPluginCapability(server);
-      // Remote-catalog plugins ignore the config-level enabled flag (their
-      // state lives server-side): the write below would "succeed" without
-      // changing anything, so refuse loudly instead of pretending.
-      const atIdx = pluginId.lastIndexOf("@");
-      const marketplaceName = atIdx !== -1 ? pluginId.slice(atIdx + 1) : "";
-      if (!marketplacePathCache.get(marketplaceName) && remotePluginRefCache.has(pluginId)) {
-        throw new Error("Codex remote plugins can't be enabled/disabled — uninstall the plugin instead.");
-      }
-      await server.sendRequest("config/value/write", {
-        keyPath: `plugins.${pluginId}.enabled`,
-        value: enabled,
-        mergeStrategy: "replace",
-      });
-      invalidatePluginCaches();
-      logInfo(`Plugin ${enabled ? "enabled" : "disabled"}: ${pluginId}`);
-    },
+    listPlugins: capabilities.listPlugins,
+    listInstalledPlugins: capabilities.listInstalledPlugins,
+    readPlugin: capabilities.readPlugin,
+    installPlugin: capabilities.installPlugin,
+    uninstallPlugin: capabilities.uninstallPlugin,
+    setPluginEnabled: capabilities.setPluginEnabled,
   };
 }

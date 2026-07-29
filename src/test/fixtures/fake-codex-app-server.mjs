@@ -32,6 +32,61 @@ function notify(method, params) {
   send({ jsonrpc: "2.0", method, params });
 }
 
+function fixturePluginSummary(overrides = {}) {
+  return {
+    id: "fixture-plugin@fixture-remote",
+    remotePluginId: "remote-fixture-plugin-id",
+    version: "2.0.0",
+    localVersion: null,
+    name: "fixture-plugin",
+    shareContext: null,
+    source: { type: "remote", path: "" },
+    installed: false,
+    enabled: false,
+    installPolicy: "AVAILABLE",
+    installPolicySource: null,
+    mustShowInstallationInterstitial: false,
+    authPolicy: "ON_INSTALL",
+    availability: { type: "available" },
+    interface: {
+      displayName: "Fixture Plugin",
+      shortDescription: "Fixture remote plugin",
+      longDescription: "A remote plugin served by the app-server fixture.",
+      developerName: "Mains",
+      category: "testing",
+      capabilities: ["apps", "skills"],
+      websiteUrl: "https://example.com/fixture-plugin",
+      privacyPolicyUrl: null,
+      termsOfServiceUrl: null,
+      defaultPrompt: ["Use the fixture plugin"],
+      brandColor: "#ff8800",
+      composerIcon: null,
+      composerIconUrl: "https://example.com/fixture-composer.png",
+      logo: null,
+      logoDark: null,
+      logoUrl: "https://example.com/fixture-logo.png",
+      logoUrlDark: null,
+      screenshots: [],
+      screenshotUrls: ["https://example.com/fixture-shot.png"],
+    },
+    keywords: ["fixture", "test"],
+    ...overrides,
+  };
+}
+
+function fixturePluginCatalog() {
+  return {
+    marketplaces: [{
+      name: "fixture-remote",
+      path: null,
+      interface: { displayName: "Fixture Marketplace" },
+      plugins: [fixturePluginSummary()],
+    }],
+    marketplaceLoadErrors: [],
+    featuredPluginIds: ["fixture-plugin@fixture-remote"],
+  };
+}
+
 const input = readline.createInterface({
   input: process.stdin,
   crlfDelay: Infinity,
@@ -398,6 +453,142 @@ input.on("line", (line) => {
           availableCount: 1,
           credits: null,
         },
+      });
+      break;
+
+    case "model/list":
+      respond(id, {
+        data: [{
+          id: "gpt-fixture-codex",
+          model: "gpt-fixture-codex",
+          upgrade: null,
+          upgradeInfo: null,
+          availabilityNux: null,
+          displayName: "GPT Fixture Codex",
+          description: "Fixture model for capability integration tests.",
+          hidden: false,
+          supportedReasoningEfforts: [{
+            reasoningEffort: "medium",
+            description: "Balanced fixture reasoning.",
+          }],
+          defaultReasoningEffort: "medium",
+          inputModalities: ["text", "image"],
+          supportsPersonality: true,
+          additionalSpeedTiers: [],
+          serviceTiers: [{
+            id: "fast",
+            name: "Fast",
+            description: "Priority fixture service.",
+          }],
+          defaultServiceTier: null,
+          isDefault: true,
+        }],
+        nextCursor: null,
+      });
+      break;
+
+    case "skills/list":
+      respond(id, {
+        data: [{
+          cwd: params.cwds?.[0] ?? process.cwd(),
+          skills: [{
+            name: "fixture-skill",
+            description: "Fixture skill description.",
+            shortDescription: "Fixture skill",
+            interface: {
+              displayName: "Fixture Skill",
+              shortDescription: "Fixture skill",
+              iconSmall: null,
+              iconLarge: null,
+              brandColor: "#ff8800",
+              defaultPrompt: "Use the fixture skill",
+            },
+            path: "/tmp/fixture-skill/SKILL.md",
+            scope: "repo",
+            enabled: true,
+          }],
+          errors: [],
+        }],
+      });
+      break;
+
+    case "plugin/list":
+      respond(id, {
+        ...fixturePluginCatalog(),
+        remoteSyncError: null,
+      });
+      break;
+
+    case "plugin/installed":
+      respond(id, {
+        ...fixturePluginCatalog(),
+        marketplaces: fixturePluginCatalog().marketplaces.map(
+          (marketplace) => ({
+            ...marketplace,
+            plugins: marketplace.plugins.map((plugin) =>
+              fixturePluginSummary({
+                ...plugin,
+                installed: true,
+                enabled: true,
+                localVersion: "2.0.0",
+              })
+            ),
+          }),
+        ),
+      });
+      break;
+
+    case "plugin/read":
+      respond(id, {
+        plugin: {
+          marketplaceName: "fixture-remote",
+          marketplacePath: null,
+          summary: fixturePluginSummary(),
+          shareUrl: null,
+          description: "Fixture plugin detail.",
+          skills: [{
+            name: "fixture-plugin-skill",
+            description: "Fixture plugin skill.",
+            shortDescription: "Plugin skill",
+            interface: {
+              displayName: "Fixture Plugin Skill",
+              shortDescription: "Plugin skill",
+            },
+            path: null,
+            enabled: true,
+          }],
+          hooks: [],
+          apps: [{
+            id: "fixture-app",
+            name: "Fixture App",
+            description: "Fixture app.",
+            installUrl: "https://example.com/install",
+            category: "testing",
+          }],
+          appTemplates: [],
+          mcpServers: ["fixture-mcp"],
+          scheduledTasks: null,
+        },
+      });
+      break;
+
+    case "plugin/install":
+      respond(id, {
+        authPolicy: "ON_INSTALL",
+        appsNeedingAuth: [],
+      });
+      break;
+
+    case "plugin/uninstall":
+      respond(id, {});
+      break;
+
+    case "config/value/write":
+      respond(id, {
+        status: "ok",
+        version: "1",
+        filePath: "/tmp/mains-test-codex-home/config.toml",
+        overriddenMetadata: null,
       });
       break;
 
