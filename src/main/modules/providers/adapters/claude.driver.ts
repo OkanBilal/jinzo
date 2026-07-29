@@ -1118,8 +1118,6 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     options.systemPrompt = {
       type: "preset",
       preset: "claude_code",
-      append:
-        "IMPORTANT: Never commit changes using Bash (git add, git commit). If the user asks you to commit, always use the CommitChanges tool from the mains MCP server to stage and commit changes. Similarly, never create pull requests using Bash (gh pr create). Always use the CreatePR tool from the mains MCP server instead.",
     };
 
     if (runId && options.settings && typeof options.settings !== "string") {

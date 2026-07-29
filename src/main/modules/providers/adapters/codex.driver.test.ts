@@ -10,13 +10,49 @@
 import { describe, it, expect } from "vitest";
 import {
   buildCollaborationMode,
+  CODEX_ARCHIVED_CHAT_MESSAGE,
+  isCodexArchivedThreadError,
+  isCodexUnavailableThreadError,
   mapCodexPluginList,
   mapImageGenerationLifecycle,
   mapRateLimitSnapshot,
   mapSandboxMode,
+  normalizeCodexResumeError,
   parseCodexReviewFindings,
   relativizeGoalMentions,
 } from "./codex.driver";
+
+describe("codex.driver / thread availability errors", () => {
+  it("maps an archived-session RPC error to the Mains user-facing message", () => {
+    const error = new Error(
+      "session 019faaad is archived. Run `codex unarchive 019faaad` to unarchive it first. (code: -32600)",
+    );
+
+    expect(isCodexArchivedThreadError(error)).toBe(true);
+    expect(isCodexUnavailableThreadError(error)).toBe(true);
+    expect(normalizeCodexResumeError(error).message).toBe(
+      CODEX_ARCHIVED_CHAT_MESSAGE,
+    );
+  });
+
+  it("treats a missing thread as unavailable without rewriting its error", () => {
+    const error = new Error(
+      "thread not found: 019faaad (code: -32600)",
+    );
+
+    expect(isCodexArchivedThreadError(error)).toBe(false);
+    expect(isCodexUnavailableThreadError(error)).toBe(true);
+    expect(normalizeCodexResumeError(error)).toBe(error);
+  });
+
+  it("keeps unrelated app-server failures visible", () => {
+    const error = new Error("RPC timeout: thread/goal/get (30000ms)");
+
+    expect(isCodexArchivedThreadError(error)).toBe(false);
+    expect(isCodexUnavailableThreadError(error)).toBe(false);
+    expect(normalizeCodexResumeError(error)).toBe(error);
+  });
+});
 
 describe("codex.driver / mapCodexPluginList", () => {
   it("maps the installed-only wire response without requiring featured ids", () => {

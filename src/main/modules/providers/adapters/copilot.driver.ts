@@ -1309,13 +1309,11 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
         sessionConfig.reasoningEffort = reasoningEffort;
       }
 
-      const commitInstruction =
-        "\nIMPORTANT: Never commit changes using Bash (git add, git commit). If the user asks you to commit, always use the CommitChanges tool from the mains MCP server to stage and commit changes. Similarly, never create pull requests using Bash (gh pr create). Always use the CreatePR tool from the mains MCP server instead.";
       const workspaceContext = `You are working in the directory: ${request.workspace.rootPath}\nAll file operations should be relative to this workspace root.`;
       sessionConfig.systemMessage = {
         content: systemPrompt
-          ? `${workspaceContext}\n\n${systemPrompt}${commitInstruction}`
-          : `${workspaceContext}${commitInstruction}`,
+          ? `${workspaceContext}\n\n${systemPrompt}`
+          : workspaceContext,
       };
 
       const sdkSession = await copilotClient.createSession(sessionConfig);

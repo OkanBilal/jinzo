@@ -1656,9 +1656,6 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
       runId: request.runId,
     });
 
-    prompt +=
-      "\n\nIMPORTANT: Never commit changes using Bash (git add, git commit). If the user asks you to commit, always use the CommitChanges tool from the mains MCP server to stage and commit changes. Similarly, never create pull requests using Bash (gh pr create). Always use the CreatePR tool from the mains MCP server instead. Before explicitly adding named packages (for example: npm install axios, pnpm add zod, pip install requests, cargo add serde), you MUST call the CheckPackage tool first to verify package safety. Do NOT call CheckPackage for dependency restore commands with no package names, such as npm install, npm ci, pnpm install, yarn install, or bun install.";
-
     if (request.attachments && request.attachments.length > 0) {
       const { savedPaths, inlineTexts } = saveAttachments(request.attachments, request.runId);
       if (inlineTexts.length > 0) {

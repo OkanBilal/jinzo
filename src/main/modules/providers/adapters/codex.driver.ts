@@ -112,6 +112,44 @@ function isResponse(msg: unknown): msg is JsonRpcResponse {
   return typeof msg === "object" && msg !== null && "id" in msg && !("method" in msg);
 }
 
+export const CODEX_ARCHIVED_CHAT_MESSAGE =
+  "This chat is archived in Codex. Unarchive it in Codex to continue, or archive it in Mains to hide it from this workspace.";
+
+function codexErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+export function isCodexArchivedThreadError(error: unknown): boolean {
+  return /\b(?:session|thread)\b[^\n]*\bis archived\b/i.test(
+    codexErrorMessage(error),
+  );
+}
+
+function isCodexMissingThreadError(error: unknown): boolean {
+  return (
+    /\b(?:session|thread)\b[^\n]*\bnot found\b/i.test(
+      codexErrorMessage(error),
+    ) ||
+    /\b(?:missing|unknown) thread\b|\b(?:session|thread)\b[^\n]*\bdoes not exist\b/i.test(
+      codexErrorMessage(error),
+    )
+  );
+}
+
+export function isCodexUnavailableThreadError(error: unknown): boolean {
+  return (
+    isCodexArchivedThreadError(error) ||
+    isCodexMissingThreadError(error)
+  );
+}
+
+export function normalizeCodexResumeError(error: unknown): Error {
+  if (isCodexArchivedThreadError(error)) {
+    return new Error(CODEX_ARCHIVED_CHAT_MESSAGE);
+  }
+  return error instanceof Error ? error : new Error(String(error));
+}
+
 // ─────────────────────────────────────────────────────────────
 // Thread item types (mirroring SDK types for event mapping)
 // ─────────────────────────────────────────────────────────────
@@ -3081,16 +3119,14 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     | { type: "skill"; name: string; path: string }
   >;
 
-  const MAINS_TOOL_INSTRUCTION = "IMPORTANT: Never commit changes using shell commands (git add, git commit). If the user asks you to commit, always use the CommitChanges tool to stage and commit changes. Similarly, never create pull requests using shell commands (gh pr create). Always use the CreatePR tool instead. Before explicitly adding named packages (for example: npm install axios, pnpm add zod, pip install requests, cargo add serde), call CheckPackage first to verify package safety. Do not call CheckPackage for dependency restore commands with no package names, such as npm install, npm ci, pnpm install, yarn install, or bun install.";
-
   function buildTurnInput(request: WorkRunRequest): TurnInput {
     let prompt: string;
 
     if (request.context && request.context.length > 0) {
       const contextParts = formatContextSection(request.context);
-      prompt = `Context:\n${contextParts}\n\n---\n\n${MAINS_TOOL_INSTRUCTION}\n\n ${request.goal}`;
+      prompt = `Context:\n${contextParts}\n\n---\n\n ${request.goal}`;
     } else {
-      prompt = `${MAINS_TOOL_INSTRUCTION}\n\n ${request.goal}`;
+      prompt = request.goal;
     }
 
     prompt = appendPromptSections(prompt, {
@@ -3784,8 +3820,11 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
           config: buildCodexConfigOverrides(networkAccess),
         });
       } catch (resumeError) {
-        const errMsg = resumeError instanceof Error ? resumeError.message : String(resumeError);
-        if (/not found|missing thread|unknown thread|does not exist/i.test(errMsg)) {
+        if (isCodexArchivedThreadError(resumeError)) {
+          throw normalizeCodexResumeError(resumeError);
+        }
+        const errMsg = codexErrorMessage(resumeError);
+        if (isCodexMissingThreadError(resumeError)) {
           logWarn(`Thread resume failed (${errMsg}), starting new thread`);
           const threadResult = await server.sendRequest("thread/start", {
             cwd: request.workspace.rootPath,
@@ -4269,6 +4308,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         const result = await appServer.sendRequest("thread/goal/get", { threadId }) as Record<string, unknown>;
         return mapGoalSnapshot(result?.goal as Record<string, unknown> | undefined);
       } catch (error) {
+        if (isCodexUnavailableThreadError(error)) return null;
         logError("getGoal failed:", error);
         return null;
       }
