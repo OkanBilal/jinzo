@@ -66,7 +66,7 @@ export function ToggleButton({
             onTerminalToggle();
           }}
           className={` p-1.25 transition-all duration-300 ease-out
-             rounded-lg cursor-pointer hover:bg-primary-100/80 dark:hover:bg-primary/10
+             rounded-full cursor-pointer hover:bg-primary-100/80 dark:hover:bg-primary/10
            `}
           aria-label={terminalOpen ? "Close terminal" : "Open terminal"}
         >
@@ -77,7 +77,7 @@ export function ToggleButton({
         tooltip={isOpen ? "Close right panel" : "Open right panel"}
         tooltipPosition="left"
         onClick={onClick}
-        className="rounded-lg cursor-pointer hover:bg-primary-100 dark:hover:bg-primary/10 p-1  transition-all duration-300 ease-out"
+        className="rounded-full cursor-pointer hover:bg-primary-100 dark:hover:bg-primary/10 p-1  transition-all duration-300 ease-out"
         aria-label={isOpen ? "Close right panel" : "Open right panel"}
       >
         {isOpen ? (

@@ -358,6 +358,19 @@ export const runsRepo = {
     await db.update(runTurns).set(updateData).where(eq(runTurns.id, id));
   },
 
+  async patchTurnMetadata(
+    id: number,
+    metadata: Record<string, unknown>,
+  ): Promise<void> {
+    const db = getDb();
+    await db
+      .update(runTurns)
+      .set({
+        metadata: sql`json_patch(COALESCE(${runTurns.metadata}, '{}'), ${JSON.stringify(metadata)})`,
+      })
+      .where(eq(runTurns.id, id));
+  },
+
   async appendResponseContent(id: number, content: string): Promise<void> {
     const db = getDb();
     await db

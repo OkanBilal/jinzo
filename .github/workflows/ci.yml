@@ -47,3 +47,21 @@ jobs:
       - run: npm ci
       - run: npm rebuild better-sqlite3
       - run: npm test
+
+  codex-app-server:
+    name: Codex app-server (${{ matrix.codex-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        codex-version: ["0.146.0", "latest"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Install Codex CLI
+        run: npm install --global @openai/codex@${{ matrix.codex-version }}
+      - run: npm run codex:protocol:smoke

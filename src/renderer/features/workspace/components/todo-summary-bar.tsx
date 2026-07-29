@@ -6,12 +6,67 @@ import { Button } from "@/components/ui";
 
 interface TodoSummaryBarProps {
   events: RunEvent[];
+  structuralPlan?: StructuralPlanSnapshot | null;
 }
 
 interface TodoItem {
   content: string;
   status: "completed" | "in_progress" | "pending";
   activeForm?: string;
+}
+
+export interface StructuralPlanSnapshot {
+  providerTurnId: string;
+  explanation?: string;
+  steps: Array<{
+    step: string;
+    status: TodoItem["status"];
+  }>;
+  updatedAt?: number;
+}
+
+export function parseStructuralPlanSnapshot(
+  value: unknown,
+): StructuralPlanSnapshot | null {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Record<string, unknown>;
+  if (
+    typeof candidate.providerTurnId !== "string" ||
+    !Array.isArray(candidate.steps)
+  ) {
+    return null;
+  }
+
+  const steps = candidate.steps.flatMap((rawStep) => {
+    if (!rawStep || typeof rawStep !== "object") return [];
+    const step = rawStep as Record<string, unknown>;
+    if (
+      typeof step.step !== "string" ||
+      (
+        step.status !== "pending" &&
+        step.status !== "in_progress" &&
+        step.status !== "completed"
+      )
+    ) {
+      return [];
+    }
+    const status = step.status as TodoItem["status"];
+    return [{
+      step: step.step,
+      status,
+    }];
+  });
+
+  return {
+    providerTurnId: candidate.providerTurnId,
+    ...(typeof candidate.explanation === "string"
+      ? { explanation: candidate.explanation }
+      : {}),
+    steps,
+    ...(typeof candidate.updatedAt === "number"
+      ? { updatedAt: candidate.updatedAt }
+      : {}),
+  };
 }
 
 function parseEventInput(event: RunEvent): Record<string, unknown> | null {
@@ -118,6 +173,19 @@ function buildSnapshotTodos(events: RunEvent[]): TodoItem[] | null {
   return latest;
 }
 
+export function selectTodoSnapshot(
+  events: RunEvent[],
+  structuralPlan?: StructuralPlanSnapshot | null,
+): TodoItem[] | null {
+  if (structuralPlan) {
+    return structuralPlan.steps.map((step) => ({
+      content: step.step,
+      status: step.status,
+    }));
+  }
+  return buildSnapshotTodos(events) ?? buildTaskSnapshot(events);
+}
+
 /**
  * Sticky widget rendered above the input that shows "X out of Y tasks
  * completed". Replaces the per-call TaskCreate/TaskUpdate cards in the message
@@ -128,14 +196,17 @@ function buildSnapshotTodos(events: RunEvent[]): TodoItem[] | null {
  * "running" (so it disappears when the run finishes). It also returns null on
  * its own when the current events carry no todos.
  */
-export function TodoSummaryBar({ events }: TodoSummaryBarProps) {
+export function TodoSummaryBar({
+  events,
+  structuralPlan,
+}: TodoSummaryBarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Prefer a full-snapshot source (Copilot UpdateTodos); fall back to the
-  // incremental TaskCreate/TaskUpdate aggregation (Claude/Codex).
+  // A provider-native structural plan is authoritative. Fall back to the
+  // legacy tool-call projections for providers without this event stream.
   const todos = useMemo(
-    () => buildSnapshotTodos(events) ?? buildTaskSnapshot(events),
-    [events],
+    () => selectTodoSnapshot(events, structuralPlan),
+    [events, structuralPlan],
   );
 
   if (!todos || todos.length === 0) return null;

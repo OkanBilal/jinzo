@@ -523,6 +523,60 @@ describe("RunSession", () => {
       expect(ps!.content).toBe("Try asking about X");
     });
 
+    it("persists the latest structured plan on the active turn without replacing metadata", async () => {
+      const session = makeSession();
+      await flushBackground();
+      const [activeTurn] = await runsRepo.findTurnsByRun("r1");
+      await runsRepo.updateTurn(activeTurn.id, {
+        metadata: { existing: "keep" },
+      });
+
+      await session.project({
+        type: "plan_update",
+        providerTurnId: "turn-provider-1",
+        explanation: "Implementing",
+        steps: [
+          { step: "Inspect", status: "completed" },
+          { step: "Implement", status: "in_progress" },
+        ],
+        ts: 123,
+      });
+
+      const [persistedTurn] =
+        await runsRepo.findTurnsByRun("r1");
+      expect(persistedTurn.metadata).toEqual({
+        existing: "keep",
+        codexPlan: {
+          providerTurnId: "turn-provider-1",
+          explanation: "Implementing",
+          steps: [
+            { step: "Inspect", status: "completed" },
+            { step: "Implement", status: "in_progress" },
+          ],
+          updatedAt: 123,
+        },
+      });
+    });
+
+    it("waits for initial turn creation when a plan update arrives immediately", async () => {
+      const session = makeSession();
+
+      await session.project({
+        type: "plan_update",
+        providerTurnId: "turn-provider-early",
+        steps: [{ step: "Start", status: "in_progress" }],
+        ts: 456,
+      });
+
+      const [persistedTurn] =
+        await runsRepo.findTurnsByRun("r1");
+      expect(persistedTurn.metadata?.codexPlan).toEqual({
+        providerTurnId: "turn-provider-early",
+        steps: [{ step: "Start", status: "in_progress" }],
+        updatedAt: 456,
+      });
+    });
+
     it("treats status event as a no-op (no DB write)", async () => {
       const session = makeSession();
       await flushBackground();

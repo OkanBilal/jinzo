@@ -32,6 +32,8 @@ export default defineConfig(() => {
         'bufferutil',
         'utf-8-validate',
         '@anthropic-ai/claude-agent-sdk',
+        '@anthropic-ai/claude-agent-sdk-darwin-arm64',
+        '@anthropic-ai/claude-agent-sdk-darwin-x64',
         '@github/copilot-sdk',
         '@github/copilot',
         '@github/copilot-darwin-arm64',
@@ -67,6 +69,8 @@ export default defineConfig(() => {
         // strips the non-target one from the final bundle.
         const scopedModulesToCopy = [
           '@anthropic-ai/claude-agent-sdk',
+          '@anthropic-ai/claude-agent-sdk-darwin-arm64',
+          '@anthropic-ai/claude-agent-sdk-darwin-x64',
           '@github/copilot-sdk',
           '@github/copilot',
           '@github/copilot-darwin-arm64',

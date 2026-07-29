@@ -196,6 +196,25 @@ export interface WorkRunContextUsageEvent {
   ts?: number;
 }
 
+export interface WorkRunPlanStep {
+  step: string;
+  status: "pending" | "in_progress" | "completed";
+}
+
+/**
+ * Latest structured execution-plan snapshot for the active provider turn.
+ *
+ * This is intentionally separate from a provider's user-facing plan proposal
+ * item: it represents live execution progress, not content awaiting approval.
+ */
+export interface WorkRunPlanUpdateEvent {
+  type: "plan_update";
+  providerTurnId: string;
+  explanation?: string;
+  steps: WorkRunPlanStep[];
+  ts?: number;
+}
+
 /**
  * Union of all possible events emitted during a work run
  */
@@ -206,7 +225,8 @@ export type WorkRunEvent =
   | WorkRunStatusEvent
   | WorkRunSubagentEvent
   | WorkRunPromptSuggestionEvent
-  | WorkRunContextUsageEvent;
+  | WorkRunContextUsageEvent
+  | WorkRunPlanUpdateEvent;
 
 /**
  * Artifact summary in the result
@@ -682,11 +702,43 @@ export interface GoalSetParams {
 /**
  * Rate limit information from a provider
  */
-export interface RateLimitInfo {
+export interface SpendControlLimitInfo {
+  limit: string;
+  used: string;
+  remainingPercent: number;
+  resetsAt: number;
+}
+
+export interface RateLimitSnapshotInfo {
+  limitId?: string;
+  limitName?: string;
   planType?: string;
   primary?: RateLimitWindow;
   secondary?: RateLimitWindow;
   credits?: { hasCredits: boolean; balance?: string; unlimited: boolean };
+  individualLimit?: SpendControlLimitInfo;
+  spendControlReached?: boolean;
+  rateLimitReachedType?: string;
+}
+
+export interface RateLimitResetCreditInfo {
+  id: string;
+  resetType: string;
+  status: string;
+  grantedAt: number;
+  expiresAt?: number;
+  title?: string;
+  description?: string;
+}
+
+export interface RateLimitInfo extends RateLimitSnapshotInfo {
+  /** Complete multi-bucket view keyed by Codex's metered limit id. */
+  rateLimitsByLimitId?: Record<string, RateLimitSnapshotInfo>;
+  rateLimitResetCredits?: {
+    availableCount: number;
+    /** Undefined means the backend only returned a count. */
+    credits?: RateLimitResetCreditInfo[];
+  };
 }
 
 export interface RateLimitWindow {
@@ -754,7 +806,7 @@ export interface CodexAdapterConfig {
   baseUrl?: string;
   /** Additional Codex CLI config overrides (passed as --config key=value) */
   config?: Record<string, unknown>;
-  /** Saved JSON Schema definitions for structured output (forwarded as `output_schema` on `turn/start`). */
+  /** Saved JSON Schema definitions for structured output (forwarded as `outputSchema` on `turn/start`). */
   structuredOutputs?: Record<string, StructuredOutputEntry>;
   /** ID of the currently selected structured output schema (null = disabled). */
   structuredOutputsSelectedId?: string | null;
@@ -1506,8 +1558,11 @@ export interface AccountInfo {
     type: "apiKey";
   } | {
     type: "chatgpt";
-    email: string;
+    email: string | null;
     planType: string;
+  } | {
+    type: "amazonBedrock";
+    usesCodexManagedCredentials: boolean;
   } | {
     type: "cursor";
     email: string;
@@ -1528,6 +1583,9 @@ export interface AccountInfo {
     version: string | null;
     channel: string | null;
     outdated: boolean;
+    compatibility?: "supported" | "newer" | "unsupported" | "unknown";
+    minimumVersion?: string;
+    testedProtocolVersion?: string;
   };
 }
 

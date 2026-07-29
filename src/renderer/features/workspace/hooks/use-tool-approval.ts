@@ -7,9 +7,13 @@ export interface ToolApprovalRequest {
   toolName: string;
   toolInput?: Record<string, unknown>;
   kind: "tool_approval" | "ask_user";
+  header?: string;
   question?: string;
   options?: Array<{ label: string; description?: string }>;
   multiSelect?: boolean;
+  isOther?: boolean;
+  isSecret?: boolean;
+  autoResolutionMs?: number;
   timestamp: number;
 }
 
@@ -32,13 +36,21 @@ export function useToolApproval(runs?: readonly RunStatusLike[]) {
   const [rawApprovals, setRawApprovals] = useState<ToolApprovalRequest[]>([]);
 
   useEffect(() => {
-    const cleanup = appEvents.runs.onToolApprovalRequest(
+    const cleanupRequest = appEvents.runs.onToolApprovalRequest(
       (request: ToolApprovalRequest) => {
         setRawApprovals((prev) => [...prev, request]);
       },
     );
+    const cleanupResolved = appEvents.runs.onToolApprovalResolved(
+      ({ requestId }: { requestId: string }) => {
+        setRawApprovals((prev) =>
+          prev.filter((request) => request.requestId !== requestId),
+        );
+      },
+    );
     return () => {
-      cleanup();
+      cleanupRequest();
+      cleanupResolved();
     };
   }, []);
 

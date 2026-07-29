@@ -7,6 +7,14 @@ export function shouldHideRightPanel(pathname: string): boolean {
 }
 
 /**
+ * How long the sidebar / right-panel slide takes, in ms. The panels animate via
+ * a Tailwind `duration-200` class, which can't read this constant — so any
+ * change here must be mirrored in `sidebar.tsx` and `panel.tsx`. JS timers that
+ * unmount a panel derive from this value so they never fire mid-transition.
+ */
+export const LAYOUT_PANEL_ANIM_MS = 200;
+
+/**
  * Layout widths are driven at runtime through these CSS custom properties
  * (see `index.css` for the static fallbacks). Persisted values live in the
  * `appSettings` redux slice and are mirrored onto `:root` by
