@@ -391,9 +391,17 @@ export interface ToolApprovalRequest {
   toolName: string;
   toolInput?: Record<string, unknown>;
   kind: "tool_approval" | "ask_user";
+  /** Short label shown above a structured question. */
+  header?: string;
   question?: string;
   options?: Array<{ label: string; description?: string }>;
   multiSelect?: boolean;
+  /** Codex marks questions that expect a free-form "Other" response. */
+  isOther?: boolean;
+  /** Render free-form input as a masked password field. */
+  isSecret?: boolean;
+  /** Provider-requested timeout before the question auto-resolves. */
+  autoResolutionMs?: number;
   timestamp: number;
 }
 
@@ -402,4 +410,3 @@ export interface ToolApprovalResponse {
   approved: boolean;
   answer?: string;
 }
-

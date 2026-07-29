@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useMainHeader } from "@/hooks/use-main-header";
 import { useCapabilities } from "@/lib/platform";
+import { LAYOUT_PANEL_ANIM_MS } from "@/lib/layout";
 
 interface MainContentProps {
   children: ReactNode;
@@ -48,7 +49,9 @@ export function MainContent({
       style={{
         marginLeft,
         marginRight,
-        transition: "margin 200ms ease-out",
+        // Content margins track the panels as they slide — same duration so the
+        // two edges never drift apart mid-animation.
+        transition: `margin ${LAYOUT_PANEL_ANIM_MS}ms ease-out`,
       }}
     >
       {header && (

@@ -9,11 +9,16 @@ type RespondToToolApproval = (
   answer?: string,
 ) => void;
 
-export type PlanStatus = "pending" | "applied" | "dismissed";
+export type PlanStatus = "pending" | "applied" | "dismissed" | "failed";
 export type PlanInteractionMode = "live-approval" | "follow-up";
 
 function isPlanStatus(value: unknown): value is PlanStatus {
-  return value === "pending" || value === "applied" || value === "dismissed";
+  return (
+    value === "pending" ||
+    value === "applied" ||
+    value === "dismissed" ||
+    value === "failed"
+  );
 }
 
 export function getPersistedPlanStatus(
@@ -22,6 +27,7 @@ export function getPersistedPlanStatus(
 ): PlanStatus {
   if (isPlanStatus(metadata?.planStatus)) return metadata.planStatus;
   if (isPlanStatus(legacyOutput?.planStatus)) return legacyOutput.planStatus;
+  if (metadata?.status === "error") return "failed";
   return "pending";
 }
 

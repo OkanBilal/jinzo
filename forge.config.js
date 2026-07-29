@@ -107,6 +107,23 @@ module.exports = {
         }
       }
 
+      // Keep only the Claude Agent SDK native binary for the target arch.
+      const anthropicScope = path.join(viteNodeModules, '@anthropic-ai');
+      if (fs.existsSync(anthropicScope)) {
+        for (const entry of fs.readdirSync(anthropicScope, { withFileTypes: true })) {
+          const isNativeBinaryPkg =
+            /^claude-agent-sdk-(darwin|linux|linuxmusl|win32)-/.test(entry.name);
+          const targetPkg = `claude-agent-sdk-${platform}-${arch}`;
+          if (entry.isDirectory() && isNativeBinaryPkg && entry.name !== targetPkg) {
+            const fullPath = path.join(anthropicScope, entry.name);
+            const size = getDirSize(fullPath);
+            fs.rmSync(fullPath, { recursive: true, force: true });
+            totalSaved += size;
+            console.log(`  ✓ Removed ${path.relative(viteNodeModules, fullPath)} (${(size / 1024 / 1024).toFixed(1)} MB)`);
+          }
+        }
+      }
+
       // Strip node-pty source/build artifacts not needed at runtime
       const ptyExtras = ['third_party', 'deps', 'src', 'scripts', 'node-addon-api'].map(
         d => path.join(viteNodeModules, 'node-pty', d)
@@ -138,8 +155,8 @@ module.exports = {
         'Mains may capture the screen when you use features or connected tools that need a visual of your desktop.',
     },
     asar: {
-      unpack: '{**/*.node,**/copilot,**/spawn-helper,**/rg,**/*.wasm}',
-      unpackDir: '.vite/build/node_modules/{node-pty,@github/copilot-darwin-arm64,@github/copilot-darwin-x64,@github/copilot/prebuilds,@github/copilot/ripgrep,@anthropic-ai/claude-agent-sdk/vendor}',
+      unpack: '{**/*.node,**/claude,**/copilot,**/spawn-helper,**/rg,**/*.wasm}',
+      unpackDir: '.vite/build/node_modules/{node-pty,@github/copilot-darwin-arm64,@github/copilot-darwin-x64,@github/copilot/prebuilds,@github/copilot/ripgrep,@anthropic-ai/claude-agent-sdk-darwin-arm64,@anthropic-ai/claude-agent-sdk-darwin-x64}',
     },
     icon: 'src/renderer/public/icon',
     extraResource: [

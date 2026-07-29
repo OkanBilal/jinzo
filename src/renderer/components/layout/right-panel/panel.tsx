@@ -28,7 +28,7 @@ export function Panel({ isVisible, isAnimatedIn, width, component }: PanelProps)
 
   return (
     <div
-      className={`block fixed top-0 bottom-0 right-0 overflow-hidden transition-[transform,opacity] duration-300 ease-out z-(--z-overlay) will-change-transform ${
+      className={`block fixed top-0 bottom-0 right-0 overflow-hidden transition-[transform,opacity] duration-200 ease-out z-(--z-overlay) will-change-transform ${
         isMobile ? "bg-primary dark:bg-primary-950 shadow-2xl" : "bg-transparent"
       }`}
       style={{

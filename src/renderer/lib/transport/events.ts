@@ -47,6 +47,9 @@ export const appEvents = {
     onToolApprovalRequest: bind<typeof window.api.runs.onToolApprovalRequest>(
       CHANNELS.runs.toolApprovalRequest,
     ),
+    onToolApprovalResolved: bind<typeof window.api.runs.onToolApprovalResolved>(
+      CHANNELS.runs.toolApprovalResolved,
+    ),
   },
   providers: {
     onModelsUpdated: bind<typeof window.api.providers.onModelsUpdated>(

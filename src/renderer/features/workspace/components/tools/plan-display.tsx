@@ -115,6 +115,11 @@ export function PlanDisplay({
             Dismissed
           </span>
         )}
+        {status === "failed" && (
+          <span className="text-xxs text-red-500">
+            Failed
+          </span>
+        )}
         <ArrowUp
           className={`size-3 text-primary-500 ml-auto transition-transform ${isExpanded ? "rotate-180" : "rotate-90"}`}
         />

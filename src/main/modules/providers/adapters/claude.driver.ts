@@ -49,8 +49,15 @@ import type {
   WorkRunRequest,
   WorkRunUsage,
 } from "../../../../shared/adapter.types";
-import { findClaudeBinary, resolveCandidate } from "../providers.utils";
-import { requestToolApproval } from "../../runs/user-input-broker";
+import {
+  findClaudeBinary,
+  findPackagedClaudeSdkBinary,
+  resolveCandidate,
+} from "../providers.utils";
+import {
+  cancelPendingRequest,
+  requestToolApproval,
+} from "../../runs/user-input-broker";
 import type { ToolApprovalRequest, ToolApprovalResponse } from "../../runs/runs.dto";
 import { runsRepo } from "../../runs/runs.repo";
 import {
@@ -199,6 +206,22 @@ export function buildClaudePermissionModeOptions(
     // forward permission requests that require an application decision.
     ...(canUseTool ? { canUseTool } : {}),
   };
+}
+
+/**
+ * The Agent SDK ships a Claude Code binary with the same protocol version.
+ * Let it select that binary unless the user explicitly configured an override;
+ * auto-discovered system CLIs update independently and can break the SDK's
+ * bidirectional permission stream.
+ */
+export function buildClaudeExecutableOptions(
+  configuredBinary?: string,
+  packagedSdkBinary?: string | null,
+): Pick<SDKOptions, "pathToClaudeCodeExecutable"> {
+  const candidate = configuredBinary ?? packagedSdkBinary;
+  if (!candidate) return {};
+  const resolved = resolveCandidate(candidate);
+  return resolved ? { pathToClaudeCodeExecutable: resolved } : {};
 }
 
 interface SDKCanUseToolOptions {
@@ -508,6 +531,7 @@ interface ClaudePermissionBridgeOptions {
   allowedTools: Set<string>;
   bypassMode: boolean;
   requestApproval?: ApprovalRequester;
+  cancelApproval?: (requestId: string) => void;
 }
 
 interface PermissionDecision {
@@ -529,6 +553,7 @@ export function createClaudePermissionBridge({
   allowedTools,
   bypassMode,
   requestApproval = requestToolApproval,
+  cancelApproval = cancelPendingRequest,
 }: ClaudePermissionBridgeOptions): {
   canUseTool: SDKCanUseTool;
 } {
@@ -589,7 +614,15 @@ export function createClaudePermissionBridge({
       if (resolveAbort) context.signal.removeEventListener("abort", resolveAbort);
     }
 
-    if (!response?.approved) {
+    if (!response) {
+      // The SDK may close a control stream while a permission request is
+      // parked (for example during background-agent handoff). Resolve the
+      // broker entry as well so the renderer never retains a ghost dialog.
+      cancelApproval(requestId);
+      return { allowed: false, reason: "Permission request aborted" };
+    }
+
+    if (!response.approved) {
       return { allowed: false, reason: "User denied permission" };
     }
 
@@ -952,49 +985,27 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       permissionMode: runPermissionMode,
     } = args;
 
-    let binaryPath: string | null = null;
-    if (config.binary) {
-      const resolved = resolveCandidate(config.binary);
-      if (resolved) {
-        binaryPath = resolved;
-        logInfo("Using configured Claude CLI at:", binaryPath);
-      } else {
-        logWarn(
-          `Configured binary path "${config.binary}" is not a valid executable, falling back to discovery`,
-        );
-      }
-    }
-
-    if (!binaryPath) {
-      binaryPath = findClaudeBinary();
-    }
-
-    if (!binaryPath) {
-      throw new Error(
-        "Claude CLI not found. Please install Claude Code and run `claude login` to authenticate, " +
-          "or ensure the CLI is in your PATH. You can also set config.binary to the full path of the claude executable.",
+    const packagedSdkBinary = config.binary
+      ? null
+      : findPackagedClaudeSdkBinary();
+    const executableOptions = buildClaudeExecutableOptions(
+      config.binary,
+      packagedSdkBinary,
+    );
+    if (config.binary && !executableOptions.pathToClaudeCodeExecutable) {
+      logWarn(
+        `Configured binary path "${config.binary}" is not a valid executable; using the SDK-bundled Claude CLI`,
       );
+    } else if (executableOptions.pathToClaudeCodeExecutable) {
+      logInfo(
+        config.binary
+          ? "Using configured Claude CLI at:"
+          : "Using packaged SDK-bundled Claude CLI at:",
+        executableOptions.pathToClaudeCodeExecutable,
+      );
+    } else {
+      logInfo("Using SDK-bundled Claude CLI");
     }
-
-    try {
-      const realPath = fs.realpathSync(binaryPath);
-      const stat = fs.statSync(realPath);
-      if (stat.isDirectory()) {
-        throw new Error(
-          `Claude CLI path "${binaryPath}" resolves to a directory (${realPath}), not an executable file. ` +
-            "The Claude Code installation may be corrupted. Please reinstall Claude Code.",
-        );
-      }
-    } catch (e) {
-      if ((e as NodeJS.ErrnoException).code === "ENOENT") {
-        throw new Error(`Claude CLI not found at path: ${binaryPath}`);
-      }
-      if (e instanceof Error && e.message.includes("directory")) {
-        throw e;
-      }
-    }
-
-    logInfo("Using Claude CLI at:", binaryPath);
 
     // Strip API key/auth token when using CLI (subscription mode) so the subprocess
     // uses CLI login session rather than API billing.
@@ -1025,7 +1036,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
         permissionBridge?.canUseTool,
       ),
       abortController,
-      pathToClaudeCodeExecutable: binaryPath,
+      ...executableOptions,
       env: cleanEnv,
       settingSources,
     };

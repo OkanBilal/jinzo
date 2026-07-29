@@ -2,6 +2,7 @@ import { BrowserWindow, Notification } from "electron";
 import type { ToolApprovalRequest, ToolApprovalResponse } from "./runs.dto";
 import { appSettingsService } from "../appSettings";
 import { emit } from "../../ipc-kit";
+import { CHANNELS } from "../../../shared/ipc-kit/channels";
 
 /**
  * Singleton broker that manages pending tool-approval requests.
@@ -16,7 +17,6 @@ import { emit } from "../../ipc-kit";
  *  6. The stored resolve fn fires → the awaiting hook gets the result.
  */
 
-const PUSH_CHANNEL = "runs:toolApprovalRequest";
 const REQUEST_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
 interface PendingRequest {
@@ -35,11 +35,23 @@ export function requestToolApproval(
   req: ToolApprovalRequest,
 ): Promise<ToolApprovalResponse> {
   return new Promise<ToolApprovalResponse>((resolve) => {
+    const requestedTimeout = req.autoResolutionMs;
+    const timeoutMs =
+      typeof requestedTimeout === "number" &&
+      Number.isFinite(requestedTimeout) &&
+      requestedTimeout > 0
+        ? Math.min(requestedTimeout, REQUEST_TIMEOUT_MS)
+        : REQUEST_TIMEOUT_MS;
     // Auto-deny after timeout
     const timer = setTimeout(() => {
       pending.delete(req.requestId);
       resolve({ requestId: req.requestId, approved: false });
-    }, REQUEST_TIMEOUT_MS);
+      emit(
+        CHANNELS.runs.toolApprovalResolved,
+        { requestId: req.requestId },
+        { runId: req.runId },
+      );
+    }, timeoutMs);
 
     pending.set(req.requestId, {
       runId: req.runId,
@@ -48,7 +60,7 @@ export function requestToolApproval(
     });
 
     // Push to all clients via the event bus (local renderer and/or remote).
-    emit(PUSH_CHANNEL, req, { runId: req.runId });
+    emit(CHANNELS.runs.toolApprovalRequest, req, { runId: req.runId });
 
     // Send desktop notification if enabled
     appSettingsService.getSettings().then((settings) => {
@@ -82,6 +94,26 @@ export function handleToolApprovalResponse(resp: ToolApprovalResponse): void {
   clearTimeout(entry.timer);
   pending.delete(resp.requestId);
   entry.resolve(resp);
+}
+
+/** Resolve one provider-owned request as denied when the provider closes it. */
+export function cancelPendingRequest(requestId: string): void {
+  for (const [pendingId, entry] of pending) {
+    if (
+      pendingId !== requestId &&
+      !pendingId.startsWith(`${requestId}-q`)
+    ) {
+      continue;
+    }
+    clearTimeout(entry.timer);
+    pending.delete(pendingId);
+    entry.resolve({ requestId: pendingId, approved: false });
+    emit(
+      CHANNELS.runs.toolApprovalResolved,
+      { requestId: pendingId },
+      { runId: entry.runId },
+    );
+  }
 }
 
 /**

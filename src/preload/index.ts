@@ -514,6 +514,15 @@ const api = {
       return () =>
         ipcRenderer.removeListener(CHANNELS.runs.toolApprovalRequest, listener);
     },
+    onToolApprovalResolved: (
+      callback: (payload: { requestId: string }) => void,
+    ) => {
+      const listener = (_: any, payload: { requestId: string }) =>
+        callback(payload);
+      ipcRenderer.on(CHANNELS.runs.toolApprovalResolved, listener);
+      return () =>
+        ipcRenderer.removeListener(CHANNELS.runs.toolApprovalResolved, listener);
+    },
     respondToolApproval: (response: {
       requestId: string;
       approved: boolean;

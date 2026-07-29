@@ -13,6 +13,7 @@ import {
   TodoSummaryBar,
 } from "@/features/workspace/components";
 import { ToolApprovalDialog } from "@/features/workspace/components/tools/tool-approval-dialog";
+import { parseStructuralPlanSnapshot } from "@/features/workspace/components/todo-summary-bar";
 import {
   useWorkspacePage,
   useToolApproval,
@@ -74,6 +75,14 @@ export function WorkspaceProviderPage({
   const currentPlanApproval = isExitPlanApproval(currentApproval)
     ? currentApproval
     : undefined;
+  const currentStructuralPlan = useMemo(() => {
+    const activeTurn = ws.currentTurns.find(
+      (turn) => turn.status === "active",
+    );
+    return parseStructuralPlanSnapshot(
+      activeTurn?.metadata?.codexPlan,
+    );
+  }, [ws.currentTurns]);
 
   const handleStop = useCallback(() => {
     if (ws.activeRunId) {
@@ -310,7 +319,10 @@ export function WorkspaceProviderPage({
           whole run) rather than `isLoading` (which only tracks the brief
           start/continue IPC call, making the bar flash and vanish mid-run). */}
       {ws.showEmptyState || ws.showNewRunTab || ws.activeRun?.status !== "running" ? null : (
-        <TodoSummaryBar events={ws.currentEvents} />
+        <TodoSummaryBar
+          events={ws.currentEvents}
+          structuralPlan={currentStructuralPlan}
+        />
       )}
 
       {ws.currentWorkspace && !ws.showEmptyState && !ws.showNewRunTab && (

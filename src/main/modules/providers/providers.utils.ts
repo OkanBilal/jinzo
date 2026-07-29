@@ -80,6 +80,7 @@ const isWindows = process.platform === "win32";
 
 // Cached CLI paths
 let cachedCliPath: string | null = null;
+let cachedClaudeSdkCliPath: string | null = null;
 let cachedCopilotCliPath: string | null = null;
 
 /**
@@ -181,6 +182,63 @@ export function compareVersionsDesc(a: string, b: string): number {
  */
 export function clearClaudeCliCache(): void {
   cachedCliPath = null;
+  cachedClaudeSdkCliPath = null;
+}
+
+/**
+ * Resolve the Agent SDK's version-matched native CLI in a packaged Electron
+ * app. In development the SDK resolves its optional dependency itself; inside
+ * ASAR we pass the unpacked executable path explicitly because child_process
+ * cannot spawn an executable from the virtual archive.
+ */
+export function findPackagedClaudeSdkBinary(): string | null {
+  try {
+    const { app } = require("electron");
+    if (!app.isPackaged) return null;
+
+    if (cachedClaudeSdkCliPath && isExecutableFile(cachedClaudeSdkCliPath)) {
+      return cachedClaudeSdkCliPath;
+    }
+    cachedClaudeSdkCliPath = null;
+
+    const nativePkg =
+      `@anthropic-ai/claude-agent-sdk-${process.platform}-${process.arch}`;
+    const binaryName = process.platform === "win32" ? "claude.exe" : "claude";
+    const appPath = app.getAppPath();
+    const candidates = [
+      path.join(
+        appPath + ".unpacked",
+        ".vite",
+        "build",
+        "node_modules",
+        nativePkg,
+        binaryName,
+      ),
+      path.join(
+        appPath,
+        ".vite",
+        "build",
+        "node_modules",
+        nativePkg,
+        binaryName,
+      ),
+    ];
+
+    for (const candidate of candidates) {
+      if (isExecutableFile(candidate)) {
+        logInfo("Found packaged Claude Agent SDK binary at:", candidate);
+        cachedClaudeSdkCliPath = candidate;
+        return candidate;
+      }
+    }
+
+    logWarn(
+      `Packaged Claude Agent SDK binary (${nativePkg}/${binaryName}) not found`,
+    );
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 /**

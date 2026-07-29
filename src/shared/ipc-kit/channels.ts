@@ -246,6 +246,7 @@ export const CHANNELS = {
     start: "runs:start",
     statusChanged: "runs:statusChanged",
     toolApprovalRequest: "runs:toolApprovalRequest",
+    toolApprovalResolved: "runs:toolApprovalResolved",
     toolApprovalResponse: "runs:toolApprovalResponse",
     update: "runs:update",
   },
