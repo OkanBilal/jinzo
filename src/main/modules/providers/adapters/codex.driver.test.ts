@@ -17,12 +17,12 @@ import {
   CODEX_ARCHIVED_CHAT_MESSAGE,
   isCodexArchivedThreadError,
   isCodexUnavailableThreadError,
-  mapImageGenerationLifecycle,
   mapSandboxMode,
   normalizeCodexResumeError,
   parseCodexReviewFindings,
   relativizeGoalMentions,
 } from "./codex.driver";
+import { mapImageGenerationLifecycle } from "./codex-event-mapper";
 import {
   mapCodexPluginList,
   mapRateLimitResponse,
