@@ -10,6 +10,7 @@
 import { describe, it, expect, vi } from "vitest";
 import {
   buildClaudePermissionModeOptions,
+  buildClaudeExecutableOptions,
   classifyOutcome,
   createClaudePermissionBridge,
   removeClaudeRuntimeSettings,
@@ -69,6 +70,16 @@ describe("claude.driver / skill frontmatter", () => {
 });
 
 describe("claude.driver / permission mode options", () => {
+  it("uses the SDK-matched bundled CLI unless a binary override is explicit", () => {
+    expect(buildClaudeExecutableOptions()).toEqual({});
+    expect(buildClaudeExecutableOptions(process.execPath)).toEqual({
+      pathToClaudeCodeExecutable: process.execPath,
+    });
+    expect(buildClaudeExecutableOptions(undefined, process.execPath)).toEqual({
+      pathToClaudeCodeExecutable: process.execPath,
+    });
+  });
+
   it("acknowledges bypassPermissions so detached agents can inherit bypass mode", () => {
     expect(buildClaudePermissionModeOptions("bypassPermissions")).toEqual({
       permissionMode: "bypassPermissions",
@@ -271,6 +282,43 @@ describe("claude.driver / permission bridge", () => {
         kind: "tool_approval",
       }),
     );
+  });
+
+  it("cancels a parked broker request when the SDK permission stream aborts", async () => {
+    const requestApproval = vi.fn(
+      () => new Promise<never>(() => {}),
+    );
+    const cancelApproval = vi.fn();
+    const abortController = new AbortController();
+    const bridge = createClaudePermissionBridge({
+      runId: "run-aborted-permission",
+      allowedTools: new Set(),
+      bypassMode: false,
+      requestApproval,
+      cancelApproval,
+    });
+
+    const result = bridge.canUseTool(
+      "AskUserQuestion",
+      { questions: [{ question: "Continue?" }] },
+      {
+        signal: abortController.signal,
+        toolUseID: "tool-aborted-permission",
+        requestId: "permission-aborted",
+      },
+    );
+
+    await vi.waitFor(() => {
+      expect(requestApproval).toHaveBeenCalledOnce();
+    });
+    abortController.abort();
+
+    await expect(result).resolves.toEqual({
+      behavior: "deny",
+      message: "Permission request aborted",
+      toolUseID: "tool-aborted-permission",
+    });
+    expect(cancelApproval).toHaveBeenCalledWith("permission-aborted");
   });
 });
 

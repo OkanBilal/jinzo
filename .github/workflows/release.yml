@@ -44,7 +44,7 @@ jobs:
       # variant, so fetch its tarball and drop it into node_modules directly —
       # `npm install --cpu x64` would re-reify the whole tree against x64 and
       # could swap out build tooling (esbuild etc.) needed on the arm64 host.
-      - name: Install x64 Copilot binary package
+      - name: Install x64 agent binary packages
         if: matrix.arch == 'x64'
         run: |
           # Read the file directly — @github/copilot's "exports" field blocks
@@ -54,6 +54,12 @@ jobs:
           mkdir -p node_modules/@github/copilot-darwin-x64
           tar -xzf github-copilot-darwin-x64-*.tgz -C node_modules/@github/copilot-darwin-x64 --strip-components=1
           rm github-copilot-darwin-x64-*.tgz
+
+          SDK_VERSION=$(node -p "JSON.parse(require('fs').readFileSync('node_modules/@anthropic-ai/claude-agent-sdk/package.json', 'utf8')).optionalDependencies['@anthropic-ai/claude-agent-sdk-darwin-x64']")
+          npm pack "@anthropic-ai/claude-agent-sdk-darwin-x64@$SDK_VERSION"
+          mkdir -p node_modules/@anthropic-ai/claude-agent-sdk-darwin-x64
+          tar -xzf anthropic-ai-claude-agent-sdk-darwin-x64-*.tgz -C node_modules/@anthropic-ai/claude-agent-sdk-darwin-x64 --strip-components=1
+          rm anthropic-ai-claude-agent-sdk-darwin-x64-*.tgz
 
       - name: Import signing certificate
         env:

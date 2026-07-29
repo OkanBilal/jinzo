@@ -87,8 +87,8 @@ describe("shouldShowPlanActions", () => {
     ).toBe(true);
   });
 
-  it("never shows actions after the plan was applied or dismissed", () => {
-    for (const status of ["applied", "dismissed"] as const) {
+  it("never shows actions after the plan was applied, dismissed, or failed", () => {
+    for (const status of ["applied", "dismissed", "failed"] as const) {
       expect(
         shouldShowPlanActions({
           status,
@@ -109,5 +109,14 @@ describe("getPersistedPlanStatus", () => {
         { planStatus: "pending" },
       ),
     ).toBe("applied");
+  });
+
+  it("marks an errored ExitPlanMode tool call as failed", () => {
+    expect(
+      getPersistedPlanStatus(
+        { status: "error" },
+        null,
+      ),
+    ).toBe("failed");
   });
 });

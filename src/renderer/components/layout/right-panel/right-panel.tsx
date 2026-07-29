@@ -2,11 +2,11 @@ import { useEffect, useLayoutEffect, useReducer } from "react";
 import { useLayoutConfig } from "@/hooks/use-layout-config";
 import { useIsMobile } from "@/lib/platform";
 import { useAppSelector } from "@/lib/redux/hooks";
+import { LAYOUT_PANEL_ANIM_MS } from "@/lib/layout";
 import { ToggleButton } from "./toggle-button";
 import { Panel } from "./panel";
 
 type AnimationState = "closed" | "opening" | "open" | "closing";
-const PANEL_ANIMATION_MS = 220;
 
 interface RightPanelProps {
   isOpen: boolean;
@@ -60,7 +60,7 @@ export default function RightPanel({
       return () => cancelAnimationFrame(frameId);
     }
     if (animationState === "closing") {
-      const timer = setTimeout(() => dispatch("closed"), PANEL_ANIMATION_MS);
+      const timer = setTimeout(() => dispatch("closed"), LAYOUT_PANEL_ANIM_MS);
       return () => clearTimeout(timer);
     }
     return undefined;

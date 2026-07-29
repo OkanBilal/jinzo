@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { SidebarHeader } from "./sidebar-header";
 import { SidebarFooter } from "./sidebar-footer";
@@ -37,6 +37,7 @@ import { useAppSelector, useAppDispatch } from "@/lib/redux/hooks";
 import { setSidebarWidth } from "@/lib/redux/slices/appSettingsSlice";
 import { setLayoutWidthVar } from "@/hooks/use-layout-width-vars";
 import {
+  LAYOUT_PANEL_ANIM_MS,
   SIDEBAR_WIDTH_VAR,
   SIDEBAR_WIDTH_MIN,
   SIDEBAR_WIDTH_MAX,
@@ -126,6 +127,22 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     onSpaceChange: handleSpaceChange,
   });
 
+  // The resize handle lives inside the <aside>, so it slides out with it. Drop
+  // it only once the sidebar is fully off-screen — pulling it on the `collapsed`
+  // flag alone would strip it (and its tab stop) on the first animation frame.
+  const [isAnimating, setIsAnimating] = useState(false);
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    setIsAnimating(true);
+    const timer = setTimeout(() => setIsAnimating(false), LAYOUT_PANEL_ANIM_MS);
+    return () => clearTimeout(timer);
+  }, [collapsed]);
+  const showResizeHandle = !collapsed || isAnimating;
+
   // Suppress unused variable warning for handleRefreshConnections
   void handleRefreshConnections;
 
@@ -143,12 +160,12 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     <>
       <aside
         ref={swipeRef}
-        className={`fixed top-0 bottom-0 left-0 z-(--z-sidebar) transition-[transform,opacity] duration-200 ease-out ${
+        className={`fixed top-0 bottom-0 left-0 z-(--z-sidebar) transition-[transform,opacity] duration-200 ease-out will-change-transform ${
           isMobile ? "bg-primary dark:bg-primary-950 shadow-2xl" : ""
         }`}
         style={{
           width: isMobile ? "100%" : "var(--sidebar-width)",
-          transform: collapsed ? "translateX(-100%)" : "translateX(0)",
+          transform: collapsed ? "translate3d(-100%,0,0)" : "translate3d(0,0,0)",
           opacity: collapsed ? 0 : 1,
         }}
         role="complementary"
@@ -367,7 +384,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
             />
           </div>
         )}
-        {!collapsed && (
+        {showResizeHandle && (
           <ResizeHandle
             edge="right"
             value={sidebarWidth}
