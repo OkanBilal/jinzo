@@ -7,6 +7,7 @@ import { useAppDispatch } from "@/lib/redux/hooks";
 import { runsApi, workspaceApi } from "@/lib/redux/api";
 import { mergeRunEvents } from "../utils/run-event-mappers";
 import { createRunCache, pruneRunMap } from "../lib/run-cache";
+import { createRunStatusSyncPolicy } from "../lib/run-status-sync";
 import { useStreamingEvents } from "./use-streaming-events";
 
 type Attachments = Array<{
@@ -336,6 +337,10 @@ export function useWorkspaceRuns(
     () => runs.find((r) => r.id === activeRunId)?.status,
     [runs, activeRunId],
   );
+  const statusSyncPolicy = useMemo(
+    () => createRunStatusSyncPolicy(runs),
+    [runs],
+  );
 
   const finalizeRun = useCallback(async (run: Run) => {
     if (run.status === "running" || run.status === "queued") return;
@@ -377,8 +382,8 @@ export function useWorkspaceRuns(
     dispatch(workspaceApi.util.invalidateTags(["ReviewFindings"]));
   }, [dispatch]);
 
-  // Push subscription: main broadcasts after each persisted event and on
-  // terminal transitions. Debounce refetches to coalesce bursts.
+  // Transcript and live-diff pushes are scoped to the selected running tab.
+  // Debounce transcript refetches to coalesce event bursts.
   useEffect(() => {
     if (!activeRunId || activeRunStatus !== "running") return;
 
@@ -395,16 +400,6 @@ export function useWorkspaceRuns(
       if (runId === activeRunId) scheduleRefetch();
     });
 
-    const offStatus = appEvents.runs.onStatusChanged(async ({ runId }) => {
-      if (runId !== activeRunId) return;
-      const result = await appApi.runs.getById(activeRunId);
-      if (result.success && result.data) {
-        setRuns((prev) => prev.map((r) => (r.id === activeRunId ? result.data : r)));
-        await finalizeRun(result.data);
-      }
-      void loadRunDetails(activeRunId);
-    });
-
     // Live workspace diff: invalidate cached diff queries on each
     // incremental recomputation so the UI re-renders with fresh changes.
     const offDiff = appEvents.runs.onDiffUpdated(({ runId, workspaceId }) => {
@@ -418,11 +413,33 @@ export function useWorkspaceRuns(
 
     return () => {
       offEvent();
-      offStatus();
       offDiff();
       if (refetchTimer !== null) window.clearTimeout(refetchTimer);
     };
-  }, [activeRunId, activeRunStatus, loadRunDetails, finalizeRun, dispatch]);
+  }, [activeRunId, activeRunStatus, loadRunDetails, dispatch]);
+
+  // Run status is workspace-scoped, not tab-scoped. Keep listening while any
+  // open run is pending so an inactive tab cannot miss its terminal event.
+  useEffect(() => {
+    if (!statusSyncPolicy.listen) return;
+
+    return appEvents.runs.onStatusChanged(async ({ runId }) => {
+      const targetRunId = statusSyncPolicy.targetRunId(runId);
+      if (!targetRunId) return;
+
+      const result = await appApi.runs.getById(targetRunId);
+      if (result.success && result.data) {
+        setRuns((prev) =>
+          prev.map((run) => (run.id === targetRunId ? result.data : run)),
+        );
+        await finalizeRun(result.data);
+      }
+
+      // Pull the final transcript while the completion event is fresh. This
+      // makes the completed tab ready even before the user switches back.
+      void loadRunDetails(targetRunId);
+    });
+  }, [statusSyncPolicy, loadRunDetails, finalizeRun]);
 
   // Polling fallback for dropped pushes, stalled adapters, or backgrounded
   // renderers. 10s keeps IO low since push handles the common case.
@@ -754,18 +771,28 @@ export function useWorkspaceRuns(
 
   const selectTab = useCallback(
     (runId: string) => {
+      const wasPending = runs.some(
+        (run) =>
+          run.id === runId &&
+          (run.status === "running" || run.status === "queued"),
+      );
+
       setActiveRunId(runId);
-      if (!runEvents[runId]) {
-        loadRunDetails(runId);
-      } else {
-        // Already in memory — bump its LRU position and re-prune in case
-        // another tab push crowded the whitelist since.
-        const allowed = cacheRef.current.touch(runId);
-        setRunEvents((prev) => pruneRunMap(prev, allowed));
-        setRunTurns((prev) => pruneRunMap(prev, allowed));
-      }
+
+      // Always reconcile on tab focus. Besides refreshing the transcript,
+      // this is the immediate fallback for a dropped/backgrounded status push.
+      void loadRunDetails(runId);
+      void (async () => {
+        const result = await appApi.runs.getById(runId);
+        if (!result.success || !result.data) return;
+
+        setRuns((prev) =>
+          prev.map((run) => (run.id === runId ? result.data : run)),
+        );
+        if (wasPending) await finalizeRun(result.data);
+      })();
     },
-    [runEvents, loadRunDetails],
+    [runs, loadRunDetails, finalizeRun],
   );
 
   const activeRun = runs.find((r) => r.id === activeRunId);
