@@ -11,6 +11,7 @@ import CodePage from "@/routes/Code";
 const Settings = lazy(() => import("@/routes/Settings"));
 const PluginsPage = lazy(() => import("@/routes/Plugins"));
 const Pulse = lazy(() => import("@/routes/Pulse"));
+const Cue = lazy(() => import("@/routes/Cue"));
 const Relay = lazy(() => import("@/routes/Relay"));
 
 function DefaultRoute() {
@@ -36,6 +37,8 @@ export function MainRoutes() {
         <Route path="/settings" element={<Settings />} />
         <Route path="/plugins" element={<PluginsPage />} />
         <Route path="/pulse" element={<Pulse />} />
+        <Route path="/cue" element={<Cue />} />
+        <Route path="/cue/:projectId" element={<Cue />} />
         <Route path="/relay" element={<Relay />} />
       </Routes>
     </Suspense>

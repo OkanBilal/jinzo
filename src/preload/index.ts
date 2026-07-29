@@ -816,6 +816,18 @@ const api = {
       ipcRenderer.invoke(CHANNELS.pulse.toggle, id, isActive),
     runNow: (id: string) => ipcRenderer.invoke(CHANNELS.pulse.runNow, id),
   },
+
+  // Project-scoped working memory
+  cues: {
+    listByProject: (projectId: string) =>
+      ipcRenderer.invoke(CHANNELS.cues.listByProject, projectId),
+    getById: (id: string) => ipcRenderer.invoke(CHANNELS.cues.getById, id),
+    create: (accountId: string, input: unknown) =>
+      ipcRenderer.invoke(CHANNELS.cues.create, accountId, input),
+    update: (id: string, input: unknown) =>
+      ipcRenderer.invoke(CHANNELS.cues.update, id, input),
+    delete: (id: string) => ipcRenderer.invoke(CHANNELS.cues.delete, id),
+  },
 };
 
 // Expose protected methods that allow the renderer process

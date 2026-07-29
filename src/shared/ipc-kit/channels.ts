@@ -69,6 +69,13 @@ export const CHANNELS = {
   documents: {
     sign: "documents:sign",
   },
+  cues: {
+    create: "cues:create",
+    delete: "cues:delete",
+    getById: "cues:getById",
+    listByProject: "cues:listByProject",
+    update: "cues:update",
+  },
   entities: {
     create: "entities:create",
     delete: "entities:delete",

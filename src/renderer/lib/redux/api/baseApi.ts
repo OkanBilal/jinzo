@@ -84,6 +84,7 @@ export const baseApi = createApi({
     'WorkspaceActivity',
     'Automations',
     'Pulse',
+    'Cue',
     'ProjectSignals',
   ],
   endpoints: () => ({}),

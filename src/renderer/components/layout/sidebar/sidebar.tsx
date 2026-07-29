@@ -12,6 +12,7 @@ import {
   Plus,
   Connect,
   Project,
+  Note,
   Sun,
   Relay,
   Plugin,
@@ -134,6 +135,8 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     location.pathname.startsWith("/plugins/");
   const isPulseRoute =
     location.pathname === "/pulse" || location.pathname.startsWith("/pulse/");
+  const isCueRoute =
+    location.pathname === "/cue" || location.pathname.startsWith("/cue/");
   const isRelayRoute =
     location.pathname === "/relay" ||
     location.pathname.startsWith("/relay/");
@@ -209,6 +212,36 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                   },
                 ]}
               />
+            </div>
+            <div className="px-3 mb-px">
+              <Button
+                variant="subtle"
+                tooltip="Project memory"
+                className={`justify-start flex items-center gap-2 w-full rounded-xl transition-colors ${
+                  isCueRoute
+                    ? "bg-primary/50 glass-outline dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/10"
+                    : ""
+                }`}
+                onClick={() => navigate("/cue")}
+                aria-current={isCueRoute ? "page" : undefined}
+              >
+                <Note
+                  className={`w-4 h-4 -ml-1 ${
+                    isCueRoute
+                      ? "text-primary-950 dark:text-primary"
+                      : "text-primary-900 dark:text-primary-200"
+                  }`}
+                />
+                <Body
+                  className={`text-s font-normal ${
+                    isCueRoute
+                      ? "text-primary-950 dark:text-primary"
+                      : "text-primary-900 dark:text-primary-100"
+                  }`}
+                >
+                  Cue
+                </Body>
+              </Button>
             </div>
             <div className="px-3 mb-px">
               <Button

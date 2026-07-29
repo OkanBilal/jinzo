@@ -244,6 +244,57 @@ export const workspaces = sqliteTable(
 );
 
 /* -----------------------------
+   CUES (project-scoped working memory)
+------------------------------ */
+
+export const cues = sqliteTable(
+  "cues",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    // A Cue belongs to the durable project, never to a disposable worktree.
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    // Kept only as provenance for cues captured from a particular workspace.
+    sourceWorkspaceId: text("source_workspace_id").references(() => workspaces.id, {
+      onDelete: "set null",
+    }),
+    kind: text("kind", { enum: ["note", "prompt", "todo"] })
+      .notNull()
+      .default("note"),
+    status: text("status", { enum: ["inbox", "active", "done"] })
+      .notNull()
+      .default("inbox"),
+    title: text("title"),
+    content: text("content").notNull(),
+    isPinned: integer("is_pinned", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    sortOrder: integer("sort_order").notNull().default(0),
+    metadata: text("metadata"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    index("idx_cues_account").on(t.accountId),
+    index("idx_cues_project_status").on(t.projectId, t.status),
+    index("idx_cues_project_updated").on(t.projectId, t.updatedAt),
+    index("idx_cues_source_workspace").on(t.sourceWorkspaceId),
+    check(
+      "check_cues_metadata_json",
+      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`,
+    ),
+  ],
+);
+
+/* -----------------------------
    PROJECT RESOURCES (pivot table)
    Links projects to connection_resources
 ------------------------------ */

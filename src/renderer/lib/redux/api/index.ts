@@ -475,6 +475,15 @@ export {
   useTogglePulseMutation,
   useRunPulseNowMutation,
 } from "./pulseApi";
+export {
+  cuesApi,
+  useListCuesByProjectQuery,
+  useGetCueByIdQuery,
+  useCreateCueMutation,
+  useUpdateCueMutation,
+  useDeleteCueMutation,
+} from "./cuesApi";
+export type { Cue, CueKind, CueStatus, CreateCueInput, UpdateCueInput } from "./cuesApi";
 export type {
   Pulse,
   PulseFrequency,

@@ -297,8 +297,8 @@ class DatabaseClient {
    * Detect and fix tracker/schema mismatch.
    *
    * If application tables already exist (e.g. created by `db:push`)
-   * but `__drizzle_migrations` is empty, backfill the tracker with
-   * all migration entries so that `migrate()` skips them.
+   * but their matching migration entries are absent, backfill only the
+   * already-materialized entries so that `migrate()` does not re-run them.
    */
   private backfillMigrationTracker(migrationsFolder: string): void {
     if (!this.sqlite) return;
@@ -332,22 +332,26 @@ class DatabaseClient {
         `);
       }
 
-      // Check if tracker has any entries
-      const count = this.sqlite
-        .prepare(`SELECT COUNT(*) as cnt FROM "__drizzle_migrations"`)
-        .get() as { cnt: number };
-
-      if (count.cnt > 0) return; // Tracker is populated, nothing to do
-
-      // Tables exist but tracker is empty — read journal and backfill
+      // Tables exist — read the journal and reconcile migrations that are
+      // missing from the tracker. `db:push` can leave a populated tracker in
+      // exactly this state when it creates only the newest table.
       const journalPath = path.join(migrationsFolder, "meta", "_journal.json");
       if (!fs.existsSync(journalPath)) return;
 
       const journal = JSON.parse(fs.readFileSync(journalPath, "utf-8"));
       const entries: Array<{ tag: string; when: number }> = journal.entries || [];
 
+      const latestTracked = this.sqlite
+        .prepare(`SELECT MAX(created_at) as latest FROM "__drizzle_migrations"`)
+        .get() as { latest: number | null };
+      const pendingEntries = entries.filter(
+        (entry) => latestTracked.latest == null || entry.when > latestTracked.latest,
+      );
+
+      if (pendingEntries.length === 0) return;
+
       console.log(
-        `Migration tracker empty but tables exist — backfilling ${entries.length} migration(s)`,
+        `Reconciling ${pendingEntries.length} untracked migration(s) against existing tables`,
       );
 
       const insert = this.sqlite.prepare(
@@ -355,28 +359,29 @@ class DatabaseClient {
       );
 
       const backfill = this.sqlite.transaction(() => {
-        for (const entry of entries) {
+        for (const entry of pendingEntries) {
           const sqlPath = path.join(migrationsFolder, `${entry.tag}.sql`);
           if (!fs.existsSync(sqlPath)) continue;
 
-          // Check if the tables from this migration already exist
-          // by trying to see if the first CREATE TABLE target exists
+          // We can safely reconcile CREATE TABLE migrations when their target
+          // already exists. ALTER-only migrations remain pending: their schema
+          // state is not reliably inferable from SQL text alone.
           const sql = fs.readFileSync(sqlPath, "utf-8");
           const tableMatch = sql.match(/CREATE TABLE\s+`?(\w+)`?/i);
 
-          if (tableMatch) {
-            const tableName = tableMatch[1];
-            const exists = this.sqlite!
-              .prepare(
-                `SELECT name FROM sqlite_master WHERE type='table' AND name=?`,
-              )
-              .get(tableName);
+          if (!tableMatch) break;
 
-            if (!exists) {
-              // This migration's tables don't exist yet — stop backfilling,
-              // let migrate() apply this and subsequent migrations normally
-              break;
-            }
+          const tableName = tableMatch[1];
+          const exists = this.sqlite!
+            .prepare(
+              `SELECT name FROM sqlite_master WHERE type='table' AND name=?`,
+            )
+            .get(tableName);
+
+          if (!exists) {
+            // This migration's table does not exist. Stop at the first gap so
+            // migrate() can apply it and every later migration in order.
+            break;
           }
 
           const hash = crypto
@@ -388,7 +393,7 @@ class DatabaseClient {
       });
 
       backfill();
-      console.log("Migration tracker backfill complete");
+      console.log("Migration tracker reconciliation complete");
     } catch (err) {
       console.warn("Migration tracker backfill failed (non-fatal):", err);
       // Non-fatal — migrate() will try anyway

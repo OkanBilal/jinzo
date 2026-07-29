@@ -98,6 +98,7 @@ import {
   unregisterPulseIpc,
   pulseService,
 } from "./modules/pulse";
+import { registerCuesIpc, unregisterCuesIpc } from "./modules/cues";
 import {
   registerGuardsIpc,
   unregisterGuardsIpc,
@@ -639,6 +640,7 @@ async function initializeApp() {
     updatesService.initialize();
     registerAutomationsIpc();
     registerPulseIpc();
+    registerCuesIpc();
     registerGuardsIpc();
     registerBrowserIpc();
     registerSshIpc();
@@ -952,6 +954,7 @@ async function cleanupApp() {
     unregisterAutomationsIpc();
     pulseService.stop();
     unregisterPulseIpc();
+    unregisterCuesIpc();
     unregisterGuardsIpc();
     await shutdownAllGuardAdapters();
     try { browserService.destroy(); } catch { /* ignore */ }
