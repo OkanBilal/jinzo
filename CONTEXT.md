@@ -118,6 +118,10 @@ _Avoid_: re-introducing wholesale `vi.mock("simple-git")` tests for semantic met
 
 Vocabulary for the `providers/adapters/` subsystem, where one unified `WorkRunAdapter` interface fronts four agent SDKs (Claude, Copilot, Codex, Cursor).
 
+**Codex app-server client**:
+The deep process/transport module in `codex-app-server.client.ts`. It owns one `codex app-server` child process, JSON-object framing over stdio, typed request/response correlation and timeouts, notification/server-request routing, and deterministic pending-request cleanup on exit or shutdown. `codex.driver.ts` owns protocol semantics — initialization, thread/turn behavior, approvals, and mapping notifications into `WorkRunEvent` — and reaches the transport only through the client's small interface. The client itself does not know about runs or workspaces.
+_Avoid_: spawning `codex app-server`, parsing its stdout, tracking JSON-RPC request IDs, or managing pending RPC timers inside `codex.driver.ts`; moving run/thread semantics into the transport client.
+
 **mains tool**:
 An in-house tool exposed to coding agents across the drivers — `GetWorkspaceDiff`, `SaveReview`, `SaveFinding`, `SaveFindings`, `CommitChanges`, `CreatePR`, `CheckPackage`. The handler logic lives once in `mains-tools.core.ts`; the parameter schema lives once in `mains-tools.schemas.ts` as a Zod object (the single source of truth — `z.infer` types the handler's args, `z.toJSONSchema` feeds the SDKs that want JSON Schema). The human descriptions are the existing `TOOL_DESCRIPTIONS` map.
 _Avoid_: re-declaring a mains tool's parameter schema, required-fields list, or description inside a driver.

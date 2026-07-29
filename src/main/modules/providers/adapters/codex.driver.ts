@@ -18,8 +18,7 @@
 // right `turn/start` or `review/start` request.
 // ─────────────────────────────────────────────────────────────
 
-import { spawn, type ChildProcess } from "node:child_process";
-import { type Interface as ReadlineInterface } from "node:readline";
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -77,46 +76,10 @@ import {
 } from "./mains-tools.registry";
 import { guardsService } from "../../guards/guards.service";
 import type {
-  CodexAppServerMethod,
   CodexAppServerParams,
   CodexAppServerResult,
 } from "./codex-app-server-protocol/rpc";
-
-// ─────────────────────────────────────────────────────────────
-// JSON-RPC Types
-// ─────────────────────────────────────────────────────────────
-
-interface JsonRpcRequest {
-  jsonrpc?: "2.0";
-  id: number | string;
-  method: string;
-  params?: unknown;
-}
-
-interface JsonRpcNotification {
-  jsonrpc?: "2.0";
-  method: string;
-  params?: unknown;
-}
-
-interface JsonRpcResponse {
-  jsonrpc?: "2.0";
-  id: number | string;
-  result?: unknown;
-  error?: { code: number; message: string; data?: unknown };
-}
-
-function isServerRequest(msg: unknown): msg is JsonRpcRequest {
-  return typeof msg === "object" && msg !== null && "method" in msg && "id" in msg;
-}
-
-function isServerNotification(msg: unknown): msg is JsonRpcNotification {
-  return typeof msg === "object" && msg !== null && "method" in msg && !("id" in msg);
-}
-
-function isResponse(msg: unknown): msg is JsonRpcResponse {
-  return typeof msg === "object" && msg !== null && "id" in msg && !("method" in msg);
-}
+import { CodexAppServer } from "./codex-app-server.client";
 
 export const CODEX_ARCHIVED_CHAT_MESSAGE =
   "This chat is archived in Codex. Unarchive it in Codex to continue, or archive it in Mains to hide it from this workspace.";
@@ -204,6 +167,17 @@ interface Usage {
   reasoning_output_tokens?: number;
 }
 
+type CodexConfigOverrides = NonNullable<
+  CodexAppServerParams<"thread/start">["config"]
+>;
+type CodexOutputSchema = Exclude<
+  CodexAppServerParams<"turn/start">["outputSchema"],
+  null | undefined
+>;
+type CodexGoalStatus = NonNullable<
+  CodexAppServerParams<"thread/goal/set">["status"]
+>;
+
 // ─────────────────────────────────────────────────────────────
 // Approval mode mapping
 // ─────────────────────────────────────────────────────────────
@@ -223,10 +197,12 @@ export function mapSandboxMode(mode?: string): "read-only" | "workspace-write" |
  */
 function resolveOutputSchema(
   config: CodexAdapterConfig,
-): Record<string, unknown> | undefined {
+): CodexOutputSchema | undefined {
   const selectedId = config.structuredOutputsSelectedId;
   if (!selectedId) return undefined;
-  return config.structuredOutputs?.[selectedId]?.schema;
+  return config.structuredOutputs?.[selectedId]?.schema as
+    | CodexOutputSchema
+    | undefined;
 }
 
 /**
@@ -236,7 +212,9 @@ function resolveOutputSchema(
  * `sandbox_workspace_write.network_access` — there is NO top-level
  * `sandbox_network_access` field.
  */
-function buildCodexConfigOverrides(networkAccess: boolean): Record<string, unknown> {
+function buildCodexConfigOverrides(
+  networkAccess: boolean,
+): CodexConfigOverrides {
   return {
     sandbox_workspace_write: { network_access: networkAccess },
   };
@@ -273,6 +251,34 @@ export function buildCollaborationMode(
       developer_instructions: null,
     },
   };
+}
+
+export function buildCodexReviewTarget(
+  target: WorkRunReviewRequest["target"],
+): CodexAppServerParams<"review/start">["target"] {
+  if (target.type === "uncommittedChanges") {
+    return { type: "uncommittedChanges" };
+  }
+  if (target.type === "baseBranch") {
+    if (!target.branch) {
+      throw new Error("A base branch is required for a base-branch review");
+    }
+    return { type: "baseBranch", branch: target.branch };
+  }
+  if (target.type === "commit") {
+    if (!target.sha) {
+      throw new Error("A commit SHA is required for a commit review");
+    }
+    return {
+      type: "commit",
+      sha: target.sha,
+      title: target.title ?? null,
+    };
+  }
+  if (!target.instructions) {
+    throw new Error("Instructions are required for a custom review");
+  }
+  return { type: "custom", instructions: target.instructions };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -354,6 +360,14 @@ const MAINS_DYNAMIC_TOOLS = toCodexDynamicTools();
 
 const MAINS_TOOL_NAMES = new Set(MAINS_DYNAMIC_TOOLS.map((t) => t.name));
 
+type CodexThreadStartParams = CodexAppServerParams<"thread/start"> & {
+  dynamicTools?: typeof MAINS_DYNAMIC_TOOLS;
+};
+
+type CodexTurnStartParams = CodexAppServerParams<"turn/start"> & {
+  collaborationMode?: Record<string, unknown>;
+};
+
 // ─────────────────────────────────────────────────────────────
 // Active run tracking
 // ─────────────────────────────────────────────────────────────
@@ -420,7 +434,8 @@ const sessionIdMap = new Map<string, string>();
 // Track saved review item IDs to prevent duplicate persistence
 const savedReviewItems = new Set<string>();
 
-const { info: logInfo, error: logError, warn: logWarn } = createLogger("[CodexDriver]");
+const codexLogger = createLogger("[CodexDriver]");
+const { info: logInfo, error: logError, warn: logWarn } = codexLogger;
 
 // ─────────────────────────────────────────────────────────────
 // Rate-limit snapshot mapping + live push
@@ -685,10 +700,10 @@ async function maybeSetThreadGoal(
   if (!goalMode || !threadId || !rawObjective?.trim()) return;
   if (!overwrite) {
     try {
-      const existing = (await server.sendRequest("thread/goal/get", { threadId })) as
-        | { goal?: { status?: string } | null }
-        | undefined;
-      if (existing?.goal && existing.goal.status !== "complete") return;
+      const existing = await server.sendRequest("thread/goal/get", {
+        threadId,
+      });
+      if (existing.goal && existing.goal.status !== "complete") return;
     } catch {
       /* no goal / get failed — fall through and set */
     }
@@ -706,301 +721,6 @@ function runIdForThread(threadId: string | undefined): string | null {
     if (tid === threadId) return runId;
   }
   return null;
-}
-
-// ─────────────────────────────────────────────────────────────
-// App Server Process Manager
-// ─────────────────────────────────────────────────────────────
-
-interface PendingRequest {
-  resolve: (value: unknown) => void;
-  reject: (error: Error) => void;
-  timer: ReturnType<typeof setTimeout>;
-}
-
-class CodexAppServer {
-  private child: ChildProcess | null = null;
-  private output: ReadlineInterface | null = null;
-  private nextId = 1;
-  private pendingRequests = new Map<number | string, PendingRequest>();
-  private notificationHandler: ((method: string, params: unknown) => void) | null = null;
-  private backgroundHandler: ((method: string, params: unknown) => void) | null = null;
-  private serverRequestHandler: ((id: number | string, method: string, params: unknown) => void) | null = null;
-  private onClose: (() => void) | null = null;
-  private stderrBuffer = "";
-  private jsonBuffer = "";
-
-  async start(binaryPath: string, cwd: string, env?: Record<string, string>): Promise<void> {
-    if (this.child) return;
-
-    const spawnEnv: Record<string, string | undefined> = {
-      ...process.env,
-      ...env,
-    };
-
-    this.child = spawn(binaryPath, ["app-server"], {
-      cwd,
-      env: spawnEnv,
-      stdio: ["pipe", "pipe", "pipe"],
-      shell: process.platform === "win32",
-    });
-
-    if (!this.child.stdout || !this.child.stdin) {
-      throw new Error("Failed to get stdio pipes from codex app-server");
-    }
-
-    // Use raw data handler instead of readline to handle JSON messages
-    // that contain literal newlines in string values (e.g. plugin descriptions).
-    // We buffer incoming data and try to parse complete JSON objects.
-    this.child.stdout.on("data", (chunk: Buffer) => {
-      this.jsonBuffer += chunk.toString();
-      this.drainJsonBuffer();
-      // Guard: if we've accumulated >32MB without a parseable message we're
-      // almost certainly stuck on malformed output. Reset to avoid unbounded
-      // memory growth.
-      if (this.jsonBuffer.length > 32 * 1024 * 1024) {
-        logError(
-          `jsonBuffer exceeded 32MB (${this.jsonBuffer.length} bytes), resetting`,
-        );
-        this.jsonBuffer = "";
-      }
-    });
-
-    this.child.stderr?.on("data", (data: Buffer) => {
-      this.stderrBuffer += data.toString();
-      // Keep only last 2KB of stderr
-      if (this.stderrBuffer.length > 2048) {
-        this.stderrBuffer = this.stderrBuffer.slice(-2048);
-      }
-    });
-
-    this.child.on("close", (code) => {
-      logInfo(`App-server process exited with code ${code}`);
-      this.cleanup(new Error(`Codex app-server exited with code ${code}`));
-      this.onClose?.();
-    });
-
-    this.child.on("error", (err) => {
-      logError("App-server process error:", err.message);
-      this.cleanup(new Error(`Codex app-server process error: ${err.message}`));
-    });
-  }
-
-  setNotificationHandler(handler: (method: string, params: unknown) => void): void {
-    this.notificationHandler = handler;
-  }
-
-  /** Persistent handler that runs for ALL notifications (even after turn completes) */
-  setBackgroundHandler(handler: (method: string, params: unknown) => void): void {
-    this.backgroundHandler = handler;
-  }
-
-  setServerRequestHandler(handler: (id: number | string, method: string, params: unknown) => void): void {
-    this.serverRequestHandler = handler;
-  }
-
-  setOnClose(handler: () => void): void {
-    this.onClose = handler;
-  }
-
-  async sendRequest<Method extends CodexAppServerMethod>(
-    method: Method,
-    params: CodexAppServerParams<Method>,
-    timeoutMs = 30000,
-  ): Promise<CodexAppServerResult<Method>> {
-    if (!this.child?.stdin) {
-      throw new Error("App-server not running");
-    }
-
-    const reqId = this.nextId++;
-    const message: JsonRpcRequest = { jsonrpc: "2.0", id: reqId, method, ...(params !== undefined ? { params } : {}) };
-
-    return new Promise<CodexAppServerResult<Method>>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.pendingRequests.delete(reqId);
-        reject(new Error(`RPC timeout: ${method} (${timeoutMs}ms)`));
-      }, timeoutMs);
-
-      this.pendingRequests.set(reqId, {
-        resolve: (value) =>
-          resolve(value as CodexAppServerResult<Method>),
-        reject,
-        timer,
-      });
-      this.writeMessage(message);
-    });
-  }
-
-  respondToRequest(id: number | string, result: unknown): void {
-    this.writeMessage({ jsonrpc: "2.0", id, result });
-  }
-
-  sendNotification(method: string, params?: unknown): void {
-    this.writeMessage({ jsonrpc: "2.0", method, ...(params !== undefined ? { params } : {}) });
-  }
-
-  respondToRequestError(id: number | string, code: number, message: string): void {
-    this.writeMessage({ jsonrpc: "2.0", id, error: { code, message } });
-  }
-
-  get isRunning(): boolean {
-    return this.child !== null && this.child.exitCode === null;
-  }
-
-  async stop(): Promise<void> {
-    if (!this.child) return;
-
-    // Reject all pending requests
-    for (const [_id, pending] of this.pendingRequests) {
-      clearTimeout(pending.timer);
-      pending.reject(new Error("App-server stopping"));
-    }
-    this.pendingRequests.clear();
-
-    const child = this.child;
-    this.cleanup();
-
-    // Graceful shutdown: close stdin, then kill after timeout
-    try {
-      child.stdin?.end();
-      await new Promise<void>((resolve) => {
-        const killTimer = setTimeout(() => {
-          child.kill("SIGKILL");
-          resolve();
-        }, 3000);
-        child.on("close", () => {
-          clearTimeout(killTimer);
-          resolve();
-        });
-      });
-    } catch {
-      child.kill("SIGKILL");
-    }
-  }
-
-  private writeMessage(message: unknown): void {
-    if (!this.child?.stdin) return;
-    const encoded = JSON.stringify(message);
-    this.child.stdin.write(`${encoded}\n`);
-  }
-
-  private handleLine(line: string): void {
-    if (!line.trim()) return;
-
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(line);
-    } catch {
-      // Not JSON — might be log output, ignore
-      return;
-    }
-
-    if (isResponse(parsed)) {
-      const pending = this.pendingRequests.get(parsed.id);
-      if (pending) {
-        this.pendingRequests.delete(parsed.id);
-        clearTimeout(pending.timer);
-        if (parsed.error) {
-          pending.reject(new Error(`${parsed.error.message} (code: ${parsed.error.code})`));
-        } else {
-          pending.resolve(parsed.result);
-        }
-      }
-    } else if (isServerRequest(parsed)) {
-      this.serverRequestHandler?.(parsed.id, parsed.method, parsed.params);
-    } else if (isServerNotification(parsed)) {
-      this.notificationHandler?.(parsed.method, parsed.params);
-      this.backgroundHandler?.(parsed.method, parsed.params);
-    }
-  }
-
-  /**
-   * Drain the JSON buffer: try to extract complete JSON objects.
-   * The app-server sends newline-delimited JSON, but some JSON values
-   * contain literal newlines (e.g. plugin long descriptions), so we
-   * can't rely on line boundaries. Instead, we try parsing progressively
-   * larger chunks until we get valid JSON.
-   */
-  private drainJsonBuffer(): void {
-    while (this.jsonBuffer.length > 0) {
-      // Skip leading whitespace/newlines
-      const trimStart = this.jsonBuffer.search(/\S/);
-      if (trimStart === -1) {
-        this.jsonBuffer = "";
-        return;
-      }
-      if (trimStart > 0) {
-        this.jsonBuffer = this.jsonBuffer.slice(trimStart);
-      }
-
-      // Must start with '{' for a JSON object
-      if (this.jsonBuffer[0] !== "{") {
-        // Skip to next '{' — might be garbage/log output
-        const nextBrace = this.jsonBuffer.indexOf("{", 1);
-        if (nextBrace === -1) {
-          this.jsonBuffer = "";
-          return;
-        }
-        this.jsonBuffer = this.jsonBuffer.slice(nextBrace);
-        continue;
-      }
-
-      // Try to parse from the start. Use a brace-depth counter for efficiency.
-      let depth = 0;
-      let inString = false;
-      let escaped = false;
-      let endIdx = -1;
-
-      for (let i = 0; i < this.jsonBuffer.length; i++) {
-        const ch = this.jsonBuffer[i];
-        if (escaped) {
-          escaped = false;
-          continue;
-        }
-        if (ch === "\\") {
-          if (inString) escaped = true;
-          continue;
-        }
-        if (ch === '"') {
-          inString = !inString;
-          continue;
-        }
-        if (inString) continue;
-        if (ch === "{") depth++;
-        else if (ch === "}") {
-          depth--;
-          if (depth === 0) {
-            endIdx = i;
-            break;
-          }
-        }
-      }
-
-      if (endIdx === -1) {
-        // Incomplete JSON — wait for more data
-        return;
-      }
-
-      const jsonStr = this.jsonBuffer.slice(0, endIdx + 1);
-      this.jsonBuffer = this.jsonBuffer.slice(endIdx + 1);
-
-      this.handleLine(jsonStr);
-    }
-  }
-
-  private cleanup(pendingError?: Error): void {
-    if (pendingError) {
-      for (const pending of this.pendingRequests.values()) {
-        clearTimeout(pending.timer);
-        pending.reject(pendingError);
-      }
-      this.pendingRequests.clear();
-    }
-    this.output?.close();
-    this.output = null;
-    this.child = null;
-    this.jsonBuffer = "";
-  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -2007,7 +1727,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     const spawnCwd = cwd ?? os.homedir();
     logInfo(`Starting app-server: ${binaryPath} app-server (cwd: ${spawnCwd}, HOME=${process.env.HOME}, homedir=${os.homedir()})`);
 
-    const server = new CodexAppServer();
+    const server = new CodexAppServer(codexLogger);
     const env = buildCodexEnv(binaryPath);
 
     await server.start(binaryPath, spawnCwd, env);
@@ -2259,12 +1979,12 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     await Promise.all(
       unknownIds.map(async (threadId) => {
         try {
-          const res = (await server.sendRequest("thread/read", {
+          const response = await server.sendRequest("thread/read", {
             threadId,
             includeTurns: false,
-          })) as { thread?: { agentNickname?: string | null; agentRole?: string | null } } | undefined;
-          const nickname = res?.thread?.agentNickname ?? undefined;
-          const role = res?.thread?.agentRole ?? undefined;
+          });
+          const nickname = response.thread.agentNickname ?? undefined;
+          const role = response.thread.agentRole ?? undefined;
           runState.subAgents.set(threadId, { threadId, nickname: nickname ?? undefined, role: role ?? undefined });
         } catch {
           // App-server doesn't know the thread yet, or read failed — keep
@@ -3614,11 +3334,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
   // Input building
   // ─────────────────────────────────────────────────────────────
 
-  type TurnInput = Array<
-    | { type: "text"; text: string; text_elements: [] }
-    | { type: "localImage"; path: string }
-    | { type: "skill"; name: string; path: string }
-  >;
+  type TurnInput = CodexAppServerParams<"turn/start">["input"];
 
   function buildTurnInput(request: WorkRunRequest): TurnInput {
     let prompt: string;
@@ -4335,7 +4051,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       const personality = config.personality ?? "none";
 
       const networkAccess = config.networkAccessEnabled !== false;
-      const threadStartParams: Record<string, unknown> = {
+      const threadStartParams: CodexThreadStartParams = {
         cwd: request.workspace.rootPath,
         approvalPolicy,
         sandbox,
@@ -4346,9 +4062,11 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       };
 
       logInfo(`Starting thread (model: ${resolvedModel || "default"}, cwd: ${request.workspace.rootPath})`);
-      const threadResult = await server.sendRequest("thread/start", threadStartParams) as Record<string, unknown>;
-      const thread = threadResult?.thread as Record<string, unknown> | undefined;
-      const threadId = (thread?.id ?? threadResult?.threadId) as string | undefined;
+      const threadResult = await server.sendRequest(
+        "thread/start",
+        threadStartParams,
+      );
+      const threadId = threadResult.thread.id;
 
       if (threadId) sessionIdMap.set(runId, threadId);
 
@@ -4367,7 +4085,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       const serviceTier = overrideServiceTier ?? config.serviceTier;
       const planEnabled = overridePlanMode ?? config.planMode ?? false;
       const collaborationMode = buildCollaborationMode(planEnabled, resolvedModel, effort);
-      const turnStartParams: Record<string, unknown> = {
+      const turnStartParams: CodexTurnStartParams = {
         threadId: threadId ?? "",
         input: turnInput,
         ...(resolvedModel ? { model: resolvedModel } : {}),
@@ -4427,7 +4145,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         const errMsg = codexErrorMessage(resumeError);
         if (isCodexMissingThreadError(resumeError)) {
           logWarn(`Thread resume failed (${errMsg}), starting new thread`);
-          const threadResult = await server.sendRequest("thread/start", {
+          const fallbackStartParams: CodexThreadStartParams = {
             cwd: request.workspace.rootPath,
             approvalPolicy,
             sandbox,
@@ -4435,13 +4153,14 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
             ...(resolvedModel ? { model: resolvedModel } : {}),
             config: buildCodexConfigOverrides(networkAccess),
             dynamicTools: MAINS_DYNAMIC_TOOLS,
-          }) as Record<string, unknown>;
-          const newThreadId = (threadResult?.thread as Record<string, unknown>)?.id as string ??
-                          threadResult?.threadId as string;
-          if (newThreadId) {
-            sessionIdMap.set(runId, newThreadId);
-            threadId = newThreadId;
-          }
+          };
+          const threadResult = await server.sendRequest(
+            "thread/start",
+            fallbackStartParams,
+          );
+          const newThreadId = threadResult.thread.id;
+          sessionIdMap.set(runId, newThreadId);
+          threadId = newThreadId;
         } else {
           throw resumeError;
         }
@@ -4465,7 +4184,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         config.modelReasoningEffort,
         /*forceReset*/ true,
       );
-      const turnStartParams = {
+      const turnStartParams: CodexTurnStartParams = {
         threadId: currentThreadId,
         input: turnInput,
         ...(resolvedModel ? { model: resolvedModel } : {}),
@@ -4505,7 +4224,6 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
 
       const approvalPolicy = config.approvalMode ?? "on-request";
       const sandbox = mapSandboxMode(config.sandboxMode);
-      const personality = config.personality ?? "none";
       const networkAccess = config.networkAccessEnabled !== false;
 
       const forkResult = await server.sendRequest("thread/fork", {
@@ -4513,17 +4231,11 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         cwd: request.workspace.rootPath,
         approvalPolicy,
         sandbox,
-        personality,
         ...(resolvedModel ? { model: resolvedModel } : {}),
         config: buildCodexConfigOverrides(networkAccess),
-      }) as Record<string, unknown>;
+      });
 
-      const forkedThread = forkResult?.thread as Record<string, unknown> | undefined;
-      const forkedThreadId = (forkedThread?.id ?? forkResult?.threadId) as string | undefined;
-
-      if (!forkedThreadId) {
-        throw new Error("thread/fork did not return a new thread ID");
-      }
+      const forkedThreadId = forkResult.thread.id;
 
       sessionIdMap.set(runId, forkedThreadId);
 
@@ -4565,7 +4277,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         config.modelReasoningEffort,
         /*forceReset*/ true,
       );
-      const turnStartParams = {
+      const turnStartParams: CodexTurnStartParams = {
         threadId: forkedThreadId,
         input: turnInput,
         ...(resolvedModel ? { model: resolvedModel } : {}),
@@ -4584,6 +4296,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
 
     async reviewSession(request: WorkRunReviewRequest): Promise<AcquiredSession> {
       const { runId } = request;
+      const target = buildCodexReviewTarget(request.target);
       const resolvedModel = request.model || config.defaultModel || undefined;
       const timeout = config.timeout ?? 3_600_000;
 
@@ -4594,7 +4307,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       const personality = config.personality ?? "none";
 
       const networkAccess = config.networkAccessEnabled !== false;
-      const threadStartParams: Record<string, unknown> = {
+      const threadStartParams: CodexThreadStartParams = {
         cwd: request.workspace.rootPath,
         approvalPolicy,
         sandbox,
@@ -4605,27 +4318,19 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       };
 
       logInfo(`Starting review thread (model: ${resolvedModel || "default"}, cwd: ${request.workspace.rootPath})`);
-      const threadResult = await server.sendRequest("thread/start", threadStartParams) as Record<string, unknown>;
-      const thread = threadResult?.thread as Record<string, unknown> | undefined;
-      const threadId = (thread?.id ?? threadResult?.threadId) as string | undefined;
+      const threadResult = await server.sendRequest(
+        "thread/start",
+        threadStartParams,
+      );
+      const threadId = threadResult.thread.id;
 
       if (threadId) sessionIdMap.set(runId, threadId);
 
       const mainsCtxReview: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
       activeRuns.set(runId, { threadId: threadId ?? null, subscribedThreadIds: new Set(threadId ? [threadId] : []), turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxReview, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set(), emittedDocPaths: new Set(), runStartedAt: Date.now(), planBuffers: new Map(), subAgents: new Map() });
 
-      const target: Record<string, unknown> = { type: request.target.type };
-      if (request.target.type === "baseBranch" && request.target.branch) {
-        target.branch = request.target.branch;
-      } else if (request.target.type === "commit") {
-        if (request.target.sha) target.sha = request.target.sha;
-        if (request.target.title) target.title = request.target.title;
-      } else if (request.target.type === "custom" && request.target.instructions) {
-        target.instructions = request.target.instructions;
-      }
-
-      const reviewStartParams: Record<string, unknown> = {
-        threadId: threadId ?? "",
+      const reviewStartParams: CodexAppServerParams<"review/start"> = {
+        threadId,
         target,
         ...(request.delivery ? { delivery: request.delivery } : {}),
       };
@@ -4635,26 +4340,23 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         const result = await server.sendRequest(
           "review/start",
           reviewStartParams,
-        ) as Record<string, unknown>;
-        const reviewThreadId = result.reviewThreadId as string | undefined;
-        const reviewTurn = result.turn as Record<string, unknown> | undefined;
+        );
+        const reviewThreadId = result.reviewThreadId;
 
-        if (reviewThreadId) {
-          sessionIdMap.set(runId, reviewThreadId);
-          const state = activeRuns.get(runId);
-          if (state) {
-            state.subscribedThreadIds.add(reviewThreadId);
-            state.threadId = reviewThreadId;
-            state.turnId = (reviewTurn?.id as string | undefined) ?? state.turnId;
-          }
-          if (reviewThreadId !== threadId) {
-            runsRepo.updateRun(runId, { sessionId: reviewThreadId }).catch((error) =>
-              logWarn(
+        sessionIdMap.set(runId, reviewThreadId);
+        const state = activeRuns.get(runId);
+        if (state) {
+          state.subscribedThreadIds.add(reviewThreadId);
+          state.threadId = reviewThreadId;
+          state.turnId = result.turn.id;
+        }
+        if (reviewThreadId !== threadId) {
+          runsRepo.updateRun(runId, { sessionId: reviewThreadId }).catch((error) =>
+            logWarn(
                 "Failed to persist detached review thread:",
                 error instanceof Error ? error.message : error,
               ),
-            );
-          }
+          );
         }
       };
 
@@ -4834,8 +4536,8 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         // Use existing server or start with homedir (neutral CWD that won't trigger restart)
         const server = await ensureServer();
 
-        const result = await server.sendRequest("model/list", {}) as Record<string, unknown>;
-        const data = result?.data as Array<Record<string, unknown>> | undefined;
+        const result = await server.sendRequest("model/list", {});
+        const data = result.data;
 
         if (!data || !Array.isArray(data)) {
           logWarn("Invalid models response from app-server");
@@ -4845,23 +4547,24 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         return data
           .filter((m) => !m.hidden)
           .map((m): ModelInfo => {
-            const inputModalities = m.inputModalities as string[] | undefined;
-            const effortOptions = m.supportedReasoningEfforts as Array<{ reasoningEffort: string }> | undefined;
-            const effortLevels = effortOptions?.map((e) => e.reasoningEffort) as ("low" | "medium" | "high" | "xhigh")[] | undefined;
+            const inputModalities = m.inputModalities;
+            const effortLevels = m.supportedReasoningEfforts.map(
+              (option) => option.reasoningEffort,
+            ) as ("low" | "medium" | "high" | "xhigh")[];
 
             // serviceTiers (preferred) or legacy additionalSpeedTiers (string[]).
             // Codex returns { id, name, description } per tier; the older
             // additionalSpeedTiers array carries only ids, so we lift them
             // into the same shape with id==name as a fallback.
-            const tiersRaw = m.serviceTiers as Array<{ id: string; name?: string; description?: string }> | undefined;
-            const legacyTiers = m.additionalSpeedTiers as string[] | undefined;
+            const tiersRaw = m.serviceTiers;
+            const legacyTiers = m.additionalSpeedTiers;
             const serviceTiers = tiersRaw && tiersRaw.length > 0
               ? tiersRaw.map((t) => ({ id: t.id, name: t.name ?? t.id, description: t.description }))
               : legacyTiers && legacyTiers.length > 0
                 ? legacyTiers.map((id) => ({ id, name: id }))
                 : undefined;
 
-            const rawName = (m.displayName as string) || (m.id as string);
+            const rawName = m.displayName || m.id;
             // Format display name: "gpt-5.4" → "GPT-5.4", "gpt-5.1-codex-mini" → "GPT-5.1 Codex Mini"
             const displayName = rawName
               .replace(/^gpt-/i, "GPT-")
@@ -4878,10 +4581,10 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
               serviceTiers?.some((t) => t.id === "fast" || t.id === "priority") ?? false;
 
             return {
-              id: m.id as string,
+              id: m.id,
               displayName,
-              isDefault: (m.isDefault as boolean) || (m.id as string) === config.defaultModel,
-              description: m.description as string | undefined,
+              isDefault: m.isDefault || m.id === config.defaultModel,
+              description: m.description,
               capabilities: {
                 vision: inputModalities?.includes("image"),
               },
@@ -4903,10 +4606,10 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       const cli = await getCodexCliHealth();
       try {
         const server = await ensureServer();
-        const result = await server.sendRequest("account/read", {}) as Record<string, unknown>;
+        const result = await server.sendRequest("account/read", {});
         return {
-          account: result.account as AccountInfo["account"],
-          requiresOpenaiAuth: (result.requiresOpenaiAuth as boolean) ?? false,
+          account: result.account,
+          requiresOpenaiAuth: result.requiresOpenaiAuth,
           cli,
         };
       } catch (error) {
@@ -4950,13 +4653,21 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
           return null;
         }
         const server = await ensureServer();
-        const result = await server.sendRequest("thread/goal/set", {
+        const goalParams: CodexAppServerParams<"thread/goal/set"> = {
           threadId,
           ...(params.objective !== undefined ? { objective: params.objective } : {}),
-          ...(params.status !== undefined ? { status: params.status } : {}),
+          ...(params.status !== undefined
+            ? { status: params.status as CodexGoalStatus }
+            : {}),
           ...(params.tokenBudget !== undefined ? { tokenBudget: params.tokenBudget } : {}),
-        }) as Record<string, unknown>;
-        const goal = mapGoalSnapshot(result?.goal as Record<string, unknown> | undefined);
+        };
+        const result = await server.sendRequest(
+          "thread/goal/set",
+          goalParams,
+        );
+        const goal = mapGoalSnapshot(
+          result.goal as unknown as Record<string, unknown>,
+        );
         broadcastGoal(PROVIDER_IDS.codex, runId, goal);
         return goal;
       } catch (error) {
@@ -4969,8 +4680,12 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       try {
         const threadId = sessionIdMap.get(runId) ?? (await runsRepo.findRunById(runId))?.sessionId ?? undefined;
         if (!threadId || !appServer?.isRunning) return null;
-        const result = await appServer.sendRequest("thread/goal/get", { threadId }) as Record<string, unknown>;
-        return mapGoalSnapshot(result?.goal as Record<string, unknown> | undefined);
+        const result = await appServer.sendRequest("thread/goal/get", {
+          threadId,
+        });
+        return mapGoalSnapshot(
+          result.goal as unknown as Record<string, unknown> | undefined,
+        );
       } catch (error) {
         if (isCodexUnavailableThreadError(error)) return null;
         logError("getGoal failed:", error);
@@ -4983,8 +4698,10 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         const threadId = sessionIdMap.get(runId) ?? (await runsRepo.findRunById(runId))?.sessionId ?? undefined;
         if (!threadId) return false;
         const server = await ensureServer();
-        const result = await server.sendRequest("thread/goal/clear", { threadId }) as Record<string, unknown>;
-        const cleared = result?.cleared === true;
+        const result = await server.sendRequest("thread/goal/clear", {
+          threadId,
+        });
+        const cleared = result.cleared;
         if (cleared) broadcastGoal(PROVIDER_IDS.codex, runId, null);
         return cleared;
       } catch (error) {
@@ -5367,9 +5084,8 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       const params = marketplacePath
         ? { pluginName, marketplacePath }
         : { pluginName: remoteRef!.remotePluginId, remoteMarketplaceName: remoteRef!.marketplaceName };
-      const result = await server.sendRequest("plugin/read", params, 30000) as Record<string, unknown>;
-      const p = result?.plugin as Record<string, unknown>;
-      if (!p) throw new Error("plugin/read returned no plugin data");
+      const result = await server.sendRequest("plugin/read", params, 30000);
+      const p = result.plugin as unknown as Record<string, unknown>;
 
       const summary = p.summary as Record<string, unknown>;
       const iface = summary?.interface as Record<string, unknown> | undefined;
@@ -5487,7 +5203,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       const remoteRef = remotePluginRefCache.get(pluginId);
 
       if (marketplacePath) {
-        await server.sendRequest("plugin/uninstall", { pluginId, marketplacePath });
+        await server.sendRequest("plugin/uninstall", { pluginId });
       } else if (remoteRef) {
         // Remote plugins uninstall by backend id — the composite id silently no-ops.
         await server.sendRequest("plugin/uninstall", { pluginId: remoteRef.remotePluginId });

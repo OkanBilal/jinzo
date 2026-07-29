@@ -457,6 +457,66 @@ describe("codex.driver / app-server protocol", () => {
     ]);
   });
 
+  it("uses the generated thread/fork contract without obsolete fields", async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mains-codex-driver-"));
+    tempDirs.push(tempDir);
+    const logPath = path.join(tempDir, "protocol.jsonl");
+    process.env.MAINS_CODEX_FIXTURE_LOG = logPath;
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 500,
+      personality: "friendly",
+    });
+    drivers.push(driver);
+
+    await driver.createSession(request("run-fork-source"));
+    const acquired = await driver.forkSession?.({
+      runId: "run-fork-target",
+      sourceRunId: "run-fork-source",
+      accountId: "account-1",
+      workspace: {
+        id: "workspace-1",
+        rootPath: process.cwd(),
+      },
+      message: "continue from the fork",
+      model: "gpt-5.4",
+    });
+    expect(acquired).toBeDefined();
+
+    const outcome = await driver.executePrompt(
+      acquired!.session,
+      acquired!.prompt,
+      async () => undefined,
+      new AbortController().signal,
+    );
+
+    expect(outcome.status).toBe("succeeded");
+    const forkRequest = readProtocolLog(logPath).find(
+      (message) => message.method === "thread/fork",
+    );
+    expect(forkRequest?.params).toMatchObject({
+      threadId: "thread-1",
+      model: "gpt-5.4",
+    });
+    expect(forkRequest?.params).not.toHaveProperty("personality");
+
+    const turnStart = readProtocolLog(logPath).find(
+      (message) =>
+        message.method === "turn/start" &&
+        (message.params as { threadId?: string } | undefined)?.threadId ===
+          "thread-1-fork",
+    );
+    expect(turnStart?.params).toMatchObject({
+      input: [
+        expect.objectContaining({
+          type: "text",
+          text_elements: [],
+        }),
+      ],
+    });
+  });
+
   it("routes concurrent run events by thread without handler interference", async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mains-codex-driver-"));
     tempDirs.push(tempDir);

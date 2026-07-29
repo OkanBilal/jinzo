@@ -46,6 +46,8 @@ input.on("line", (line) => {
   if (!("method" in message) || !("id" in message)) return;
 
   const { id, method, params = {} } = message;
+  if (process.env.MAINS_CODEX_FIXTURE_HANG_METHOD === method) return;
+
   switch (method) {
     case "initialize":
       respond(
@@ -63,6 +65,30 @@ input.on("line", (line) => {
 
     case "thread/start": {
       const threadId = `thread-${nextThreadId++}`;
+      respond(id, {
+        thread: {
+          id: threadId,
+          preview: "",
+          modelProvider: "openai",
+          createdAt: 1,
+          updatedAt: 1,
+          status: { type: "idle" },
+          path: null,
+          cwd: params.cwd,
+          cliVersion: "0.146.0",
+          source: "appServer",
+          agentNickname: null,
+          agentRole: null,
+          gitInfo: null,
+          name: null,
+          turns: [],
+        },
+      });
+      break;
+    }
+
+    case "thread/fork": {
+      const threadId = `${params.threadId}-fork`;
       respond(id, {
         thread: {
           id: threadId,

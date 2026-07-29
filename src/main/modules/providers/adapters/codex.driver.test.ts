@@ -12,6 +12,7 @@ import path from "node:path";
 import { describe, it, expect } from "vitest";
 import {
   buildCollaborationMode,
+  buildCodexReviewTarget,
   CODEX_APP_SERVER_PROTOCOL_VERSION,
   CODEX_ARCHIVED_CHAT_MESSAGE,
   isCodexArchivedThreadError,
@@ -491,6 +492,49 @@ describe("codex.driver / buildCollaborationMode", () => {
       const result = buildCollaborationMode(false, "gpt-5.4", undefined, true);
       expect(result?.settings).toMatchObject({ reasoning_effort: null });
     });
+  });
+});
+
+describe("codex.driver / buildCodexReviewTarget", () => {
+  it("maps every review target to the generated app-server shape", () => {
+    expect(
+      buildCodexReviewTarget({ type: "uncommittedChanges" }),
+    ).toEqual({ type: "uncommittedChanges" });
+    expect(
+      buildCodexReviewTarget({ type: "baseBranch", branch: "main" }),
+    ).toEqual({ type: "baseBranch", branch: "main" });
+    expect(
+      buildCodexReviewTarget({
+        type: "commit",
+        sha: "abc123",
+        title: "Fix protocol",
+      }),
+    ).toEqual({
+      type: "commit",
+      sha: "abc123",
+      title: "Fix protocol",
+    });
+    expect(
+      buildCodexReviewTarget({
+        type: "custom",
+        instructions: "Review auth changes",
+      }),
+    ).toEqual({
+      type: "custom",
+      instructions: "Review auth changes",
+    });
+  });
+
+  it("rejects incomplete targets before starting an app-server thread", () => {
+    expect(() =>
+      buildCodexReviewTarget({ type: "baseBranch" }),
+    ).toThrow("A base branch is required");
+    expect(() =>
+      buildCodexReviewTarget({ type: "commit" }),
+    ).toThrow("A commit SHA is required");
+    expect(() =>
+      buildCodexReviewTarget({ type: "custom" }),
+    ).toThrow("Instructions are required");
   });
 });
 

@@ -1,14 +1,48 @@
 import type { InitializeParams } from "./generated/InitializeParams";
 import type { InitializeResponse } from "./generated/InitializeResponse";
+import type { ConfigValueWriteParams } from "./generated/v2/ConfigValueWriteParams";
+import type { ConfigWriteResponse } from "./generated/v2/ConfigWriteResponse";
 import type { ExperimentalFeatureListParams } from "./generated/v2/ExperimentalFeatureListParams";
 import type { ExperimentalFeatureListResponse } from "./generated/v2/ExperimentalFeatureListResponse";
 import type { GetAccountParams } from "./generated/v2/GetAccountParams";
 import type { GetAccountRateLimitsResponse } from "./generated/v2/GetAccountRateLimitsResponse";
 import type { GetAccountResponse } from "./generated/v2/GetAccountResponse";
+import type { ModelListParams } from "./generated/v2/ModelListParams";
+import type { ModelListResponse } from "./generated/v2/ModelListResponse";
+import type { PluginInstallParams } from "./generated/v2/PluginInstallParams";
+import type { PluginInstallResponse } from "./generated/v2/PluginInstallResponse";
+import type { PluginInstalledParams } from "./generated/v2/PluginInstalledParams";
+import type { PluginInstalledResponse } from "./generated/v2/PluginInstalledResponse";
+import type { PluginListParams } from "./generated/v2/PluginListParams";
+import type { PluginListResponse } from "./generated/v2/PluginListResponse";
+import type { PluginReadParams } from "./generated/v2/PluginReadParams";
+import type { PluginReadResponse } from "./generated/v2/PluginReadResponse";
+import type { PluginUninstallParams } from "./generated/v2/PluginUninstallParams";
+import type { PluginUninstallResponse } from "./generated/v2/PluginUninstallResponse";
+import type { ReviewStartParams } from "./generated/v2/ReviewStartParams";
+import type { ReviewStartResponse } from "./generated/v2/ReviewStartResponse";
 import type { SkillsListParams } from "./generated/v2/SkillsListParams";
 import type { SkillsListResponse } from "./generated/v2/SkillsListResponse";
-
-type JsonObject = Record<string, unknown>;
+import type { ThreadForkParams } from "./generated/v2/ThreadForkParams";
+import type { ThreadForkResponse } from "./generated/v2/ThreadForkResponse";
+import type { ThreadGoalClearParams } from "./generated/v2/ThreadGoalClearParams";
+import type { ThreadGoalClearResponse } from "./generated/v2/ThreadGoalClearResponse";
+import type { ThreadGoalGetParams } from "./generated/v2/ThreadGoalGetParams";
+import type { ThreadGoalGetResponse } from "./generated/v2/ThreadGoalGetResponse";
+import type { ThreadGoalSetParams } from "./generated/v2/ThreadGoalSetParams";
+import type { ThreadGoalSetResponse } from "./generated/v2/ThreadGoalSetResponse";
+import type { ThreadReadParams } from "./generated/v2/ThreadReadParams";
+import type { ThreadReadResponse } from "./generated/v2/ThreadReadResponse";
+import type { ThreadResumeParams } from "./generated/v2/ThreadResumeParams";
+import type { ThreadResumeResponse } from "./generated/v2/ThreadResumeResponse";
+import type { ThreadStartParams } from "./generated/v2/ThreadStartParams";
+import type { ThreadStartResponse } from "./generated/v2/ThreadStartResponse";
+import type { ThreadUnsubscribeParams } from "./generated/v2/ThreadUnsubscribeParams";
+import type { ThreadUnsubscribeResponse } from "./generated/v2/ThreadUnsubscribeResponse";
+import type { TurnInterruptParams } from "./generated/v2/TurnInterruptParams";
+import type { TurnInterruptResponse } from "./generated/v2/TurnInterruptResponse";
+import type { TurnStartParams } from "./generated/v2/TurnStartParams";
+import type { TurnStartResponse } from "./generated/v2/TurnStartResponse";
 
 interface RpcMethod<Params, Result> {
   params: Params;
@@ -34,24 +68,33 @@ export interface CodexAppServerRpc {
   >;
   "skills/list": RpcMethod<SkillsListParams, SkillsListResponse>;
 
-  "config/value/write": RpcMethod<JsonObject, JsonObject>;
-  "model/list": RpcMethod<JsonObject, JsonObject>;
-  "plugin/install": RpcMethod<JsonObject, JsonObject>;
-  "plugin/installed": RpcMethod<JsonObject, JsonObject>;
-  "plugin/list": RpcMethod<JsonObject, JsonObject>;
-  "plugin/read": RpcMethod<JsonObject, JsonObject>;
-  "plugin/uninstall": RpcMethod<JsonObject, JsonObject>;
-  "review/start": RpcMethod<JsonObject, JsonObject>;
-  "thread/fork": RpcMethod<JsonObject, JsonObject>;
-  "thread/goal/clear": RpcMethod<JsonObject, JsonObject>;
-  "thread/goal/get": RpcMethod<JsonObject, JsonObject>;
-  "thread/goal/set": RpcMethod<JsonObject, JsonObject>;
-  "thread/read": RpcMethod<JsonObject, JsonObject>;
-  "thread/resume": RpcMethod<JsonObject, JsonObject>;
-  "thread/start": RpcMethod<JsonObject, JsonObject>;
-  "thread/unsubscribe": RpcMethod<JsonObject, JsonObject>;
-  "turn/interrupt": RpcMethod<JsonObject, JsonObject>;
-  "turn/start": RpcMethod<JsonObject, JsonObject>;
+  "config/value/write": RpcMethod<ConfigValueWriteParams, ConfigWriteResponse>;
+  "model/list": RpcMethod<ModelListParams, ModelListResponse>;
+  "plugin/install": RpcMethod<PluginInstallParams, PluginInstallResponse>;
+  "plugin/installed": RpcMethod<PluginInstalledParams, PluginInstalledResponse>;
+  "plugin/list": RpcMethod<PluginListParams, PluginListResponse>;
+  "plugin/read": RpcMethod<PluginReadParams, PluginReadResponse>;
+  "plugin/uninstall": RpcMethod<
+    PluginUninstallParams,
+    PluginUninstallResponse
+  >;
+  "review/start": RpcMethod<ReviewStartParams, ReviewStartResponse>;
+  "thread/fork": RpcMethod<ThreadForkParams, ThreadForkResponse>;
+  "thread/goal/clear": RpcMethod<
+    ThreadGoalClearParams,
+    ThreadGoalClearResponse
+  >;
+  "thread/goal/get": RpcMethod<ThreadGoalGetParams, ThreadGoalGetResponse>;
+  "thread/goal/set": RpcMethod<ThreadGoalSetParams, ThreadGoalSetResponse>;
+  "thread/read": RpcMethod<ThreadReadParams, ThreadReadResponse>;
+  "thread/resume": RpcMethod<ThreadResumeParams, ThreadResumeResponse>;
+  "thread/start": RpcMethod<ThreadStartParams, ThreadStartResponse>;
+  "thread/unsubscribe": RpcMethod<
+    ThreadUnsubscribeParams,
+    ThreadUnsubscribeResponse
+  >;
+  "turn/interrupt": RpcMethod<TurnInterruptParams, TurnInterruptResponse>;
+  "turn/start": RpcMethod<TurnStartParams, TurnStartResponse>;
 }
 
 export type CodexAppServerMethod = keyof CodexAppServerRpc;
