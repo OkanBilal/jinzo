@@ -5,6 +5,13 @@ import readline from "node:readline";
 import process from "node:process";
 import { setTimeout } from "node:timers";
 
+if (process.argv.includes("--version")) {
+  process.stdout.write(
+    `codex-cli ${process.env.MAINS_CODEX_FIXTURE_VERSION ?? "0.146.0"}\n`,
+  );
+  process.exit(0);
+}
+
 const logPath = process.env.MAINS_CODEX_FIXTURE_LOG;
 let nextThreadId = 1;
 
@@ -41,7 +48,17 @@ input.on("line", (line) => {
   const { id, method, params = {} } = message;
   switch (method) {
     case "initialize":
-      respond(id, { userAgent: "mains-test-codex-app-server" });
+      respond(
+        id,
+        process.env.MAINS_CODEX_FIXTURE_LEGACY_INITIALIZE === "1"
+          ? { userAgent: "mains-test-codex-app-server" }
+          : {
+              userAgent: "mains-test-codex-app-server",
+              codexHome: "/tmp/mains-test-codex-home",
+              platformFamily: "unix",
+              platformOs: "macos",
+            },
+      );
       break;
 
     case "thread/start": {
@@ -284,6 +301,78 @@ input.on("line", (line) => {
 
     case "thread/unsubscribe":
       respond(id, { status: "unsubscribed" });
+      break;
+
+    case "experimentalFeature/list":
+      respond(id, {
+        data: [{
+          name: "plugins",
+          stage: "stable",
+          displayName: null,
+          description: null,
+          announcement: null,
+          enabled: process.env.MAINS_CODEX_FIXTURE_PLUGINS_ENABLED !== "0",
+          defaultEnabled: true,
+        }],
+        nextCursor: null,
+      });
+      break;
+
+    case "account/read":
+      respond(id, {
+        account: process.env.MAINS_CODEX_FIXTURE_ACCOUNT === "bedrock"
+          ? {
+              type: "amazonBedrock",
+              usesCodexManagedCredentials: true,
+            }
+          : {
+              type: "chatgpt",
+              email: "codex@example.com",
+              planType: "pro",
+            },
+        requiresOpenaiAuth: false,
+      });
+      break;
+
+    case "account/rateLimits/read":
+      respond(id, {
+        rateLimits: {
+          limitId: "codex",
+          limitName: "Codex",
+          primary: {
+            usedPercent: 10,
+            windowDurationMins: 300,
+            resetsAt: 1717200000,
+          },
+          secondary: null,
+          credits: null,
+          individualLimit: null,
+          spendControlReached: false,
+          planType: "pro",
+          rateLimitReachedType: null,
+        },
+        rateLimitsByLimitId: {
+          codex: {
+            limitId: "codex",
+            limitName: "Codex",
+            primary: {
+              usedPercent: 10,
+              windowDurationMins: 300,
+              resetsAt: 1717200000,
+            },
+            secondary: null,
+            credits: null,
+            individualLimit: null,
+            spendControlReached: false,
+            planType: "pro",
+            rateLimitReachedType: null,
+          },
+        },
+        rateLimitResetCredits: {
+          availableCount: 1,
+          credits: null,
+        },
+      });
       break;
 
     default:

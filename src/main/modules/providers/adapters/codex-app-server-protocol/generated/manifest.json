@@ -1,0 +1,133 @@
+{
+  "cliVersion": "0.146.0",
+  "files": [
+    {
+      "path": "AbsolutePathBuf.ts",
+      "sha256": "a79d31d5e8f24c58c8cce2633e5e4fc5b0bb88d1c44c69e7ce7d0dc7c1252272"
+    },
+    {
+      "path": "ClientInfo.ts",
+      "sha256": "c3f38c70ffff810867af87a536d915dadea9e4b547343611c4e14731bcb7c648"
+    },
+    {
+      "path": "InitializeCapabilities.ts",
+      "sha256": "6f04ceb3f75de8d4061fde084d89c7756b23a9e33e37684d44d35f535e715c42"
+    },
+    {
+      "path": "InitializeParams.ts",
+      "sha256": "bfc13b4fc9e37f629ee67b42d6e7f342ba38668ff528e738a911de5ebcfd545f"
+    },
+    {
+      "path": "InitializeResponse.ts",
+      "sha256": "4feabcb66d4bf01869d2780beaec1838d41b30213cdf57de175298aed01f5379"
+    },
+    {
+      "path": "PlanType.ts",
+      "sha256": "afb5250f6dbd3d97560504a683a613ace7aa66c8c147a580b55e3944663500b8"
+    },
+    {
+      "path": "v2/Account.ts",
+      "sha256": "122259e3439c0c0f63e53a2f2e0028a9e6f153b3bc16c1a705f640b98ff8bf37"
+    },
+    {
+      "path": "v2/CreditsSnapshot.ts",
+      "sha256": "e56bf82bc93959ed95748dc7363520d4cf477d9c7ac2b8e40e48c91b03c2575a"
+    },
+    {
+      "path": "v2/ExperimentalFeature.ts",
+      "sha256": "2de02b9c1426f552df38b289f638a4f41bc0395477532fdffe36ea390be078fa"
+    },
+    {
+      "path": "v2/ExperimentalFeatureListParams.ts",
+      "sha256": "a559812d9b8cf625941c19be35814b9403a20b12bc737a1982fea5870dfbde1e"
+    },
+    {
+      "path": "v2/ExperimentalFeatureListResponse.ts",
+      "sha256": "f8bf394784271cbef32b95435bb2af986bb15e5a11e831c090993685ea6ca035"
+    },
+    {
+      "path": "v2/ExperimentalFeatureStage.ts",
+      "sha256": "70de16db64325f2201f5b10b6492b4a13d6acd1c02f65f8d8af1738d2fb751d8"
+    },
+    {
+      "path": "v2/GetAccountParams.ts",
+      "sha256": "73feed16e294673d984618e2264a32be4b20bfe45973fdba064bddd2e6c6c18a"
+    },
+    {
+      "path": "v2/GetAccountRateLimitsResponse.ts",
+      "sha256": "f788fb65a357cb56e1eb1f4866edc3d5ed92241098b31a56c13705ffad5f4868"
+    },
+    {
+      "path": "v2/GetAccountResponse.ts",
+      "sha256": "f16f348c9c37a760bd7b4c75c0b7d86a57d6cbd16bd6a1c4b06dffa39157b6a9"
+    },
+    {
+      "path": "v2/RateLimitReachedType.ts",
+      "sha256": "67ca3e1a5154ac7ea40be29b31ad55be4a786b228ce89fecc566ef00309b5e8c"
+    },
+    {
+      "path": "v2/RateLimitResetCredit.ts",
+      "sha256": "2c9c8e61ab99676d0492d391cf259cef70336c42f89ed8555b000fedd943c4a1"
+    },
+    {
+      "path": "v2/RateLimitResetCreditStatus.ts",
+      "sha256": "bdb35657a7d3b1d42c69892f1fb4ebf48a95fd4221c647f26c9aa66d646591f4"
+    },
+    {
+      "path": "v2/RateLimitResetCreditsSummary.ts",
+      "sha256": "013f75bc1455656f0e1e42e8c7fb67d7657d2bcc3f31a15e285cca767048c3f6"
+    },
+    {
+      "path": "v2/RateLimitResetType.ts",
+      "sha256": "762b31640420075407fe3b1a7dd6e7662551d155d0d1f562bb59f79ecc6a58e7"
+    },
+    {
+      "path": "v2/RateLimitSnapshot.ts",
+      "sha256": "22d541aabad555d5ff02bae11acbcdd1d54c3a61496a1e05562a18aae64c4b6b"
+    },
+    {
+      "path": "v2/RateLimitWindow.ts",
+      "sha256": "d1c57b5226a87ef3c02643835d62fe2c95b78c6c37cd53fd4aeccf68be9a7f1b"
+    },
+    {
+      "path": "v2/SkillDependencies.ts",
+      "sha256": "777800a9177c0d26e58cb8d5eda982667719aad36d27a2f0ad8ae2771edcb7a7"
+    },
+    {
+      "path": "v2/SkillErrorInfo.ts",
+      "sha256": "0d59892e9b1d002a1d7065a49b3951c3d9a8b73bd1746a5b76c3018882296a54"
+    },
+    {
+      "path": "v2/SkillInterface.ts",
+      "sha256": "89f8ca16e522a35679f7f61353a9949c9fa2c7a11684c26af4fc9bc0415eccfe"
+    },
+    {
+      "path": "v2/SkillMetadata.ts",
+      "sha256": "0eea5c553e945e148ffa06578620663b18a01ff33c2977f6ee9a00ca2d994e90"
+    },
+    {
+      "path": "v2/SkillScope.ts",
+      "sha256": "cc13d4657511705e351a68c578caaec3112bf8e59284384d994675ec403371a6"
+    },
+    {
+      "path": "v2/SkillToolDependency.ts",
+      "sha256": "4e658e9cd6d6bedb73870f1b742cf5cf79d9eb4c8635838e2acc99d328810ab5"
+    },
+    {
+      "path": "v2/SkillsListEntry.ts",
+      "sha256": "90a88e7e15fdfffa9a4e7e6b04c81e2b04faae4b1fe95717e0d01e80573cce20"
+    },
+    {
+      "path": "v2/SkillsListParams.ts",
+      "sha256": "c7ba20615ea17d426387c5bd53d2dc0e4ab9a3845e21f07b127d459b6b54aa1d"
+    },
+    {
+      "path": "v2/SkillsListResponse.ts",
+      "sha256": "149b1dc469d830015f96d4bc31ac1f76daf296ba5d2eff41caf4149f1da5ea97"
+    },
+    {
+      "path": "v2/SpendControlLimitSnapshot.ts",
+      "sha256": "c58ca129df392a50bd08ad077fc862a89f15981d91c059a1aeac33b8b318493f"
+    }
+  ]
+}

@@ -682,11 +682,43 @@ export interface GoalSetParams {
 /**
  * Rate limit information from a provider
  */
-export interface RateLimitInfo {
+export interface SpendControlLimitInfo {
+  limit: string;
+  used: string;
+  remainingPercent: number;
+  resetsAt: number;
+}
+
+export interface RateLimitSnapshotInfo {
+  limitId?: string;
+  limitName?: string;
   planType?: string;
   primary?: RateLimitWindow;
   secondary?: RateLimitWindow;
   credits?: { hasCredits: boolean; balance?: string; unlimited: boolean };
+  individualLimit?: SpendControlLimitInfo;
+  spendControlReached?: boolean;
+  rateLimitReachedType?: string;
+}
+
+export interface RateLimitResetCreditInfo {
+  id: string;
+  resetType: string;
+  status: string;
+  grantedAt: number;
+  expiresAt?: number;
+  title?: string;
+  description?: string;
+}
+
+export interface RateLimitInfo extends RateLimitSnapshotInfo {
+  /** Complete multi-bucket view keyed by Codex's metered limit id. */
+  rateLimitsByLimitId?: Record<string, RateLimitSnapshotInfo>;
+  rateLimitResetCredits?: {
+    availableCount: number;
+    /** Undefined means the backend only returned a count. */
+    credits?: RateLimitResetCreditInfo[];
+  };
 }
 
 export interface RateLimitWindow {
@@ -1506,8 +1538,11 @@ export interface AccountInfo {
     type: "apiKey";
   } | {
     type: "chatgpt";
-    email: string;
+    email: string | null;
     planType: string;
+  } | {
+    type: "amazonBedrock";
+    usesCodexManagedCredentials: boolean;
   } | {
     type: "cursor";
     email: string;
@@ -1528,6 +1563,9 @@ export interface AccountInfo {
     version: string | null;
     channel: string | null;
     outdated: boolean;
+    compatibility?: "supported" | "newer" | "unsupported" | "unknown";
+    minimumVersion?: string;
+    testedProtocolVersion?: string;
   };
 }
 

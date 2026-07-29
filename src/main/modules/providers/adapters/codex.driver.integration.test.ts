@@ -68,8 +68,13 @@ async function waitForProtocolMessage(
 }
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   approvalHarness.requests.length = 0;
   delete process.env.MAINS_CODEX_FIXTURE_LOG;
+  delete process.env.MAINS_CODEX_FIXTURE_VERSION;
+  delete process.env.MAINS_CODEX_FIXTURE_LEGACY_INITIALIZE;
+  delete process.env.MAINS_CODEX_FIXTURE_PLUGINS_ENABLED;
+  delete process.env.MAINS_CODEX_FIXTURE_ACCOUNT;
   await Promise.all(drivers.splice(0).map((driver) => driver.shutdown?.()));
   for (const dir of tempDirs.splice(0)) {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -77,6 +82,195 @@ afterEach(async () => {
 });
 
 describe("codex.driver / app-server protocol", () => {
+  it("identifies the real Mains version during initialization", async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mains-codex-driver-"));
+    tempDirs.push(tempDir);
+    const logPath = path.join(tempDir, "protocol.jsonl");
+    process.env.MAINS_CODEX_FIXTURE_LOG = logPath;
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 2000,
+    });
+    drivers.push(driver);
+
+    await driver.createSession(request("run-client-version"));
+
+    const initialize = readProtocolLog(logPath).find(
+      (message) => message.method === "initialize",
+    );
+    expect(initialize?.params).toMatchObject({
+      clientInfo: {
+        name: "mains",
+        title: "Mains Desktop",
+        version: "0.4.2",
+      },
+    });
+  });
+
+  it("rejects Codex CLI versions older than the supported protocol", async () => {
+    process.env.MAINS_CODEX_FIXTURE_VERSION = "0.145.0";
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 2000,
+    });
+    drivers.push(driver);
+
+    await expect(
+      driver.createSession(request("run-old-codex")),
+    ).rejects.toThrow(
+      "Codex CLI 0.145.0 is not supported. Mains requires 0.146.0 or newer.",
+    );
+  });
+
+  it("reports an unsupported Codex CLI in account health metadata", async () => {
+    process.env.MAINS_CODEX_FIXTURE_VERSION = "0.145.0";
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 2000,
+    });
+    drivers.push(driver);
+
+    const accountInfo = await driver.getAccountInfo?.();
+
+    expect(accountInfo?.cli).toMatchObject({
+      version: "0.145.0",
+      outdated: true,
+      compatibility: "unsupported",
+      minimumVersion: "0.146.0",
+      testedProtocolVersion: "0.146.0",
+    });
+  });
+
+  it("allows a newer CLI in forward-compatible mode and reports a warning", async () => {
+    process.env.MAINS_CODEX_FIXTURE_VERSION = "0.147.0";
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 2000,
+    });
+    drivers.push(driver);
+
+    const accountInfo = await driver.getAccountInfo?.();
+
+    expect(accountInfo?.cli).toMatchObject({
+      version: "0.147.0",
+      outdated: false,
+      compatibility: "newer",
+      testedProtocolVersion: "0.146.0",
+    });
+    expect(warn).toHaveBeenCalledWith(
+      "[CodexDriver]",
+      expect.stringContaining(
+        "newer than Mains' tested app-server schema 0.146.0",
+      ),
+    );
+    warn.mockRestore();
+  });
+
+  it("maps current account variants and complete rate-limit responses", async () => {
+    process.env.MAINS_CODEX_FIXTURE_ACCOUNT = "bedrock";
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 2000,
+    });
+    drivers.push(driver);
+
+    const accountInfo = await driver.getAccountInfo?.();
+    const rateLimits = await driver.getRateLimits?.();
+
+    expect(accountInfo?.account).toEqual({
+      type: "amazonBedrock",
+      usesCodexManagedCredentials: true,
+    });
+    expect(rateLimits).toMatchObject({
+      limitId: "codex",
+      primary: { usedPercent: 10 },
+      rateLimitsByLimitId: {
+        codex: {
+          limitId: "codex",
+          primary: { usedPercent: 10 },
+        },
+      },
+      rateLimitResetCredits: {
+        availableCount: 1,
+      },
+    });
+  });
+
+  it("rejects an app-server that does not expose the current initialize contract", async () => {
+    process.env.MAINS_CODEX_FIXTURE_LEGACY_INITIALIZE = "1";
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 2000,
+    });
+    drivers.push(driver);
+
+    await expect(
+      driver.createSession(request("run-legacy-initialize")),
+    ).rejects.toThrow(
+      "Codex app-server initialize response is incompatible with protocol 0.146.0",
+    );
+  });
+
+  it("scopes skill discovery to the requested workspace", async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mains-codex-driver-"));
+    tempDirs.push(tempDir);
+    const logPath = path.join(tempDir, "protocol.jsonl");
+    process.env.MAINS_CODEX_FIXTURE_LOG = logPath;
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 2000,
+    });
+    drivers.push(driver);
+
+    await driver.listSkills?.(tempDir);
+
+    const skillsList = readProtocolLog(logPath).find(
+      (message) => message.method === "skills/list",
+    );
+    expect(skillsList?.params).toEqual({
+      cwds: [tempDir],
+      forceReload: true,
+    });
+  });
+
+  it("does not call plugin RPCs when the Codex plugins feature is disabled", async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mains-codex-driver-"));
+    tempDirs.push(tempDir);
+    const logPath = path.join(tempDir, "protocol.jsonl");
+    process.env.MAINS_CODEX_FIXTURE_LOG = logPath;
+    process.env.MAINS_CODEX_FIXTURE_PLUGINS_ENABLED = "0";
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 2000,
+    });
+    drivers.push(driver);
+
+    const result = await driver.listPlugins?.();
+
+    expect(result).toMatchObject({
+      marketplaces: [],
+      remoteSyncError: "Codex plugins feature is disabled or unavailable.",
+    });
+    expect(readProtocolLog(logPath)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ method: "experimentalFeature/list" }),
+      ]),
+    );
+    expect(readProtocolLog(logPath)).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ method: "plugin/list" }),
+      ]),
+    );
+  });
+
   it("forwards the selected structured-output schema as outputSchema", async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mains-codex-driver-"));
     tempDirs.push(tempDir);

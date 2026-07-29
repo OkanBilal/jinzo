@@ -34,6 +34,8 @@
     "reset": "npm rebuild better-sqlite3 && npm run db:clean:dev",
     "hard-reset": "npm run reset && rm -rf node_modules package-lock.json .vite dist .webpack && npm install",
     "clean": "rm -rf .vite dist out .webpack node_modules/.vite node_modules/.cache",
+    "codex:protocol:generate": "node scripts/generate-codex-app-server-protocol.mjs",
+    "codex:protocol:smoke": "node scripts/smoke-codex-app-server-protocol.mjs",
     "licenses:generate": "node scripts/generate-third-party-notices.mjs"
   },
   "keywords": [

@@ -12,11 +12,39 @@ export interface RateLimitWindow {
   total?: number;
 }
 
-export interface RateLimitInfo {
+export interface SpendControlLimitInfo {
+  limit: string;
+  used: string;
+  remainingPercent: number;
+  resetsAt: number;
+}
+
+export interface RateLimitSnapshotInfo {
+  limitId?: string;
+  limitName?: string;
   planType?: string;
   primary?: RateLimitWindow;
   secondary?: RateLimitWindow;
   credits?: { hasCredits: boolean; balance?: string; unlimited: boolean };
+  individualLimit?: SpendControlLimitInfo;
+  spendControlReached?: boolean;
+  rateLimitReachedType?: string;
+}
+
+export interface RateLimitInfo extends RateLimitSnapshotInfo {
+  rateLimitsByLimitId?: Record<string, RateLimitSnapshotInfo>;
+  rateLimitResetCredits?: {
+    availableCount: number;
+    credits?: Array<{
+      id: string;
+      resetType: string;
+      status: string;
+      grantedAt: number;
+      expiresAt?: number;
+      title?: string;
+      description?: string;
+    }>;
+  };
 }
 
 /** A Codex thread goal (mirrors `GoalInfo` in shared/adapter.types). */
@@ -232,8 +260,11 @@ export interface AccountInfo {
     type: "apiKey";
   } | {
     type: "chatgpt";
-    email: string;
+    email: string | null;
     planType: string;
+  } | {
+    type: "amazonBedrock";
+    usesCodexManagedCredentials: boolean;
   } | {
     type: "cursor";
     email: string;
@@ -248,6 +279,9 @@ export interface AccountInfo {
     version: string | null;
     channel: string | null;
     outdated: boolean;
+    compatibility?: "supported" | "newer" | "unsupported" | "unknown";
+    minimumVersion?: string;
+    testedProtocolVersion?: string;
   };
 }
 

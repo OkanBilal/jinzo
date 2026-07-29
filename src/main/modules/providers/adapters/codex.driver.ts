@@ -23,7 +23,7 @@ import { type Interface as ReadlineInterface } from "node:readline";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { shell } from "electron";
+import { app, shell } from "electron";
 import { findCodexBinaryPath } from "../providers.utils";
 import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 import { emit } from "../../../ipc-kit";
@@ -76,6 +76,11 @@ import {
   dispatchMainsTool,
 } from "./mains-tools.registry";
 import { guardsService } from "../../guards/guards.service";
+import type {
+  CodexAppServerMethod,
+  CodexAppServerParams,
+  CodexAppServerResult,
+} from "./codex-app-server-protocol/rpc";
 
 // ─────────────────────────────────────────────────────────────
 // JSON-RPC Types
@@ -115,6 +120,29 @@ function isResponse(msg: unknown): msg is JsonRpcResponse {
 
 export const CODEX_ARCHIVED_CHAT_MESSAGE =
   "This chat is archived in Codex. Unarchive it in Codex to continue, or archive it in Mains to hide it from this workspace.";
+
+/** App-server schema version this driver is developed and tested against. */
+export const CODEX_APP_SERVER_PROTOCOL_VERSION = "0.146.0";
+/** Oldest CLI whose app-server contract Mains accepts. */
+export const CODEX_MIN_CLI_VERSION = "0.146.0";
+
+function compareCodexVersions(left: string, right: string): number | null {
+  const parse = (value: string): [number, number, number] | null => {
+    const match = value.match(/^(\d+)\.(\d+)\.(\d+)/);
+    return match
+      ? [Number(match[1]), Number(match[2]), Number(match[3])]
+      : null;
+  };
+  const leftParts = parse(left);
+  const rightParts = parse(right);
+  if (!leftParts || !rightParts) return null;
+  for (let index = 0; index < leftParts.length; index += 1) {
+    if (leftParts[index] !== rightParts[index]) {
+      return leftParts[index] < rightParts[index] ? -1 : 1;
+    }
+  }
+  return 0;
+}
 
 function codexErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -408,23 +436,122 @@ export function mapRateLimitSnapshot(rl: Record<string, unknown> | undefined): R
   const primary = rl.primary as Record<string, unknown> | undefined;
   const secondary = rl.secondary as Record<string, unknown> | undefined;
   const credits = rl.credits as Record<string, unknown> | undefined;
+  const individualLimit = rl.individualLimit as
+    | Record<string, unknown>
+    | undefined;
   return {
-    planType: rl.planType as string | undefined,
+    ...(typeof rl.limitId === "string" ? { limitId: rl.limitId } : {}),
+    ...(typeof rl.limitName === "string" ? { limitName: rl.limitName } : {}),
+    planType: typeof rl.planType === "string" ? rl.planType : undefined,
     primary: primary ? {
       usedPercent: primary.usedPercent as number,
-      windowDurationMins: primary.windowDurationMins as number | undefined,
-      resetsAt: primary.resetsAt as number | undefined,
+      windowDurationMins:
+        typeof primary.windowDurationMins === "number"
+          ? primary.windowDurationMins
+          : undefined,
+      resetsAt:
+        typeof primary.resetsAt === "number"
+          ? primary.resetsAt
+          : undefined,
     } : undefined,
     secondary: secondary ? {
       usedPercent: secondary.usedPercent as number,
-      windowDurationMins: secondary.windowDurationMins as number | undefined,
-      resetsAt: secondary.resetsAt as number | undefined,
+      windowDurationMins:
+        typeof secondary.windowDurationMins === "number"
+          ? secondary.windowDurationMins
+          : undefined,
+      resetsAt:
+        typeof secondary.resetsAt === "number"
+          ? secondary.resetsAt
+          : undefined,
     } : undefined,
     credits: credits ? {
       hasCredits: credits.hasCredits as boolean,
-      balance: credits.balance as string | undefined,
+      balance: typeof credits.balance === "string" ? credits.balance : undefined,
       unlimited: credits.unlimited as boolean,
     } : undefined,
+    ...(individualLimit
+      ? {
+          individualLimit: {
+            limit: individualLimit.limit as string,
+            used: individualLimit.used as string,
+            remainingPercent: individualLimit.remainingPercent as number,
+            resetsAt: individualLimit.resetsAt as number,
+          },
+        }
+      : {}),
+    ...(typeof rl.spendControlReached === "boolean"
+      ? { spendControlReached: rl.spendControlReached }
+      : {}),
+    ...(typeof rl.rateLimitReachedType === "string"
+      ? { rateLimitReachedType: rl.rateLimitReachedType }
+      : {}),
+  };
+}
+
+/** Map the complete `account/rateLimits/read` response, including new buckets. */
+export function mapRateLimitResponse(
+  response: Record<string, unknown> | undefined,
+): RateLimitInfo | null {
+  if (!response) return null;
+  const rateLimits = mapRateLimitSnapshot(
+    response.rateLimits as Record<string, unknown> | undefined,
+  );
+  if (!rateLimits) return null;
+
+  const rawBuckets = response.rateLimitsByLimitId as
+    | Record<string, unknown>
+    | null
+    | undefined;
+  const rateLimitsByLimitId: NonNullable<
+    RateLimitInfo["rateLimitsByLimitId"]
+  > = {};
+  for (const [limitId, rawSnapshot] of Object.entries(rawBuckets ?? {})) {
+    const snapshot = mapRateLimitSnapshot(
+      rawSnapshot as Record<string, unknown> | undefined,
+    );
+    if (snapshot) rateLimitsByLimitId[limitId] = snapshot;
+  }
+
+  const rawResetCredits = response.rateLimitResetCredits as
+    | Record<string, unknown>
+    | null
+    | undefined;
+  const rawCredits = rawResetCredits?.credits;
+  const resetCredits = Array.isArray(rawCredits)
+    ? rawCredits.map((rawCredit) => {
+        const credit = rawCredit as Record<string, unknown>;
+        return {
+          id: credit.id as string,
+          resetType: credit.resetType as string,
+          status: credit.status as string,
+          grantedAt: credit.grantedAt as number,
+          ...(typeof credit.expiresAt === "number"
+            ? { expiresAt: credit.expiresAt }
+            : {}),
+          ...(typeof credit.title === "string"
+            ? { title: credit.title }
+            : {}),
+          ...(typeof credit.description === "string"
+            ? { description: credit.description }
+            : {}),
+        };
+      })
+    : undefined;
+
+  return {
+    ...rateLimits,
+    ...(Object.keys(rateLimitsByLimitId).length > 0
+      ? { rateLimitsByLimitId }
+      : {}),
+    ...(rawResetCredits
+      ? {
+          rateLimitResetCredits: {
+            availableCount: Number(rawResetCredits.availableCount ?? 0),
+            ...(resetCredits ? { credits: resetCredits } : {}),
+          },
+        }
+      : {}),
   };
 }
 
@@ -548,7 +675,7 @@ export function mapImageGenerationLifecycle(
  *   new turn to keep pursuing.
  */
 async function maybeSetThreadGoal(
-  server: { sendRequest: (method: string, params?: unknown) => Promise<unknown> },
+  server: CodexAppServer,
   threadId: string | undefined,
   goalMode: boolean,
   rawObjective: string | undefined,
@@ -676,7 +803,11 @@ class CodexAppServer {
     this.onClose = handler;
   }
 
-  async sendRequest(method: string, params?: unknown, timeoutMs = 30000): Promise<unknown> {
+  async sendRequest<Method extends CodexAppServerMethod>(
+    method: Method,
+    params: CodexAppServerParams<Method>,
+    timeoutMs = 30000,
+  ): Promise<CodexAppServerResult<Method>> {
     if (!this.child?.stdin) {
       throw new Error("App-server not running");
     }
@@ -684,13 +815,18 @@ class CodexAppServer {
     const reqId = this.nextId++;
     const message: JsonRpcRequest = { jsonrpc: "2.0", id: reqId, method, ...(params !== undefined ? { params } : {}) };
 
-    return new Promise((resolve, reject) => {
+    return new Promise<CodexAppServerResult<Method>>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pendingRequests.delete(reqId);
         reject(new Error(`RPC timeout: ${method} (${timeoutMs}ms)`));
       }, timeoutMs);
 
-      this.pendingRequests.set(reqId, { resolve, reject, timer });
+      this.pendingRequests.set(reqId, {
+        resolve: (value) =>
+          resolve(value as CodexAppServerResult<Method>),
+        reject,
+        timer,
+      });
       this.writeMessage(message);
     });
   }
@@ -1327,6 +1463,8 @@ interface CodexRunSink {
 export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
   let appServer: CodexAppServer | null = null;
   let appServerStartPromise: Promise<CodexAppServer> | null = null;
+  let codexVersionPromise: Promise<string | null> | null = null;
+  let codexCompatibilityPromise: Promise<void> | null = null;
   const runSinks = new Map<string, CodexRunSink>();
   const serverRequestOwners = new Map<string, string>();
   const titleGenerationModel = "gpt-5.4-mini";
@@ -1347,6 +1485,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
   let installedPluginsCache: { value: PluginListResponse; fetchedAt: number } | null = null;
   let pluginCatalogInFlight: Promise<PluginListResponse> | null = null;
   let installedPluginsInFlight: Promise<PluginListResponse> | null = null;
+  let pluginCapabilityPromise: Promise<void> | null = null;
   let pluginCacheGeneration = 0;
 
   function indexPluginReferences(result: Record<string, unknown>): void {
@@ -1371,8 +1510,35 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     }
   }
 
+  async function assertPluginCapability(server: CodexAppServer): Promise<void> {
+    pluginCapabilityPromise ??= (async () => {
+      let cursor: string | null = null;
+      do {
+        const result: CodexAppServerResult<"experimentalFeature/list"> =
+          await server.sendRequest("experimentalFeature/list", {
+            cursor,
+            limit: 100,
+          });
+        const feature = result.data.find(({ name }) => name === "plugins");
+        if (feature) {
+          if (!feature.enabled || feature.stage === "removed") {
+            throw new Error(
+              "Codex plugins feature is disabled or unavailable.",
+            );
+          }
+          return;
+        }
+        cursor = result.nextCursor;
+      } while (cursor);
+
+      throw new Error("Codex plugins feature is disabled or unavailable.");
+    })();
+    return pluginCapabilityPromise;
+  }
+
   async function fetchPluginList(method: "plugin/list" | "plugin/installed"): Promise<PluginListResponse> {
     const server = await ensureServer();
+    await assertPluginCapability(server);
     const result = await server.sendRequest(method, {}, 30000) as Record<string, unknown>;
     indexPluginReferences(result);
     return mapCodexPluginList(result);
@@ -1620,15 +1786,79 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     });
   }
 
-  /** Read the installed Codex CLI version (e.g. "0.135.0" from "codex-cli 0.135.0"). */
-  async function getCodexVersion(): Promise<string | null> {
-    try {
-      const { stdout } = await runCodexCli(["--version"], 8000);
-      const match = stdout.trim().match(/(\d+\.\d+\.\d+[^\s]*)/);
-      return match ? match[1] : stdout.trim() || null;
-    } catch {
-      return null;
-    }
+  /** Read the installed Codex CLI version (e.g. "0.146.0" from "codex-cli 0.146.0"). */
+  function getCodexVersion(): Promise<string | null> {
+    codexVersionPromise ??= (async () => {
+      try {
+        const { stdout } = await runCodexCli(["--version"], 8000);
+        const match = stdout.trim().match(/(\d+\.\d+\.\d+[^\s]*)/);
+        return match ? match[1] : stdout.trim() || null;
+      } catch {
+        return null;
+      }
+    })();
+    return codexVersionPromise;
+  }
+
+  function ensureCompatibleCodexVersion(): Promise<void> {
+    codexCompatibilityPromise ??= (async () => {
+      const version = await getCodexVersion();
+      if (!version) {
+        logWarn(
+          "Could not determine the Codex CLI version; app-server compatibility is unverified.",
+        );
+        return;
+      }
+
+      const minimumComparison = compareCodexVersions(
+        version,
+        CODEX_MIN_CLI_VERSION,
+      );
+      if (minimumComparison !== null && minimumComparison < 0) {
+        throw new Error(
+          `Codex CLI ${version} is not supported. Mains requires ${CODEX_MIN_CLI_VERSION} or newer.`,
+        );
+      }
+
+      const schemaComparison = compareCodexVersions(
+        version,
+        CODEX_APP_SERVER_PROTOCOL_VERSION,
+      );
+      if (schemaComparison !== null && schemaComparison > 0) {
+        logWarn(
+          `Codex CLI ${version} is newer than Mains' tested app-server schema ${CODEX_APP_SERVER_PROTOCOL_VERSION}; continuing in forward-compatible mode.`,
+        );
+      }
+    })();
+    return codexCompatibilityPromise;
+  }
+
+  async function getCodexCliHealth(): Promise<
+    NonNullable<AccountInfo["cli"]>
+  > {
+    const version = await getCodexVersion();
+    const minimumComparison = version
+      ? compareCodexVersions(version, CODEX_MIN_CLI_VERSION)
+      : null;
+    const schemaComparison = version
+      ? compareCodexVersions(version, CODEX_APP_SERVER_PROTOCOL_VERSION)
+      : null;
+    const compatibility =
+      !version || minimumComparison === null || schemaComparison === null
+        ? "unknown"
+        : minimumComparison < 0
+          ? "unsupported"
+          : schemaComparison > 0
+            ? "newer"
+            : "supported";
+    return {
+      version,
+      channel: null,
+      outdated: compatibility === "unsupported",
+      compatibility,
+      minimumVersion: CODEX_MIN_CLI_VERSION,
+      testedProtocolVersion: CODEX_APP_SERVER_PROTOCOL_VERSION,
+    };
   }
 
   function requestThreadId(params: unknown): string | undefined {
@@ -1788,6 +2018,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       if (appServer === server) {
         appServer = null;
       }
+      pluginCapabilityPromise = null;
       for (const sink of [...runSinks.values()]) {
         sink.finalize({
           status: "failed",
@@ -1797,16 +2028,27 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     });
 
     // Handshake: initialize → initialized (required before any other RPC)
-    await server.sendRequest("initialize", {
+    const initializeResponse = await server.sendRequest("initialize", {
       clientInfo: {
         name: "mains",
         title: "Mains Desktop",
-        version: "1.0.0",
+        version: app.getVersion(),
       },
       capabilities: {
         experimentalApi: true,
+        requestAttestation: false,
       },
     });
+    if (
+      typeof initializeResponse.userAgent !== "string" ||
+      typeof initializeResponse.codexHome !== "string" ||
+      typeof initializeResponse.platformFamily !== "string" ||
+      typeof initializeResponse.platformOs !== "string"
+    ) {
+      throw new Error(
+        `Codex app-server initialize response is incompatible with protocol ${CODEX_APP_SERVER_PROTOCOL_VERSION}`,
+      );
+    }
     server.sendNotification("initialized");
 
     // Background handler: captures notifications that arrive after turn completes
@@ -1864,7 +2106,9 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     if (appServer?.isRunning) return appServer;
     if (appServerStartPromise) return appServerStartPromise;
 
-    const startPromise = startServer(cwd);
+    const startPromise = ensureCompatibleCodexVersion().then(() =>
+      startServer(cwd),
+    );
     appServerStartPromise = startPromise;
     try {
       return await startPromise;
@@ -4656,7 +4900,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     },
 
     async getAccountInfo(): Promise<AccountInfo> {
-      const cli = { version: await getCodexVersion(), channel: null, outdated: false };
+      const cli = await getCodexCliHealth();
       try {
         const server = await ensureServer();
         const result = await server.sendRequest("account/read", {}) as Record<string, unknown>;
@@ -4679,8 +4923,13 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     async getRateLimits(): Promise<import("../../../../shared/adapter.types").RateLimitInfo | null> {
       try {
         if (!appServer?.isRunning) return null;
-        const result = await appServer.sendRequest("account/rateLimits/read", {}) as Record<string, unknown>;
-        return mapRateLimitSnapshot(result?.rateLimits as Record<string, unknown> | undefined);
+        const result = await appServer.sendRequest(
+          "account/rateLimits/read",
+          undefined,
+        );
+        return mapRateLimitResponse(
+          result as unknown as Record<string, unknown>,
+        );
       } catch (error) {
         logError("Failed to get rate limits:", error);
         return null;
@@ -4744,10 +4993,15 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       }
     },
 
-    async listSkills(): Promise<import("../../../../shared/adapter.types").SkillInfo[]> {
+    async listSkills(
+      workspacePath?: string,
+    ): Promise<import("../../../../shared/adapter.types").SkillInfo[]> {
       try {
-        const server = await ensureServer();
-        const result = await server.sendRequest("skills/list", { forceReload: true }) as Record<string, unknown>;
+        const server = await ensureServer(workspacePath);
+        const result = await server.sendRequest("skills/list", {
+          ...(workspacePath ? { cwds: [workspacePath] } : {}),
+          forceReload: true,
+        });
         const entries = result?.data as Array<Record<string, unknown>> | undefined;
 
         const skills: import("../../../../shared/adapter.types").SkillInfo[] = [];
@@ -5104,6 +5358,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
 
     async readPlugin(pluginName: string, marketplacePath: string): Promise<PluginDetail> {
       const server = await ensureServer();
+      await assertPluginCapability(server);
       // Local marketplaces read by path; remote-catalog plugins (path-less) by backend id.
       const remoteRef = !marketplacePath ? remotePluginRefCache.get(pluginName) : undefined;
       if (!marketplacePath && !remoteRef) {
@@ -5187,6 +5442,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     async installPlugin(pluginId: string, _scope?: "user" | "project" | "local"): Promise<void> {
       // Codex has no install-scope concept; _scope exists only for interface parity.
       const server = await ensureServer();
+      await assertPluginCapability(server);
       // pluginId format: "name@marketplace" e.g. "github@openai-curated-remote"
       const atIdx = pluginId.lastIndexOf("@");
       const marketplaceName = atIdx !== -1 ? pluginId.slice(atIdx + 1) : "";
@@ -5224,6 +5480,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
 
     async uninstallPlugin(pluginId: string): Promise<void> {
       const server = await ensureServer();
+      await assertPluginCapability(server);
       const atIdx = pluginId.lastIndexOf("@");
       const marketplaceName = atIdx !== -1 ? pluginId.slice(atIdx + 1) : "";
       const marketplacePath = marketplacePathCache.get(marketplaceName);
@@ -5243,6 +5500,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
 
     async setPluginEnabled(pluginId: string, enabled: boolean): Promise<void> {
       const server = await ensureServer();
+      await assertPluginCapability(server);
       // Remote-catalog plugins ignore the config-level enabled flag (their
       // state lives server-side): the write below would "succeed" without
       // changing anything, so refuse loudly instead of pretending.

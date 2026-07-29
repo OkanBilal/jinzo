@@ -7,20 +7,39 @@
 // canonical/Mains formats.
 // ─────────────────────────────────────────────────────────────
 
+import fs from "node:fs";
+import path from "node:path";
 import { describe, it, expect } from "vitest";
 import {
   buildCollaborationMode,
+  CODEX_APP_SERVER_PROTOCOL_VERSION,
   CODEX_ARCHIVED_CHAT_MESSAGE,
   isCodexArchivedThreadError,
   isCodexUnavailableThreadError,
   mapCodexPluginList,
   mapImageGenerationLifecycle,
+  mapRateLimitResponse,
   mapRateLimitSnapshot,
   mapSandboxMode,
   normalizeCodexResumeError,
   parseCodexReviewFindings,
   relativizeGoalMentions,
 } from "./codex.driver";
+
+describe("codex.driver / generated protocol snapshot", () => {
+  it("keeps the runtime contract version aligned with generated bindings", () => {
+    const protocolManifest = JSON.parse(
+      fs.readFileSync(
+        path.resolve(
+          __dirname,
+          "codex-app-server-protocol/generated/manifest.json",
+        ),
+        "utf8",
+      ),
+    ) as { cliVersion: string };
+    expect(CODEX_APP_SERVER_PROTOCOL_VERSION).toBe(protocolManifest.cliVersion);
+  });
+});
 
 describe("codex.driver / thread availability errors", () => {
   it("maps an archived-session RPC error to the Mains user-facing message", () => {
@@ -274,6 +293,8 @@ describe("codex.driver / mapRateLimitSnapshot", () => {
     };
 
     expect(mapRateLimitSnapshot(snapshot)).toEqual({
+      limitId: "codex",
+      limitName: "Codex",
       planType: "pro",
       primary: { usedPercent: 42, windowDurationMins: 300, resetsAt: 1717200000 },
       secondary: { usedPercent: 8, windowDurationMins: 10080, resetsAt: 1717800000 },
@@ -291,6 +312,128 @@ describe("codex.driver / mapRateLimitSnapshot", () => {
       primary: { usedPercent: 5, windowDurationMins: undefined, resetsAt: undefined },
       secondary: undefined,
       credits: undefined,
+    });
+  });
+
+  it("normalizes nullable protocol fields to optional Mains fields", () => {
+    expect(mapRateLimitSnapshot({
+      planType: null,
+      primary: {
+        usedPercent: 5,
+        windowDurationMins: null,
+        resetsAt: null,
+      },
+      secondary: null,
+      credits: {
+        hasCredits: false,
+        balance: null,
+        unlimited: false,
+      },
+    })).toEqual({
+      planType: undefined,
+      primary: {
+        usedPercent: 5,
+        windowDurationMins: undefined,
+        resetsAt: undefined,
+      },
+      secondary: undefined,
+      credits: {
+        hasCredits: false,
+        balance: undefined,
+        unlimited: false,
+      },
+    });
+  });
+
+  it("preserves bucket identity and spend-control state", () => {
+    expect(mapRateLimitSnapshot({
+      limitId: "codex",
+      limitName: "Codex",
+      planType: "team",
+      primary: null,
+      secondary: null,
+      credits: null,
+      individualLimit: {
+        limit: "100.00",
+        used: "25.00",
+        remainingPercent: 75,
+        resetsAt: 1717800000,
+      },
+      spendControlReached: false,
+      rateLimitReachedType: "workspace_member_usage_limit_reached",
+    })).toEqual({
+      limitId: "codex",
+      limitName: "Codex",
+      planType: "team",
+      primary: undefined,
+      secondary: undefined,
+      credits: undefined,
+      individualLimit: {
+        limit: "100.00",
+        used: "25.00",
+        remainingPercent: 75,
+        resetsAt: 1717800000,
+      },
+      spendControlReached: false,
+      rateLimitReachedType: "workspace_member_usage_limit_reached",
+    });
+  });
+});
+
+describe("codex.driver / mapRateLimitResponse", () => {
+  it("maps all metered buckets and reset-credit details", () => {
+    expect(mapRateLimitResponse({
+      rateLimits: {
+        limitId: "codex",
+        limitName: "Codex",
+        planType: "pro",
+        primary: { usedPercent: 10 },
+      },
+      rateLimitsByLimitId: {
+        codex: {
+          limitId: "codex",
+          limitName: "Codex",
+          planType: "pro",
+          primary: { usedPercent: 10 },
+        },
+        "codex-other": {
+          limitId: "codex-other",
+          limitName: "Other",
+          secondary: { usedPercent: 20 },
+        },
+      },
+      rateLimitResetCredits: {
+        availableCount: 2,
+        credits: [{
+          id: "credit-1",
+          resetType: "codexRateLimits",
+          status: "available",
+          grantedAt: 1717200000,
+          expiresAt: null,
+          title: "Reset",
+          description: null,
+        }],
+      },
+    })).toMatchObject({
+      limitId: "codex",
+      primary: { usedPercent: 10 },
+      rateLimitsByLimitId: {
+        codex: { limitId: "codex", primary: { usedPercent: 10 } },
+        "codex-other": {
+          limitId: "codex-other",
+          secondary: { usedPercent: 20 },
+        },
+      },
+      rateLimitResetCredits: {
+        availableCount: 2,
+        credits: [{
+          id: "credit-1",
+          resetType: "codexRateLimits",
+          status: "available",
+          grantedAt: 1717200000,
+          title: "Reset",
+        }],
+      },
     });
   });
 });

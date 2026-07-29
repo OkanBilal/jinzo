@@ -192,12 +192,20 @@ export default function CodexSettings() {
         signedIn={
           account?.type === "chatgpt"
             ? {
-                title: account.email,
+                title: account.email ?? "ChatGPT account",
                 description: account.type,
                 plan:
                   account.planType.charAt(0).toUpperCase() +
                   account.planType.slice(1),
               }
+            : account?.type === "amazonBedrock"
+              ? {
+                  title: "Amazon Bedrock",
+                  description: account.type,
+                  plan: account.usesCodexManagedCredentials
+                    ? "Managed credentials"
+                    : "AWS credentials",
+                }
             : null
         }
         isApiKey={account?.type === "apiKey"}
@@ -211,7 +219,24 @@ export default function CodexSettings() {
         shortName={getProviderVariant("codex").label}
         cli={cli}
         buttonVariant="secondary"
-      />
+      >
+        {cli?.compatibility === "unsupported" && (
+          <SettingsRow
+            title="Update required"
+            description={`Mains requires Codex CLI ${cli.minimumVersion ?? "0.146.0"} or newer.`}
+          >
+            <span className="text-xs text-destructive">Unsupported</span>
+          </SettingsRow>
+        )}
+        {cli?.compatibility === "newer" && (
+          <SettingsRow
+            title="Newer CLI detected"
+            description={`This CLI is newer than the tested app-server contract (${cli.testedProtocolVersion ?? "unknown"}). Forward-compatible mode is active.`}
+          >
+            <span className="text-xs text-warning">Untested</span>
+          </SettingsRow>
+        )}
+      </ProviderCliSection>
 
       <SettingsSection title="Configuration">
         <SettingsRow
