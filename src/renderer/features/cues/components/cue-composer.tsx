@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Input, Modal, ModalHeader, Textarea, toast } from "@/components/ui";
+import { Button, Input, Modal, ModalHeader, Select, Textarea, toast } from "@/components/ui";
 import { Note } from "@/components/ui/icons";
 import {
   useCreateCueMutation,
@@ -12,11 +12,18 @@ interface CueComposerProps {
   projectId: string;
   open: boolean;
   onClose: () => void;
+  initialContent?: string;
 }
 
-export function CueComposer({ accountId, projectId, open, onClose }: CueComposerProps) {
+export function CueComposer({
+  accountId,
+  projectId,
+  open,
+  onClose,
+  initialContent = "",
+}: CueComposerProps) {
   const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
+  const [content, setContent] = useState(initialContent);
   const [kind, setKind] = useState<CueKind>("note");
   const [status, setStatus] = useState<CueStatus>("inbox");
   const [createCue, { isLoading }] = useCreateCueMutation();
@@ -60,7 +67,7 @@ export function CueComposer({ accountId, projectId, open, onClose }: CueComposer
   return (
     <Modal isOpen={open} onClose={close} className="w-full max-w-xl">
       <ModalHeader onClose={close}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 py-2">
           <span className="grid size-7 place-items-center rounded-lg bg-primary-200/70 dark:bg-primary/10">
             <Note className="size-4 text-primary-800 dark:text-primary-100" />
           </span>
@@ -74,27 +81,27 @@ export function CueComposer({ accountId, projectId, open, onClose }: CueComposer
         <div className="grid grid-cols-2 gap-3 mb-4">
           <label className="grid gap-1.5 text-xs font-medium text-primary-700 dark:text-primary-300">
             Shape
-            <select
+            <Select
               value={kind}
-              onChange={(event) => setKind(event.target.value as CueKind)}
-              className="h-9 rounded-xl border border-primary-300/70 bg-primary-50 px-3 text-sm text-primary-950 outline-none focus:ring-2 focus:ring-primary-500 dark:border-primary/15 dark:bg-primary-900 dark:text-primary-50"
-            >
-              <option value="note">Note</option>
-              <option value="prompt">Prompt</option>
-              <option value="todo">To-do</option>
-            </select>
+              onChange={setKind}
+              options={[
+                { value: "note", label: "Note" },
+                { value: "prompt", label: "Prompt" },
+                { value: "todo", label: "To-do" },
+              ]}
+            />
           </label>
           <label className="grid gap-1.5 text-xs font-medium text-primary-700 dark:text-primary-300">
             Place
-            <select
+            <Select
               value={status}
-              onChange={(event) => setStatus(event.target.value as CueStatus)}
-              className="h-9 rounded-xl border border-primary-300/70 bg-primary-50 px-3 text-sm text-primary-950 outline-none focus:ring-2 focus:ring-primary-500 dark:border-primary/15 dark:bg-primary-900 dark:text-primary-50"
-            >
-              <option value="inbox">Inbox</option>
-              <option value="active">In progress</option>
-              <option value="done">Done</option>
-            </select>
+              onChange={setStatus}
+              options={[
+                { value: "inbox", label: "Inbox" },
+                { value: "active", label: "In progress" },
+                { value: "done", label: "Done" },
+              ]}
+            />
           </label>
         </div>
 

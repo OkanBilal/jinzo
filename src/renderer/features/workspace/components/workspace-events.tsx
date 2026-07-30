@@ -33,6 +33,7 @@ import { isDocumentRenderImage } from "@/lib/document-viewer";
 import { Button, CopyButton, Tooltip } from "@/components/ui";
 import { formatCostFromMicros, formatDurationMs } from "@/lib/format";
 import { PromptSuggestionChips } from "./prompt-suggestion-chips";
+import { ChatSelectionActions } from "./chat-selection-actions";
 
 function formatNumber(n: number): string {
   return n.toLocaleString("en-US");
@@ -331,6 +332,8 @@ interface WorkspaceEventsProps {
   onApplyPlan?: () => void;
   onDismissPlan?: () => void;
   hasPendingPlanApproval?: boolean;
+  onAddSelectionToChat?: (text: string) => void;
+  onAddSelectionToCue?: (text: string) => void;
 }
 
 export function WorkspaceEvents({
@@ -348,7 +351,10 @@ export function WorkspaceEvents({
   onApplyPlan,
   onDismissPlan,
   hasPendingPlanApproval = false,
+  onAddSelectionToChat,
+  onAddSelectionToCue,
 }: WorkspaceEventsProps) {
+  const transcriptRef = useRef<HTMLDivElement>(null);
   const isEditorActive = activeTab === "editor";
   const isIssueActive = isIssueTab(activeTab);
   const isSignalActive = isSignalTab(activeTab);
@@ -607,6 +613,7 @@ export function WorkspaceEvents({
         {isNoteActive && activeNoteId && <NoteTabContent reviewId={activeNoteId} />}
         {currentEvents.length > 0 && (
           <div
+            ref={transcriptRef}
             className={`h-full overflow-y-auto noscrollbar ${isRunTabActive ? "" : "hidden"}`}
           >
             <div className="min-h-75 max-w-210 mx-auto space-y-4 pt-12 pb-24 px-4">
@@ -660,6 +667,13 @@ export function WorkspaceEvents({
               <div ref={eventsEndRef} />
             </div>
           </div>
+        )}
+        {onAddSelectionToChat && onAddSelectionToCue && (
+          <ChatSelectionActions
+            containerRef={transcriptRef}
+            onAddToChat={onAddSelectionToChat}
+            onAddToCue={onAddSelectionToCue}
+          />
         )}
         {showEmpty && <WorkspaceEmptyState workspace={currentWorkspace} />}
         {/* Top/bottom fade overlays — only shown on run content (chat), not on editor/issue/note tabs.

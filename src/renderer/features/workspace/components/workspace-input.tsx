@@ -109,6 +109,8 @@ interface WorkspaceInputProps {
   isNewRunTabActive?: boolean;
   /** Empty-state stack: tighter outer margins so the bar sits vertically centered with the headline. */
   layout?: "default" | "centered";
+  /** Monotonic focus request from actions outside the input, such as selected chat text. */
+  focusRequest?: number;
 }
 
 export function WorkspaceInput({
@@ -137,6 +139,7 @@ export function WorkspaceInput({
   onStop,
   isNewRunTabActive = false,
   layout = "default",
+  focusRequest = 0,
 }: WorkspaceInputProps) {
   const inputRef = useRef<RichInputFormHandle>(null);
   const unifiedContextDropdownRef = useRef<HTMLDivElement>(null);
@@ -201,6 +204,12 @@ export function WorkspaceInput({
     });
     return () => cancelAnimationFrame(id);
   }, [isNewRunTabActive]);
+
+  useEffect(() => {
+    if (focusRequest === 0) return;
+    const id = requestAnimationFrame(() => inputRef.current?.focus());
+    return () => cancelAnimationFrame(id);
+  }, [focusRequest]);
 
   const [unifiedMenu, updateUnifiedMenu] = useReducer(
     (

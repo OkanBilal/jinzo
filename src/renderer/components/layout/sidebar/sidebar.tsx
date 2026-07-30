@@ -12,10 +12,10 @@ import {
   Plus,
   Connect,
   Project,
-  Note,
   Sun,
   Relay,
   Plugin,
+  Cue,
 } from "@/components/ui/icons";
 import CloneRepoModal from "./clone-repo-modal";
 import CreateProjectModal from "./create-project-modal";
@@ -242,7 +242,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 onClick={() => navigate("/cue")}
                 aria-current={isCueRoute ? "page" : undefined}
               >
-                <Note
+                <Cue
                   className={`w-4 h-4 -ml-1 ${
                     isCueRoute
                       ? "text-primary-950 dark:text-primary"

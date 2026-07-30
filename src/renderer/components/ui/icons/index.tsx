@@ -141,3 +141,7 @@ export { default as Download } from "./download";
 export { default as Plugin } from "./plugin";
 export { default as Workflow } from "./workflow";
 export { default as Zai } from "./zai";
+export { default as Pin } from "./pin";
+export { default as PinOutline } from "./pin-outline";
+export { default as ArchiveCheck } from "./archive-check";
+export { default as Cue } from "./cue";

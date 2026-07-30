@@ -22,9 +22,12 @@ import {
 import { isFirstWorkspaceTabActive } from "@/features/workspace/utils/is-first-workspace-tab-active";
 import {
   useAbortRunMutation,
+  useGetAccountQuery,
   useGetProviderByIdQuery,
   useUpdateProviderMutation,
 } from "@/lib/redux/api";
+import { toast } from "@/components/ui";
+import { CueComposer } from "@/features/cues/components/cue-composer";
 import { useAppSelector } from "@/lib/redux/hooks";
 import { useSetMainHeader } from "@/hooks/use-main-header";
 import { useWorkspaceRouteTopRounding } from "@/hooks/use-workspace-route-top-rounding";
@@ -55,7 +58,13 @@ export function WorkspaceProviderPage({
   );
   const ws = useWorkspacePage(providerId);
   const [customizeRequested, setCustomizeRequested] = useState(false);
+  const [inputFocusRequest, setInputFocusRequest] = useState(0);
+  const [cueCapture, setCueCapture] = useState<{
+    projectId: string;
+    content: string;
+  } | null>(null);
   const [abortRun] = useAbortRunMutation();
+  const { data: account } = useGetAccountQuery();
   const { data: providerData } = useGetProviderByIdQuery(providerId);
   const [updateProvider] = useUpdateProviderMutation();
   const bottomTerminal = useBottomTerminal();
@@ -96,6 +105,26 @@ export function WorkspaceProviderPage({
       ws.setAutoExecute(true);
     },
     [ws],
+  );
+
+  const handleAddSelectionToChat = useCallback(
+    (selection: string) => {
+      ws.setGoal((current) => (current.trim() ? `${current}\n\n${selection}` : selection));
+      setInputFocusRequest((request) => request + 1);
+    },
+    [ws],
+  );
+
+  const handleAddSelectionToCue = useCallback(
+    (selection: string) => {
+      const projectId = ws.currentWorkspace?.projectId;
+      if (!projectId) {
+        toast.error("Cue capture needs a project-linked workspace");
+        return;
+      }
+      setCueCapture({ projectId, content: selection });
+    },
+    [ws.currentWorkspace?.projectId],
   );
 
   const handleApplyPlan = useCallback(async () => {
@@ -267,6 +296,7 @@ export function WorkspaceProviderPage({
                   onStop={handleStop}
                   isNewRunTabActive={ws.showNewRunTab}
                   layout="centered"
+                  focusRequest={inputFocusRequest}
                 />
               </div>
             )}
@@ -291,6 +321,8 @@ export function WorkspaceProviderPage({
             onApplyPlan={handleApplyPlan}
             onDismissPlan={handleDismissPlan}
             hasPendingPlanApproval={!!currentPlanApproval}
+            onAddSelectionToChat={handleAddSelectionToChat}
+            onAddSelectionToCue={handleAddSelectionToCue}
           />
         )}
       </div>
@@ -373,6 +405,7 @@ export function WorkspaceProviderPage({
           onUploadedFilesChange={ws.setUploadedFiles}
           onStop={handleStop}
           isNewRunTabActive={ws.showNewRunTab}
+          focusRequest={inputFocusRequest}
         />
       ) : null}
       </div>
@@ -383,6 +416,15 @@ export function WorkspaceProviderPage({
           rootPath={ws.currentWorkspace.rootPath}
           isOpen={bottomTerminal.isOpen}
           onClose={bottomTerminal.close}
+        />
+      )}
+      {cueCapture && (
+        <CueComposer
+          open
+          onClose={() => setCueCapture(null)}
+          accountId={account?.id}
+          projectId={cueCapture.projectId}
+          initialContent={cueCapture.content}
         />
       )}
     </div>

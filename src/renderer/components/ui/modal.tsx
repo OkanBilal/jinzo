@@ -57,7 +57,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         className={cn(
-          "relative flex flex-col glass-surface rounded-xl shadow-2xl overflow-hidden max-h-[92vh]",
+          "relative flex flex-col glass-surface rounded-3xl overflow-hidden max-h-[92vh]",
           className,
         )}
         style={{
@@ -79,7 +79,7 @@ interface ModalHeaderProps {
 /** Standard modal title bar: content on the left, close button on the right. */
 export function ModalHeader({ onClose, children }: ModalHeaderProps) {
   return (
-    <div className="flex items-center justify-between px-4 py-2.5 border-b border-primary-200 dark:border-primary-800 shrink-0">
+    <div className="flex items-center justify-between px-4 py-2  shrink-0">
       <div className="flex items-center gap-2 min-w-0 flex-1">{children}</div>
       <Button
         onClick={onClose}
