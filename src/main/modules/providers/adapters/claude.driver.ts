@@ -167,7 +167,37 @@ interface SDKOptions {
   includePartialMessages?: boolean;
   plugins?: Array<{ type: "local"; path: string; skipMcpDiscovery?: boolean }>;
   canUseTool?: SDKCanUseTool;
+  onElicitation?: SDKOnElicitation;
 }
+
+/**
+ * MCP elicitation — a server asking the user for input (form fields, or a URL
+ * to authenticate at). When no callback is supplied the SDK declines every
+ * request automatically, so the server's flow fails with nothing shown to the
+ * user.
+ */
+interface SDKElicitationRequest {
+  serverName: string;
+  message: string;
+  mode?: "form" | "url";
+  url?: string;
+  elicitationId?: string;
+  requestedSchema?: Record<string, unknown>;
+  title?: string;
+  displayName?: string;
+  description?: string;
+}
+
+/** MCP `ElicitResult`. `content` is required by the server when accepting a form. */
+interface SDKElicitationResult {
+  action: "accept" | "decline" | "cancel";
+  content?: Record<string, string | number | boolean | string[]>;
+}
+
+type SDKOnElicitation = (
+  request: SDKElicitationRequest,
+  options: { signal: AbortSignal },
+) => Promise<SDKElicitationResult>;
 
 function isSDKPermissionMode(
   value: unknown,
@@ -503,6 +533,8 @@ interface SDKSessionInfoLite {
 
 interface SDKQuery extends AsyncGenerator<SDKMessage, void> {
   interrupt(): Promise<void>;
+  /** Forcefully ends the query and terminates the CLI subprocess. */
+  close(): void;
   rewindFiles(userMessageUuid: string, options?: { dryRun?: boolean }): Promise<unknown>;
   setPermissionMode(mode: string): Promise<void>;
   setModel(model?: string): Promise<void>;
@@ -774,6 +806,110 @@ export function createClaudePermissionBridge({
   return { canUseTool };
 }
 
+/** Narrow arbitrary JSON to the value types MCP allows in an elicitation result. */
+function coerceElicitationContent(
+  parsed: unknown,
+): Record<string, string | number | boolean | string[]> | null {
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  const out: Record<string, string | number | boolean | string[]> = {};
+  for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+    if (
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+    ) {
+      out[key] = value;
+    } else if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
+      out[key] = value as string[];
+    }
+    // Anything else (nested objects, nulls) is not expressible — drop it rather
+    // than sending a payload the server will reject wholesale.
+  }
+  return out;
+}
+
+/**
+ * Bridge MCP elicitation requests to the same approval broker that already
+ * backs tool approvals and AskUserQuestion.
+ *
+ * Without this the SDK auto-declines every elicitation, so an MCP server that
+ * needs a form filled or an auth URL visited fails with nothing shown to the
+ * user — the failure mode this exists to remove.
+ */
+export function createClaudeElicitationHandler({
+  runId,
+  requestApproval = requestToolApproval,
+  cancelApproval = cancelPendingRequest,
+}: {
+  runId: string;
+  requestApproval?: ApprovalRequester;
+  cancelApproval?: (requestId: string) => void;
+}): SDKOnElicitation {
+  return async (request, options) => {
+    if (options.signal.aborted) return { action: "cancel" };
+
+    const requestId = `${runId}-elicit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const mode = request.mode ?? (request.url ? "url" : "form");
+    const req: ToolApprovalRequest = {
+      requestId,
+      runId,
+      // The dialog's title slot; the server name is the most identifying label.
+      toolName: request.displayName || request.serverName,
+      kind: "elicitation",
+      header: request.title,
+      question: request.message,
+      description: request.description,
+      serverName: request.serverName,
+      elicitationMode: mode,
+      url: request.url,
+      requestedSchema: request.requestedSchema,
+      timestamp: Date.now(),
+    };
+
+    let resolveAbort: (() => void) | undefined;
+    const aborted = new Promise<null>((resolve) => {
+      resolveAbort = () => resolve(null);
+      options.signal.addEventListener("abort", resolveAbort, { once: true });
+    });
+
+    let response: ToolApprovalResponse | null;
+    try {
+      response = await Promise.race([requestApproval(req), aborted]);
+    } finally {
+      if (resolveAbort) options.signal.removeEventListener("abort", resolveAbort);
+    }
+
+    if (!response) {
+      // Settle the broker entry too, so the renderer never keeps a ghost dialog.
+      cancelApproval(requestId);
+      return { action: "cancel" };
+    }
+    if (!response.approved) return { action: "decline" };
+
+    if (mode === "url") return { action: "accept" };
+
+    const content = response.answer
+      ? coerceElicitationContent(safeParseJson(response.answer))
+      : null;
+    if (!content) {
+      // Accepting with content we know is wrong turns into an opaque server-side
+      // validation error; declining reports the real problem — we could not
+      // collect the fields.
+      logWarn("Elicitation accepted without usable form content; declining");
+      return { action: "decline" };
+    }
+    return { action: "accept", content };
+  };
+}
+
+function safeParseJson(value: string): unknown {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Map a `system:task_*` message to a WorkRunTaskEvent.
  *
@@ -931,6 +1067,12 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
   let getSessionInfoFn:
     | ((sessionId: string, options?: { dir?: string }) => Promise<SDKSessionInfoLite | undefined>)
     | null = null;
+  // Standalone SDK fn that removes a persisted session: `{sessionId}.jsonl` plus
+  // the `{sessionId}/` subagent-transcript subdirectory. Clearing our own DB
+  // column does not touch either, so without this the transcripts accumulate.
+  let deleteSdkSessionFn:
+    | ((sessionId: string, options?: { dir?: string }) => Promise<void>)
+    | null = null;
 
   // Cross-run TTL caches
   let cachedModels: ModelInfo[] | null = null;
@@ -994,6 +1136,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       createSdkMcpServerFn = (ClaudeSDK as any).createSdkMcpServer ?? null;
       toolFn = (ClaudeSDK as any).tool ?? null;
       getSessionInfoFn = (ClaudeSDK as any).getSessionInfo ?? null;
+      deleteSdkSessionFn = (ClaudeSDK as any).deleteSession ?? null;
       sdkLoaded = true;
       logInfo("SDK loaded successfully");
     } catch (error) {
@@ -1297,6 +1440,12 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
 
     options.promptSuggestions = true;
     options.includePartialMessages = true;
+
+    // Without a handler the SDK declines every MCP elicitation automatically,
+    // so a server asking for a form or an auth URL fails silently.
+    if (runId) {
+      options.onElicitation = createClaudeElicitationHandler({ runId });
+    }
 
     {
       const guardHook = await guardsService.buildClaudeGuardHook();
@@ -2346,8 +2495,20 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
 
     async cleanup(session): Promise<void> {
       // Per-run state lives on the Session object Core is about to drop.
-      // The SDK query auto-completes when the stream ends.
       const cs = session as ClaudeSession;
+
+      // The query normally auto-completes when the stream ends, so this is a
+      // backstop: on an aborted or errored run the CLI subprocess can outlive
+      // the stream, and nothing else would reap it.
+      try {
+        cs.query?.close?.();
+      } catch (err) {
+        logWarn(
+          "Failed to close SDK query:",
+          err instanceof Error ? err.message : String(err),
+        );
+      }
+
       removeClaudeRuntimeSettings(cs.runtimeSettingsPath);
     },
 
@@ -2363,6 +2524,30 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     },
 
     async deleteSession(runId: string): Promise<void> {
+      // Resolve before clearing the memo — lookupSessionId reads it.
+      const sessionId = await lookupSessionId(runId);
+
+      // Remove the persisted transcript too. Clearing our own column only makes
+      // the session unreachable from Mains; the CLI's `{sessionId}.jsonl` and
+      // its subagent-transcript directory would stay on disk forever.
+      if (sessionId) {
+        try {
+          await ensureSDK();
+          if (deleteSdkSessionFn) {
+            await deleteSdkSessionFn(sessionId);
+          } else {
+            logWarn("SDK has no deleteSession(); transcript left on disk");
+          }
+        } catch (err) {
+          // A missing session throws — that is the already-deleted case, and it
+          // must not block clearing our own reference to it.
+          logWarn(
+            `Failed to delete SDK session ${sessionId}:`,
+            err instanceof Error ? err.message : String(err),
+          );
+        }
+      }
+
       sessionIdMemo.delete(runId);
       runsRepo
         .updateRun(runId, { sessionId: null })
@@ -2375,6 +2560,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       loadError = null;
       queryFn = null;
       getSessionInfoFn = null;
+      deleteSdkSessionFn = null;
       cachedModels = null;
       cachedModelsTimestamp = 0;
       cachedPlugins = null;

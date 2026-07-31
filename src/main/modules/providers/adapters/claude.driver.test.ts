@@ -13,6 +13,7 @@ import {
   buildClaudeExecutableOptions,
   classifyOutcome,
   createClaudePermissionBridge,
+  createClaudeElicitationHandler,
   removeClaudeRuntimeSettings,
   writeClaudeRuntimeSettings,
   mapClaudePluginList,
@@ -959,5 +960,128 @@ describe("claude.driver / mapTaskMessage", () => {
       TS,
     );
     expect(event).toBeNull();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// MCP elicitation bridge. Without a handler the SDK auto-declines every
+// request, so these cover the paths that make a request reach the user.
+// ─────────────────────────────────────────────────────────────
+
+describe("claude.driver / elicitation handler", () => {
+  const FORM_REQUEST = {
+    serverName: "linear",
+    message: "Provide your workspace credentials",
+    mode: "form" as const,
+    requestedSchema: {
+      properties: { apiKey: { type: "string" } },
+      required: ["apiKey"],
+    },
+  };
+
+  function opts() {
+    return { signal: new AbortController().signal };
+  }
+
+  it("routes the request to the approval broker as an elicitation", async () => {
+    const requestApproval = vi.fn().mockResolvedValue({
+      requestId: "x",
+      approved: true,
+      answer: JSON.stringify({ apiKey: "sk-123" }),
+    });
+    const handler = createClaudeElicitationHandler({ runId: "run-1", requestApproval });
+
+    await expect(handler(FORM_REQUEST, opts())).resolves.toEqual({
+      action: "accept",
+      content: { apiKey: "sk-123" },
+    });
+    expect(requestApproval).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runId: "run-1",
+        kind: "elicitation",
+        serverName: "linear",
+        elicitationMode: "form",
+        question: "Provide your workspace credentials",
+        requestedSchema: FORM_REQUEST.requestedSchema,
+      }),
+    );
+  });
+
+  it("declines when the user dismisses", async () => {
+    const handler = createClaudeElicitationHandler({
+      runId: "run-1",
+      requestApproval: vi.fn().mockResolvedValue({ requestId: "x", approved: false }),
+    });
+    await expect(handler(FORM_REQUEST, opts())).resolves.toEqual({ action: "decline" });
+  });
+
+  // A URL elicitation is a browser round-trip; there is no content to send back.
+  it("accepts a url elicitation without content", async () => {
+    const handler = createClaudeElicitationHandler({
+      runId: "run-1",
+      requestApproval: vi.fn().mockResolvedValue({ requestId: "x", approved: true }),
+    });
+    await expect(
+      handler(
+        { serverName: "notion", message: "Authenticate", mode: "url", url: "https://x.test" },
+        opts(),
+      ),
+    ).resolves.toEqual({ action: "accept" });
+  });
+
+  // Sending content we know is malformed surfaces as an opaque server-side
+  // validation error; declining names the real problem.
+  it("declines a form accepted without usable content", async () => {
+    const handler = createClaudeElicitationHandler({
+      runId: "run-1",
+      requestApproval: vi
+        .fn()
+        .mockResolvedValue({ requestId: "x", approved: true, answer: "not json" }),
+    });
+    await expect(handler(FORM_REQUEST, opts())).resolves.toEqual({ action: "decline" });
+  });
+
+  it("drops values MCP cannot express rather than sending them", async () => {
+    const handler = createClaudeElicitationHandler({
+      runId: "run-1",
+      requestApproval: vi.fn().mockResolvedValue({
+        requestId: "x",
+        approved: true,
+        answer: JSON.stringify({ keep: "a", n: 2, flag: true, tags: ["x"], nested: { a: 1 } }),
+      }),
+    });
+    await expect(handler(FORM_REQUEST, opts())).resolves.toEqual({
+      action: "accept",
+      content: { keep: "a", n: 2, flag: true, tags: ["x"] },
+    });
+  });
+
+  it("cancels immediately when the signal is already aborted", async () => {
+    const requestApproval = vi.fn();
+    const controller = new AbortController();
+    controller.abort();
+    const handler = createClaudeElicitationHandler({ runId: "run-1", requestApproval });
+
+    await expect(handler(FORM_REQUEST, { signal: controller.signal })).resolves.toEqual({
+      action: "cancel",
+    });
+    expect(requestApproval).not.toHaveBeenCalled();
+  });
+
+  // A control stream can close while a dialog is parked; the broker entry has to
+  // be released too or the renderer keeps a dialog nothing will ever answer.
+  it("releases the broker entry when aborted mid-request", async () => {
+    const controller = new AbortController();
+    const cancelApproval = vi.fn();
+    const handler = createClaudeElicitationHandler({
+      runId: "run-1",
+      requestApproval: () => new Promise(() => {}),
+      cancelApproval,
+    });
+
+    const pending = handler(FORM_REQUEST, { signal: controller.signal });
+    controller.abort();
+    await expect(pending).resolves.toEqual({ action: "cancel" });
+    expect(cancelApproval).toHaveBeenCalledTimes(1);
   });
 });

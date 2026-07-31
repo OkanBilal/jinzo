@@ -1,6 +1,12 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { ArrowUp, Question } from "@/components/ui/icons";
 import { Body, Button, Caption, Checkbox, Text } from "@/components/ui";
+import {
+  ElicitationForm,
+  buildElicitationContent,
+  parseElicitationFields,
+  type ElicitationValues,
+} from "./elicitation-form";
 import type { ToolApprovalRequest } from "../../hooks";
 import { ToolInputPreview } from "./tool-input-preview";
 import { resolveTool } from "../../utils/resolve-tool";
@@ -203,6 +209,42 @@ export function ToolApprovalDialog({
   const [freeText, setFreeText] = useState("");
   const [allowForSession, setAllowForSession] = useState(false);
   const [showAllParams, setShowAllParams] = useState(false);
+  const [elicitValues, setElicitValues] = useState<ElicitationValues>({});
+  const [elicitMissing, setElicitMissing] = useState<string[]>([]);
+
+  const elicitFields = useMemo(
+    () =>
+      request.kind === "elicitation" && request.elicitationMode !== "url"
+        ? parseElicitationFields(request.requestedSchema)
+        : [],
+    [request.kind, request.elicitationMode, request.requestedSchema],
+  );
+
+  const handleElicitChange = useCallback((name: string, value: string | boolean) => {
+    setElicitValues((prev) => ({ ...prev, [name]: value }));
+    setElicitMissing([]);
+  }, []);
+
+  /**
+   * The URL flow is the whole point of a "url" elicitation: the user has to
+   * visit it for the server-side step to complete, so open it as part of
+   * accepting rather than leaving them a link to find.
+   */
+  const handleElicitAcceptUrl = useCallback(() => {
+    if (request.url) window.api.shell.openExternal(request.url);
+    onRespond(request.requestId, true);
+  }, [request.url, request.requestId, onRespond]);
+
+  const handleElicitSubmit = useCallback(() => {
+    const result = buildElicitationContent(elicitFields, elicitValues);
+    if (!result.ok) {
+      setElicitMissing(result.missing);
+      return;
+    }
+    // The broker carries a single free-form `answer`; the driver parses it back
+    // into the MCP `content` object.
+    onRespond(request.requestId, true, JSON.stringify(result.content));
+  }, [elicitFields, elicitValues, request.requestId, onRespond]);
 
   const handleAllow = useCallback(() => {
     onRespond(
@@ -245,6 +287,73 @@ export function ToolApprovalDialog({
 
   const canSubmit =
     selectedOptions.length > 0 || (!isCursor && freeText.trim().length > 0);
+
+  if (request.kind === "elicitation") {
+    const isUrlMode = request.elicitationMode === "url" && !!request.url;
+    return (
+      <div className="mx-auto mb-1 max-w-210">
+        <div className="overflow-hidden rounded-2xl glass-surface">
+          <div className="flex gap-3 px-3.5 pb-2 pt-3.5 sm:px-4 sm:pt-4">
+            <Question className="mt-0.5 size-4 shrink-0 text-primary-600 dark:text-primary-400" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="text-xxs font-semibold uppercase tracking-wide text-primary-500 dark:text-primary-400">
+                {request.header || `${request.serverName ?? "MCP"} needs input`}
+              </div>
+              <Body className="leading-snug font-medium">
+                {request.question || "An MCP server is requesting input."}
+              </Body>
+              {request.description && (
+                <Caption className="block text-primary-500">
+                  {request.description}
+                </Caption>
+              )}
+              {isUrlMode && (
+                <Caption className="block truncate font-mono text-primary-500">
+                  {request.url}
+                </Caption>
+              )}
+            </div>
+          </div>
+
+          {!isUrlMode && (
+            <ElicitationForm
+              fields={elicitFields}
+              values={elicitValues}
+              onChange={handleElicitChange}
+            />
+          )}
+
+          {elicitMissing.length > 0 && (
+            <Caption className="block px-3.5 pb-2 text-danger sm:px-4">
+              Required: {elicitMissing.join(", ")}
+            </Caption>
+          )}
+
+          <div className="border-t border-primary-200/40 px-3.5 py-3 dark:border-primary-700/25 sm:px-4">
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                variant="primary"
+                className="min-w-18 text-primary-700 hover:bg-primary-200/40 dark:text-primary-300 dark:hover:bg-primary-800/50"
+                onClick={handleDeny}
+              >
+                Decline
+              </Button>
+              <Button
+                variant="submit"
+                className="min-w-18 font-semibold shadow-sm disabled:opacity-45"
+                onClick={isUrlMode ? handleElicitAcceptUrl : handleElicitSubmit}
+                // A schema with no renderable fields still accepts — some
+                // elicitations are a bare confirmation.
+                disabled={false}
+              >
+                {isUrlMode ? "Open & continue" : "Submit"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (request.kind === "ask_user") {
     return (

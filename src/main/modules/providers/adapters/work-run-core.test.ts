@@ -285,6 +285,41 @@ describe("createWorkRunAdapter", () => {
       // Should not throw
       await expect(adapter.abortRun!("never-existed")).resolves.toBeUndefined();
     });
+
+    // Regression: writing provider config mid-run (approving a plan, any
+    // toolbar toggle) invalidates the adapter cache, so the next
+    // createWorkAdapter() hands back a fresh instance. Stopping the run has to
+    // still reach it — otherwise abortRun resolves silently, the caller falls
+    // back to its force-finalize timer, and the driver keeps editing files
+    // after the UI says the run stopped.
+    it("aborts a run started on a different adapter instance", async () => {
+      const fake = createFakeDriver({
+        awaitAbort: true,
+        outcome: { status: "canceled", stopReason: "cancelled" },
+      });
+      const owning = createWorkRunAdapter(fake.driver);
+      const replacement = createWorkRunAdapter(fake.driver);
+
+      const runPromise = owning.startRun(makeStartReq({ runId: "run-orphan" }), () => {});
+      await new Promise((r) => setImmediate(r));
+
+      await replacement.abortRun!("run-orphan");
+
+      const result = await runPromise;
+      expect(result.status).toBe("canceled");
+      expect(fake.calls.executePrompt[0].signalAborted).toBe(true);
+    });
+
+    // The run is unregistered once it settles, so a later stop must not find a
+    // stale entry and abort a controller belonging to nothing.
+    it("forgets a run once it completes", async () => {
+      const fake = createFakeDriver({ outcome: { status: "succeeded" } });
+      const adapter = createWorkRunAdapter(fake.driver);
+
+      await adapter.startRun(makeStartReq({ runId: "run-done" }), () => {});
+
+      await expect(adapter.abortRun!("run-done")).resolves.toBeUndefined();
+    });
   });
 
   describe("optional verbs", () => {
