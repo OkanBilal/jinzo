@@ -353,9 +353,18 @@ interface SDKResultError extends SDKResultBase {
 
 type SDKResultMessage = SDKResultSuccess | SDKResultError;
 
-interface SDKSystemMessage {
+export interface SDKSystemMessage {
   type: "system";
-  subtype: "init" | "compact_boundary" | "api_retry" | "status" | "plugin_install";
+  subtype:
+    | "init"
+    | "compact_boundary"
+    | "api_retry"
+    | "status"
+    | "plugin_install"
+    | "task_started"
+    | "task_progress"
+    | "task_updated"
+    | "task_notification";
   uuid: string;
   session_id: string;
   model?: string;
@@ -385,9 +394,28 @@ interface SDKSystemMessage {
   retry_delay_ms?: number;
   error_status?: number | null;
   // subtype: "plugin_install"
-  status?: "started" | "installed" | "failed" | "completed";
+  status?: "started" | "installed" | "failed" | "completed" | "stopped";
   name?: string;
   error?: string;
+  // subtypes: "task_started" | "task_progress" | "task_updated" | "task_notification"
+  task_id?: string;
+  tool_use_id?: string;
+  description?: string;
+  subagent_type?: string;
+  task_type?: string;
+  last_tool_name?: string;
+  summary?: string;
+  output_file?: string;
+  skip_transcript?: boolean;
+  usage?: { total_tokens?: number; tool_uses?: number; duration_ms?: number };
+  // subtype: "task_updated" — a wire-safe subset of the changed task fields
+  patch?: {
+    status?: "pending" | "running" | "completed" | "failed" | "killed" | "paused";
+    description?: string;
+    end_time?: number;
+    error?: string;
+    is_backgrounded?: boolean;
+  };
 }
 
 interface SDKRateLimitInfo {
@@ -496,6 +524,15 @@ interface SDKQuery extends AsyncGenerator<SDKMessage, void> {
 // Per-run session state (handed back to Core as opaque `session`)
 // ─────────────────────────────────────────────────────────────
 
+/**
+ * taskId → the tool_use_id that spawned it, remembered from `task_started`
+ * because later task phases don't all repeat it.
+ */
+export type ClaudeTaskIndex = Map<
+  string,
+  { toolUseId?: string; description?: string; subagentType?: string }
+>;
+
 interface ClaudeSession {
   runId: string;
   options: SDKOptions;
@@ -512,6 +549,14 @@ interface ClaudeSession {
   };
   /** Per-run tool-call correlation index (toolCallId → toolName/input). */
   toolCallIndex: Map<string, { toolName: string; input?: unknown; startedAt?: number }>;
+  /**
+   * Per-run task correlation index (taskId → spawning tool_use_id).
+   *
+   * `system:task_updated` carries only `task_id` — no `tool_use_id` — so the
+   * anchor has to be remembered from `task_started` for later phases to attach
+   * to the right tool call.
+   */
+  taskIndex: ClaudeTaskIndex;
   /** Per-(runId, blockIndex) streaming text buffers. */
   partialTextBuffers: Map<string, string>;
   /** Per-(runId, blockIndex) streaming thinking buffers. */
@@ -523,6 +568,52 @@ interface ClaudeSession {
 }
 
 const { info: logInfo, warn: logWarn, error: logError } = createLogger("[ClaudeDriver]");
+
+/**
+ * Wire name of the subagent tool.
+ *
+ * The CLI names this tool in two layers and they do not agree: the registry
+ * calls it `Task` (that is what system/init's tool list reports and what
+ * permission rules and DEFAULT_ALLOWED_TOOLS match), while the `tool_use`
+ * blocks it emits name it `Agent`. Event mapping only ever sees wire names, so
+ * matching `Task` here would never fire.
+ */
+const SUBAGENT_TOOL_NAME = "Agent";
+
+/**
+ * Build the terminal `subagent` event for a finished subagent tool call.
+ * Shared by the `user` tool_result path (what the SDK actually sends) and the
+ * bare `tool_result` fallback in the default branch.
+ */
+function buildSubagentCompletionEvent(args: {
+  input?: unknown;
+  output?: unknown;
+  error?: string;
+  toolUseId?: string;
+  ts: number;
+}): WorkRunEvent {
+  const { input, output, error, toolUseId, ts } = args;
+  const taskInput = input as Record<string, unknown> | undefined;
+  const subagentType = (taskInput?.subagent_type as string) || "general-purpose";
+
+  let agentId: string | undefined;
+  if (typeof output === "string") {
+    const agentIdMatch = output.match(/agentId:\s*([a-f0-9-]+)/i);
+    if (agentIdMatch) agentId = agentIdMatch[1];
+  }
+
+  return {
+    type: "subagent",
+    phase: error ? "failed" : "completed",
+    agentType: subagentType,
+    agentId,
+    parentToolUseId: toolUseId || undefined,
+    result: typeof output === "string" ? output : safeJson(output),
+    error,
+    ts,
+    metadata: { toolCallId: toolUseId || undefined },
+  };
+}
 
 type ApprovalRequester = (request: ToolApprovalRequest) => Promise<ToolApprovalResponse>;
 
@@ -681,6 +772,102 @@ export function createClaudePermissionBridge({
   };
 
   return { canUseTool };
+}
+
+/**
+ * Map a `system:task_*` message to a WorkRunTaskEvent.
+ *
+ * The CLI runs long tool calls as tasks: a Bash command that outlives the
+ * foreground timeout is backgrounded, and every Agent call is a task. The
+ * spawning tool call returns immediately, so the task's real outcome arrives
+ * later — sometimes after the `result` message — via `task_notification`.
+ *
+ * Only `task_started` and `task_notification` carry `tool_use_id`; the rest are
+ * resolved through the session's taskIndex, which `task_started` populates.
+ * Returns null when the anchor is unknown (a task whose start was never seen),
+ * because an event with no tool call to attach to has nowhere to land.
+ */
+export function mapTaskMessage(
+  msg: SDKSystemMessage,
+  taskIndex: ClaudeTaskIndex,
+  ts: number,
+): WorkRunEvent | null {
+  const taskId = msg.task_id;
+  if (!taskId) return null;
+
+  if (msg.subtype === "task_started") {
+    taskIndex.set(taskId, {
+      toolUseId: msg.tool_use_id,
+      description: msg.description,
+      subagentType: msg.subagent_type,
+    });
+  }
+
+  const known = taskIndex.get(taskId);
+  const toolCallId = msg.tool_use_id ?? known?.toolUseId;
+  if (!toolCallId) return null;
+
+  const base = {
+    type: "task" as const,
+    taskId,
+    toolCallId,
+    description: msg.description ?? known?.description,
+    subagentType: msg.subagent_type ?? known?.subagentType,
+    skipTranscript: msg.skip_transcript,
+    ts,
+  };
+
+  const usage = msg.usage
+    ? {
+        totalTokens: msg.usage.total_tokens,
+        toolUses: msg.usage.tool_uses,
+        durationMs: msg.usage.duration_ms,
+      }
+    : undefined;
+
+  switch (msg.subtype) {
+    case "task_started":
+      return { ...base, phase: "started", status: "running", taskType: msg.task_type };
+
+    case "task_progress":
+      return {
+        ...base,
+        phase: "progress",
+        status: "running",
+        usage,
+        lastToolName: msg.last_tool_name,
+        summary: msg.summary,
+      };
+
+    case "task_updated":
+      return {
+        ...base,
+        phase: "updated",
+        status: msg.patch?.status,
+        description: msg.patch?.description ?? base.description,
+        error: msg.patch?.error,
+      };
+
+    case "task_notification": {
+      // Terminal for this task — drop the anchor so a later message carrying a
+      // recycled id cannot reattach to a tool call that is already settled.
+      taskIndex.delete(taskId);
+      const raw = msg.status;
+      const status =
+        raw === "completed" || raw === "failed" || raw === "stopped" ? raw : undefined;
+      return {
+        ...base,
+        phase: "completed",
+        status,
+        summary: msg.summary,
+        outputFile: msg.output_file,
+        usage,
+        error: status === "failed" ? msg.summary : undefined,
+      };
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -1190,7 +1377,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
                 },
               });
 
-              if (block.name === "Task") {
+              if (block.name === SUBAGENT_TOOL_NAME) {
                 const taskInput = block.input as Record<string, unknown> | undefined;
                 const subagentType =
                   (taskInput?.subagent_type as string) || "general-purpose";
@@ -1261,6 +1448,22 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
                 userFeedback: resultMeta?.user_feedback,
               },
             });
+
+            // A subagent's result arrives here — as a tool_result block inside a
+            // user message — never as a bare `tool_result` message. The default
+            // branch below also builds this event, but for a message shape the
+            // SDK does not send, so this is the path that actually fires.
+            if (prev?.toolName === SUBAGENT_TOOL_NAME) {
+              events.push(
+                buildSubagentCompletionEvent({
+                  input: prev.input,
+                  output,
+                  error,
+                  toolUseId,
+                  ts,
+                }),
+              );
+            }
           }
           userContent = content.map((c) => c.text || "").filter(Boolean).join("\n");
         }
@@ -1358,6 +1561,14 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
               error: systemMsg.error,
             },
           });
+        } else if (
+          systemMsg.subtype === "task_started" ||
+          systemMsg.subtype === "task_progress" ||
+          systemMsg.subtype === "task_updated" ||
+          systemMsg.subtype === "task_notification"
+        ) {
+          const taskEvent = mapTaskMessage(systemMsg, cs.taskIndex, ts);
+          if (taskEvent) events.push(taskEvent);
         }
         break;
       }
@@ -1498,9 +1709,18 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       }
 
       default: {
-        // Tool result-style messages (tool_use_id correlation)
+        // Tool result-style messages (tool_use_id correlation).
+        //
+        // Requiring an actual payload matters: `tool_progress` heartbeats also
+        // carry a tool_use_id, and treating one as a result would close a still-
+        // running tool call and drop it from toolCallIndex, so the real result
+        // would later resolve to toolName "unknown".
         const anyMsg = msg as any;
-        if (anyMsg.tool_use_id || anyMsg.type === "tool_result") {
+        const looksLikeToolResult =
+          anyMsg.type === "tool_result" ||
+          (anyMsg.tool_use_id !== undefined &&
+            (anyMsg.content !== undefined || anyMsg.result !== undefined));
+        if (looksLikeToolResult) {
           const toolUseId = anyMsg.tool_use_id || "";
           const prev = toolUseId ? cs.toolCallIndex.get(toolUseId) : undefined;
 
@@ -1525,27 +1745,10 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
             },
           });
 
-          if (toolName === "Task") {
-            const taskInput = input as Record<string, unknown> | undefined;
-            const subagentType =
-              (taskInput?.subagent_type as string) || "general-purpose";
-
-            let agentId: string | undefined;
-            if (typeof output === "string") {
-              const agentIdMatch = output.match(/agentId:\s*([a-f0-9-]+)/i);
-              if (agentIdMatch) agentId = agentIdMatch[1];
-            }
-            events.push({
-              type: "subagent",
-              phase: error ? "failed" : "completed",
-              agentType: subagentType,
-              agentId,
-              parentToolUseId: toolUseId || undefined,
-              result: typeof output === "string" ? output : safeJson(output),
-              error,
-              ts,
-              metadata: { toolCallId: toolUseId || undefined },
-            });
+          if (toolName === SUBAGENT_TOOL_NAME) {
+            events.push(
+              buildSubagentCompletionEvent({ input, output, error, toolUseId, ts }),
+            );
           }
         } else {
           events.push({
@@ -1674,6 +1877,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       isInitial,
       state: { hasAssistantContent: false },
       toolCallIndex: new Map(),
+      taskIndex: new Map(),
       partialTextBuffers: new Map(),
       partialThinkingBuffers: new Map(),
     };

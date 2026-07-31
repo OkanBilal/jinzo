@@ -34,6 +34,11 @@ import { AskUserQuestionDisplay, type AskUserQuestionParams } from "./ask-user-q
 import { WebFetchDisplay, type WebFetchParams } from "./web-fetch-display";
 import { GenericToolDisplay } from "./generic-tool-display";
 import { ToolStatusProvider, eventToolStatus } from "./_shared";
+import {
+  TaskProgressStrip,
+  type SubagentMetadata,
+  type TaskMetadata,
+} from "./task-progress-strip";
 
 interface ToolCallItemProps {
   event: RunEvent;
@@ -296,8 +301,20 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
   // Lifecycle status (queued/running/done/error/canceled) flows down to every
   // ToolHeader via context, so the per-tool displays stay status-agnostic.
   const status = eventToolStatus(event);
+
+  // A task can outlive the tool call that spawned it (a backgrounded command,
+  // a subagent), so its outcome lands on the tool call's metadata after the
+  // call itself has settled. Appended to whatever the per-tool renderer
+  // produced rather than dispatched by tool name — any tool can be backgrounded.
+  const task = event.metadata?.task as TaskMetadata | undefined;
+  const subagent = event.metadata?.subagent as SubagentMetadata | undefined;
   const wrap = (node: ReactNode) => (
-    <ToolStatusProvider value={status}>{node}</ToolStatusProvider>
+    <ToolStatusProvider value={status}>
+      {node}
+      {(task || subagent) && (
+        <TaskProgressStrip task={task} subagent={subagent} isCompact={isCompact} />
+      )}
+    </ToolStatusProvider>
   );
 
   if (isEmptyTool) {

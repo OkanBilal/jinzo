@@ -19,7 +19,9 @@ import {
   mapClaudePluginDetail,
   cleanGeneratedTitle,
   parseSimpleYaml,
+  mapTaskMessage,
 } from "./claude.driver";
+import type { ClaudeTaskIndex, SDKSystemMessage } from "./claude.driver";
 import fs from "node:fs";
 import {
   ALLOWED_TOOLS_SET,
@@ -783,5 +785,179 @@ describe("claude.driver / mapClaudePluginDetail", () => {
     expect(detail.skills).toEqual([]);
     expect(detail.mcpServers).toEqual([]);
     expect(detail.summary.interface?.displayName).toBe("ghost");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// Background/foreground task mapping (system:task_* messages).
+//
+// Payloads mirror what the bundled Claude CLI actually emits: a `sleep`
+// backgrounded into a local_bash task, and an Agent subagent task.
+// ─────────────────────────────────────────────────────────────
+
+describe("claude.driver / mapTaskMessage", () => {
+  const TS = 1_700_000_000_000;
+
+  function sys(msg: Partial<SDKSystemMessage>): SDKSystemMessage {
+    return {
+      type: "system",
+      uuid: "u1",
+      session_id: "s1",
+      ...msg,
+    } as SDKSystemMessage;
+  }
+
+  function newIndex(): ClaudeTaskIndex {
+    return new Map();
+  }
+
+  it("maps task_started and records the tool_use_id anchor", () => {
+    const index = newIndex();
+    const event = mapTaskMessage(
+      sys({
+        subtype: "task_started",
+        task_id: "bflwfagyw",
+        tool_use_id: "toolu_bash",
+        description: "sleep 45 && echo finished-ok",
+        task_type: "local_bash",
+      }),
+      index,
+      TS,
+    );
+
+    expect(event).toMatchObject({
+      type: "task",
+      phase: "started",
+      status: "running",
+      taskId: "bflwfagyw",
+      toolCallId: "toolu_bash",
+      description: "sleep 45 && echo finished-ok",
+      taskType: "local_bash",
+      ts: TS,
+    });
+    expect(index.get("bflwfagyw")?.toolUseId).toBe("toolu_bash");
+  });
+
+  it("maps task_progress with usage and last tool", () => {
+    const index = newIndex();
+    mapTaskMessage(
+      sys({ subtype: "task_started", task_id: "t1", tool_use_id: "toolu_agent", subagent_type: "general-purpose" }),
+      index,
+      TS,
+    );
+
+    const event = mapTaskMessage(
+      sys({
+        subtype: "task_progress",
+        task_id: "t1",
+        tool_use_id: "toolu_agent",
+        last_tool_name: "Bash",
+        summary: "Counting files",
+        usage: { total_tokens: 1200, tool_uses: 3, duration_ms: 4500 },
+      }),
+      index,
+      TS,
+    );
+
+    expect(event).toMatchObject({
+      phase: "progress",
+      status: "running",
+      lastToolName: "Bash",
+      summary: "Counting files",
+      subagentType: "general-purpose",
+      usage: { totalTokens: 1200, toolUses: 3, durationMs: 4500 },
+    });
+  });
+
+  it("resolves task_updated through the index — it carries no tool_use_id", () => {
+    const index = newIndex();
+    mapTaskMessage(
+      sys({ subtype: "task_started", task_id: "t1", tool_use_id: "toolu_agent" }),
+      index,
+      TS,
+    );
+
+    const event = mapTaskMessage(
+      sys({
+        subtype: "task_updated",
+        task_id: "t1",
+        patch: { status: "completed", end_time: 1785499819327 },
+      }),
+      index,
+      TS,
+    );
+
+    expect(event).toMatchObject({
+      phase: "updated",
+      status: "completed",
+      toolCallId: "toolu_agent",
+    });
+  });
+
+  it("maps task_notification to the terminal phase and keeps the output file", () => {
+    const index = newIndex();
+    mapTaskMessage(
+      sys({ subtype: "task_started", task_id: "bflwfagyw", tool_use_id: "toolu_bash" }),
+      index,
+      TS,
+    );
+
+    const event = mapTaskMessage(
+      sys({
+        subtype: "task_notification",
+        task_id: "bflwfagyw",
+        tool_use_id: "toolu_bash",
+        status: "completed",
+        summary: "sleep 45 && echo finished-ok",
+        output_file: "/tmp/claude-task-bflwfagyw.log",
+      }),
+      index,
+      TS,
+    );
+
+    expect(event).toMatchObject({
+      phase: "completed",
+      status: "completed",
+      outputFile: "/tmp/claude-task-bflwfagyw.log",
+      toolCallId: "toolu_bash",
+    });
+    // Terminal: the anchor is released so a recycled id cannot reattach.
+    expect(index.has("bflwfagyw")).toBe(false);
+  });
+
+  it("surfaces the summary as the error when a task fails", () => {
+    const index = newIndex();
+    const event = mapTaskMessage(
+      sys({
+        subtype: "task_notification",
+        task_id: "t9",
+        tool_use_id: "toolu_x",
+        status: "failed",
+        summary: "command exited 1",
+      }),
+      index,
+      TS,
+    );
+
+    expect(event).toMatchObject({ phase: "completed", status: "failed", error: "command exited 1" });
+  });
+
+  it("returns null when the task has no known tool call anchor", () => {
+    // task_updated for a task whose start was never seen (e.g. resumed session).
+    const event = mapTaskMessage(
+      sys({ subtype: "task_updated", task_id: "orphan", patch: { status: "running" } }),
+      newIndex(),
+      TS,
+    );
+    expect(event).toBeNull();
+  });
+
+  it("returns null without a task_id", () => {
+    const event = mapTaskMessage(
+      sys({ subtype: "task_started", tool_use_id: "toolu_bash" }),
+      newIndex(),
+      TS,
+    );
+    expect(event).toBeNull();
   });
 });
