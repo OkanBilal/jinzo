@@ -30,7 +30,7 @@ export function GetDiffDisplay({
   return (
     <div>
       <ToolHeader
-        icon={<Mains className="size-3.5" />}
+        icon={<Mains className="size-4" />}
         verb="Checked diff"
         hasDetails={hasContent}
         isExpanded={isExpanded}

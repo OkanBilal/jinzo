@@ -56,7 +56,7 @@ export function SaveFindingDisplay({
   return (
     <div>
       <ToolHeader
-        icon={<Mains className="size-3.5" />}
+        icon={<Mains className="size-4" />}
         verb="Saved findings"
         hasDetails={hasFindings}
         isExpanded={isExpanded}

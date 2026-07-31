@@ -32,7 +32,7 @@ export function WebFetchDisplay({ params, output, isCompact = false }: { params:
   return (
     <div>
       <ToolHeader
-        icon={<Web className="size-3.5" />}
+        icon={<Web className="size-4" />}
         verb={label}
         hasDetails={hasContent}
         isExpanded={isExpanded}

@@ -246,7 +246,7 @@ export function ToolHeader({
       {children}
       {hasDetails && (
         <ArrowUp
-          className={`size-3.5 shrink-0 text-primary-500 opacity-100 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${
+          className={`size-4 shrink-0 text-primary-500 opacity-100 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${
             isExpanded ? "rotate-180" : "rotate-90"
           }`}
         />

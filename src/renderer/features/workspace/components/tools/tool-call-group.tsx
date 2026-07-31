@@ -69,7 +69,7 @@ function ToolCallGroupImpl({
         <div className="flex items-center transition-all duration-200">
           <span
             aria-hidden="true"
-            className={`flex shrink-0 items-center gap-0.5 overflow-hidden text-primary-500 transition-[max-width,opacity,transform,margin] duration-200 ease-out group-hover:text-primary-950 group-hover:dark:text-primary ${
+            className={`flex shrink-0 items-center gap-1 overflow-hidden text-primary-500 transition-[max-width,opacity,transform,margin] duration-200 ease-out group-hover:text-primary-950 group-hover:dark:text-primary ${
               isExpanded
                 ? "mr-0 max-w-0 -translate-x-1 opacity-0"
                 : "mr-1 max-w-20 translate-x-0 opacity-100"
@@ -78,13 +78,13 @@ function ToolCallGroupImpl({
             {Array.from(toolIcons.entries()).slice(0, 5).map(([key, icon]) => (
               <span
                 key={key}
-                className="flex size-4 items-center justify-center [&>svg]:size-3.5"
+                className="flex size-4 items-center justify-center [&>svg]:size-4"
               >
                 {icon}
               </span>
             ))}
           </span>
-          <span className="text-primary-500  group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className="text-primary-500  group-hover:text-primary-950 group-hover:dark:text-primary mr-0.5">
             {toolCount} tool call{toolCount !== 1 ? "s" : ""}
           </span>
           <span className=" text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
@@ -93,7 +93,7 @@ function ToolCallGroupImpl({
           </span>
         </div>
         <ArrowUp
-          className={`size-3.5 shrink-0 text-primary-500 opacity-100 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
+          className={`size-4 shrink-0 text-primary-500 opacity-100 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
         />
 {/*
         {group.isRunning && (

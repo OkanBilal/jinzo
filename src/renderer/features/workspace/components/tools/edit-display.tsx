@@ -58,7 +58,7 @@ export function EditDisplay({
   return (
     <div>
       <ToolHeader
-        icon={<Edit className="size-3.5" />}
+        icon={<Edit className="size-4" />}
         verb="Edited"
         hasDetails={hasDiff}
         isExpanded={isExpanded}

@@ -39,7 +39,7 @@ export function CheckPackageDisplay({
   return (
     <div>
       <ToolHeader
-        icon={<Mains className="size-3.5" />}
+        icon={<Mains className="size-4" />}
         verb="CheckPackage"
         hasDetails={hasContent}
         isExpanded={isExpanded}

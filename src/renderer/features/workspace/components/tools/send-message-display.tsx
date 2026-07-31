@@ -101,7 +101,7 @@ export function SendMessageDisplay({
         isCompact={isCompact}
       >
         {recipient && (
-          <span className="shrink-0 max-w-[10rem] truncate font-medium text-primary-600 dark:text-primary-300">
+          <span className="shrink-0 max-w-40 truncate font-medium text-primary-600 dark:text-primary-300">
             {recipient}
           </span>
         )}
@@ -145,7 +145,7 @@ export function SendMessageDisplay({
             {(receiptText || receipt.resumedAgentId) && (
               <div className="pt-1 border-t border-primary-100 dark:border-primary/10 space-y-0.5 text-t text-primary-500 dark:text-primary-400">
                 {receiptText && (
-                  <p className="whitespace-pre-wrap break-words">{receiptText}</p>
+                  <p className="whitespace-pre-wrap wrap-break-word">{receiptText}</p>
                 )}
                 {receipt.resumedAgentId && (
                   <div className="font-mono">

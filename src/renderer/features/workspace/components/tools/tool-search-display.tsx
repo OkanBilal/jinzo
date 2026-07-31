@@ -17,7 +17,7 @@ export function ToolSearchDisplay({ output, isCompact = false }: { params: ToolS
   return (
     <div>
       <ToolHeader
-        icon={<Search className="size-3.5" />}
+        icon={<Search className="size-4" />}
         verb="Searched tools"
         hasDetails={hasMatches}
         isExpanded={isExpanded}

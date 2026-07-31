@@ -56,7 +56,7 @@ export function DeleteDisplay({
   return (
     <div>
       <ToolHeader
-        icon={<Trash className="size-3.5" />}
+        icon={<Trash className="size-4" />}
         verb="Deleted"
         hasDetails={canExpand}
         isExpanded={isExpanded}

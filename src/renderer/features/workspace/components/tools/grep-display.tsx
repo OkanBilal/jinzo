@@ -28,7 +28,7 @@ export function GrepDisplay({ params, output, isCompact = false }: { params: Gre
   return (
     <div>
       <ToolHeader
-        icon={<Grep className="size-3.5" />}
+        icon={<Grep className="size-4" />}
         verb="Grepped"
         hasDetails={hasContent}
         isExpanded={isExpanded}

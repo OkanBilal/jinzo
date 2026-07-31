@@ -23,9 +23,9 @@ export function TerminalSection({
       style={{ height: isOpen ? "15.5rem" : "0px" }}
     >
       <div className="flex items-center justify-between px-3 py-1.5">
-        <div className="flex items-center gap-2">
-          <Bash className="size-3 text-primary-500 dark:text-primary-300" />
-          <Body className="font-medium">
+        <div className="flex items-center gap-1">
+          <Bash className="size-4 text-primary-500 dark:text-primary-400" />
+          <Body className="font-medium text-s text-primary-700 dark:text-primary-200">
             Terminal
           </Body>
         </div>

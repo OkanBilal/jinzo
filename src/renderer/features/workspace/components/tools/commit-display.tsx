@@ -23,7 +23,7 @@ export function CommitDisplay({
   return (
     <div>
       <ToolHeader
-        icon={<Mains className="size-3.5" />}
+        icon={<Mains className="size-4" />}
         verb="Committed"
         hasDetails={hasContent}
         isExpanded={isExpanded}

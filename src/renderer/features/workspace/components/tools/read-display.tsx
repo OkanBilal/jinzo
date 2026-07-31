@@ -47,7 +47,7 @@ export function ReadDisplay({
   return (
     <div>
       <ToolHeader
-        icon={<Read className="size-3.5" />}
+        icon={<Read className="size-4" />}
         verb="Read"
         hasDetails={hasContent}
         isExpanded={isExpanded}

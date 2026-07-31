@@ -25,7 +25,7 @@ export function SaveReviewDisplay({
   return (
     <div>
       <ToolHeader
-        icon={<Mains className="size-3.5" />}
+        icon={<Mains className="size-4" />}
         verb="Saved review"
         hasDetails={hasSummary}
         isExpanded={isExpanded}

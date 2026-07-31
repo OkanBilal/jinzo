@@ -25,7 +25,7 @@ export function PRDisplay({
   return (
     <div>
       <ToolHeader
-        icon={<Mains className="size-3.5" />}
+        icon={<Mains className="size-4" />}
         verb="PR"
         hasDetails={hasContent}
         isExpanded={isExpanded}

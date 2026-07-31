@@ -18,6 +18,7 @@ import {
   Sparkles,
   Task,
   Trash,
+  View,
   Web,
   Workflow,
 } from "@/components/ui/icons";
@@ -69,8 +70,9 @@ export interface BuiltinTool {
 /** Past-tense verb labels used for any vendor that doesn't override them. */
 export const DEFAULT_VERBS: Record<string, VerbInfo> = {
   list: { label: "listed", icon: <Search className="size-3.5" /> },
-  get: { label: "got", icon: <Read className="size-4" /> },
-  fetch: { label: "fetched", icon: <Read className="size-4" /> },
+  get: { label: "got", icon: <View className="size-4" /> },
+  view: { label: "viewed", icon: <View className="size-4" /> },
+  fetch: { label: "fetched", icon: <View className="size-4" /> },
   read: { label: "read", icon: <Read className="size-4" /> },
   search: { label: "searched", icon: <Search className="size-3.5" /> },
   research: { label: "researched", icon: <Search className="size-3.5" /> },
@@ -79,14 +81,14 @@ export const DEFAULT_VERBS: Record<string, VerbInfo> = {
   update: { label: "updated", icon: <Edit className="size-3.5" /> },
   delete: { label: "deleted", icon: <Trash className="size-3.5" /> },
   archive: { label: "archived", icon: <Trash className="size-3.5" /> },
-  extract: { label: "extracted", icon: <Read className="size-4" /> },
+  extract: { label: "extracted", icon: <View className="size-4" /> },
   add: { label: "added", icon: <Plus className="size-4" /> },
   remove: { label: "removed", icon: <Trash className="size-3.5" /> },
   send: { label: "sent", icon: <SendMessage className="size-4" /> },
   run: { label: "ran", icon: <Bash className="size-4" /> },
   draft: { label: "drafted", icon: <Edit className="size-3.5" /> },
   reply: { label: "replied", icon: <SendMessage className="size-4" /> },
-  open: { label: "opened", icon: <Read className="size-4" /> },
+  open: { label: "opened", icon: <View className="size-4" /> },
   close: { label: "closed", icon: <Trash className="size-3.5" /> },
 };
 
@@ -158,7 +160,7 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
     displayName: "TaskGet",
     groupKey: "taskget",
     category: "Todo",
-    icon: <Read className="size-4" />,
+    icon: <View className="size-4" />,
     aliases: ["taskget"],
   },
   {

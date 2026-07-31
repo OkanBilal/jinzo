@@ -141,3 +141,4 @@ export { default as Download } from "./download";
 export { default as Plugin } from "./plugin";
 export { default as Workflow } from "./workflow";
 export { default as Zai } from "./zai";
+export { default as View } from "./view";
