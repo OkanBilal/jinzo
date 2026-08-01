@@ -46,6 +46,52 @@ export function buildPerFileDiffHashes(diffText: string): Map<string, string> {
   return result;
 }
 
+export interface FileDiffStat {
+  additions: number;
+  deletions: number;
+  /**
+   * The file didn't exist at the base ref — staged-new or untracked. Discarding
+   * such a file deletes it rather than restoring it, so callers that ask before
+   * destroying anything need to tell the two apart.
+   */
+  isNew: boolean;
+}
+
+/**
+ * Per-file added/removed line counts, read off the same unified diff the totals
+ * come from — including the synthetic hunks `captureDiffSnapshot` writes for
+ * untracked files, which `git diff` alone never reports.
+ *
+ * Renames are indexed under both the old and new path, so a lookup by whichever
+ * name the caller holds still resolves. Files with no line changes (mode-only
+ * edits, binaries, oversized untracked stubs) land at 0/0.
+ */
+export function parsePerFileDiffStats(
+  diffText: string,
+): Map<string, FileDiffStat> {
+  const result = new Map<string, FileDiffStat>();
+  if (!diffText) return result;
+  for (const chunk of diffText.split(/^(?=diff --git )/m)) {
+    const header = chunk.match(/^diff --git a\/(.+?) b\/(.+)/);
+    if (!header) continue;
+    let additions = 0;
+    let deletions = 0;
+    // git writes "new file mode <mode>"; the synthetic hunks this module
+    // generates for untracked files carry the same marker.
+    const isNew = /^new file/m.test(chunk);
+    for (const line of chunk.split("\n")) {
+      // `+++`/`---` are the file headers, not content lines.
+      if (line.startsWith("+++") || line.startsWith("---")) continue;
+      if (line.startsWith("+")) additions++;
+      else if (line.startsWith("-")) deletions++;
+    }
+    const stat = { additions, deletions, isNew };
+    result.set(header[2].trim(), stat);
+    if (header[1] !== header[2]) result.set(header[1].trim(), stat);
+  }
+  return result;
+}
+
 // ─────────────────────────────────────────────────────────────
 // Internal diff primitives
 // ─────────────────────────────────────────────────────────────

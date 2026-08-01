@@ -12,7 +12,7 @@ export function shouldHideRightPanel(pathname: string): boolean {
  * change here must be mirrored in `sidebar.tsx` and `panel.tsx`. JS timers that
  * unmount a panel derive from this value so they never fire mid-transition.
  */
-export const LAYOUT_PANEL_ANIM_MS = 200;
+export const LAYOUT_PANEL_ANIM_MS = 150;
 
 /**
  * Layout widths are driven at runtime through these CSS custom properties
@@ -35,6 +35,14 @@ export const BROWSER_PANEL_WIDTH_VAR = "--browser-panel-width";
 export const BROWSER_PANEL_WIDTH_DEFAULT = 608; // 38rem
 export const BROWSER_PANEL_WIDTH_MIN = 420;
 export const BROWSER_PANEL_WIDTH_MAX = 960;
+
+/**
+ * Gap left on either side of the session panel — between it and whatever panel
+ * owns the right edge, and between it and the content it pushes left. Shared so
+ * the panel's `right` offset and the content margin that reserves its column
+ * can't drift apart. Its width is fixed (`--session-panel-width`, not resizable).
+ */
+export const SESSION_PANEL_GUTTER = "0.4375rem";
 
 export const DOC_VIEWER_PANEL_WIDTH_VAR = "--doc-viewer-panel-width";
 export const DOC_VIEWER_PANEL_WIDTH_DEFAULT = 720; // 45rem

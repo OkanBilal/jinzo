@@ -88,8 +88,10 @@ export function registerWorkspaceIpc(): void {
   );
 
   ipcMain.handle(
-    CHANNELS.workspace.discardChanges,
-    handle((id: string) => workspaceService.discardChanges(id)),
+    CHANNELS.workspace.discardPaths,
+    handle((id: string, paths: string[]) =>
+      workspaceService.discardPaths(id, paths),
+    ),
   );
 
   // Native dialog — needs the focused window, so it stays hand-written.
@@ -274,7 +276,7 @@ export function unregisterWorkspaceIpc(): void {
     CHANNELS.workspace.delete,
     CHANNELS.workspace.archive,
     CHANNELS.workspace.renameBranch,
-    CHANNELS.workspace.discardChanges,
+    CHANNELS.workspace.discardPaths,
     CHANNELS.workspace.selectDirectory,
     // activity
     CHANNELS.workspace.listActivity,

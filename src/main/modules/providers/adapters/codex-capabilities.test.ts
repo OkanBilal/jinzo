@@ -51,6 +51,7 @@ afterEach(async () => {
   for (const dir of tempDirs.splice(0)) {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+  delete process.env.MAINS_CODEX_FIXTURE_STALE_INSTALLED;
 });
 
 describe("Codex capabilities", () => {
@@ -198,6 +199,54 @@ describe("Codex capabilities", () => {
       )?.params,
     ).toEqual({
       pluginId: "remote-fixture-plugin-id",
+    });
+  });
+
+  it("surfaces a mid-session install that plugin/installed still omits", async () => {
+    process.env.MAINS_CODEX_FIXTURE_STALE_INSTALLED = "1";
+    const tempDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "mains-codex-capabilities-"),
+    );
+    tempDirs.push(tempDir);
+    const logPath = path.join(tempDir, "protocol.jsonl");
+    const server = await startServer(logPath);
+    const capabilities = createCodexCapabilities({
+      ensureServer: async () => server,
+      getRunningServer: () => server,
+      getCliHealth: async () => ({
+        version: "0.146.0",
+        channel: null,
+        outdated: false,
+      }),
+    });
+
+    // Warm the catalog the way the plugin browser does, then install from it.
+    await capabilities.listPlugins();
+    await expect(capabilities.listInstalledPlugins()).resolves.toMatchObject({
+      marketplaces: [],
+    });
+
+    await capabilities.installPlugin("fixture-plugin@fixture-remote");
+
+    const installed = await capabilities.listInstalledPlugins();
+    expect(installed.marketplaces).toEqual([
+      expect.objectContaining({
+        name: "fixture-remote",
+        plugins: [
+          expect.objectContaining({
+            id: "fixture-plugin@fixture-remote",
+            name: "fixture-plugin",
+            installed: true,
+            enabled: true,
+          }),
+        ],
+      }),
+    ]);
+
+    // Uninstalling has to clear the overlay again.
+    await capabilities.uninstallPlugin("fixture-plugin@fixture-remote");
+    await expect(capabilities.listInstalledPlugins()).resolves.toMatchObject({
+      marketplaces: [],
     });
   });
 });

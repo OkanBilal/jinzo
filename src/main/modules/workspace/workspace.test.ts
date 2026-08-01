@@ -101,7 +101,7 @@ vi.mock("../git/git.service", () => ({
     getGitDirectory: vi.fn(),
     getHeadSha: vi.fn(),
     renameBranch: vi.fn(),
-    resetHard: vi.fn(),
+    discardPaths: vi.fn(),
     captureDiffSnapshot: vi.fn(),
   },
 }));
@@ -2739,7 +2739,7 @@ describe("workspaceService — createFromSource (workspace intake)", () => {
 });
 
 // ════════════════════════════════════════════════════════════════
-// 7. Workspace git operations (renameBranch / discardChanges)
+// 7. Workspace git operations (renameBranch / discardPaths)
 //
 // Throw-style methods — the envelope is applied by handle() at the IPC seam,
 // so these assert on resolved values / rejections, not ServiceResponse.
@@ -2929,45 +2929,46 @@ describe("workspaceService — git operations", () => {
     });
   });
 
-  describe("discardChanges", () => {
-    it("hard-resets to the recorded diff's baseRef and drops the diff row", async () => {
-      createWorkspace(db, { id: "ws-d", rootPath: "/repos/d" });
+  describe("discardPaths", () => {
+    it("discards the given paths in the workspace's repo and re-records the diff", async () => {
+      createWorkspace(db, { id: "ws-dp", rootPath: "/repos/dp" });
       createWorkspaceDiff(db, {
-        workspaceId: "ws-d",
-        baseRef: "sha-base",
+        workspaceId: "ws-dp",
+        baseRef: "sha-old",
         diffText: "diff",
       });
-      gitMock.resetHard.mockResolvedValue(undefined);
+      gitMock.discardPaths.mockResolvedValue(undefined);
+      gitMock.getHeadSha.mockResolvedValue("sha-head");
+      gitMock.captureDiffSnapshot.mockResolvedValue({
+        baseRef: "sha-head",
+        diffText: "",
+        files: [],
+        untrackedFiles: [],
+        shortstat: "",
+      });
 
-      await workspaceService.discardChanges("ws-d");
+      await workspaceService.discardPaths("ws-dp", ["a.ts", "b.ts"]);
 
-      expect(gitMock.resetHard).toHaveBeenCalledWith("/repos/d", "sha-base");
-      const latest = await workspaceRepo.findLatestDiffByWorkspace("ws-d");
-      expect(latest).toBeNull();
+      expect(gitMock.discardPaths).toHaveBeenCalledWith("/repos/dp", [
+        "a.ts",
+        "b.ts",
+      ]);
+      // The tree came back clean, so the stale row must not survive.
+      expect(await workspaceRepo.findLatestDiffByWorkspace("ws-dp")).toBeNull();
     });
 
-    it("throws when there is no recorded diff", async () => {
-      createWorkspace(db, { id: "ws-nodiff", rootPath: "/repos/nd" });
+    it("does not touch the repo for an empty list", async () => {
+      createWorkspace(db, { id: "ws-dp-empty", rootPath: "/repos/dpe" });
+
+      await workspaceService.discardPaths("ws-dp-empty", []);
+
+      expect(gitMock.discardPaths).not.toHaveBeenCalled();
+    });
+
+    it("throws for an unknown workspace", async () => {
       await expect(
-        workspaceService.discardChanges("ws-nodiff"),
-      ).rejects.toThrow("No recorded diff to discard");
-      expect(gitMock.resetHard).not.toHaveBeenCalled();
-    });
-
-    it("keeps the diff row when the reset fails", async () => {
-      createWorkspace(db, { id: "ws-rf", rootPath: "/repos/rf" });
-      createWorkspaceDiff(db, {
-        workspaceId: "ws-rf",
-        baseRef: "sha-base",
-        diffText: "diff",
-      });
-      gitMock.resetHard.mockRejectedValue(new Error("reset failed"));
-
-      await expect(workspaceService.discardChanges("ws-rf")).rejects.toThrow(
-        "reset failed",
-      );
-      const latest = await workspaceRepo.findLatestDiffByWorkspace("ws-rf");
-      expect(latest).not.toBeNull();
+        workspaceService.discardPaths("nope", ["a.ts"]),
+      ).rejects.toThrow("Workspace not found");
     });
   });
 });

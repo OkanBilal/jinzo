@@ -25,7 +25,7 @@ import {
   recordWorkspaceDiff,
 } from "../workspace";
 import { runSessionRegistry } from "../runs/run-session-registry";
-import { gitService } from "../git";
+import { gitService, parsePerFileDiffStats } from "../git";
 import { projectsService } from "../projects";
 import { appSettingsService } from "../appSettings";
 // `createWorkAdapter` is imported lazily inside the generation methods to break
@@ -34,6 +34,16 @@ import { appSettingsService } from "../appSettings";
 const execFileAsync = promisify(execFile);
 
 const MAX_DIFF_CHARS = 12_000;
+
+/** A file in the working tree's diff, as the session panel lists it. */
+export interface ChangedFile {
+  /** Repo-relative path. */
+  path: string;
+  additions: number;
+  deletions: number;
+  /** Created since the last commit — discarding it deletes it. */
+  isNew: boolean;
+}
 
 /** Live snapshot the commit panel renders (branch, stats, push state). */
 export interface GitFlowStatus {
@@ -48,6 +58,13 @@ export interface GitFlowStatus {
   additions: number;
   deletions: number;
   changedFiles: number;
+  /**
+   * The changed files with their own line counts, from the same snapshot the
+   * totals come from. Paths and counts only: this status is refetched
+   * throughout a run, and shipping the diff text with it would be paying for a
+   * payload nothing on this screen renders.
+   */
+  files: ChangedFile[];
   /** True when the current branch is the repo's default — PR creation is
    * disabled here (you can't open a PR from the default branch to itself). */
   isDefaultBranch: boolean;
@@ -559,11 +576,19 @@ export const gitFlowService = {
     let additions = 0;
     let deletions = 0;
     let changedFiles = 0;
+    let files: ChangedFile[] = [];
     if (headSha) {
       const snapshot = await gitService
         .captureDiffSnapshot(rootPath, headSha)
         .catch(() => null);
       if (snapshot) {
+        const perFile = parsePerFileDiffStats(snapshot.diffText);
+        files = snapshot.files.map((path) => ({
+          path,
+          additions: perFile.get(path)?.additions ?? 0,
+          deletions: perFile.get(path)?.deletions ?? 0,
+          isNew: perFile.get(path)?.isNew ?? false,
+        }));
         changedFiles = snapshot.files.length;
         const parsed = parseShortstat(snapshot.shortstat);
         additions = parsed.additions;
@@ -581,6 +606,7 @@ export const gitFlowService = {
       additions,
       deletions,
       changedFiles,
+      files,
       isDefaultBranch,
     };
   },

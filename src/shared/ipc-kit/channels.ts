@@ -321,7 +321,7 @@ export const CHANNELS = {
     selectDirectory: "workspace:selectDirectory",
     update: "workspace:update",
     renameBranch: "workspace:renameBranch",
-    discardChanges: "workspace:discardChanges",
+    discardPaths: "workspace:discardPaths",
     // ── activity ──
     createActivity: "workspace:createActivity",
     createManyActivity: "workspace:createManyActivity",

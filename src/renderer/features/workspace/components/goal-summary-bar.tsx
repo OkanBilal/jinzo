@@ -70,11 +70,10 @@ function formatUsage(goal: GoalInfo): string | null {
 }
 
 /**
- * Standalone bar shown directly above the input (just below the diff summary
- * bar) for a Codex run with an active thread goal. Self-contained: pulls its
- * own goal state via {@link useCodexGoal} and renders Codex-style status + live
- * usage with edit / pause / clear controls. Returns null when there's no goal.
- * Visual container mirrors {@link DiffSummaryBar}.
+ * Standalone bar shown directly above the input for a Codex run with an active
+ * thread goal. Self-contained: pulls its own goal state via {@link useCodexGoal}
+ * and renders Codex-style status + live usage with edit / pause / clear
+ * controls. Returns null when there's no goal.
  */
 export function GoalSummaryBar({ providerId, runId, isRunning, enabled, rootPath }: GoalSummaryBarProps) {
   const { goal, updateObjective, clear, pause, resume, isBusy } = useCodexGoal(providerId, runId, enabled);

@@ -15,7 +15,18 @@ export interface GitFlowStatus {
   additions: number;
   deletions: number;
   changedFiles: number;
+  /** The changed files with their own line counts, from the same snapshot as the totals. */
+  files: ChangedFile[];
   isDefaultBranch: boolean;
+}
+
+export interface ChangedFile {
+  /** Repo-relative path. */
+  path: string;
+  additions: number;
+  deletions: number;
+  /** Created since the last commit — discarding it deletes it. */
+  isNew: boolean;
 }
 
 export interface PublishPreflight {

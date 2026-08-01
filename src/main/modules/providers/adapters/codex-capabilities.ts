@@ -527,6 +527,94 @@ export function createCodexCapabilities(
   let pluginCapabilityPromise: Promise<void> | null = null;
   let pluginCacheGeneration = 0;
 
+  // ── Session install overlay ──────────────────────────────────
+  // `plugin/installed` is answered from an install registry the app-server
+  // snapshots when it boots: a plugin installed from a *remote* marketplace
+  // mid-session never appears in it, even though `plugin/list` flips the same
+  // plugin to installed=true and `skills/list` starts returning its skills
+  // straight away (verified against codex-cli 0.146.0). Since Mains keeps one
+  // long-lived app-server per adapter, without this overlay Settings › Plugins
+  // and the "@" menu's Plugins section only catch up when the app restarts.
+  // Entries are dropped as soon as the server reports the plugin itself.
+  const sessionInstalls = new Map<
+    string,
+    { marketplaceName: string; plugin: PluginInfo }
+  >();
+  const sessionUninstalls = new Set<string>();
+
+  /** Snapshot the catalog entry for a plugin before its caches are dropped. */
+  function captureCatalogEntry(pluginId: string): {
+    marketplaceName: string;
+    plugin: PluginInfo;
+  } {
+    for (const marketplace of pluginCatalogCache?.value.marketplaces ?? []) {
+      const plugin = marketplace.plugins.find(
+        (candidate) => candidate.id === pluginId,
+      );
+      if (plugin) {
+        return {
+          marketplaceName: marketplace.name,
+          // The catalog entry still carries the pre-install flags.
+          plugin: { ...plugin, installed: true, enabled: true },
+        };
+      }
+    }
+    // The catalog is normally warm (installs are initiated from the plugin
+    // browser), but fall back to an id-derived stub so the row still shows.
+    const separatorIndex = pluginId.lastIndexOf("@");
+    return {
+      marketplaceName:
+        separatorIndex !== -1 ? pluginId.slice(separatorIndex + 1) : "",
+      plugin: {
+        id: pluginId,
+        name:
+          separatorIndex !== -1 ? pluginId.slice(0, separatorIndex) : pluginId,
+        source: { type: "remote", path: "" },
+        installed: true,
+        enabled: true,
+        installPolicy: "AVAILABLE",
+        authPolicy: "ON_INSTALL",
+        interface: null,
+      },
+    };
+  }
+
+  /** Fold this session's installs/uninstalls into a `plugin/installed` reply. */
+  function applySessionOverlay(
+    list: PluginListResponse,
+  ): PluginListResponse {
+    if (sessionInstalls.size === 0 && sessionUninstalls.size === 0) {
+      return list;
+    }
+    const marketplaces = list.marketplaces.map((marketplace) => ({
+      ...marketplace,
+      plugins: marketplace.plugins.filter(
+        (plugin) => !sessionUninstalls.has(plugin.id),
+      ),
+    }));
+    for (const [pluginId, entry] of sessionInstalls) {
+      const alreadyReported = marketplaces.some((marketplace) =>
+        marketplace.plugins.some((plugin) => plugin.id === pluginId),
+      );
+      if (alreadyReported) continue;
+      const plugin: PluginInfo = { ...entry.plugin, installed: true };
+      const marketplace = marketplaces.find(
+        (candidate) => candidate.name === entry.marketplaceName,
+      );
+      if (marketplace) {
+        marketplace.plugins = [...marketplace.plugins, plugin];
+      } else {
+        marketplaces.push({
+          name: entry.marketplaceName,
+          path: "",
+          interface: null,
+          plugins: [plugin],
+        });
+      }
+    }
+    return { ...list, marketplaces };
+  }
+
   function indexPluginReferences(
     result: Record<string, unknown>,
   ): void {
@@ -829,7 +917,7 @@ export function createCodexCapabilities(
       Date.now() - installedPluginsCache.fetchedAt <
         INSTALLED_PLUGINS_TTL_MS
     ) {
-      return installedPluginsCache.value;
+      return applySessionOverlay(installedPluginsCache.value);
     }
     if (installedPluginsInFlight) return installedPluginsInFlight;
 
@@ -848,6 +936,7 @@ export function createCodexCapabilities(
       .catch((error) =>
         pluginListFailure(error, "plugin/installed", staleValue),
       )
+      .then(applySessionOverlay)
       .finally(() => {
         if (installedPluginsInFlight === request) {
           installedPluginsInFlight = null;
@@ -941,6 +1030,10 @@ export function createCodexCapabilities(
       );
     }
 
+    // Capture before invalidating — the catalog cache is the only place the
+    // plugin's display metadata lives until the app-server is restarted.
+    sessionUninstalls.delete(pluginId);
+    sessionInstalls.set(pluginId, captureCatalogEntry(pluginId));
     invalidatePluginCaches();
     logger.info(`Plugin installed and enabled: ${pluginId}`);
   }
@@ -968,6 +1061,8 @@ export function createCodexCapabilities(
         `Marketplace not found for "${pluginId}". Try browsing plugins first.`,
       );
     }
+    sessionInstalls.delete(pluginId);
+    sessionUninstalls.add(pluginId);
     invalidatePluginCaches();
     logger.info(`Plugin uninstalled: ${pluginId}`);
   }

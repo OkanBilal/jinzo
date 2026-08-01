@@ -15,7 +15,6 @@ export { WorkspaceTabs } from "./workspace-tabs";
 export { WorkspaceEvents } from "./workspace-events";
 export { WorkspaceInput } from "./workspace-input";
 export { TerminalSection } from "./terminal-section";
-export { DiffSummaryBar } from "./diff-summary-bar";
 export { GoalSummaryBar } from "./goal-summary-bar";
 export { TodoSummaryBar } from "./todo-summary-bar";
 export { BrowserPanel } from "./browser-panel";

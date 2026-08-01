@@ -13,5 +13,7 @@ export type {
 export {
   hashContent,
   buildPerFileDiffHashes,
+  parsePerFileDiffStats,
   type DiffSnapshot,
+  type FileDiffStat,
 } from "./git-snapshot";
