@@ -237,7 +237,7 @@ export function WorkspaceTabs({
           />
         ))}
         {showNewRunTab && (
-          <div className="animate-slide-in-left">
+          <div className="animate-slide-in-left min-w-0">
             <NewRunTab
               variant={variant!}
               isActive={activeTab === "new-run"}
@@ -248,7 +248,7 @@ export function WorkspaceTabs({
         )}
         <Button
           onClick={onNewRun}
-          className="p-2.5 text-primary-900 ml-0.5 mb-0.5 mr-8 dark:text-primary-200  hover:text-primary-950 dark:hover:text-primary-300 hover:bg-primary/20 dark:hover:bg-primary/5  rounded-xl cursor-pointer transition-colors"
+          className="p-2.5 shrink-0 text-primary-900 ml-0.5 mb-0.5 mr-8 dark:text-primary-200  hover:text-primary-950 dark:hover:text-primary-300 hover:bg-primary/20 dark:hover:bg-primary/5  rounded-xl cursor-pointer transition-colors"
           title="New run"
         >
           <Plus className="size-4" />
