@@ -3,6 +3,7 @@ import { HashRouter as Router, useLocation } from "react-router-dom";
 import Sidebar from "./components/layout/sidebar";
 import RightPanel from "./components/layout/right-panel";
 import { SessionPanel } from "./components/layout/session-panel";
+import { selectSessionRunId } from "./components/layout/session-panel/select-session-run";
 import {
   MainRoutes,
   MainLayout,
@@ -93,6 +94,9 @@ function AppContent() {
   const activeWorkspaceId = useAppSelector(
     (state) => state.workspace.activeWorkspaceId,
   );
+  const sessionRunId = useAppSelector((state) =>
+    selectSessionRunId(state.workspace),
+  );
   const onboardingCompleted = useAppSelector(
     (state) => state.appSettings.onboardingCompleted,
   );
@@ -111,10 +115,14 @@ function AppContent() {
   // that hide the right panel.
   const sessionPanelShown =
     isSessionPanelOpen && !!activeWorkspaceId && !hideRightPanel;
-  // Another panel already holding the right edge has taken the room the box
-  // would otherwise be given, so it floats over the chat instead of pushing it
-  // — and drops back into the layout by itself once that panel closes.
-  const sessionPanelFloating = rightLaneWidth !== EDGE_GUTTER;
+  // The box floats — overlays the content instead of taking a column — when
+  // there is no room to share (another panel already holds the right edge), or
+  // nothing to share *with*: the empty state and the other non-run tabs centre
+  // a prompt, and insetting the content would slide that column off-centre for
+  // a panel it has no relationship to. Both are derived, so closing that panel
+  // or opening a run drops the box back into the layout on its own.
+  const sessionPanelFloating =
+    rightLaneWidth !== EDGE_GUTTER || sessionRunId === null;
   // Sharing the layout means insetting the content, not shrinking it: a smaller
   // content box would cut a hole in its opaque surface and expose the
   // translucent window behind it. The inset keeps the surface whole and still

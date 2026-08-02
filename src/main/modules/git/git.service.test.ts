@@ -436,6 +436,55 @@ describe("discardPaths", () => {
   });
 });
 
+describe("checkoutBranch", () => {
+  it("moves the checkout to an existing branch", async () => {
+    const repo = makeRepo();
+    git(repo, "branch", "feature");
+
+    await gitService.checkoutBranch(repo, "feature");
+
+    expect(await gitService.getCurrentBranch(repo)).toBe("feature");
+  });
+
+  // Uncommitted work that doesn't collide comes along — the panel warns about
+  // this rather than stashing behind the user's back.
+  it("carries uncommitted changes to the new branch", async () => {
+    const repo = makeRepo();
+    git(repo, "branch", "feature");
+    write(repo, "scratch.txt", "wip\n");
+
+    await gitService.checkoutBranch(repo, "feature");
+
+    expect(fs.readFileSync(path.join(repo, "scratch.txt"), "utf-8")).toBe("wip\n");
+  });
+
+  // git's own refusal is the error the user needs to see, so it propagates.
+  it("rejects when the working tree would be overwritten", async () => {
+    const repo = makeRepo();
+    git(repo, "checkout", "-b", "feature");
+    write(repo, "conflict.txt", "from feature\n");
+    git(repo, "add", ".");
+    git(repo, "commit", "-m", "feature file");
+    git(repo, "checkout", "main");
+    write(repo, "conflict.txt", "uncommitted\n");
+
+    await expect(gitService.checkoutBranch(repo, "feature")).rejects.toThrow();
+    expect(await gitService.getCurrentBranch(repo)).toBe("main");
+  });
+
+  it("rejects a branch name that would parse as a git option", async () => {
+    const repo = makeRepo();
+    await expect(gitService.checkoutBranch(repo, "--orphan")).rejects.toThrow(
+      "Invalid git ref",
+    );
+  });
+
+  it("rejects an unknown branch", async () => {
+    const repo = makeRepo();
+    await expect(gitService.checkoutBranch(repo, "nope")).rejects.toThrow();
+  });
+});
+
 describe("renameBranch", () => {
   it("renames the branch", async () => {
     const repo = makeRepo();

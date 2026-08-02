@@ -327,6 +327,21 @@ export const workspaceApi = baseApi.injectEndpoints({
       invalidatesTags: ["WorkspaceGitStates"],
     }),
 
+    // Checks out an existing branch in the workspace and re-records its diff.
+    switchWorkspaceBranch: builder.mutation<
+      void,
+      { workspaceId: string; branch: string }
+    >({
+      query: ({ workspaceId, branch }) => ({
+        handler: CHANNELS.workspace.switchBranch,
+        args: [workspaceId, branch],
+      }),
+      invalidatesTags: (_result, _error, { workspaceId }) => [
+        "WorkspaceGitStates",
+        { type: "WorkspaceDiffs", id: workspaceId },
+      ],
+    }),
+
     // Restores specific files to their HEAD state (deleting the ones HEAD
     // doesn't have) and re-records the workspace diff.
     discardWorkspacePaths: builder.mutation<
@@ -582,6 +597,7 @@ export const {
   useArchiveWorkspaceMutation,
   useSelectWorkspaceDirectoryMutation,
   useRenameWorkspaceBranchMutation,
+  useSwitchWorkspaceBranchMutation,
   useDiscardWorkspacePathsMutation,
   // activity
   useListWorkspaceActivityQuery,

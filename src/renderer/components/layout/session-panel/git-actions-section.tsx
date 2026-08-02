@@ -9,6 +9,8 @@ import {
   Github,
   Lock,
   Undo,
+  Check,
+  Refresh,
 } from "@/components/ui/icons";
 import {
   Alert,
@@ -29,6 +31,9 @@ import {
   useGetPublishPreflightQuery,
   usePublishRepoMutation,
   useDiscardWorkspacePathsMutation,
+  useSwitchWorkspaceBranchMutation,
+  useGetWorkspaceQuery,
+  useListProjectBranchesQuery,
   type ChangedFile,
 } from "@/lib/redux/api";
 import { extractErrorMessage } from "@/lib/extract-error-message";
@@ -40,7 +45,7 @@ import { PanelItem, PanelCollapse, PANEL_ROW_X } from "./panel-item";
 
 type PendingAction = "commit" | "commitPush" | "push" | "pr" | "publish" | null;
 /** The panel rows that open in place. */
-type Section = "changes" | "commit" | "pr" | "publish";
+type Section = "changes" | "branch" | "commit" | "pr" | "publish";
 
 /** An Undo waiting on confirmation. `key` is the row it came from. */
 interface DiscardRequest {
@@ -135,6 +140,9 @@ export function GitActionsSection({
   const [confirmDiscard, setConfirmDiscard] = useState<DiscardRequest | null>(
     null,
   );
+  /** Branch being checked out, and the one held for confirmation. */
+  const [switchingBranch, setSwitchingBranch] = useState<string | null>(null);
+  const [confirmBranch, setConfirmBranch] = useState<string | null>(null);
   // Publish section (offered in place of push/PR when the repo has no remote).
   const [publishOwnerRepo, setPublishOwnerRepo] = useState("");
   const [publishPrivate, setPublishPrivate] = useState(true);
@@ -158,6 +166,19 @@ export function GitActionsSection({
     refetchOnMountOrArgChange: true,
   });
 
+  // The branch list comes from the project's repo — a worktree workspace shares
+  // its refs, so the names are the same either way. Fetched only while the row
+  // is open; `git branch` on a large repo isn't free.
+  const { data: workspace } = useGetWorkspaceQuery(activeWorkspaceId!, {
+    skip: !activeWorkspaceId,
+  });
+  const projectId = workspace?.projectId ?? null;
+  const { data: branchNames, isFetching: branchesFetching } =
+    useListProjectBranchesQuery(projectId!, {
+      skip: !projectId || !isSectionOpen("branch"),
+    });
+  const branches = branchNames ?? [];
+
   // gh auth + default owner/name, fetched only while the publish form is open.
   const { data: preflight, isFetching: preflightFetching } =
     useGetPublishPreflightQuery(activeWorkspaceId!, {
@@ -169,6 +190,7 @@ export function GitActionsSection({
   const [createPrGitFlow] = useCreatePrGitFlowMutation();
   const [publishRepo] = usePublishRepoMutation();
   const [discardWorkspacePaths] = useDiscardWorkspacePathsMutation();
+  const [switchWorkspaceBranch] = useSwitchWorkspaceBranchMutation();
   // Recomputes + persists the canonical workspace diff and invalidates the
   // WorkspaceDiffs cache, so the sidebar workspace item (which reads that
   // stored diff) reflects the same numbers the panel shows live.
@@ -242,6 +264,46 @@ export function GitActionsSection({
       }
     },
     [activeWorkspaceId, discarding, discardWorkspacePaths, refetch],
+  );
+
+  const runBranchSwitch = useCallback(
+    async (branch: string) => {
+      if (!activeWorkspaceId || switchingBranch) return;
+      setSwitchingBranch(branch);
+      try {
+        await switchWorkspaceBranch({
+          workspaceId: activeWorkspaceId,
+          branch,
+        }).unwrap();
+        toast.success(`Switched to ${branch}`);
+        refetch();
+      } catch (err) {
+        // git refuses a checkout that would overwrite local work, or one whose
+        // branch is checked out in another worktree. Its message says which.
+        toast.error(extractErrorMessage(err, `Could not switch to ${branch}.`));
+      } finally {
+        setSwitchingBranch(null);
+        setConfirmBranch(null);
+      }
+    },
+    [activeWorkspaceId, switchingBranch, switchWorkspaceBranch, refetch],
+  );
+
+  /**
+   * Uncommitted work travels with a checkout — or blocks it, if the target
+   * branch touches the same files. Neither is obvious from a branch list, so a
+   * dirty tree asks first; a clean one just switches.
+   */
+  const handleBranchClick = useCallback(
+    (branch: string) => {
+      if (branch === status?.branch) return;
+      if (hasChanges) {
+        setConfirmBranch(branch);
+        return;
+      }
+      runBranchSwitch(branch);
+    },
+    [status?.branch, hasChanges, runBranchSwitch],
   );
 
   // Live counts during a run: the run session recomputes the workspace diff
@@ -451,12 +513,50 @@ export function GitActionsSection({
       <PanelItem
         icon={<Branch className="size-4" />}
         label={status?.branch || "—"}
+        expandable
+        expanded={isSectionOpen("branch")}
+        onClick={() => toggleSection("branch")}
+        // Nothing to list without a project: the branch names come from the
+        // project's repo, which a worktree workspace shares refs with.
+        disabled={!projectId}
+        title={
+          projectId ? "Show the repo's branches" : "This workspace has no project"
+        }
         trailing={
           hasChanges
             ? `${changedFiles} file${changedFiles === 1 ? "" : "s"}`
             : undefined
         }
       />
+      <PanelCollapse isOpen={isSectionOpen("branch")}>
+        <div className="max-h-56 overflow-y-auto noscrollbar">
+          {branchesFetching && branches.length === 0 ? (
+            <PanelItem
+              icon={<Refresh className="size-4 animate-spin" />}
+              label={
+                <span className="font-normal text-primary-500">Loading…</span>
+              }
+            />
+          ) : (
+            branches.map((branch) => {
+              const isCurrent = branch === status?.branch;
+              return (
+                <PanelItem
+                  key={branch}
+                  icon={<Branch className="size-4" />}
+                  label={branch}
+                  title={isCurrent ? `${branch} — already checked out` : `Switch to ${branch}`}
+                  onClick={isCurrent ? undefined : () => handleBranchClick(branch)}
+                  disabled={switchingBranch !== null}
+                  loading={switchingBranch === branch}
+                  // The checkout it's on, marked rather than offered again.
+                  trailing={isCurrent ? <Check className="size-3.5" /> : undefined}
+                />
+              );
+            })
+          )}
+        </div>
+      </PanelCollapse>
 
       <PanelItem
         icon={<Commit className="size-4" />}
@@ -699,6 +799,19 @@ export function GitActionsSection({
       )}
 
       {footer}
+
+      <Alert
+        isOpen={!!confirmBranch}
+        title={`Switch to ${confirmBranch ?? ""}?`}
+        description={`${changedFiles} uncommitted file${
+          changedFiles === 1 ? "" : "s"
+        } will come along to ${confirmBranch ?? ""}. Git refuses the switch outright if that branch touches the same files.`}
+        primaryButtonText="Switch"
+        secondaryButtonText="Cancel"
+        onPrimary={() => confirmBranch && runBranchSwitch(confirmBranch)}
+        onSecondary={() => setConfirmBranch(null)}
+        isPrimaryLoading={switchingBranch !== null}
+      />
 
       {/* Portals to the body, so it isn't clipped by the panel's scroll box. */}
       <Alert

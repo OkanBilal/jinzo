@@ -259,6 +259,7 @@ export {
   useArchiveWorkspaceMutation,
   useSelectWorkspaceDirectoryMutation,
   useRenameWorkspaceBranchMutation,
+  useSwitchWorkspaceBranchMutation,
   useDiscardWorkspacePathsMutation,
   // activity
   useListWorkspaceActivityQuery,

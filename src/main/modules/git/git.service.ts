@@ -558,6 +558,23 @@ export const gitService = {
 
   /** Hard-reset the working tree to a given ref and clean untracked files. */
   /**
+   * Check out an existing branch in this working tree.
+   *
+   * Deliberately a plain `git checkout <branch>`: git's own rules decide the
+   * outcome, and its refusals are the ones worth surfacing. Uncommitted work
+   * that doesn't collide comes along; work that would be overwritten makes git
+   * refuse, as does a branch already checked out in another worktree. Nothing
+   * is forced or stashed on the user's behalf.
+   *
+   * A name that exists only on the remote resolves the way it does on the
+   * command line — git creates the local tracking branch.
+   */
+  async checkoutBranch(rootPath: string, branch: string): Promise<void> {
+    assertRef(branch);
+    await getGit(rootPath).checkout(branch);
+  },
+
+  /**
    * Discard the working-tree changes to specific files, restoring each to its
    * HEAD state.
    *

@@ -102,6 +102,7 @@ vi.mock("../git/git.service", () => ({
     getHeadSha: vi.fn(),
     renameBranch: vi.fn(),
     discardPaths: vi.fn(),
+    checkoutBranch: vi.fn(),
     captureDiffSnapshot: vi.fn(),
   },
 }));
@@ -2739,7 +2740,7 @@ describe("workspaceService — createFromSource (workspace intake)", () => {
 });
 
 // ════════════════════════════════════════════════════════════════
-// 7. Workspace git operations (renameBranch / discardPaths)
+// 7. Workspace git operations (renameBranch / switchBranch / discardPaths)
 //
 // Throw-style methods — the envelope is applied by handle() at the IPC seam,
 // so these assert on resolved values / rejections, not ServiceResponse.
@@ -2926,6 +2927,75 @@ describe("workspaceService — git operations", () => {
       ).rejects.toThrow("branch exists");
       const ws = await workspaceRepo.findById("ws-fail");
       expect(ws!.baseBranch).toBe("main");
+    });
+  });
+
+  describe("switchBranch", () => {
+    /** The file's existing pattern for capturing an emitted event. */
+    function captureEmits() {
+      const send = vi.fn();
+      vi.mocked(BrowserWindow.getAllWindows).mockReturnValue([
+        { isDestroyed: () => false, webContents: { send } } as any,
+      ]);
+      registerBrowserWindowSink();
+      return send;
+    }
+
+    it("checks out in the workspace's own path and announces the branch", async () => {
+      const send = captureEmits();
+      createWorkspace(db, { id: "ws-sb", rootPath: "/repos/sb" });
+      gitMock.checkoutBranch.mockResolvedValue(undefined);
+      gitMock.getCurrentBranch.mockResolvedValue("feature");
+      gitMock.getHeadSha.mockResolvedValue("sha-head");
+      gitMock.captureDiffSnapshot.mockResolvedValue({
+        baseRef: "sha-head",
+        diffText: "",
+        files: [],
+        untrackedFiles: [],
+        shortstat: "",
+      });
+
+      await workspaceService.switchBranch("ws-sb", "feature");
+
+      expect(gitMock.checkoutBranch).toHaveBeenCalledWith("/repos/sb", "feature");
+      expect(send).toHaveBeenCalledWith("workspace:gitStateChanged", {
+        workspaceId: "ws-sb",
+        branch: "feature",
+      });
+    });
+
+    // A remote-only name resolves to its local tracking branch, so the event
+    // has to carry what git actually checked out.
+    it("announces the branch git ended up on, not the one requested", async () => {
+      const send = captureEmits();
+      createWorkspace(db, { id: "ws-sb2", rootPath: "/repos/sb2" });
+      gitMock.checkoutBranch.mockResolvedValue(undefined);
+      gitMock.getCurrentBranch.mockResolvedValue("feature");
+      // No HEAD to anchor to — resyncDiff bails, the announcement still happens.
+      gitMock.getHeadSha.mockRejectedValue(new Error("no HEAD"));
+
+      await workspaceService.switchBranch("ws-sb2", "origin/feature");
+
+      expect(send).toHaveBeenCalledWith("workspace:gitStateChanged", {
+        workspaceId: "ws-sb2",
+        branch: "feature",
+      });
+    });
+
+    it("does not announce a branch when the checkout fails", async () => {
+      const send = captureEmits();
+      createWorkspace(db, { id: "ws-sb3", rootPath: "/repos/sb3" });
+      gitMock.checkoutBranch.mockRejectedValue(
+        new Error("Your local changes would be overwritten"),
+      );
+
+      await expect(
+        workspaceService.switchBranch("ws-sb3", "feature"),
+      ).rejects.toThrow("would be overwritten");
+      expect(send).not.toHaveBeenCalledWith(
+        "workspace:gitStateChanged",
+        expect.anything(),
+      );
     });
   });
 

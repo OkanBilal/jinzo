@@ -4,9 +4,9 @@ import { setSessionPanelOpen } from "@/lib/redux/slices/appSettingsSlice";
 import { usePanelAnimation } from "@/hooks/use-panel-animation";
 import { useIsMobile } from "@/lib/platform";
 import { LAYOUT_PANEL_ANIM_MS, SESSION_PANEL_GUTTER } from "@/lib/layout";
-import { isRunTab } from "@/features/workspace/utils/repo-utils";
 import { GitActionsSection } from "./git-actions-section";
 import { SessionSubagents } from "./session-subagents";
+import { selectSessionRunId } from "./select-session-run";
 
 /** Overshoots slightly past full size — the "pop" as the box inflates. */
 const POP_EASE = "cubic-bezier(0.34, 1.56, 0.64, 1)";
@@ -53,18 +53,9 @@ export function SessionPanel({
   const activeWorkspaceId = useAppSelector(
     (state) => state.workspace.activeWorkspaceId,
   );
-  // The workspace's active tab is the run being viewed — the only place a
-  // "current session" exists. Falls back to the tab the editor was opened from,
-  // so opening a changed file out of this very panel doesn't empty its subagent
-  // list. Other non-run tabs (an issue, a note) genuinely have no session.
-  const activeRunId = useAppSelector((state) => {
-    const { activeTab, previousNonEditorTab } = state.workspace;
-    if (isRunTab(activeTab)) return activeTab;
-    if (activeTab === "editor" && previousNonEditorTab && isRunTab(previousNonEditorTab)) {
-      return previousNonEditorTab;
-    }
-    return null;
-  });
+  const activeRunId = useAppSelector((state) =>
+    selectSessionRunId(state.workspace),
+  );
   const isOpen = useAppSelector((state) => state.appSettings.sessionPanelOpen);
 
   const { isVisible, isAnimatedIn } = usePanelAnimation(
@@ -80,7 +71,7 @@ export function SessionPanel({
 
   return (
     <div
-      className={`fixed z-(--z-panel-toggle) w-(--session-panel-width) max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl glass-surface will-change-transform ${
+      className={`fixed z-(--z-panel-toggle) w-(--session-panel-width) max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl glass-surface will-change-transform ${
         // Lying on top of the transcript, it needs the lift to read as a
         // separate surface; sharing the layout, it doesn't overlap anything.
         floating ? "shadow-2xl" : ""
@@ -88,7 +79,7 @@ export function SessionPanel({
       style={{
         // Tucked under the top-right toolbar, aligned to the same edge — inside
         // whatever panel already owns it.
-        top: "calc(3rem + env(safe-area-inset-top))",
+        top: "calc(3.225rem + env(safe-area-inset-top))",
         right: isMobile
           ? "0.8125rem"
           : `calc(${laneOffset} + ${SESSION_PANEL_GUTTER})`,

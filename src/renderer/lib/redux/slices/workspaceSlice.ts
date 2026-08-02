@@ -137,6 +137,10 @@ const workspaceSlice = createSlice({
         state.fileContentError = null;
         state.isLoadingFileContent = false;
         state.previousNonEditorTab = null;
+        // The tab is a single global field, so it would otherwise still name a
+        // run belonging to the workspace being left. "editor" is the neutral
+        // tab, and the page picks the newest run from there when there is one.
+        state.activeTab = "editor";
       }
       state.activeWorkspaceId = action.payload;
     },
@@ -148,6 +152,7 @@ const workspaceSlice = createSlice({
         state.fileContentError = null;
         state.isLoadingFileContent = false;
         state.previousNonEditorTab = null;
+        state.activeTab = "editor";
       }
       state.activeWorkspaceIdByProvider[action.payload.providerId] = action.payload.workspaceId;
     },

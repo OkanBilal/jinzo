@@ -88,6 +88,13 @@ export function registerWorkspaceIpc(): void {
   );
 
   ipcMain.handle(
+    CHANNELS.workspace.switchBranch,
+    handle((id: string, branch: string) =>
+      workspaceService.switchBranch(id, branch),
+    ),
+  );
+
+  ipcMain.handle(
     CHANNELS.workspace.discardPaths,
     handle((id: string, paths: string[]) =>
       workspaceService.discardPaths(id, paths),
@@ -276,6 +283,7 @@ export function unregisterWorkspaceIpc(): void {
     CHANNELS.workspace.delete,
     CHANNELS.workspace.archive,
     CHANNELS.workspace.renameBranch,
+    CHANNELS.workspace.switchBranch,
     CHANNELS.workspace.discardPaths,
     CHANNELS.workspace.selectDirectory,
     // activity

@@ -728,6 +728,33 @@ export const workspaceService = {
   // operations".
   // ─────────────────────────────────────────────────────────────
 
+  /**
+   * Check out an existing branch in the workspace's own checkout.
+   *
+   * Unlike `renameBranch`, this never touches a worktree's source repo: the
+   * point is to move *this* checkout, and git refuses on its own if the branch
+   * is already checked out in another worktree.
+   *
+   * The diff is re-recorded afterwards because it was anchored to the old
+   * branch's HEAD; leaving it would show the previous branch's changes against
+   * the new one.
+   */
+  async switchBranch(workspaceId: string, branch: string): Promise<void> {
+    const workspace = await workspaceRepo.findById(workspaceId);
+    if (!workspace) throw new Error("Workspace not found");
+    if (!workspace.rootPath) throw new Error("Workspace has no root path");
+    if (!branch.trim()) throw new Error("Branch name is required");
+
+    await gitService.checkoutBranch(workspace.rootPath, branch);
+    // Read back rather than assuming: a remote name resolves to its local
+    // tracking branch, so what got checked out isn't always what was asked for.
+    const current = await gitService
+      .getCurrentBranch(workspace.rootPath)
+      .catch(() => branch);
+    emitGitStateChanged({ workspaceId, branch: current ?? branch });
+    await this.resyncDiff(workspaceId);
+  },
+
   /** Rename the branch actually checked out in the workspace. */
   async renameBranch(
     workspaceId: string,
