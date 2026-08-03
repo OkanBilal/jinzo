@@ -1,6 +1,8 @@
 export { registerWorkspaceIpc, unregisterWorkspaceIpc } from "./workspace.ipc";
 export {
   workspaceService,
+  workspacePathExists,
+  assertWorkspacePathExists,
   logWorkspaceActivity,
   emitFindingsChanged,
   recordWorkspaceDiff,

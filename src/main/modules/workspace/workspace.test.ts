@@ -15,6 +15,7 @@
 // ════════════════════════════════════════════════════════════════
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { existsSync } from "fs";
 import { createTestDb } from "../../../test/setup-db";
 import {
   createAccount,
@@ -114,6 +115,8 @@ vi.mock("../appSettings/appSettings.service", () => ({
 import {
   workspaceService,
   logWorkspaceActivity,
+  workspacePathExists,
+  assertWorkspacePathExists,
 } from "./index";
 import { workspaceRepo } from "./workspace.repo";
 import { projectsRepo } from "../projects/projects.repo";
@@ -2793,7 +2796,7 @@ describe("workspaceService — git operations", () => {
       registerBrowserWindowSink();
 
       await expect(workspaceService.listGitStates()).resolves.toEqual([
-        { workspaceId: "ws-live", branch: "main" },
+        { workspaceId: "ws-live", branch: "main", pathExists: true },
       ]);
 
       onWatch?.("change", "HEAD");
@@ -2802,8 +2805,58 @@ describe("workspaceService — git operations", () => {
       expect(send).toHaveBeenCalledWith("workspace:gitStateChanged", {
         workspaceId: "ws-live",
         branch: "feature/external",
+        pathExists: true,
       });
       expect(close).not.toHaveBeenCalled();
+    });
+
+    // A workspace row outlives its folder. `branch: null` alone can't express
+    // that — it already means "not a git repo" — so presence is reported
+    // separately and the git call is skipped entirely.
+    it("reports a deleted folder without probing git", async () => {
+      createWorkspace(db, { id: "ws-gone", rootPath: "/repos/gone" });
+      vi.mocked(existsSync).mockReturnValue(false);
+
+      await expect(workspaceService.listGitStates()).resolves.toEqual([
+        { workspaceId: "ws-gone", branch: null, pathExists: false },
+      ]);
+      expect(gitMock.getCurrentBranch).not.toHaveBeenCalled();
+    });
+
+    it("reports a present folder that is not a git repo as pathExists", async () => {
+      createWorkspace(db, { id: "ws-plainfs", rootPath: "/repos/plainfs" });
+      vi.mocked(existsSync).mockReturnValue(true);
+      gitMock.getCurrentBranch.mockRejectedValue(new Error("not a git repository"));
+
+      await expect(workspaceService.listGitStates()).resolves.toEqual([
+        { workspaceId: "ws-plainfs", branch: null, pathExists: true },
+      ]);
+    });
+  });
+
+  describe("workspace directory presence", () => {
+    it("workspacePathExists mirrors the filesystem", () => {
+      vi.mocked(existsSync).mockReturnValue(true);
+      expect(workspacePathExists("/repos/here")).toBe(true);
+      vi.mocked(existsSync).mockReturnValue(false);
+      expect(workspacePathExists("/repos/gone")).toBe(false);
+    });
+
+    it("assertWorkspacePathExists passes through when the folder is there", () => {
+      vi.mocked(existsSync).mockReturnValue(true);
+      expect(() => assertWorkspacePathExists("/repos/here", "here")).not.toThrow();
+    });
+
+    // The message is what the user sees when a run is refused, so it has to name
+    // the workspace and the path rather than surfacing a bare ENOENT.
+    it("assertWorkspacePathExists names the workspace and the path", () => {
+      vi.mocked(existsSync).mockReturnValue(false);
+      expect(() => assertWorkspacePathExists("/repos/gone", "my-app")).toThrow(
+        /"my-app".*\/repos\/gone/s,
+      );
+      expect(() => assertWorkspacePathExists("/repos/gone")).toThrow(
+        /This workspace.*\/repos\/gone/s,
+      );
     });
   });
 
@@ -2961,6 +3014,7 @@ describe("workspaceService — git operations", () => {
       expect(send).toHaveBeenCalledWith("workspace:gitStateChanged", {
         workspaceId: "ws-sb",
         branch: "feature",
+        pathExists: true,
       });
     });
 
@@ -2979,6 +3033,7 @@ describe("workspaceService — git operations", () => {
       expect(send).toHaveBeenCalledWith("workspace:gitStateChanged", {
         workspaceId: "ws-sb2",
         branch: "feature",
+        pathExists: true,
       });
     });
 

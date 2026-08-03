@@ -618,7 +618,13 @@ export const fileExplorerService = {
         throw error;
       }
       const errCode = (error as NodeJS.ErrnoException).code;
-      console.error(`[FileExplorer] listDir failed for ${resolvedPath}:`, error);
+      // A deleted directory is an ordinary outcome here (the workspace folder can
+      // vanish under us); dumping the errno object made it look like a defect.
+      if (errCode === "ENOENT") {
+        console.warn(`[FileExplorer] listDir: directory does not exist: ${resolvedPath}`);
+      } else {
+        console.error(`[FileExplorer] listDir failed for ${resolvedPath}:`, error);
+      }
       throwFsError(
         error,
         "Directory does not exist",

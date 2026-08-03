@@ -335,7 +335,11 @@ export default function WorkspacesList({
     const projectData = workspace.projectId
       ? projectDataMap.get(workspace.projectId)
       : undefined;
-    const branch = gitStateByWorkspaceId.get(workspace.id)?.branch ?? null;
+    const gitState = gitStateByWorkspaceId.get(workspace.id);
+    const branch = gitState?.branch ?? null;
+    // Absent until the first git-state read lands; assume present so rows don't
+    // flash a "missing" badge on every cold start.
+    const pathExists = gitState?.pathExists ?? true;
     const canRenameBranch =
       branch !== null &&
       branch !== workspace.baseBranch &&
@@ -348,6 +352,7 @@ export default function WorkspacesList({
         rootPath={workspace.rootPath}
         status={workspace.status}
         branch={branch}
+        pathExists={pathExists}
         updatedAt={workspace.updatedAt}
         isActive={isActive}
         projectId={workspace.projectId}

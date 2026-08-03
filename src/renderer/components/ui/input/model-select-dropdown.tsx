@@ -8,7 +8,11 @@ import { createPortal } from "react-dom";
 import { Button } from "../button";
 import DropdownWrapper from "../dropdown-wrapper";
 import { useClickOutside } from "@/hooks/use-click-outside";
-import { formatModelDisplayName, getModelIcon } from "@/lib/model-icons";
+import {
+  formatModelDisplayName,
+  getModelIcon,
+  selectableModelNames,
+} from "@/lib/model-icons";
 import { formatEffortLevel } from "@/lib/format";
 import { ArrowUp, Brain, Check } from "../icons";
 import { ULTRACODE_GRADIENT_TEXT } from "./ultracode-styles";
@@ -50,19 +54,7 @@ export function ModelSelectDropdown({
   isLoading = false,
   variant,
 }: ModelSelectDropdownProps) {
-  const modelList = (Array.isArray(models) ? models : []).filter(
-    (m) => {
-      const normalized = m.trim().toLowerCase();
-      const normalizedDisplayName = formatModelDisplayName(m, variant)
-        .trim()
-        .toLowerCase();
-      return (
-        normalized !== "auto" &&
-        normalizedDisplayName !== "auto" &&
-        !(variant === "cursor" && normalized === "default")
-      );
-    },
-  );
+  const modelList = selectableModelNames(models, variant);
   const noModels = !isLoading && modelList.length === 0;
   const displayModel = formatModelDisplayName(model, variant);
   const selectedModelEffortLevels =
@@ -77,18 +69,28 @@ export function ModelSelectDropdown({
     bottom: number;
     left: number;
   } | null>(null);
+  /**
+   * Whether choosing this model opens the effort / thinking submenu.
+   *
+   * This decides what a click on the model row means. With a submenu the click
+   * is only the first half of the interaction — the menu stays open so the
+   * follow-up choice can be made, and that branch closes it. Without one the
+   * click is the whole interaction, so leaving the menu open just strands it.
+   *
+   * Claude models advertising no effort levels still get an On/Off thinking
+   * toggle, so for that variant there is always a submenu.
+   */
+  const modelHasEffortMenu = (candidate: string) =>
+    (modelEffortLevelsByModel[candidate] ?? []).length > 0 || variant === "claude";
+
   const hoveredModelEffortLevels = hoveredModel
     ? (modelEffortLevelsByModel[hoveredModel] ?? [])
     : [];
   const hoveredModelDisplayName = hoveredModel
     ? formatModelDisplayName(hoveredModel, variant)
     : "";
-  const hoveredModelUsesThinkingToggle =
-    !!hoveredModel &&
-    variant === "claude" &&
-    hoveredModelEffortLevels.length === 0;
   const hoveredModelHasEffortMenu =
-    hoveredModelEffortLevels.length > 0 || hoveredModelUsesThinkingToggle;
+    !!hoveredModel && modelHasEffortMenu(hoveredModel);
   const hoveredModelSupportsUltracode =
     variant === "claude" &&
     hoveredModelEffortLevels.includes("xhigh");
@@ -135,10 +137,7 @@ export function ModelSelectDropdown({
 
   const openEffortMenu = (hovered: string) => {
     clearEffortCloseTimer();
-    const effortLevels = modelEffortLevelsByModel[hovered] ?? [];
-    const usesThinkingToggle =
-      variant === "claude" && effortLevels.length === 0;
-    if (effortLevels.length === 0 && !usesThinkingToggle) {
+    if (!modelHasEffortMenu(hovered)) {
       setHoveredModel(null);
       return;
     }
@@ -158,6 +157,15 @@ export function ModelSelectDropdown({
         ? menuRect.right + gap
         : Math.max(8, menuRect.left - panelWidth - gap),
     });
+  };
+
+  const selectModel = (candidate: string) => {
+    onModelChange(candidate);
+    // Models with a submenu keep the menu open so the effort/thinking choice can
+    // follow; that branch closes it on selection.
+    if (modelHasEffortMenu(candidate)) return;
+    closeEffortMenu();
+    onClose?.();
   };
 
   const selectEffortForHoveredModel = (level: string) => {
@@ -256,7 +264,7 @@ export function ModelSelectDropdown({
               <Button
                 key={m}
                 type="button"
-                onClick={() => onModelChange(m)}
+                onClick={() => selectModel(m)}
                 onMouseEnter={() => openEffortMenu(m)}
                 onMouseLeave={scheduleEffortMenuClose}
                 onFocus={() => openEffortMenu(m)}

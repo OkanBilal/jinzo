@@ -51,6 +51,8 @@ interface WorkspaceItemProps {
   rootPath?: string;
   status?: WorkspaceStatus;
   branch?: string | null;
+  /** False once the workspace's folder is gone from disk. */
+  pathExists?: boolean;
   updatedAt?: Date;
   isActive?: boolean;
   projectId?: string | null;
@@ -71,6 +73,7 @@ export default function WorkspaceItem({
   rootPath,
   status = "todo",
   branch,
+  pathExists = true,
   //updatedAt,
   isActive = false,
   projectId,
@@ -219,13 +222,27 @@ export default function WorkspaceItem({
               ) : (
                 <span className="size-2.75 mr-2 flex items-center" />
               )}
-              {branch && !isRenamingBranch && (
+              {!pathExists ? (
+                // Replaces the branch line rather than sitting next to it: with
+                // no folder there is no branch to show, and the reason the row
+                // looks inert is the more useful thing to surface.
+                <Tooltip
+                  content={`Folder not found: ${rootPath ?? "unknown path"}`}
+                  position="top"
+                >
+                  <Muted
+                    className={`text-xs text-amber-600 dark:text-amber-500 truncate ${grouping === "status" ? "-ml-1.5" : ""}`}
+                  >
+                    Folder missing
+                  </Muted>
+                </Tooltip>
+              ) : branch && !isRenamingBranch ? (
                 <Muted
                   className={`text-xs text-primary-800 dark:text-primary-200 truncate ${grouping === "status" ? "-ml-1.5" : ""}`}
                 >
                   {branch}
                 </Muted>
-              )}
+              ) : null}
               {isRenamingBranch && (
                 <input
                   ref={renameInputRef}
