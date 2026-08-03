@@ -22,7 +22,7 @@ export function RevokeConfirmModal({
       isOpen
       title={`Revoke ${appName} Access?`}
       description={description || defaultDescription}
-      primaryButtonText="Revoke Access"
+      primaryButtonText="Revoke"
       secondaryButtonText="Cancel"
       onPrimary={onConfirm}
       onSecondary={onCancel}

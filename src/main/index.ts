@@ -27,6 +27,7 @@ app.commandLine.appendSwitch("ignore-gpu-blocklist");
 import { spawn, execFile } from "child_process";
 import { promisify } from "util";
 import * as fs from "fs";
+import * as fsp from "fs/promises";
 import * as path from "path";
 import { initializeDatabase, closeDatabase } from "./db/client";
 import { registerBrowserWindowSink } from "./ipc-kit/browser-window-sink";
@@ -194,7 +195,10 @@ let tray: Tray | null = null;
 let installedAppsCache: DetectedApp[] | null = null;
 let installedAppsCacheTime = 0;
 let detectInFlight: Promise<DetectedApp[]> | null = null;
+let persistedAppsLoaded = false;
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+/** Bump when `DetectedApp` or `KNOWN_APPS` changes shape — invalidates the disk cache. */
+const INSTALLED_APPS_CACHE_VERSION = 1;
 const ALLOWED_EXTERNAL_PROTOCOLS = new Set(["https:", "http:", "mailto:"]);
 
 function appIconsDir(): string {
@@ -394,80 +398,165 @@ const APP_SEARCH_DIRS = [
   path.join(app.getPath("home"), "Applications"),
 ];
 
+/** Run `worker` over `items` with at most `limit` in flight. */
+async function mapWithConcurrency<T>(
+  items: T[],
+  limit: number,
+  worker: (item: T) => Promise<void>,
+): Promise<void> {
+  let cursor = 0;
+  const runners = Array.from(
+    { length: Math.min(limit, items.length) },
+    async () => {
+      while (cursor < items.length) {
+        const item = items[cursor++];
+        try {
+          await worker(item);
+        } catch {
+          // one bad bundle shouldn't abort the sweep
+        }
+      }
+    },
+  );
+  await Promise.all(runners);
+}
+
+/** Read a bundle's CFBundleIdentifier, or null if the plist is unreadable. */
+async function readBundleId(appPath: string): Promise<string | null> {
+  try {
+    const { stdout } = await execFileAsync("defaults", [
+      "read",
+      path.join(appPath, "Contents", "Info"),
+      "CFBundleIdentifier",
+    ]);
+    return stdout.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Find an app by its bundle identifier without using mdfind.
- * Walks the known application directories looking for a .app whose
- * CFBundleIdentifier matches. This avoids the macOS
- * "would like to access data from other apps" privacy prompt.
+ * Map every installed bundle id to its `.app` path in a single sweep of
+ * APP_SEARCH_DIRS (no mdfind — that triggers the macOS "would like to access
+ * data from other apps" privacy prompt).
+ *
+ * Scanning once and matching against the map is what keeps this cheap: the
+ * previous shape asked "where is bundle X?" once per KNOWN_APPS entry, and each
+ * of those questions re-walked all ~230 bundles — a full scan for every app the
+ * user does *not* have installed. That was ~10k `defaults` spawns (~17s cold).
+ * One sweep is one spawn per bundle.
  */
-async function findAppByBundleId(bundleId: string): Promise<string | null> {
+async function scanBundleIdMap(): Promise<Map<string, string>> {
+  const appPaths: string[] = [];
   for (const dir of APP_SEARCH_DIRS) {
     let entries: string[];
     try {
-      entries = fs.readdirSync(dir);
+      entries = await fsp.readdir(dir);
     } catch {
       continue;
     }
     for (const entry of entries) {
       if (!entry.endsWith(".app")) continue;
       const appPath = path.join(dir, entry);
-      const plistPath = path.join(appPath, "Contents", "Info.plist");
-      if (!fs.existsSync(plistPath)) continue;
-
-      try {
-        const { stdout } = await execFileAsync("defaults", [
-          "read",
-          path.join(appPath, "Contents", "Info"),
-          "CFBundleIdentifier",
-        ]);
-        if (stdout.trim() === bundleId) return appPath;
-      } catch {
-        // plist unreadable — skip
-      }
+      if (!fs.existsSync(path.join(appPath, "Contents", "Info.plist"))) continue;
+      appPaths.push(appPath);
     }
   }
-  return null;
+
+  const byBundleId = new Map<string, string>();
+  await mapWithConcurrency(appPaths, 12, async (appPath) => {
+    const bundleId = await readBundleId(appPath);
+    // First match wins — APP_SEARCH_DIRS is ordered by preference.
+    if (bundleId && !byBundleId.has(bundleId)) byBundleId.set(bundleId, appPath);
+  });
+  return byBundleId;
 }
 
-async function detectInstalledApps(): Promise<DetectedApp[]> {
-  if (installedAppsCache && Date.now() - installedAppsCacheTime < CACHE_TTL) {
-    return installedAppsCache;
+function installedAppsCachePath(): string {
+  return path.join(app.getPath("userData"), "installed-apps.json");
+}
+
+/**
+ * Seed the in-memory cache from disk. The scan result outlives the process, so
+ * a restart doesn't pay for a cold detection — entries whose `.app` has since
+ * been removed are dropped, and icons whose PNG was cleaned out are re-derived
+ * on the next refresh.
+ */
+function loadPersistedInstalledApps(): void {
+  if (persistedAppsLoaded) return;
+  persistedAppsLoaded = true;
+  try {
+    const parsed = JSON.parse(
+      fs.readFileSync(installedAppsCachePath(), "utf8"),
+    ) as { version?: number; detectedAt?: number; apps?: DetectedApp[] };
+    if (
+      parsed?.version !== INSTALLED_APPS_CACHE_VERSION ||
+      !Array.isArray(parsed.apps)
+    ) {
+      return;
+    }
+    const iconsDir = appIconsDir();
+    installedAppsCache = parsed.apps
+      .filter((a) => a && typeof a.path === "string" && fs.existsSync(a.path))
+      .map((a) => ({
+        ...a,
+        icon:
+          a.icon && fs.existsSync(path.join(iconsDir, `${a.id}.png`))
+            ? a.icon
+            : null,
+      }));
+    installedAppsCacheTime =
+      typeof parsed.detectedAt === "number" ? parsed.detectedAt : 0;
+  } catch {
+    // no cache yet / unreadable — fall back to a full detection
   }
+}
+
+function persistInstalledApps(apps: DetectedApp[]): void {
+  try {
+    fs.writeFileSync(
+      installedAppsCachePath(),
+      JSON.stringify({
+        version: INSTALLED_APPS_CACHE_VERSION,
+        detectedAt: Date.now(),
+        apps,
+      }),
+    );
+  } catch (err) {
+    console.warn("Failed to persist installed-apps cache:", err);
+  }
+}
+
+/** Full detection sweep. Deduped across concurrent callers via `detectInFlight`. */
+function refreshInstalledApps(): Promise<DetectedApp[]> {
   if (detectInFlight) return detectInFlight;
 
   detectInFlight = (async () => {
     try {
-      const results = await Promise.allSettled(
-        KNOWN_APPS.map(async (knownApp) => {
-          try {
-            const appPath = await findAppByBundleId(knownApp.bundleId);
-            if (!appPath) return null;
+      const byBundleId = await scanBundleIdMap();
 
-            const icon = await getAppIcon(appPath, knownApp.id);
+      const detected: DetectedApp[] = [];
+      for (const knownApp of KNOWN_APPS) {
+        const appPath = byBundleId.get(knownApp.bundleId);
+        if (!appPath) continue;
+        detected.push({
+          id: knownApp.id,
+          name: knownApp.name,
+          bundleId: knownApp.bundleId,
+          path: appPath,
+          icon: null,
+        });
+      }
 
-            return {
-              id: knownApp.id,
-              name: knownApp.name,
-              bundleId: knownApp.bundleId,
-              path: appPath,
-              icon,
-            } satisfies DetectedApp;
-          } catch {
-            return null;
-          }
-        }),
-      );
-
-      const detected = results
-        .filter(
-          (r): r is PromiseFulfilledResult<DetectedApp | null> =>
-            r.status === "fulfilled",
-        )
-        .map((r) => r.value)
-        .filter((v): v is DetectedApp => v !== null);
+      // Icons are a no-op once the PNG is on disk (see getAppIcon).
+      await mapWithConcurrency(detected, 8, async (detectedApp) => {
+        detectedApp.icon = await getAppIcon(detectedApp.path, detectedApp.id);
+      });
 
       installedAppsCache = detected;
       installedAppsCacheTime = Date.now();
+      persistedAppsLoaded = true;
+      persistInstalledApps(detected);
       return detected;
     } finally {
       detectInFlight = null;
@@ -475,6 +564,25 @@ async function detectInstalledApps(): Promise<DetectedApp[]> {
   })();
 
   return detectInFlight;
+}
+
+/**
+ * Stale-while-revalidate: callers always get whatever we already know
+ * immediately, and a stale cache refreshes in the background for next time.
+ */
+async function detectInstalledApps(): Promise<DetectedApp[]> {
+  loadPersistedInstalledApps();
+
+  if (installedAppsCache) {
+    if (Date.now() - installedAppsCacheTime >= CACHE_TTL) {
+      void refreshInstalledApps().catch((err) =>
+        console.warn("Background installed-apps refresh failed:", err),
+      );
+    }
+    return installedAppsCache;
+  }
+
+  return refreshInstalledApps();
 }
 
 function resolveTrayIconPath(): string {
@@ -886,6 +994,16 @@ async function initializeApp() {
         // Close splash and show main window
         closeSplashWindow();
         window.show();
+
+        // Warm the installed-app cache off the critical path so the workspace
+        // "Open with" submenu is already populated the first time it opens.
+        if (process.platform === "darwin") {
+          setTimeout(() => {
+            void detectInstalledApps().catch((err) =>
+              console.warn("Installed-apps warmup failed:", err),
+            );
+          }, 1500);
+        }
 
         // Check for updates after a short delay
         setTimeout(() => {

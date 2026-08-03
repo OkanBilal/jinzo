@@ -34,12 +34,15 @@ import {
   useSwitchWorkspaceBranchMutation,
   useGetWorkspaceQuery,
   useListProjectBranchesQuery,
+  useLazyGetLatestWorkspaceDiffQuery,
   type ChangedFile,
 } from "@/lib/redux/api";
 import { extractErrorMessage } from "@/lib/extract-error-message";
 import { appEvents } from "@/lib/transport";
 import { DIFF_ADDED_TEXT, DIFF_REMOVED_TEXT } from "@/features/workspace/lib/severity";
 import { useOpenFileInEditor } from "@/features/workspace/hooks/use-open-file-in-editor";
+import { useOpenDiffInEditor } from "@/features/workspace/hooks/use-open-diff-in-editor";
+import { parseFileDiffSegment } from "@/features/workspace/utils/parse-diff";
 import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
 import { PanelItem, PanelCollapse, PANEL_ROW_X } from "./panel-item";
 
@@ -125,6 +128,7 @@ export function GitActionsSection({
   );
 
   const openFileInEditor = useOpenFileInEditor();
+  const openDiffInEditor = useOpenDiffInEditor();
 
   const [openSections, setOpenSections] = useState<Section[]>([]);
   const [message, setMessage] = useState("");
@@ -140,6 +144,8 @@ export function GitActionsSection({
   const [confirmDiscard, setConfirmDiscard] = useState<DiscardRequest | null>(
     null,
   );
+  /** Path whose diff is being fetched, so its row can spin while it loads. */
+  const [openingDiff, setOpeningDiff] = useState<string | null>(null);
   /** Branch being checked out, and the one held for confirmation. */
   const [switchingBranch, setSwitchingBranch] = useState<string | null>(null);
   const [confirmBranch, setConfirmBranch] = useState<string | null>(null);
@@ -190,6 +196,9 @@ export function GitActionsSection({
   const [createPrGitFlow] = useCreatePrGitFlowMutation();
   const [publishRepo] = usePublishRepoMutation();
   const [discardWorkspacePaths] = useDiscardWorkspacePathsMutation();
+  // On demand only: the diff text is fetched when a file row is clicked, not
+  // alongside the status this panel polls throughout a run.
+  const [fetchLatestDiff] = useLazyGetLatestWorkspaceDiffQuery();
   const [switchWorkspaceBranch] = useSwitchWorkspaceBranchMutation();
   // Recomputes + persists the canonical workspace diff and invalidates the
   // WorkspaceDiffs cache, so the sidebar workspace item (which reads that
@@ -234,6 +243,58 @@ export function GitActionsSection({
       setIsManualRefresh(false);
     }
   }, [activeWorkspaceId, isManualRefresh, refetch, resyncWorkspaceDiff]);
+
+  /**
+   * Open a changed file as a diff. The row belongs to a list of *changes*, so a
+   * click should show what changed rather than the whole current file — the
+   * same thing the sidebar's Changes tab opens.
+   *
+   * The status payload carries paths and counts only, so the diff text is
+   * pulled from the stored workspace diff and sliced down to this one file. A
+   * snapshot that predates the change (or was never captured) yields no
+   * segment; that's what the resync retry is for. If even that comes up empty —
+   * a binary file, or one git no longer reports — the file itself opens, so a
+   * click is never a no-op.
+   */
+  const handleOpenFileDiff = useCallback(
+    async (filePath: string) => {
+      if (!activeWorkspaceId || openingDiff) return;
+      setOpeningDiff(filePath);
+      try {
+        const cached = await fetchLatestDiff(activeWorkspaceId, true).unwrap();
+        const segment = cached?.diffText
+          ? parseFileDiffSegment(filePath, cached.diffText)
+          : "";
+        if (segment) {
+          openDiffInEditor(filePath, segment);
+          return;
+        }
+
+        await resyncWorkspaceDiff(activeWorkspaceId).unwrap();
+        const fresh = await fetchLatestDiff(activeWorkspaceId, false).unwrap();
+        const freshSegment = fresh?.diffText
+          ? parseFileDiffSegment(filePath, fresh.diffText)
+          : "";
+        if (freshSegment) {
+          openDiffInEditor(filePath, freshSegment);
+          return;
+        }
+      } catch {
+        // Fall through — the file view is always available.
+      } finally {
+        setOpeningDiff(null);
+      }
+      openFileInEditor(filePath);
+    },
+    [
+      activeWorkspaceId,
+      openingDiff,
+      fetchLatestDiff,
+      resyncWorkspaceDiff,
+      openDiffInEditor,
+      openFileInEditor,
+    ],
+  );
 
   /**
    * Run a confirmed Undo: restore those files to their HEAD state. One file
@@ -500,7 +561,8 @@ export function GitActionsSection({
             <ChangedFileRow
               key={file.path}
               file={file}
-              onOpen={openFileInEditor}
+              onOpen={handleOpenFileDiff}
+              opening={openingDiff === file.path}
               onDiscard={() =>
                 setConfirmDiscard({ key: file.path, files: [file] })
               }
@@ -522,11 +584,11 @@ export function GitActionsSection({
         title={
           projectId ? "Show the repo's branches" : "This workspace has no project"
         }
-        trailing={
-          hasChanges
-            ? `${changedFiles} file${changedFiles === 1 ? "" : "s"}`
-            : undefined
-        }
+        // trailing={
+        //   hasChanges
+        //     ? `${changedFiles} file${changedFiles === 1 ? "" : "s"}`
+        //     : undefined
+        // }
       />
       <PanelCollapse isOpen={isSectionOpen("branch")}>
         <div className="max-h-56 overflow-y-auto noscrollbar">
@@ -841,11 +903,14 @@ export function GitActionsSection({
 function ChangedFileRow({
   file,
   onOpen,
+  opening,
   onDiscard,
   discarding,
 }: {
   file: ChangedFile;
   onOpen: (filePath: string) => void;
+  /** Its diff is being fetched — the icon spins until the tab opens. */
+  opening: boolean;
   onDiscard: () => void;
   discarding: boolean;
 }) {
@@ -885,7 +950,8 @@ function ChangedFileRow({
         onClick: onDiscard,
         pending: discarding,
       }}
-      title={`Open ${file.path} in the editor`}
+      loading={opening}
+      title={`Open the diff for ${file.path}`}
       onClick={() => onOpen(file.path)}
     />
   );
