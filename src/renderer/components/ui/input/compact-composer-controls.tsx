@@ -5,7 +5,11 @@ import { Button } from "../button";
 import { ArrowUp, Brain, BoltFill, Check } from "../icons";
 import { Bolt } from "../icons/space";
 import { useClickOutside } from "@/hooks/use-click-outside";
-import { formatModelDisplayName, getModelIcon } from "@/lib/model-icons";
+import {
+  formatModelDisplayName,
+  getModelIcon,
+  selectableModelNames,
+} from "@/lib/model-icons";
 import { ULTRACODE_GRADIENT_TEXT } from "./ultracode-styles";
 
 type Variant = "claude" | "copilot" | "codex" | "cursor";
@@ -64,19 +68,7 @@ export function CompactComposerControls({
   const [isOpen, setIsOpen] = useState(false);
   useClickOutside(containerRef, () => setIsOpen(false));
 
-  const modelList = (Array.isArray(models) ? models : []).filter(
-    (m) => {
-      const normalized = m.trim().toLowerCase();
-      const normalizedDisplayName = formatModelDisplayName(m, variant)
-        .trim()
-        .toLowerCase();
-      return (
-        normalized !== "auto" &&
-        normalizedDisplayName !== "auto" &&
-        !(variant === "cursor" && normalized === "default")
-      );
-    },
-  );
+  const modelList = selectableModelNames(models, variant);
   const displayModel = formatModelDisplayName(model, variant);
   const hasEffortLevels =
     !!supportedEffortLevels && supportedEffortLevels.length > 0;

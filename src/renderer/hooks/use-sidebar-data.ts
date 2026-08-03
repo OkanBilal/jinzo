@@ -37,6 +37,7 @@ export function useSidebarData({ searchQuery }: UseSidebarDataOptions) {
               );
               if (current) {
                 current.branch = state.branch;
+                current.pathExists = state.pathExists;
               } else {
                 draft.push(state);
               }

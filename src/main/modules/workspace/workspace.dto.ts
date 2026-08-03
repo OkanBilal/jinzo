@@ -105,6 +105,12 @@ export interface WorkspaceResponse {
 export interface WorkspaceGitState {
   workspaceId: string;
   branch: string | null;
+  /**
+   * Whether the workspace's directory is still on disk. Kept separate from
+   * `branch` because a null branch means "not a git repo", which is a normal
+   * working state — a missing directory is not.
+   */
+  pathExists: boolean;
 }
 
 export interface WorkspaceListResponse {

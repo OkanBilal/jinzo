@@ -33,6 +33,41 @@ import type {
 } from "./workspace.dto";
 
 // ─────────────────────────────────────────────────────────────
+// Workspace directory presence
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Whether a workspace's directory is still on disk.
+ *
+ * A workspace row outlives its directory: the user can delete, move, or unmount
+ * it (or a worktree can be pruned) at any time, and we deliberately keep the row
+ * — the directory may come back, and silently dropping it would lose the linked
+ * runs and resources. So absence is a normal state to be reported, not an error,
+ * and callers surface it instead of letting the filesystem fail later with a
+ * bare ENOENT.
+ */
+export function workspacePathExists(rootPath: string): boolean {
+  return existsSync(path.resolve(rootPath));
+}
+
+/**
+ * Guard for anything that runs *inside* a workspace directory. Fails with the
+ * path in the message, so the user sees which directory went missing rather
+ * than an ENOENT raised somewhere deep in a provider adapter.
+ */
+export function assertWorkspacePathExists(
+  rootPath: string,
+  workspaceName?: string,
+): void {
+  if (workspacePathExists(rootPath)) return;
+  const label = workspaceName ? `"${workspaceName}"` : "This workspace";
+  throw new Error(
+    `${label} points at a folder that no longer exists: ${rootPath}. ` +
+      "Move it back, or delete the workspace.",
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
 // Script execution helpers (used by workspace lifecycle hooks)
 // ─────────────────────────────────────────────────────────────
 function validateScriptCwd(cwd: string): void {
@@ -274,16 +309,26 @@ function scheduleGitStateRefresh(workspaceId: string): void {
   entry.refreshTimer = setTimeout(() => {
     const current = gitStateWatchers.get(workspaceId);
     if (!current) return;
+    // Deletion is normally caught by the next listGitStates() sweep — fs.watch
+    // errors out on a removed directory and the watcher is torn down, so this
+    // path may never run again. Still report presence accurately for the
+    // refreshes that do land.
+    if (!workspacePathExists(current.rootPath)) {
+      if (current.branch !== null) {
+        emitGitStateChanged({ workspaceId, branch: null, pathExists: false });
+      }
+      return;
+    }
     gitService
       .getCurrentBranch(current.rootPath)
       .then((branch) => {
         if (branch !== current.branch) {
-          emitGitStateChanged({ workspaceId, branch });
+          emitGitStateChanged({ workspaceId, branch, pathExists: true });
         }
       })
       .catch(() => {
         if (current.branch !== null) {
-          emitGitStateChanged({ workspaceId, branch: null });
+          emitGitStateChanged({ workspaceId, branch: null, pathExists: true });
         }
       });
   }, 75);
@@ -383,12 +428,20 @@ export const workspaceService = {
   async listGitStates(): Promise<WorkspaceGitState[]> {
     const workspaces = await workspaceRepo.findAll();
     const states = await Promise.all(
-      workspaces.map(async (workspace) => ({
-        workspaceId: workspace.id,
-        branch: await gitService
-          .getCurrentBranch(workspace.rootPath)
-          .catch(() => null),
-      })),
+      workspaces.map(async (workspace) => {
+        // `branch: null` alone can't distinguish "not a git repo" from "the
+        // folder is gone" — two states the UI has to treat very differently.
+        // Skip the git call entirely when the directory is missing; it would
+        // only fail with ENOENT.
+        const pathExists = workspacePathExists(workspace.rootPath);
+        return {
+          workspaceId: workspace.id,
+          pathExists,
+          branch: pathExists
+            ? await gitService.getCurrentBranch(workspace.rootPath).catch(() => null)
+            : null,
+        };
+      }),
     );
     await syncGitStateWatchers(workspaces, states);
     return states;
@@ -751,7 +804,7 @@ export const workspaceService = {
     const current = await gitService
       .getCurrentBranch(workspace.rootPath)
       .catch(() => branch);
-    emitGitStateChanged({ workspaceId, branch: current ?? branch });
+    emitGitStateChanged({ workspaceId, branch: current ?? branch, pathExists: true });
     await this.resyncDiff(workspaceId);
   },
 
@@ -788,7 +841,7 @@ export const workspaceService = {
         ? worktree.sourcePath
         : workspace.rootPath;
     await gitService.renameBranch(gitPath, oldBranch, newBranchName);
-    emitGitStateChanged({ workspaceId, branch: newBranchName });
+    emitGitStateChanged({ workspaceId, branch: newBranchName, pathExists: true });
     return workspace;
   },
 

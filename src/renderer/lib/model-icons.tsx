@@ -78,6 +78,28 @@ export function getModelPrettyName(
   return model.displayName;
 }
 
+/**
+ * Narrow a list of model display names down to the ones worth offering in the
+ * picker.
+ *
+ * Only Cursor's `default` placeholder is hidden — it names no actual model, it
+ * just means "whatever Cursor picks", which the real entries already cover.
+ *
+ * `auto` deliberately stays: on Copilot and Cursor it is a genuine choice (the
+ * provider routes each turn to a model for you). It used to be filtered out
+ * alongside `default`, which hid it on Cursor and — on Copilot plans where the
+ * CLI offers nothing else — emptied the list entirely, so the picker read
+ * "No models found" when a perfectly usable model was available.
+ */
+export function selectableModelNames(
+  models: string[],
+  variant?: ModelIconVariant,
+): string[] {
+  return (Array.isArray(models) ? models : []).filter(
+    (m) => !(variant === "cursor" && m.trim().toLowerCase() === "default"),
+  );
+}
+
 /** Keep the first model when multiple entries share the same UI label. */
 export function dedupeModelsByPrettyName<T extends { displayName: string; description?: string }>(
   models: T[],

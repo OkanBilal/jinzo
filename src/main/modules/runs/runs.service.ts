@@ -2,7 +2,7 @@ import { createHash } from "crypto";
 
 import { runsRepo } from "./runs.repo";
 import { providersService } from "../providers";
-import { workspaceService } from "../workspace";
+import { workspaceService, assertWorkspacePathExists } from "../workspace";
 import {
   createWorkAdapter,
   type WorkRunContextItem,
@@ -310,6 +310,10 @@ export const runsService = {
       if (!workspace) {
         throw new Error(`Workspace "${payload.workspaceId}" not found`);
       }
+      // Refuse before any state is written. Handing a missing directory to an
+      // adapter starts a run that can only fail, and fails obscurely — the agent
+      // reports a path error from inside its own sandbox.
+      assertWorkspacePathExists(workspace.rootPath, workspace.name);
 
       await workspaceService.update(payload.workspaceId, { status: "in_progress" });
 
@@ -410,6 +414,7 @@ export const runsService = {
       if (!workspace) {
         throw new Error(`Workspace "${payload.workspaceId}" not found`);
       }
+      assertWorkspacePathExists(workspace.rootPath, workspace.name);
 
       await workspaceService.update(payload.workspaceId, { status: "in_review" });
 
@@ -515,6 +520,11 @@ export const runsService = {
       const workspace = run.workspaceId
         ? await workspaceService.get(run.workspaceId)
         : null;
+      // Workspace-less runs fall back to the app's cwd below, so only guard when
+      // the run is actually bound to a workspace directory.
+      if (workspace) {
+        assertWorkspacePathExists(workspace.rootPath, workspace.name);
+      }
 
       const adapter = createWorkAdapter(provider);
       if (!adapter.continueRun) {

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { existsSync } from "fs";
 import { createTestDb } from "../../../test/setup-db";
 import {
   createAccount,
@@ -62,6 +63,15 @@ vi.mock("../git/git.service", () => ({
   },
 }));
 
+// Workspace fixtures use synthetic /tmp/ws/<uuid> paths that were never created
+// on disk, so the real filesystem would report every one of them missing and the
+// run-start guard would reject them. Default to "present" and let the guard's own
+// tests flip this.
+vi.mock("fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("fs")>();
+  return { ...actual, existsSync: vi.fn(() => true) };
+});
+
 // Mock only the fire-and-forget side of the workspace aggregate.
 // workspaceRepo runs against the real test DB so runs.service can find/update
 // workspaces created via createWorkspace(...). createDiff and logWorkspaceActivity
@@ -91,6 +101,8 @@ import { gitService } from "../git/git.service";
 describe("runsService", () => {
   beforeEach(() => {
     ({ db, sqlite: _sqlite, cleanup } = createTestDb());
+    // Workspace folders exist unless a test says otherwise (see the fs mock).
+    vi.mocked(existsSync).mockReturnValue(true);
     // Defaults for the throw-style git mock: no repo unless a test overrides,
     // and an empty snapshot so sessions that DO get a baseRef can finalize.
     vi.mocked(gitService.getHeadSha).mockRejectedValue(
@@ -810,6 +822,33 @@ describe("runsService", () => {
       const result = await runsService.executeRun(basePayload());
       expect(result.runId).toBeTruthy();
       await flushBackground();
+    });
+
+    // Handing a deleted directory to an adapter starts a run that can only fail,
+    // and fails obscurely — the error surfaces from inside the provider instead
+    // of naming the folder. Refuse up front, before any row is written.
+    describe("workspace folder deleted", () => {
+      it("refuses to start and names the folder", async () => {
+        createWorkspace(db, { id: "ws-gone", name: "Ghost", rootPath: "/repos/gone" });
+        const adapter = setupMockAdapter();
+        vi.mocked(existsSync).mockReturnValue(false);
+
+        await expect(
+          runsService.executeRun({ ...basePayload(), workspaceId: "ws-gone" }),
+        ).rejects.toThrow(/"Ghost".*\/repos\/gone/s);
+        expect(adapter.startRun).not.toHaveBeenCalled();
+      });
+
+      it("writes no run row when it refuses", async () => {
+        createWorkspace(db, { id: "ws-gone2", rootPath: "/repos/gone2" });
+        setupMockAdapter();
+        vi.mocked(existsSync).mockReturnValue(false);
+
+        await expect(
+          runsService.executeRun({ ...basePayload(), workspaceId: "ws-gone2" }),
+        ).rejects.toThrow(/no longer exists/);
+        await expect(runsRepo.findRunsByWorkspace("ws-gone2")).resolves.toEqual([]);
+      });
     });
 
     it("calls adapter.startRun with correct params", async () => {

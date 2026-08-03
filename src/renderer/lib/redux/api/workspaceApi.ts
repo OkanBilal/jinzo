@@ -67,6 +67,11 @@ export interface UpdateWorkspacePayload {
 export interface WorkspaceGitState {
   workspaceId: string;
   branch: string | null;
+  /**
+   * Whether the workspace's folder is still on disk. Distinct from a null
+   * branch, which just means the folder isn't a git repo.
+   */
+  pathExists: boolean;
 }
 
 // Workspace intake — one operation creates a project + workspace from a repo.

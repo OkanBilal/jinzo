@@ -16,6 +16,7 @@ import {
   mapCopilotTodos,
   isTodoBookkeepingSql,
   mapCopilotQuota,
+  formatToolError,
 } from "./copilot.driver";
 
 const DEFAULT_TIMEOUT = 300_000;
@@ -219,6 +220,73 @@ describe("copilot.driver / classifyOutcome", () => {
       ).toBeNull();
       expect(mapCopilotQuota(undefined, nowMs)).toBeNull();
       expect(mapCopilotQuota({}, nowMs)).toBeNull();
+    });
+
+    // A Copilot Free account reports premium_interactions with no allowance and
+    // remainingPercentage: 0 — rendering that as "100% used" wrongly implies the
+    // user burned through a quota they never had.
+    it("skips quotas the plan does not include rather than showing them exhausted", () => {
+      const noAllowance = {
+        hasQuota: false,
+        entitlementRequests: 0,
+        usedRequests: 0,
+        remainingPercentage: 0,
+      };
+      expect(mapCopilotQuota({ premium_interactions: noAllowance }, nowMs)).toBeNull();
+
+      const result = mapCopilotQuota(
+        {
+          premium_interactions: noAllowance,
+          chat: { remainingPercentage: 80, entitlementRequests: 200, usedRequests: 40 },
+        },
+        nowMs,
+      );
+      expect(result?.primary?.label).toBe("Chat");
+      expect(result?.primary?.usedPercent).toBe(20);
+      expect(result?.secondary).toBeUndefined();
+    });
+
+    it("still reports a genuinely exhausted quota that has an allowance", () => {
+      const result = mapCopilotQuota(
+        {
+          premium_interactions: {
+            hasQuota: true,
+            entitlementRequests: 300,
+            usedRequests: 300,
+            remainingPercentage: 0,
+          },
+        },
+        nowMs,
+      );
+      expect(result?.primary?.usedPercent).toBe(100);
+      expect(result?.primary?.total).toBe(300);
+    });
+  });
+
+  describe("formatToolError (tool.execution_complete error rendering)", () => {
+    // The SDK reports tool errors as { code?, message } — String() on that
+    // renders "[object Object]" into the run timeline.
+    it("unwraps the SDK's structured error object", () => {
+      expect(formatToolError({ message: "File not found" })).toBe("File not found");
+      expect(formatToolError({ code: "ENOENT", message: "File not found" })).toBe(
+        "File not found (ENOENT)",
+      );
+      expect(formatToolError({ code: "ENOENT" })).toBe("ENOENT");
+    });
+
+    it("passes strings and Errors through", () => {
+      expect(formatToolError("boom")).toBe("boom");
+      expect(formatToolError(new Error("exploded"))).toBe("exploded");
+    });
+
+    it("treats absent and empty errors as no error", () => {
+      expect(formatToolError(undefined)).toBeUndefined();
+      expect(formatToolError(null)).toBeUndefined();
+      expect(formatToolError("")).toBeUndefined();
+    });
+
+    it("falls back to JSON rather than [object Object] for unknown shapes", () => {
+      expect(formatToolError({ detail: "weird" })).toBe('{"detail":"weird"}');
     });
   });
 

@@ -347,7 +347,11 @@ const api = {
         );
     },
     onGitStateChanged: (
-      callback: (data: { workspaceId: string; branch: string | null }) => void,
+      callback: (data: {
+        workspaceId: string;
+        branch: string | null;
+        pathExists: boolean;
+      }) => void,
     ) => {
       const listener = (_: any, data: any) => callback(data);
       ipcRenderer.on(CHANNELS.workspace.gitStateChanged, listener);

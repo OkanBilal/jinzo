@@ -62,13 +62,10 @@ interface CopilotClientOptions {
   /** How the SDK reaches the CLI — the only field it reads to resolve the CLI
    *  binary. Built via `RuntimeConnection.forStdio/forTcp/forUri`. */
   connection?: unknown;
-  /** Working directory for the spawned CLI. */
+  /** Working directory for the spawned CLI. Note this does *not* set the
+   *  working directory of sessions — see `SessionConfig.workingDirectory`. */
   workingDirectory?: string;
-  cliArgs?: string[];
-  isChildProcess?: boolean;
   logLevel?: "none" | "error" | "warning" | "info" | "debug" | "all";
-  autoStart?: boolean;
-  autoRestart?: boolean;
   env?: Record<string, string | undefined>;
   gitHubToken?: string;
   useLoggedInUser?: boolean;
@@ -98,14 +95,14 @@ type ReasoningEffort = "low" | "medium" | "high" | "xhigh";
 type AgentMode = "interactive" | "plan" | "autopilot" | "shell";
 
 interface MCPServerConfig {
-  type?: "stdio" | "http" | "sse";
+  type?: "local" | "stdio" | "http" | "sse";
   command?: string;
   args?: string[];
   env?: Record<string, string>;
-  cwd?: string;
+  workingDirectory?: string;
   url?: string;
   headers?: Record<string, string>;
-  tools: string[];
+  tools?: string[];
   timeout?: number;
 }
 
@@ -115,7 +112,12 @@ interface SessionConfig {
   reasoningEffort?: ReasoningEffort;
   systemMessage?: { content: string } | { mode: "append"; content?: string } | { mode: "replace"; content: string };
   streaming?: boolean;
-  cwd?: string;
+  /**
+   * The directory the agent treats as its workspace. This is the *only* field
+   * the SDK forwards to the runtime — an older `cwd` key is silently dropped,
+   * which leaves the session running in the client process's own cwd. Always
+   * set this explicitly rather than relying on the client's `workingDirectory`.
+   */
   workingDirectory?: string;
   tools?: CopilotTool[];
   mcpServers?: Record<string, MCPServerConfig>;
@@ -188,9 +190,9 @@ interface CopilotSdkSession {
       get?: () => Promise<string>;
     };
     plan?: {
-      // `readSqlTodos` ships in copilot-sdk v1.0.1+; the newer
-      // `readSqlTodosWithDependencies` isn't always present. We only need the
-      // rows, so call the widely-available one.
+      // We only render a flat checklist, so `readSqlTodos` is enough.
+      // `readSqlTodosWithDependencies` additionally returns the dependency edges
+      // between todos, if the UI ever grows a structured progress view.
       readSqlTodos?: () => Promise<{
         rows?: Array<{ id?: string; title?: string; description?: string; status?: string }>;
       }>;
@@ -231,33 +233,46 @@ interface SessionMetadata {
   context?: { cwd: string; gitRoot?: string; repository?: string; branch?: string };
 }
 
-type ConnectionState = "disconnected" | "connecting" | "connected" | "error";
-
 interface CopilotClientInterface {
   start(): Promise<void>;
   stop(): Promise<Error[]>;
   forceStop(): Promise<void>;
   createSession(config: SessionConfig): Promise<CopilotSdkSession>;
   resumeSession(sessionId: string, config: Omit<SessionConfig, "sessionId">): Promise<CopilotSdkSession>;
-  listSessions(filter?: { cwd?: string; repository?: string }): Promise<SessionMetadata[]>;
+  listSessions(filter?: {
+    workingDirectory?: string;
+    gitRoot?: string;
+    repository?: string;
+    branch?: string;
+  }): Promise<SessionMetadata[]>;
   deleteSession(sessionId: string): Promise<void>;
   ping(message?: string): Promise<{ message: string; timestamp: number; protocolVersion?: number }>;
+  /**
+   * Memoizes for the client's entire lifetime — the cache is only cleared by
+   * `stop()`/`forceStop()`. Prefer `rpc.models.list`, which hits the runtime
+   * every call; see the driver's `listModels`.
+   */
   listModels(): Promise<CopilotModelInfo[]>;
+  getStatus(): Promise<{ version?: string; protocolVersion?: number }>;
   getAuthStatus(): Promise<unknown>;
-  getState(): ConnectionState;
   getLastSessionId(): Promise<string | undefined>;
-  /** Client-scoped typed RPC surface (e.g. account quota). */
+  /** Client-scoped typed RPC surface (account quota, uncached model listing). */
   rpc?: {
     account?: {
       getQuota?: (params?: { gitHubToken?: string }) => Promise<{
         quotaSnapshots?: Record<string, CopilotQuotaSnapshot | undefined>;
       }>;
     };
+    models?: {
+      list?: (params?: { gitHubToken?: string }) => Promise<{ models?: CopilotModelInfo[] }>;
+    };
   };
 }
 
 interface CopilotQuotaSnapshot {
   isUnlimitedEntitlement?: boolean;
+  /** False when the plan carries no allowance for this quota at all. */
+  hasQuota?: boolean;
   entitlementRequests?: number;
   usedRequests?: number;
   remainingPercentage?: number;
@@ -309,6 +324,21 @@ function isCopilotToolAllowed(toolName: string): boolean {
   return ALLOWED_TOOLS_SET.has(toolName) || COPILOT_EXTRA_ALLOWED.has(toolName);
 }
 
+/**
+ * Events that must be handled even though the SDK flags them `ephemeral`.
+ * Ephemeral normally means "don't persist", and everything so marked is dropped
+ * on arrival — but usage accounting and failures still have to get through.
+ * `model.call_failure` in particular is *always* ephemeral, so without this it
+ * could never reach its case in mapSessionEvent.
+ */
+const EPHEMERAL_EXEMPT_EVENTS = new Set([
+  "assistant.usage",
+  "assistant.turn_end",
+  "session.usage_info",
+  "session.error",
+  "model.call_failure",
+]);
+
 // Tool calls whose raw timeline events are dropped in mapSessionEvent.
 // `exit_plan_mode` is redundant with the richer ExitPlanMode plan card we
 // synthesize from the onExitPlanModeRequest callback (full plan content +
@@ -331,6 +361,31 @@ export function isTodoBookkeepingSql(toolName: string, input: unknown): boolean 
 /** Whether a tool call's raw timeline event should be dropped in mapSessionEvent. */
 function isSuppressedToolCall(toolName: string, input: unknown): boolean {
   return SUPPRESSED_TOOLS.has(toolName) || isTodoBookkeepingSql(toolName, input);
+}
+
+/**
+ * Render a tool-completion error as a human-readable string. The SDK reports it
+ * as `{ code?, message }`, so a bare String() renders "[object Object]" in the
+ * timeline. Plain strings pass through; anything else is JSON-encoded rather
+ * than stringified. Pure, exposed for tests.
+ */
+export function formatToolError(error: unknown): string | undefined {
+  if (error === null || error === undefined) return undefined;
+  if (typeof error === "string") return error || undefined;
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object") {
+    const obj = error as Record<string, unknown>;
+    const message = typeof obj.message === "string" ? obj.message : undefined;
+    const code = typeof obj.code === "string" ? obj.code : undefined;
+    if (message) return code ? `${message} (${code})` : message;
+    if (code) return code;
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return undefined;
+    }
+  }
+  return String(error);
 }
 
 // File-creating/modifying tools (lowercased). In "acceptEdits" mode these are
@@ -377,6 +432,13 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
   const COMMANDS_CACHE_TTL_MS = 60_000;
   const commandsCache = new Map<string, { commands: CommandInfo[]; timestamp: number }>();
 
+  // Model listing cache. The SDK client memoizes models for its entire lifetime
+  // and only drops that cache on stop(), so a sign-in or plan change would never
+  // reach the picker without an app restart. We read the uncached RPC instead and
+  // expire our own copy, which keeps the renderer's refetch meaningful.
+  const MODELS_CACHE_TTL_MS = 60_000;
+  let modelsCache: { models: ModelInfo[]; timestamp: number } | null = null;
+
   // Per-run usage accumulator.
   const usageAccumulator = new Map<
     string,
@@ -416,16 +478,10 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
     const output = typeof payload.outputTokens === "number" ? payload.outputTokens : 0;
     const cacheRead = typeof payload.cacheReadTokens === "number" ? payload.cacheReadTokens : 0;
 
-    let cacheWrite = typeof payload.cacheWriteTokens === "number" ? payload.cacheWriteTokens : 0;
-    const copilotUsage = payload.copilotUsage as Record<string, unknown> | undefined;
-    if (copilotUsage && Array.isArray(copilotUsage.tokenDetails)) {
-      const writeDetail = (copilotUsage.tokenDetails as any[]).find(
-        (d) => d.tokenType === "cache_write",
-      );
-      if (writeDetail && typeof writeDetail.tokenCount === "number") {
-        cacheWrite = writeDetail.tokenCount;
-      }
-    }
+    // `copilotUsage` used to carry a `tokenDetails[]` array we mined for the
+    // cache-write count; it is now just `{ totalNanoAiu }`, so the event's own
+    // `cacheWriteTokens` is the only source.
+    const cacheWrite = typeof payload.cacheWriteTokens === "number" ? payload.cacheWriteTokens : 0;
 
     acc.inputTokens += input;
     acc.outputTokens += output;
@@ -483,7 +539,13 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
     return async (
       request: { kind: string; toolCallId?: string; [key: string]: any },
     ): Promise<{ kind: string; rules?: unknown[] }> => {
-      if (request.kind === "read" || request.kind === "shell" || request.kind === "task" || request.kind === "ask_user") {
+      // Valid kinds are: shell, write, read, mcp, url, memory, custom-tool,
+      // hook, extension-management, extension-permission-access. `read`/`shell`
+      // map to the pre-approved Read/Bash tools (see COPILOT_EXTRA_ALLOWED), so
+      // they are granted here too; everything else falls through to the user.
+      // (The former `task` / `ask_user` branches were dead — neither is a
+      // permission kind. `ask_user` is routed to onUserInputRequest instead.)
+      if (request.kind === "read" || request.kind === "shell") {
         return { kind: "approved" };
       }
 
@@ -646,28 +708,83 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
   // SDK client lifecycle
   // ─────────────────────────────────────────────────────────────
 
-  async function ensureClient(workspaceCwd?: string): Promise<CopilotClientInterface> {
-    if (client && workspaceCwd && currentClientCwd && currentClientCwd !== workspaceCwd) {
-      logInfo(`Workspace changed from ${currentClientCwd} to ${workspaceCwd}, reinitializing client`);
+  /** Tear the client down and reset every piece of state derived from it. */
+  async function disposeClient(reason: string): Promise<void> {
+    const current = client;
+    client = null;
+    clientInitPromise = null;
+    initError = null;
+    currentClientCwd = null;
+    // Both are per-runtime/per-account, so a fresh client must re-read them.
+    modelsCache = null;
+    commandsCache.clear();
+
+    if (!current) return;
+    logInfo(`Disposing Copilot client: ${reason}`);
+    try {
+      let timer: NodeJS.Timeout | undefined;
+      const stopTimeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("Stop timed out")), 5000);
+      });
       try {
-        const stopTimeout = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("Stop timed out")), 5000),
-        );
-        await Promise.race([client.stop(), stopTimeout]);
-      } catch {
-        try {
-          await client.forceStop();
-        } catch (err) {
-          logWarn("Error force stopping client during workspace change:", err);
+        await Promise.race([current.stop(), stopTimeout]);
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+    } catch {
+      try {
+        await current.forceStop();
+      } catch (err) {
+        if (!(err instanceof Error && err.message.includes("ERR_STREAM_DESTROYED"))) {
+          logWarn("Error force stopping client:", err);
         }
       }
-      client = null;
-      clientInitPromise = null;
-      initError = null;
     }
+  }
 
-    if (workspaceCwd && !currentClientCwd) {
-      currentClientCwd = workspaceCwd;
+  /**
+   * Round-trip the runtime to confirm the client is still usable. The CLI is a
+   * child process that can exit underneath us (crash, OOM, external kill), and
+   * the SDK surfaces that only as "Connection is closed" thrown from whatever
+   * call happens next — typically createSession, i.e. the start of a run.
+   */
+  async function isClientAlive(candidate: CopilotClientInterface): Promise<boolean> {
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("Health check timed out")), 5000);
+      });
+      await Promise.race([candidate.ping("health"), timeout]);
+      return true;
+    } catch (err) {
+      logWarn(
+        "Copilot client health check failed:",
+        err instanceof Error ? err.message : String(err),
+      );
+      return false;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+
+  async function ensureClient(workspaceCwd?: string): Promise<CopilotClientInterface> {
+    // The client is process-wide and long-lived; every session carries its own
+    // `workingDirectory`, so a workspace switch no longer needs to tear it down.
+    // (It used to: session `cwd` was being dropped by the SDK, so rebuilding the
+    // client was the only way to move the agent — which also killed any run still
+    // streaming on another workspace, and incidentally papered over a dead CLI
+    // child by rebuilding it. Hence the explicit health check below.)
+    // `currentClientCwd` is now just a record of what the client was built with.
+    if (client) {
+      if (await isClientAlive(client)) {
+        if (workspaceCwd && currentClientCwd !== workspaceCwd) {
+          logInfo(
+            `Reusing client (built for ${currentClientCwd ?? "no cwd"}); session will run in ${workspaceCwd}`,
+          );
+        }
+        return client;
+      }
+      await disposeClient("runtime connection is closed");
     }
 
     if (initError) {
@@ -676,8 +793,6 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
       clientInitPromise = null;
       throw err;
     }
-
-    if (client) return client;
 
     if (clientInitPromise) {
       await clientInitPromise;
@@ -713,8 +828,10 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
 
         const { RuntimeConnection } = CopilotSDK as any;
 
+        // `start()` is called explicitly below; the SDK dropped the `autoStart`
+        // option (along with `autoRestart` / `isChildProcess` / `cliArgs` —
+        // extra CLI args now live on `RuntimeConnection.forStdio({ args })`).
         const options: CopilotClientOptions = {
-          autoStart: true,
           logLevel: config.logLevel ?? "info",
         };
 
@@ -794,7 +911,10 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
   ): Omit<SessionConfig, "sessionId"> {
     const base: Omit<SessionConfig, "sessionId"> = {
       streaming: true,
-      cwd: workspace.rootPath,
+      // Authoritative for this session — see SessionConfig.workingDirectory.
+      // The client's own working directory is whatever the first caller
+      // happened to supply (often none), so it can't be relied on here.
+      workingDirectory: workspace.rootPath,
       onPermissionRequest:
         permissionMode === "bypassPermissions" || permissionMode === "allow"
           ? approveAllPermissions
@@ -839,12 +959,7 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
   function mapSessionEvent(event: SessionEvent, runId: string): WorkRunEvent | null {
     const ts = Date.now();
 
-    if (
-      event.type !== "assistant.usage" &&
-      event.type !== "session.usage_info" &&
-      isEphemeral(event)
-    )
-      return null;
+    if (!EPHEMERAL_EXEMPT_EVENTS.has(event.type) && isEphemeral(event)) return null;
 
     const payload = getPayload(event);
 
@@ -865,6 +980,63 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
         const acc = usageAccumulator.get(runId);
         if (acc) acc.numTurns++;
         return null;
+      }
+
+      // Runtime + model failures. These previously fell through to the `default`
+      // case and were dropped, so a failed model call or a session error left the
+      // timeline silent with no indication anything had gone wrong.
+      case "session.error": {
+        const p = payload as Record<string, unknown>;
+        const message = typeof p.message === "string" ? p.message : "Session error";
+        const code = typeof p.errorCode === "string" ? p.errorCode : undefined;
+        const status = typeof p.statusCode === "number" ? p.statusCode : undefined;
+        const detail = [code, status ? `HTTP ${status}` : undefined].filter(Boolean).join(" ");
+        return {
+          type: "log",
+          message: detail ? `${message} (${detail})` : message,
+          level: "error",
+          ts,
+        };
+      }
+
+      case "model.call_failure": {
+        const p = payload as Record<string, unknown>;
+        const message =
+          typeof p.errorMessage === "string" ? p.errorMessage : "Model call failed";
+        const model = typeof p.model === "string" ? p.model : undefined;
+        const status = typeof p.statusCode === "number" ? p.statusCode : undefined;
+        const detail = [model, status ? `HTTP ${status}` : undefined].filter(Boolean).join(" ");
+        return {
+          type: "log",
+          message: detail ? `${message} (${detail})` : message,
+          level: "error",
+          ts,
+        };
+      }
+
+      case "session.compaction_start":
+        return {
+          type: "log",
+          message: "Compacting conversation history…",
+          level: "info",
+          ts,
+        };
+
+      case "session.compaction_complete": {
+        const p = payload as Record<string, unknown>;
+        if (p.success === false) {
+          const err = typeof p.error === "string" ? p.error : "unknown error";
+          return { type: "log", message: `Compaction failed: ${err}`, level: "warn", ts };
+        }
+        const removed = typeof p.tokensRemoved === "number" ? p.tokensRemoved : undefined;
+        return {
+          type: "log",
+          message: removed
+            ? `Compacted conversation history (freed ~${removed} tokens)`
+            : "Compacted conversation history",
+          level: "info",
+          ts,
+        };
       }
 
       case "assistant.usage": {
@@ -951,6 +1123,9 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
         };
       }
 
+      // Current runtimes only emit `tool.execution_complete`; `tool.execution_end`
+      // is kept as a fallback because `config.binary` / `config.cliUrl` can point
+      // the driver at an older CLI than the one bundled with the app.
       case "tool.execution_end":
       case "tool.execution_complete": {
         const toolCallId = String((payload as any)?.toolCallId ?? (event as any)?.id ?? "");
@@ -977,8 +1152,7 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
           event.toolOutput;
 
         const error =
-          (payload as any)?.error ??
-          event.error ??
+          formatToolError((payload as any)?.error ?? event.error) ??
           (success === false ? "tool_failed" : undefined);
 
         if (toolCallId) toolCallIndex.delete(toolCallId);
@@ -990,7 +1164,7 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
           toolName,
           input,
           output: result,
-          error: error ? String(error) : undefined,
+          error,
           endedAt: ts,
           metadata: {
             phase: event.type === "tool.execution_complete" ? "complete" : "end",
@@ -1061,10 +1235,10 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
 
   /**
    * Read Copilot's session SQL todos and emit them as an `UpdateTodos` snapshot
-   * tool call. Triggered after each `sql` tool completes (the agent manages its
-   * todos via raw SQL; the SDK's `session.todos_changed` event is absent in
-   * copilot-sdk v1.0.1, so we can't rely on it) and, when available, on
-   * `session.todos_changed`. The renderer strips these from the timeline
+   * tool call. Triggered on `session.todos_changed`, and also after each `sql`
+   * tool completes — the agent writes its todos through raw SQL and those writes
+   * don't reliably raise the event, so the post-sql read is the backstop. Both
+   * paths dedupe against the last snapshot. The renderer strips these from the timeline
    * (groupKey "task-plan") and renders the latest snapshot in the sticky
    * TodoSummaryBar. start→complete are awaited in order (a lone "complete" is
    * dropped by the run-session projector — see buildExitPlanModeHandler).
@@ -1149,18 +1323,11 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
             })()
           : "";
 
-      if (
-        event.type !== "assistant.usage" &&
-        event.type !== "assistant.turn_end" &&
-        event.type !== "session.usage_info" &&
-        isEphemeral(event)
-      ) {
-        return;
-      }
+      if (!EPHEMERAL_EXEMPT_EVENTS.has(event.type) && isEphemeral(event)) return;
 
-      // The agent manages todos via the raw `sql` tool (session.todos_changed
-      // does not fire for those writes), so refresh the todo snapshot after each
-      // sql call completes.
+      // Backstop for todo writes the agent makes through the raw `sql` tool,
+      // which don't reliably raise session.todos_changed. emitTodosSnapshot
+      // dedupes, so a redundant read here costs nothing.
       if (completedToolName === "sql") {
         void emitTodosSnapshot(sdkSession, runId, onEvent);
       }
@@ -1460,29 +1627,8 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
       usageAccumulator.clear();
       onEventByRun.clear();
       lastTodosByRun.clear();
-      commandsCache.clear();
 
-      if (client) {
-        try {
-          const stopTimeout = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("Stop timed out")), 5000),
-          );
-          await Promise.race([client.stop(), stopTimeout]);
-        } catch {
-          try {
-            await client.forceStop();
-          } catch (err) {
-            if (!(err instanceof Error && err.message.includes("ERR_STREAM_DESTROYED"))) {
-              logError("Error force stopping client:", err);
-            }
-          }
-        }
-        client = null;
-      }
-
-      clientInitPromise = null;
-      initError = null;
-      currentClientCwd = null;
+      await disposeClient("adapter shutdown");
       logInfo("Shutdown complete");
     },
 
@@ -1609,7 +1755,7 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
       try {
         const copilotClient = await ensureClient();
         session = await copilotClient.createSession({
-          ...(workspacePath ? { cwd: workspacePath, workingDirectory: workspacePath } : {}),
+          ...(workspacePath ? { workingDirectory: workspacePath } : {}),
           onPermissionRequest: approveAllPermissions,
         });
 
@@ -1641,17 +1787,34 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
       }
     },
 
+    // What the runtime reports here is exactly what the Copilot CLI considers
+    // selectable for the signed-in account: the synthetic "auto" entry plus every
+    // model the CAPI marks `model_picker_enabled`. The CLI applies that filter
+    // server-side, so the wider catalogue it fetches is not reachable from the SDK
+    // — if the picker only offers "auto", that is the account's entitlement
+    // (e.g. Copilot Free), not a truncated response. Logged below so it is
+    // diagnosable from the app log rather than looking like a failed call.
     async listModels(): Promise<ModelInfo[]> {
+      const now = Date.now();
+      if (modelsCache && now - modelsCache.timestamp < MODELS_CACHE_TTL_MS) {
+        return modelsCache.models;
+      }
+
       try {
         const copilotClient = await ensureClient();
-        const models = await copilotClient.listModels();
 
-        if (!models || !Array.isArray(models)) {
+        // Uncached RPC first; fall back to the memoizing convenience wrapper only
+        // if the runtime predates the `models.list` method.
+        const raw = copilotClient.rpc?.models?.list
+          ? (await copilotClient.rpc.models.list({}))?.models
+          : await copilotClient.listModels();
+
+        if (!Array.isArray(raw)) {
           logWarn("Invalid models response");
-          return [];
+          return modelsCache?.models ?? [];
         }
 
-        return models.map(
+        const models = raw.map(
           (model): ModelInfo => ({
             id: model.id,
             displayName: model.name || model.id,
@@ -1662,13 +1825,26 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
             supportedEffortLevels: model.supportedReasoningEfforts,
           }),
         );
+
+        modelsCache = { models, timestamp: now };
+        logInfo(
+          `Listed ${models.length} Copilot model(s): ${models.map((m) => m.id).join(", ") || "(none)"}`,
+        );
+        if (config.defaultModel && !models.some((m) => m.id === config.defaultModel)) {
+          logWarn(
+            `Configured default model "${config.defaultModel}" is not offered by the CLI; the picker will fall back to the first available model.`,
+          );
+        }
+        return models;
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
         if (/not authenticated|gh auth login/i.test(msg)) {
           throw error;
         }
         logError("Failed to list models:", error);
-        return [];
+        // Serve the last good list rather than blanking the picker on a transient
+        // RPC failure.
+        return modelsCache?.models ?? [];
       }
     },
 
@@ -1825,9 +2001,16 @@ function resolveResetSec(resetDate: string | undefined, nowMs: number): number {
 }
 
 /**
- * Map Copilot's `account.getQuota` snapshots to a RateLimitInfo. Unlimited
- * entitlements are skipped; the first two metered quotas become primary /
- * secondary windows (usedPercent = 100 − remaining, reset via resolveResetSec).
+ * Map Copilot's `account.getQuota` snapshots to a RateLimitInfo. The first two
+ * metered quotas become primary / secondary windows (usedPercent = 100 −
+ * remaining, reset via resolveResetSec).
+ *
+ * Skipped: unlimited entitlements, and quotas the plan simply doesn't include
+ * (`hasQuota: false` / zero entitlement). A Copilot Free account reports
+ * `premium_interactions` with `entitlementRequests: 0` and
+ * `remainingPercentage: 0`, which would otherwise render as "100% used" —
+ * alarming, and wrong: nothing has been consumed, the allowance is just absent.
+ *
  * Pure given `nowMs`, exposed for tests.
  */
 export function mapCopilotQuota(
@@ -1845,6 +2028,9 @@ export function mapCopilotQuota(
   for (const key of keys) {
     const s = snapshots[key];
     if (!s || s.isUnlimitedEntitlement) continue;
+    // No allowance on this plan — which is not the same as an exhausted one.
+    if (s.hasQuota === false) continue;
+    if (typeof s.entitlementRequests === "number" && s.entitlementRequests <= 0) continue;
     const remaining = typeof s.remainingPercentage === "number" ? s.remainingPercentage : 0;
     const usedPercent = Math.max(0, Math.min(100, Math.round(100 - remaining)));
     const used = typeof s.usedRequests === "number" ? s.usedRequests : undefined;
