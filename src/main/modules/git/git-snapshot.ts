@@ -1,7 +1,7 @@
 import { createHash } from "crypto";
 import fs from "fs";
 import path from "path";
-import simpleGit from "simple-git";
+import simpleGit, { type SimpleGit } from "simple-git";
 
 // ─────────────────────────────────────────────────────────────
 // Diff snapshot — the git module's deep diff-capture operation.
@@ -11,6 +11,19 @@ import simpleGit from "simple-git";
 // are the module's internal seam — used here and by the module's tests,
 // never exported from the barrel. See CONTEXT.md "git module".
 // ─────────────────────────────────────────────────────────────
+
+/**
+ * Every git client in this module, so path output is always raw UTF-8.
+ *
+ * With git's default `core.quotePath=true`, any path holding a non-ASCII byte
+ * comes back wrapped in quotes and octal-escaped — `belgeler/özet.md` reads as
+ * `"belgeler/\303\266zet.md"`. Commands whose output we match against paths
+ * that arrived from the renderer then silently miss: `discardPaths` read such a
+ * file as "not in HEAD" and deleted it instead of restoring it.
+ */
+export function openGit(rootPath?: string): SimpleGit {
+  return simpleGit(rootPath, { config: ["core.quotePath=false"] });
+}
 
 const MAX_UNTRACKED_INLINE_BYTES = 256 * 1024;
 
@@ -98,7 +111,7 @@ export function parsePerFileDiffStats(
 
 /** Unified diff since a base commit (staged + unstaged). */
 async function diffSince(rootPath: string, baseSha: string): Promise<string> {
-  return simpleGit(rootPath).diff([baseSha]);
+  return openGit(rootPath).diff([baseSha]);
 }
 
 /** Changed (tracked) files since a base commit. */
@@ -106,7 +119,7 @@ async function changedFilesSince(
   rootPath: string,
   baseSha: string,
 ): Promise<string[]> {
-  const raw = await simpleGit(rootPath).diff(["--name-only", baseSha]);
+  const raw = await openGit(rootPath).diff(["--name-only", baseSha]);
   return raw
     .split("\n")
     .map((f) => f.trim())
@@ -118,13 +131,13 @@ async function shortStatSince(
   rootPath: string,
   baseSha: string,
 ): Promise<string> {
-  const stat = await simpleGit(rootPath).diff(["--shortstat", baseSha]);
+  const stat = await openGit(rootPath).diff(["--shortstat", baseSha]);
   return stat.trim();
 }
 
 /** Untracked files (new files not yet staged). */
 async function untrackedFilesOf(rootPath: string): Promise<string[]> {
-  const raw = await simpleGit(rootPath).raw([
+  const raw = await openGit(rootPath).raw([
     "ls-files",
     "--others",
     "--exclude-standard",

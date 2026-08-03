@@ -126,6 +126,24 @@ describe("captureDiffSnapshot", () => {
     expect(snap.untrackedFiles).toEqual(["big.bin"]);
   });
 
+  // Escaped names made the file list unreadable, and the synthetic-hunk builder
+  // stat'ed the quoted string — so an untracked non-ASCII file rendered as
+  // "(could not read file)" rather than its contents.
+  it("reports non-ASCII paths verbatim and still inlines their content", async () => {
+    const repo = makeRepo();
+    const head = await gitService.getHeadSha(repo);
+    fs.mkdirSync(path.join(repo, "raporlar"));
+    write(repo, "raporlar/özet.md", "merhaba\n");
+
+    const snap = await gitService.captureDiffSnapshot(repo, head);
+
+    expect(snap.untrackedFiles).toContain("raporlar/özet.md");
+    expect(snap.files).toContain("raporlar/özet.md");
+    expect(snap.diffText).toContain("+merhaba");
+    expect(snap.diffText).not.toContain("\\303\\266");
+    expect(snap.diffText).not.toContain("could not read file");
+  });
+
   it("throws on an unknown baseRef instead of degrading to an empty diff (all-or-throw)", async () => {
     const repo = makeRepo();
     write(repo, "README.md", "# dirty\n");
@@ -397,6 +415,36 @@ describe("discardPaths", () => {
 
     await gitService.discardPaths(repo, ["README.md", "extra.txt"]);
 
+    expect((await gitService.getStatus(repo)).isClean).toBe(true);
+  });
+
+  // git quotes and octal-escapes non-ASCII paths unless core.quotePath is off,
+  // so "is this file in HEAD?" answered `"belgeler/\303\266zet.md"` while the
+  // renderer asked about `belgeler/özet.md`. The mismatch read a committed file
+  // as one HEAD never had — and discarding that means deleting it.
+  it("restores a committed file whose name is non-ASCII", async () => {
+    const repo = makeRepo();
+    const file = "belgeler/özet.md";
+    fs.mkdirSync(path.join(repo, "belgeler"));
+    write(repo, file, "orijinal\n");
+    git(repo, "add", ".");
+    git(repo, "commit", "-m", "add özet");
+    write(repo, file, "değişti\n");
+
+    await gitService.discardPaths(repo, [file]);
+
+    expect(fs.existsSync(path.join(repo, file))).toBe(true);
+    expect(fs.readFileSync(path.join(repo, file), "utf-8")).toBe("orijinal\n");
+    expect((await gitService.getStatus(repo)).isClean).toBe(true);
+  });
+
+  it("still deletes a non-ASCII file HEAD never had", async () => {
+    const repo = makeRepo();
+    write(repo, "yeni-şey.txt", "new\n");
+
+    await gitService.discardPaths(repo, ["yeni-şey.txt"]);
+
+    expect(fs.existsSync(path.join(repo, "yeni-şey.txt"))).toBe(false);
     expect((await gitService.getStatus(repo)).isClean).toBe(true);
   });
 

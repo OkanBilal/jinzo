@@ -1,8 +1,8 @@
-import simpleGit, { SimpleGit, StatusResult, LogResult, RemoteWithRefs } from "simple-git";
+import { SimpleGit, StatusResult, LogResult, RemoteWithRefs } from "simple-git";
 import { app } from "electron";
 import path from "path";
 import fs from "fs";
-import { captureDiffSnapshot, type DiffSnapshot } from "./git-snapshot";
+import { captureDiffSnapshot, openGit, type DiffSnapshot } from "./git-snapshot";
 
 // ─────────────────────────────────────────────────────────────
 // git service — main-process-internal deep module.
@@ -125,7 +125,7 @@ function assertRef(ref: string): void {
 // ─────────────────────────────────────────────────────────────
 
 function getGit(rootPath: string): SimpleGit {
-  return simpleGit(rootPath);
+  return openGit(rootPath);
 }
 
 /** The worktrees directory under app data (falls back to ./.data headless). */
@@ -467,7 +467,7 @@ export const gitService = {
     const clonePath = path.join(targetPath, repoName);
 
     // Clone using simple-git (not bound to any repo yet).
-    await simpleGit().clone(url, clonePath);
+    await openGit().clone(url, clonePath);
 
     const defaultBranch = (
       await getGit(clonePath).revparse(["--abbrev-ref", "HEAD"])
