@@ -2,12 +2,11 @@ import { Toggle, Terminal, TerminalOpen, ToggleClose, Web } from "@/components/u
 import { Button, toast } from "@/components/ui";
 import { useAppSelector } from "@/lib/redux/hooks";
 import { useCapabilities } from "@/lib/platform";
-import { GitActionsDropdown } from "./git-actions-dropdown";
+import { SessionPanelTrigger } from "@/components/layout/session-panel";
 
 interface ToggleButtonProps {
   isOpen: boolean;
   onClick: () => void;
-  providerId?: string;
   terminalOpen?: boolean;
   onTerminalToggle?: () => void;
   browserOpen?: boolean;
@@ -17,7 +16,6 @@ interface ToggleButtonProps {
 export function ToggleButton({
   isOpen,
   onClick,
-  providerId,
   terminalOpen,
   onTerminalToggle,
   browserOpen,
@@ -36,7 +34,7 @@ export function ToggleButton({
           : "0.8125rem",
       }}
     >
-      <GitActionsDropdown providerId={providerId} />
+      <SessionPanelTrigger />
       <div className="flex items-center gap-1.5 glass-outline rounded-full p-0.5">
       {onBrowserToggle && embeddedBrowser && (
         <Button

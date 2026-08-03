@@ -390,7 +390,7 @@ export interface ToolApprovalRequest {
   runId: string;
   toolName: string;
   toolInput?: Record<string, unknown>;
-  kind: "tool_approval" | "ask_user";
+  kind: "tool_approval" | "ask_user" | "elicitation";
   /** Short label shown above a structured question. */
   header?: string;
   question?: string;
@@ -402,11 +402,26 @@ export interface ToolApprovalRequest {
   isSecret?: boolean;
   /** Provider-requested timeout before the question auto-resolves. */
   autoResolutionMs?: number;
+  /** MCP server that asked for input (kind: "elicitation"). */
+  serverName?: string;
+  /** "form" collects schema-driven fields; "url" sends the user to a browser. */
+  elicitationMode?: "form" | "url";
+  /** Destination to open (elicitationMode: "url"). */
+  url?: string;
+  /** JSON Schema describing the requested fields (elicitationMode: "form"). */
+  requestedSchema?: Record<string, unknown>;
+  /** Longer subtitle from the requester's permission-display metadata. */
+  description?: string;
   timestamp: number;
 }
 
 export interface ToolApprovalResponse {
   requestId: string;
   approved: boolean;
+  /**
+   * Free-form answer. For a "form" elicitation this carries the collected
+   * fields as a JSON object string, so the existing broker/IPC contract does
+   * not need a second payload shape.
+   */
   answer?: string;
 }

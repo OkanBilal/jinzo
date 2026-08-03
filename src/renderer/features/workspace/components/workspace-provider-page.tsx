@@ -8,7 +8,6 @@ import {
   WorkspaceInput,
   WorkspaceTabs,
   TerminalSection,
-  DiffSummaryBar,
   GoalSummaryBar,
   TodoSummaryBar,
 } from "@/features/workspace/components";
@@ -229,7 +228,10 @@ export function WorkspaceProviderPage({
     <div
       className={`flex flex-col h-full dark:bg-primary-950 ${routeTopRounding} overflow-hidden`}
     >
-      <div className="flex-1 overflow-hidden noscrollbar min-h-0">
+      {/* `content-inset` on the transcript and composer, but not on the
+          terminal below them: the session box only covers the top-right of the
+          content, so the terminal keeps the full width. */}
+      <div className="content-inset flex-1 overflow-hidden noscrollbar min-h-0">
         {useCenteredPromptLayout ? (
           <div className="flex h-full min-h-0 flex-col items-center justify-center-safe gap-8 overflow-y-auto px-4 py-10 noscrollbar">
             <WorkspaceEmptyState
@@ -301,7 +303,7 @@ export function WorkspaceProviderPage({
           runs). Anchoring it here keeps it directly above the input and always
           reachable regardless of scroll position or conversation length. */}
 
-      <div className="px-4">
+      <div className="content-inset px-4">
       {currentApproval &&
         !currentPlanApproval &&
         !ws.showEmptyState &&
@@ -322,17 +324,6 @@ export function WorkspaceProviderPage({
         <TodoSummaryBar
           events={ws.currentEvents}
           structuralPlan={currentStructuralPlan}
-        />
-      )}
-
-      {ws.currentWorkspace && !ws.showEmptyState && !ws.showNewRunTab && (
-        <DiffSummaryBar
-          workspaceId={ws.currentWorkspace.id}
-          rootPath={ws.currentWorkspace.rootPath}
-          isRunning={ws.isLoading}
-          lastCompletedRunId={
-            ws.activeRun?.status !== "running" ? ws.activeRunId : null
-          }
         />
       )}
 

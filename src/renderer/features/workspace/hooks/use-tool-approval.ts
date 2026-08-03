@@ -6,7 +6,7 @@ export interface ToolApprovalRequest {
   runId: string;
   toolName: string;
   toolInput?: Record<string, unknown>;
-  kind: "tool_approval" | "ask_user";
+  kind: "tool_approval" | "ask_user" | "elicitation";
   header?: string;
   question?: string;
   options?: Array<{ label: string; description?: string }>;
@@ -14,6 +14,16 @@ export interface ToolApprovalRequest {
   isOther?: boolean;
   isSecret?: boolean;
   autoResolutionMs?: number;
+  /** MCP server that asked for input (kind: "elicitation"). */
+  serverName?: string;
+  /** "form" collects schema-driven fields; "url" sends the user to a browser. */
+  elicitationMode?: "form" | "url";
+  /** Destination to open (elicitationMode: "url"). */
+  url?: string;
+  /** JSON Schema describing the requested fields (elicitationMode: "form"). */
+  requestedSchema?: Record<string, unknown>;
+  /** Longer subtitle from the requester's permission-display metadata. */
+  description?: string;
   timestamp: number;
 }
 

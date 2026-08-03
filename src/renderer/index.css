@@ -262,6 +262,7 @@ html:not(.app-ready) *::after {
   --sidebar-width: 18rem;
   --panel-width: 22rem;
   --browser-panel-width: 38rem;
+  --session-panel-width: 21rem;
   --drag-region-height: 1rem;
   --dropdown-min-width: 140px;
 
@@ -817,6 +818,19 @@ html.mains-web.dark #root {
   &:hover {
     --glass-tint: var(--glass-hover, var(--glass-fill));
   }
+}
+
+/*
+ * Keeps clear of the session box, which floats over the top-right of the
+ * content. The app shell sets `--content-inset-right` on the content wrapper
+ * while the box shares the layout; regions the box can't reach (the bottom
+ * terminal) simply don't carry this class and stay full width.
+ *
+ * Duration mirrors LAYOUT_PANEL_ANIM_MS in lib/layout.ts — CSS can't read it.
+ */
+@utility content-inset {
+  padding-right: var(--content-inset-right, 0px);
+  transition: padding-right 150ms ease-out;
 }
 
 @utility glass-outline {

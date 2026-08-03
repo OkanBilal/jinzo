@@ -12,6 +12,7 @@ import {
   DropdownMenu,
   DropdownMenuItem,
   DropdownMenuSub,
+  SquareSpinner,
   Tooltip,
 } from "@/components/ui";
 import {
@@ -86,12 +87,16 @@ export default function WorkspaceItem({
   const { data: latestDiff } = useGetLatestWorkspaceDiffSummaryQuery(id);
   const statusConfig = getWorkspaceStatusConfig(status);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  // Detecting installed apps spawns a `defaults read` per candidate app in the
-  // main process on every launch — too heavy for a menu that may never open.
-  // Fetch on first open instead; main-process + RTKQ caches make reopens instant.
-  const { data: installedApps = [] } = useGetInstalledAppsQuery(undefined, {
-    skip: !isDropdownOpen,
-  });
+  // Detecting installed apps sweeps every `.app` bundle in the main process, so
+  // it isn't something to do for a menu that may never open. Start on hover
+  // instead of on click — the options button only appears on hover anyway, so
+  // the request is already in flight by the time the menu opens. RTKQ dedupes
+  // this across every workspace row.
+  const [hasHovered, setHasHovered] = useState(false);
+  const { data: installedApps = [], isLoading: isLoadingApps } =
+    useGetInstalledAppsQuery(undefined, {
+      skip: !hasHovered && !isDropdownOpen,
+    });
   const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
   const [isRenamingBranch, setIsRenamingBranch] = useState(false);
   const [renameBranchValue, setRenameBranchValue] = useState(branch || "");
@@ -164,7 +169,7 @@ export default function WorkspaceItem({
   }, [isRenamingBranch]);
 
   return (
-    <div className="relative group">
+    <div className="relative group" onMouseEnter={() => setHasHovered(true)}>
       <div
         role="button"
         tabIndex={0}
@@ -288,7 +293,7 @@ export default function WorkspaceItem({
         position={dropdownPosition}
         onClose={() => setIsDropdownOpen(false)}
       >
-        {rootPath && installedApps.length > 0 && (
+        {rootPath && (isLoadingApps || installedApps.length > 0) && (
           <DropdownMenuSub
             label={
               <>
@@ -297,6 +302,14 @@ export default function WorkspaceItem({
               </>
             }
           >
+            {isLoadingApps && (
+              // Keep the row mounted while detecting so the menu doesn't reflow
+              // when the app list lands.
+              <DropdownMenuItem onClick={() => {}} disabled>
+                <SquareSpinner className="size-3.5" />
+                <span>Detecting apps…</span>
+              </DropdownMenuItem>
+            )}
             {installedApps.map((detectedApp) => (
               <DropdownMenuItem
                 key={detectedApp.id}

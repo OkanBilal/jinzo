@@ -577,6 +577,134 @@ describe("RunSession", () => {
       });
     });
 
+    // Subagent and background-task detail attaches to the tool call that
+    // spawned it, rather than creating a second row for the same work.
+    it("attaches subagent detail to the spawning tool call's metadata", async () => {
+      const session = makeSession();
+      await flushBackground();
+
+      await session.project({
+        type: "tool_call",
+        toolName: "Agent",
+        input: { subagent_type: "general-purpose" },
+        metadata: { phase: "start", toolCallId: "toolu_agent" },
+      } as any);
+
+      await session.project({
+        type: "subagent",
+        phase: "completed",
+        agentType: "general-purpose",
+        agentId: "a26e6cd0",
+        parentToolUseId: "toolu_agent",
+        result: "Counted 42 files",
+        ts: 999,
+      } as any);
+
+      const [call] = await runsRepo.findToolCallsByRun("r1");
+      expect(call.metadata?.subagent).toEqual({
+        phase: "completed",
+        agentType: "general-purpose",
+        agentId: "a26e6cd0",
+        result: "Counted 42 files",
+        updatedAt: 999,
+      });
+    });
+
+    // The regression that motivated resolvedToolCalls: a backgrounded command
+    // reports its real outcome only after the foreground call already returned
+    // "running in background", so the anchor must outlive tool call completion.
+    it("attaches task detail after the spawning tool call already completed", async () => {
+      const session = makeSession();
+      await flushBackground();
+
+      await session.project({
+        type: "tool_call",
+        toolName: "Bash",
+        input: { command: "sleep 45 && echo finished-ok" },
+        metadata: { phase: "start", toolCallId: "toolu_bash" },
+      } as any);
+      await session.project({
+        type: "tool_call",
+        toolName: "Bash",
+        output: "Command running in background with ID: bflwfagyw",
+        metadata: { phase: "complete", toolCallId: "toolu_bash" },
+      } as any);
+
+      await session.project({
+        type: "task",
+        phase: "completed",
+        taskId: "bflwfagyw",
+        toolCallId: "toolu_bash",
+        status: "completed",
+        summary: "sleep 45 && echo finished-ok",
+        outputFile: "/tmp/claude-task-bflwfagyw.log",
+        ts: 1234,
+      } as any);
+
+      const [call] = await runsRepo.findToolCallsByRun("r1");
+      expect(call.status).toBe("done");
+      expect(call.metadata?.task).toMatchObject({
+        phase: "completed",
+        taskId: "bflwfagyw",
+        status: "completed",
+        outputFile: "/tmp/claude-task-bflwfagyw.log",
+      });
+    });
+
+    it("merges successive task phases instead of overwriting", async () => {
+      const session = makeSession();
+      await flushBackground();
+
+      await session.project({
+        type: "tool_call",
+        toolName: "Agent",
+        metadata: { phase: "start", toolCallId: "toolu_agent" },
+      } as any);
+
+      await session.project({
+        type: "task",
+        phase: "started",
+        taskId: "t1",
+        toolCallId: "toolu_agent",
+        status: "running",
+        taskType: "local_agent",
+        ts: 1,
+      } as any);
+      await session.project({
+        type: "task",
+        phase: "progress",
+        taskId: "t1",
+        toolCallId: "toolu_agent",
+        status: "running",
+        lastToolName: "Bash",
+        ts: 2,
+      } as any);
+
+      const [call] = await runsRepo.findToolCallsByRun("r1");
+      // taskType came from the earlier phase and must survive the later patch.
+      expect(call.metadata?.task).toMatchObject({
+        phase: "progress",
+        taskType: "local_agent",
+        lastToolName: "Bash",
+        updatedAt: 2,
+      });
+    });
+
+    it("ignores task events whose tool call was never projected", async () => {
+      const session = makeSession();
+      await flushBackground();
+
+      await session.project({
+        type: "task",
+        phase: "completed",
+        taskId: "orphan",
+        toolCallId: "toolu_unknown",
+        status: "completed",
+      } as any);
+
+      expect(await runsRepo.findToolCallsByRun("r1")).toHaveLength(0);
+    });
+
     it("treats status event as a no-op (no DB write)", async () => {
       const session = makeSession();
       await flushBackground();

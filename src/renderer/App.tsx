@@ -2,12 +2,14 @@ import { useEffect } from "react";
 import { HashRouter as Router, useLocation } from "react-router-dom";
 import Sidebar from "./components/layout/sidebar";
 import RightPanel from "./components/layout/right-panel";
+import { SessionPanel } from "./components/layout/session-panel";
+import { selectSessionRunId } from "./components/layout/session-panel/select-session-run";
 import {
   MainRoutes,
   MainLayout,
   MainContent,
 } from "./components/layout/main";
-import { shouldHideRightPanel } from "./lib/layout";
+import { shouldHideRightPanel, SESSION_PANEL_GUTTER } from "./lib/layout";
 import { useBottomTerminal, BottomTerminalProvider } from "./hooks/use-bottom-terminal";
 import { useBrowserPanel, BrowserPanelProvider } from "./hooks/use-browser-panel";
 import { BrowserPanel } from "./features/workspace/components/browser-panel";
@@ -22,6 +24,7 @@ import { isWeb, useIsMobile } from "./lib/platform";
 import {
   setSidebarCollapsed,
   setRightPanelOpen,
+  setSessionPanelOpen,
   setOnboardingCompleted,
 } from "./lib/redux/slices/appSettingsSlice";
 import { SidebarToggleButton } from "./components/layout/sidebar/sidebar-toggle-button";
@@ -36,6 +39,9 @@ const SIDEBAR_WIDTH = "var(--sidebar-width)";
 const RIGHT_PANEL_WIDTH = "var(--panel-width)";
 const BROWSER_PANEL_WIDTH = "var(--browser-panel-width)";
 const DOC_VIEWER_PANEL_WIDTH = "var(--doc-viewer-panel-width)";
+const SESSION_PANEL_WIDTH = "var(--session-panel-width)";
+/** Content inset when no panel occupies that edge. */
+const EDGE_GUTTER = "0.375rem";
 
 function useDropdownAnimationPrewarm() {
   useEffect(() => {
@@ -82,10 +88,49 @@ function AppContent() {
     (state) => state.appSettings.sidebarCollapsed,
   );
   const isRightPanelOpen = useAppSelector((state) => state.appSettings.rightPanelOpen);
+  const isSessionPanelOpen = useAppSelector(
+    (state) => state.appSettings.sessionPanelOpen,
+  );
+  const activeWorkspaceId = useAppSelector(
+    (state) => state.workspace.activeWorkspaceId,
+  );
+  const sessionRunId = useAppSelector((state) =>
+    selectSessionRunId(state.workspace),
+  );
   const onboardingCompleted = useAppSelector(
     (state) => state.appSettings.onboardingCompleted,
   );
   const isMobile = useIsMobile();
+
+  // Whatever currently owns the right edge — the content stops there, and the
+  // session box aligns to the same edge just inside it.
+  const rightLaneWidth = docViewer.isOpen
+    ? DOC_VIEWER_PANEL_WIDTH
+    : browserPanel.isOpen
+      ? BROWSER_PANEL_WIDTH
+      : !hideRightPanel && isRightPanelOpen
+        ? RIGHT_PANEL_WIDTH
+        : EDGE_GUTTER;
+  // The box renders nothing without a workspace, and not at all on the routes
+  // that hide the right panel.
+  const sessionPanelShown =
+    isSessionPanelOpen && !!activeWorkspaceId && !hideRightPanel;
+  // The box floats — overlays the content instead of taking a column — when
+  // there is no room to share (another panel already holds the right edge), or
+  // nothing to share *with*: the empty state and the other non-run tabs centre
+  // a prompt, and insetting the content would slide that column off-centre for
+  // a panel it has no relationship to. Both are derived, so closing that panel
+  // or opening a run drops the box back into the layout on its own.
+  const sessionPanelFloating =
+    rightLaneWidth !== EDGE_GUTTER || sessionRunId === null;
+  // Sharing the layout means insetting the content, not shrinking it: a smaller
+  // content box would cut a hole in its opaque surface and expose the
+  // translucent window behind it. The inset keeps the surface whole and still
+  // slides the centered chat column left, exactly as far as the box is wide.
+  const contentInsetRight =
+    sessionPanelShown && !isMobile && !sessionPanelFloating
+      ? `calc(${SESSION_PANEL_WIDTH} + ${SESSION_PANEL_GUTTER})`
+      : undefined;
 
   // Mobile: the sidebar is an overlay drawer — auto-close on navigation (and on
   // entering mobile) so the selected content is visible. Local UI state only.
@@ -147,18 +192,9 @@ function AppContent() {
         )}
         <Sidebar collapsed={sidebarCollapsed} />
         <MainContent
-          marginLeft={isMobile || sidebarCollapsed ? "0.375rem" : SIDEBAR_WIDTH}
-          marginRight={
-            isMobile
-              ? "0.375rem"
-              : docViewer.isOpen
-                ? DOC_VIEWER_PANEL_WIDTH
-                : browserPanel.isOpen
-                  ? BROWSER_PANEL_WIDTH
-                  : !hideRightPanel && isRightPanelOpen
-                    ? RIGHT_PANEL_WIDTH
-                    : "0.375rem"
-          }
+          marginLeft={isMobile || sidebarCollapsed ? EDGE_GUTTER : SIDEBAR_WIDTH}
+          marginRight={isMobile ? EDGE_GUTTER : rightLaneWidth}
+          contentInsetRight={contentInsetRight}
           hasRightPanel={
             !hideRightPanel && !isRightPanelOpen && !browserPanel.isOpen && !docViewer.isOpen
           }
@@ -176,6 +212,8 @@ function AppContent() {
               if (open) {
                 browserPanel.close();
                 docViewer.close();
+                // The right panel takes the edge the session box sits against.
+                dispatch(setSessionPanelOpen(false));
               }
               dispatch(setRightPanelOpen(open));
             }}
@@ -190,7 +228,13 @@ function AppContent() {
               }
               browserPanel.toggle();
             } : undefined}
+          />
+        )}
+        {!hideRightPanel && (
+          <SessionPanel
             providerId={activeProviderId}
+            laneOffset={rightLaneWidth}
+            floating={sessionPanelFloating}
           />
         )}
         <BrowserPanel />

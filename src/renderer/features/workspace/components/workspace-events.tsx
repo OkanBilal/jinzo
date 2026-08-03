@@ -15,6 +15,8 @@ import { IssueTabContent } from "./issue-tab-content";
 import { SignalTabContent } from "./signal-tab-content";
 import { NoteTabContent } from "./note-tab-content";
 import { WorkspaceEmptyState } from "./workspace-empty-state";
+import { TurnRail } from "./turn-rail";
+import { buildTurnMarkers, type TurnMarker } from "../lib/turn-markers";
 import type { Run, RunEvent, Workspace } from "../types";
 import type { IssueWithEntity, SignalWithEntity, RunTurn, ModelUsageEntry } from "@/lib/redux/api";
 import {
@@ -463,6 +465,16 @@ export function WorkspaceEvents({
     [eventGroups],
   );
 
+  // Left-edge navigator: one tick per user message. Built from the same groups
+  // the transcript renders, so it can address a turn by group index.
+  const turnMarkers = useMemo(() => buildTurnMarkers(eventGroups), [eventGroups]);
+  const transcriptRef = useRef<HTMLDivElement>(null);
+  const scrollToTurn = useCallback((marker: TurnMarker) => {
+    transcriptRef.current
+      ?.querySelector(`[data-group-index="${marker.index}"]`)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, []);
+
   /** User messages grouped as `info` + user-prompt — must stay in sync with `turns` length when events are up to date. */
   const userPromptGroupCount = useMemo(
     () => eventGroups.reduce((n, g) => n + (isUserPromptGroup(g) ? 1 : 0), 0),
@@ -607,6 +619,7 @@ export function WorkspaceEvents({
         {isNoteActive && activeNoteId && <NoteTabContent reviewId={activeNoteId} />}
         {currentEvents.length > 0 && (
           <div
+            ref={transcriptRef}
             className={`h-full overflow-y-auto noscrollbar ${isRunTabActive ? "" : "hidden"}`}
           >
             <div className="min-h-75 max-w-210 mx-auto space-y-4 pt-12 pb-24 px-4">
@@ -644,6 +657,9 @@ export function WorkspaceEvents({
                 return (
                   <div
                     key={rowKey}
+                    // Scroll target for the turn rail. Every user prompt is its
+                    // own flat row, so the first index identifies the row.
+                    data-group-index={row.kind === "flat" ? row.indices[0] : undefined}
                     className={
                       isLastRow
                         ? "space-y-4"
@@ -660,6 +676,9 @@ export function WorkspaceEvents({
               <div ref={eventsEndRef} />
             </div>
           </div>
+        )}
+        {hasRunContent && (
+          <TurnRail markers={turnMarkers} onSelect={scrollToTurn} />
         )}
         {showEmpty && <WorkspaceEmptyState workspace={currentWorkspace} />}
         {/* Top/bottom fade overlays — only shown on run content (chat), not on editor/issue/note tabs.

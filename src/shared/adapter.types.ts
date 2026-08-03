@@ -165,6 +165,59 @@ export interface WorkRunSubagentEvent {
 }
 
 /**
+ * Background/foreground task lifecycle event.
+ *
+ * The Claude CLI runs long tool calls as *tasks* — a Bash command that outlives
+ * the foreground timeout is backgrounded, and every Agent (subagent) call is a
+ * task too. The spawning tool call returns immediately ("Command running in
+ * background with ID: …"), so without these events the run ends before the task
+ * does and its real result is never surfaced.
+ *
+ * `toolCallId` is the correlation key: it is the tool_use_id of the tool call
+ * that spawned the task, which is how consumers attach this to an existing tool
+ * call row. The SDK's `task_updated` message carries only `taskId`, so drivers
+ * are expected to resolve it back to a tool_use_id themselves.
+ */
+export interface WorkRunTaskEvent {
+  type: "task";
+  /** Lifecycle phase, mapped from the SDK's `system:task_*` subtypes. */
+  phase: "started" | "progress" | "updated" | "completed";
+  /** Provider task id, stable for the task's lifetime. */
+  taskId: string;
+  /** tool_use_id of the spawning tool call — the correlation key. */
+  toolCallId?: string;
+  /** Terminal status (phase "completed") or patched status (phase "updated"). */
+  status?:
+    | "completed"
+    | "failed"
+    | "stopped"
+    | "pending"
+    | "running"
+    | "killed"
+    | "paused";
+  /** Human-readable task description (e.g. the backgrounded command). */
+  description?: string;
+  /** Subagent type when the task is an Agent tool invocation. */
+  subagentType?: string;
+  /** Task kind reported by the provider, e.g. "local_bash", "local_workflow". */
+  taskType?: string;
+  /** Progress or completion summary. */
+  summary?: string;
+  /** Path to the task's captured output — where a backgrounded command's real output lands. */
+  outputFile?: string;
+  /** Most recent tool the task ran (progress phase). */
+  lastToolName?: string;
+  /** Token/tool/duration totals reported for the task. */
+  usage?: { totalTokens?: number; toolUses?: number; durationMs?: number };
+  /** Error detail when the task failed. */
+  error?: string;
+  /** Ambient/housekeeping task — consumers should hide it from the inline transcript. */
+  skipTranscript?: boolean;
+  /** Timestamp */
+  ts?: number;
+}
+
+/**
  * Prompt suggestion event emitted after a turn completes
  */
 export interface WorkRunPromptSuggestionEvent {
@@ -224,6 +277,7 @@ export type WorkRunEvent =
   | WorkRunArtifactEvent
   | WorkRunStatusEvent
   | WorkRunSubagentEvent
+  | WorkRunTaskEvent
   | WorkRunPromptSuggestionEvent
   | WorkRunContextUsageEvent
   | WorkRunPlanUpdateEvent;

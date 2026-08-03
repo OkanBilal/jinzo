@@ -6,6 +6,8 @@ import {
   DOC_VIEWER_PANEL_WIDTH_DEFAULT,
 } from "@/lib/layout";
 import type { DocType } from "@/lib/document-viewer";
+import { isNewRunTab } from "@/features/workspace/utils/repo-utils";
+import { openNewRunTab, setActiveTab } from "./workspaceSlice";
 
 /** The document currently shown in the document viewer panel. */
 export interface DocumentViewerDoc {
@@ -18,6 +20,12 @@ export interface AppSettingsState {
   sidebarCollapsed: boolean;
   rightPanelOpen: boolean;
   browserPanelOpen: boolean;
+  /**
+   * Whether the session panel (changes / git actions / subagents) is open.
+   * Deliberately not persisted: it reads the run open in the workspace, and
+   * that isn't restored on boot — reopening onto an empty panel would confuse.
+   */
+  sessionPanelOpen: boolean;
   onboardingCompleted: boolean;
   sidebarWidth: number;
   /** Right panel width in pixels. Mirrored onto `--panel-width`. */
@@ -36,6 +44,7 @@ const initialState: AppSettingsState = {
   sidebarCollapsed: false,
   rightPanelOpen: false,
   browserPanelOpen: false,
+  sessionPanelOpen: false,
   onboardingCompleted: false,
   sidebarWidth: SIDEBAR_WIDTH_DEFAULT,
   rightPanelWidth: PANEL_WIDTH_DEFAULT,
@@ -57,6 +66,9 @@ const appSettingsSlice = createSlice({
     },
     setRightPanelOpen: (state, action: PayloadAction<boolean>) => {
       state.rightPanelOpen = action.payload;
+    },
+    setSessionPanelOpen: (state, action: PayloadAction<boolean>) => {
+      state.sessionPanelOpen = action.payload;
     },
     setOnboardingCompleted: (state, action: PayloadAction<boolean>) => {
       state.onboardingCompleted = action.payload;
@@ -83,12 +95,27 @@ const appSettingsSlice = createSlice({
       state.documentViewerDoc = action.payload;
     },
   },
+  // A new-run tab has no session yet: no run, no subagents, and whatever the
+  // panel was showing belonged to the tab the user just left. Closing it here
+  // rather than at the call sites covers every way in (the "+" button, picking
+  // the tab, restoring it after a close) with one rule. Reopening it by hand on
+  // a new-run tab still works — this reacts to the switch, not to the tab.
+  extraReducers: (builder) => {
+    builder
+      .addCase(openNewRunTab, (state) => {
+        state.sessionPanelOpen = false;
+      })
+      .addCase(setActiveTab, (state, action) => {
+        if (isNewRunTab(action.payload)) state.sessionPanelOpen = false;
+      });
+  },
 });
 
 export const {
   setSidebarCollapsed,
   setBrowserPanelOpen,
   setRightPanelOpen,
+  setSessionPanelOpen,
   setOnboardingCompleted,
   setSidebarWidth,
   setRightPanelWidth,

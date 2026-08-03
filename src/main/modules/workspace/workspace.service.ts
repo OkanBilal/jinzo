@@ -728,6 +728,33 @@ export const workspaceService = {
   // operations".
   // ─────────────────────────────────────────────────────────────
 
+  /**
+   * Check out an existing branch in the workspace's own checkout.
+   *
+   * Unlike `renameBranch`, this never touches a worktree's source repo: the
+   * point is to move *this* checkout, and git refuses on its own if the branch
+   * is already checked out in another worktree.
+   *
+   * The diff is re-recorded afterwards because it was anchored to the old
+   * branch's HEAD; leaving it would show the previous branch's changes against
+   * the new one.
+   */
+  async switchBranch(workspaceId: string, branch: string): Promise<void> {
+    const workspace = await workspaceRepo.findById(workspaceId);
+    if (!workspace) throw new Error("Workspace not found");
+    if (!workspace.rootPath) throw new Error("Workspace has no root path");
+    if (!branch.trim()) throw new Error("Branch name is required");
+
+    await gitService.checkoutBranch(workspace.rootPath, branch);
+    // Read back rather than assuming: a remote name resolves to its local
+    // tracking branch, so what got checked out isn't always what was asked for.
+    const current = await gitService
+      .getCurrentBranch(workspace.rootPath)
+      .catch(() => branch);
+    emitGitStateChanged({ workspaceId, branch: current ?? branch });
+    await this.resyncDiff(workspaceId);
+  },
+
   /** Rename the branch actually checked out in the workspace. */
   async renameBranch(
     workspaceId: string,
@@ -766,16 +793,22 @@ export const workspaceService = {
   },
 
   /**
-   * Discard the workspace's pending changes: hard-reset the working tree to
-   * the recorded diff's baseRef and drop the latest diff row.
+   * Discard specific files back to their HEAD state, then re-record the diff so
+   * every surface reading it agrees on what is left.
+   *
+   * Anchored to HEAD and driven by an explicit list, so it undoes exactly the
+   * files a caller is showing — including ones that arrived outside any run,
+   * where there is no recorded diff to reset to. (A whole-tree reset to a
+   * recorded diff's baseRef used to live here as `discardChanges`; it went with
+   * the diff summary bar, its only caller.)
    */
-  async discardChanges(workspaceId: string): Promise<void> {
+  async discardPaths(workspaceId: string, paths: string[]): Promise<void> {
     const workspace = await workspaceRepo.findById(workspaceId);
     if (!workspace) throw new Error("Workspace not found");
-    const latest = await workspaceRepo.findLatestDiffByWorkspace(workspaceId);
-    if (!latest?.baseRef) throw new Error("No recorded diff to discard");
-    await gitService.resetHard(workspace.rootPath, latest.baseRef);
-    await workspaceRepo.deleteLatestDiffByWorkspace(workspaceId);
+    if (!workspace.rootPath) throw new Error("Workspace has no root path");
+    if (paths.length === 0) return;
+    await gitService.discardPaths(workspace.rootPath, paths);
+    await this.resyncDiff(workspaceId);
   },
 
   // ─────────────────────────────────────────────────────────────

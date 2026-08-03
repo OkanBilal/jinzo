@@ -7,6 +7,15 @@ interface MainContentProps {
   children: ReactNode;
   marginLeft: string;
   marginRight: string;
+  /**
+   * Room to keep clear on the right *inside* the content surface, for something
+   * that floats over it (the session box). Published as a CSS variable rather
+   * than applied here: unlike `marginRight` it must not shrink the surface (that
+   * would expose the translucent window behind it), and only the regions the box
+   * actually covers should honour it — the bottom terminal stays full width.
+   * Consumed via the `content-inset` utility.
+   */
+  contentInsetRight?: string;
   hasRightPanel?: boolean;
   sidebarCollapsed?: boolean;
   browserOpen?: boolean;
@@ -16,6 +25,7 @@ export function MainContent({
   children,
   marginLeft,
   marginRight,
+  contentInsetRight,
   hasRightPanel,
   sidebarCollapsed,
   browserOpen,
@@ -56,7 +66,7 @@ export function MainContent({
     >
       {header && (
         <div
-          className={`shrink-0 transition-all duration-300 ease-out ${hasRightPanel ? "max-w-[calc(100%-180px)]" : browserOpen ? "max-w-[calc(100%-180px)]" : ""}`}
+          className={`shrink-0 transition-all duration-300 ease-out ${hasRightPanel ? "max-w-[calc(100%-150px)]" : browserOpen ? "max-w-[calc(100%-150px)]" : ""}`}
           style={{ paddingLeft: headerPaddingLeft }}
         >
           {header}
@@ -65,7 +75,14 @@ export function MainContent({
       <div
         className={`flex-1 min-h-0 bg-primary dark:bg-primary-950 overflow-hidden ${contentRounding}`}
       >
-        <div className="h-full overflow-auto">
+        <div
+          className="h-full overflow-auto"
+          style={
+            {
+              "--content-inset-right": contentInsetRight ?? "0px",
+            } as React.CSSProperties
+          }
+        >
           {children}
         </div>
       </div>

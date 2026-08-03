@@ -101,7 +101,8 @@ vi.mock("../git/git.service", () => ({
     getGitDirectory: vi.fn(),
     getHeadSha: vi.fn(),
     renameBranch: vi.fn(),
-    resetHard: vi.fn(),
+    discardPaths: vi.fn(),
+    checkoutBranch: vi.fn(),
     captureDiffSnapshot: vi.fn(),
   },
 }));
@@ -2739,7 +2740,7 @@ describe("workspaceService — createFromSource (workspace intake)", () => {
 });
 
 // ════════════════════════════════════════════════════════════════
-// 7. Workspace git operations (renameBranch / discardChanges)
+// 7. Workspace git operations (renameBranch / switchBranch / discardPaths)
 //
 // Throw-style methods — the envelope is applied by handle() at the IPC seam,
 // so these assert on resolved values / rejections, not ServiceResponse.
@@ -2929,45 +2930,115 @@ describe("workspaceService — git operations", () => {
     });
   });
 
-  describe("discardChanges", () => {
-    it("hard-resets to the recorded diff's baseRef and drops the diff row", async () => {
-      createWorkspace(db, { id: "ws-d", rootPath: "/repos/d" });
-      createWorkspaceDiff(db, {
-        workspaceId: "ws-d",
-        baseRef: "sha-base",
-        diffText: "diff",
+  describe("switchBranch", () => {
+    /** The file's existing pattern for capturing an emitted event. */
+    function captureEmits() {
+      const send = vi.fn();
+      vi.mocked(BrowserWindow.getAllWindows).mockReturnValue([
+        { isDestroyed: () => false, webContents: { send } } as any,
+      ]);
+      registerBrowserWindowSink();
+      return send;
+    }
+
+    it("checks out in the workspace's own path and announces the branch", async () => {
+      const send = captureEmits();
+      createWorkspace(db, { id: "ws-sb", rootPath: "/repos/sb" });
+      gitMock.checkoutBranch.mockResolvedValue(undefined);
+      gitMock.getCurrentBranch.mockResolvedValue("feature");
+      gitMock.getHeadSha.mockResolvedValue("sha-head");
+      gitMock.captureDiffSnapshot.mockResolvedValue({
+        baseRef: "sha-head",
+        diffText: "",
+        files: [],
+        untrackedFiles: [],
+        shortstat: "",
       });
-      gitMock.resetHard.mockResolvedValue(undefined);
 
-      await workspaceService.discardChanges("ws-d");
+      await workspaceService.switchBranch("ws-sb", "feature");
 
-      expect(gitMock.resetHard).toHaveBeenCalledWith("/repos/d", "sha-base");
-      const latest = await workspaceRepo.findLatestDiffByWorkspace("ws-d");
-      expect(latest).toBeNull();
+      expect(gitMock.checkoutBranch).toHaveBeenCalledWith("/repos/sb", "feature");
+      expect(send).toHaveBeenCalledWith("workspace:gitStateChanged", {
+        workspaceId: "ws-sb",
+        branch: "feature",
+      });
     });
 
-    it("throws when there is no recorded diff", async () => {
-      createWorkspace(db, { id: "ws-nodiff", rootPath: "/repos/nd" });
-      await expect(
-        workspaceService.discardChanges("ws-nodiff"),
-      ).rejects.toThrow("No recorded diff to discard");
-      expect(gitMock.resetHard).not.toHaveBeenCalled();
+    // A remote-only name resolves to its local tracking branch, so the event
+    // has to carry what git actually checked out.
+    it("announces the branch git ended up on, not the one requested", async () => {
+      const send = captureEmits();
+      createWorkspace(db, { id: "ws-sb2", rootPath: "/repos/sb2" });
+      gitMock.checkoutBranch.mockResolvedValue(undefined);
+      gitMock.getCurrentBranch.mockResolvedValue("feature");
+      // No HEAD to anchor to — resyncDiff bails, the announcement still happens.
+      gitMock.getHeadSha.mockRejectedValue(new Error("no HEAD"));
+
+      await workspaceService.switchBranch("ws-sb2", "origin/feature");
+
+      expect(send).toHaveBeenCalledWith("workspace:gitStateChanged", {
+        workspaceId: "ws-sb2",
+        branch: "feature",
+      });
     });
 
-    it("keeps the diff row when the reset fails", async () => {
-      createWorkspace(db, { id: "ws-rf", rootPath: "/repos/rf" });
-      createWorkspaceDiff(db, {
-        workspaceId: "ws-rf",
-        baseRef: "sha-base",
-        diffText: "diff",
-      });
-      gitMock.resetHard.mockRejectedValue(new Error("reset failed"));
-
-      await expect(workspaceService.discardChanges("ws-rf")).rejects.toThrow(
-        "reset failed",
+    it("does not announce a branch when the checkout fails", async () => {
+      const send = captureEmits();
+      createWorkspace(db, { id: "ws-sb3", rootPath: "/repos/sb3" });
+      gitMock.checkoutBranch.mockRejectedValue(
+        new Error("Your local changes would be overwritten"),
       );
-      const latest = await workspaceRepo.findLatestDiffByWorkspace("ws-rf");
-      expect(latest).not.toBeNull();
+
+      await expect(
+        workspaceService.switchBranch("ws-sb3", "feature"),
+      ).rejects.toThrow("would be overwritten");
+      expect(send).not.toHaveBeenCalledWith(
+        "workspace:gitStateChanged",
+        expect.anything(),
+      );
+    });
+  });
+
+  describe("discardPaths", () => {
+    it("discards the given paths in the workspace's repo and re-records the diff", async () => {
+      createWorkspace(db, { id: "ws-dp", rootPath: "/repos/dp" });
+      createWorkspaceDiff(db, {
+        workspaceId: "ws-dp",
+        baseRef: "sha-old",
+        diffText: "diff",
+      });
+      gitMock.discardPaths.mockResolvedValue(undefined);
+      gitMock.getHeadSha.mockResolvedValue("sha-head");
+      gitMock.captureDiffSnapshot.mockResolvedValue({
+        baseRef: "sha-head",
+        diffText: "",
+        files: [],
+        untrackedFiles: [],
+        shortstat: "",
+      });
+
+      await workspaceService.discardPaths("ws-dp", ["a.ts", "b.ts"]);
+
+      expect(gitMock.discardPaths).toHaveBeenCalledWith("/repos/dp", [
+        "a.ts",
+        "b.ts",
+      ]);
+      // The tree came back clean, so the stale row must not survive.
+      expect(await workspaceRepo.findLatestDiffByWorkspace("ws-dp")).toBeNull();
+    });
+
+    it("does not touch the repo for an empty list", async () => {
+      createWorkspace(db, { id: "ws-dp-empty", rootPath: "/repos/dpe" });
+
+      await workspaceService.discardPaths("ws-dp-empty", []);
+
+      expect(gitMock.discardPaths).not.toHaveBeenCalled();
+    });
+
+    it("throws for an unknown workspace", async () => {
+      await expect(
+        workspaceService.discardPaths("nope", ["a.ts"]),
+      ).rejects.toThrow("Workspace not found");
     });
   });
 });

@@ -42,7 +42,10 @@ export function BaseTab({
           onClick();
         }
       }}
-      className="group relative flex items-center gap-1 pl-2.5 pr-6 py-1.5 cursor-pointer w-44 min-h-10"
+      // `w-44` is the ideal width; tabs shrink from there as the strip fills up.
+      // `min-w-28` is the floor (past it the strip scrolls) and is also what lets
+      // them shrink at all — otherwise the flex auto minimum pins them at `w-44`.
+      className="group relative flex items-center gap-1 pl-2.5 pr-6 py-1.5 cursor-pointer w-44 min-w-28 min-h-10"
     >
       {/* Active background layer — always rendered, opacity transitions */}
       <div

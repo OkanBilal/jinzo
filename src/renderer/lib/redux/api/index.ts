@@ -259,7 +259,8 @@ export {
   useArchiveWorkspaceMutation,
   useSelectWorkspaceDirectoryMutation,
   useRenameWorkspaceBranchMutation,
-  useDiscardWorkspaceChangesMutation,
+  useSwitchWorkspaceBranchMutation,
+  useDiscardWorkspacePathsMutation,
   // activity
   useListWorkspaceActivityQuery,
   useCreateWorkspaceActivityMutation,
@@ -324,6 +325,7 @@ export {
 } from "./gitFlowApi";
 export type {
   GitFlowStatus,
+  ChangedFile,
   CommitResult,
   CommitGitFlowPayload,
   CreatePrGitFlowPayload,

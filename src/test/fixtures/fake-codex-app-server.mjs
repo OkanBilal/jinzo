@@ -613,6 +613,16 @@ input.on("line", (line) => {
       break;
 
     case "plugin/installed":
+      // Real Codex answers this from a registry snapshotted at process start,
+      // so a plugin installed mid-session stays missing until a restart. Set
+      // the flag to reproduce that blind spot.
+      if (process.env.MAINS_CODEX_FIXTURE_STALE_INSTALLED === "1") {
+        respond(id, {
+          ...fixturePluginCatalog(),
+          marketplaces: [],
+        });
+        break;
+      }
       respond(id, {
         ...fixturePluginCatalog(),
         marketplaces: fixturePluginCatalog().marketplaces.map(

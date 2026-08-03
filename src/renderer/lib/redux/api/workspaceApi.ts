@@ -327,14 +327,32 @@ export const workspaceApi = baseApi.injectEndpoints({
       invalidatesTags: ["WorkspaceGitStates"],
     }),
 
-    // Hard-resets the working tree to the recorded diff's baseRef and drops
-    // the latest diff row.
-    discardWorkspaceChanges: builder.mutation<void, string>({
-      query: (workspaceId) => ({
-        handler: CHANNELS.workspace.discardChanges,
-        args: [workspaceId],
+    // Checks out an existing branch in the workspace and re-records its diff.
+    switchWorkspaceBranch: builder.mutation<
+      void,
+      { workspaceId: string; branch: string }
+    >({
+      query: ({ workspaceId, branch }) => ({
+        handler: CHANNELS.workspace.switchBranch,
+        args: [workspaceId, branch],
       }),
-      invalidatesTags: (_result, _error, workspaceId) => [
+      invalidatesTags: (_result, _error, { workspaceId }) => [
+        "WorkspaceGitStates",
+        { type: "WorkspaceDiffs", id: workspaceId },
+      ],
+    }),
+
+    // Restores specific files to their HEAD state (deleting the ones HEAD
+    // doesn't have) and re-records the workspace diff.
+    discardWorkspacePaths: builder.mutation<
+      void,
+      { workspaceId: string; paths: string[] }
+    >({
+      query: ({ workspaceId, paths }) => ({
+        handler: CHANNELS.workspace.discardPaths,
+        args: [workspaceId, paths],
+      }),
+      invalidatesTags: (_result, _error, { workspaceId }) => [
         { type: "WorkspaceDiffs", id: workspaceId },
       ],
     }),
@@ -579,7 +597,8 @@ export const {
   useArchiveWorkspaceMutation,
   useSelectWorkspaceDirectoryMutation,
   useRenameWorkspaceBranchMutation,
-  useDiscardWorkspaceChangesMutation,
+  useSwitchWorkspaceBranchMutation,
+  useDiscardWorkspacePathsMutation,
   // activity
   useListWorkspaceActivityQuery,
   useCreateWorkspaceActivityMutation,

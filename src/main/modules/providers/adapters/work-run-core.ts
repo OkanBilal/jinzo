@@ -42,6 +42,20 @@ interface RunSlot {
   controller: AbortController;
 }
 
+/**
+ * Live runs, keyed by runId — module scope, NOT per adapter instance.
+ *
+ * The adapter cache is invalidated whenever a provider's config is written
+ * (`providersService.update`), which happens mid-run: approving a plan flips
+ * the permission mode, and every toolbar toggle writes config too. The next
+ * `createWorkAdapter()` then builds a fresh instance, so instance-local
+ * bookkeeping would leave the in-flight run unreachable — `abortRun` would
+ * resolve silently while the driver kept working. Run ids are globally unique
+ * and every entry is removed in `runLifecycle`'s finally, so keying them here
+ * makes control reach a run regardless of which instance owns it.
+ */
+const runState = new Map<string, RunSlot>();
+
 /** Union of the request types that carry user-prompt content. */
 type UserPromptRequest =
   | WorkRunRequest
@@ -53,8 +67,6 @@ function getUserPromptContent(req: UserPromptRequest): string {
 }
 
 export function createWorkRunAdapter(driver: ProviderDriver): WorkRunAdapter {
-  const runState = new Map<string, RunSlot>();
-
   /** Wrap the caller's onEvent so Core can observe and enrich every event. */
   function wrapOnEvent(
     onEvent: WorkRunEventHandler,
@@ -175,7 +187,16 @@ export function createWorkRunAdapter(driver: ProviderDriver): WorkRunAdapter {
     },
     abortRun: async (runId: string) => {
       const slot = runState.get(runId);
-      if (slot) slot.controller.abort();
+      if (!slot) {
+        // Resolving silently here is what let a failed stop look like a
+        // successful one; the caller can only fall back to its force-finalize
+        // timer, which marks the run canceled while the driver keeps going.
+        console.warn(
+          `[WorkRunCore] abortRun: no live run "${runId}" — nothing to abort`,
+        );
+        return;
+      }
+      slot.controller.abort();
     },
   };
 

@@ -24,7 +24,11 @@ vi.mock("electron", () => ({
 }));
 
 import { gitService } from "./git.service";
-import { hashContent, buildPerFileDiffHashes } from "./git-snapshot";
+import {
+  hashContent,
+  buildPerFileDiffHashes,
+  parsePerFileDiffStats,
+} from "./git-snapshot";
 
 let sandbox: string;
 
@@ -354,30 +358,130 @@ describe("getBranchLog", () => {
 });
 
 // ─────────────────────────────────────────────────────────────
-// resetHard / renameBranch
+// discardPaths / renameBranch
 // ─────────────────────────────────────────────────────────────
 
-describe("resetHard", () => {
-  it("discards tracked modifications and cleans untracked files", async () => {
+describe("discardPaths", () => {
+  it("restores a committed file and leaves the others alone", async () => {
     const repo = makeRepo();
     write(repo, "README.md", "# dirty\n");
-    write(repo, "junk.txt", "junk\n");
+    write(repo, "untouched.txt", "keep me\n");
 
-    await gitService.resetHard(repo, "HEAD");
+    await gitService.discardPaths(repo, ["README.md"]);
 
-    const status = await gitService.getStatus(repo);
-    expect(status.isClean).toBe(true);
-    expect(fs.existsSync(path.join(repo, "junk.txt"))).toBe(false);
     expect(fs.readFileSync(path.join(repo, "README.md"), "utf-8")).toBe(
       "# test\n",
     );
+    expect(fs.existsSync(path.join(repo, "untouched.txt"))).toBe(true);
   });
 
-  it("rejects refs that would parse as git options", async () => {
+  // A file created since the last commit has no committed state to go back to,
+  // so discarding it means removing it — from the index as well as the disk.
+  it("deletes a file HEAD never had, staged or not", async () => {
     const repo = makeRepo();
-    await expect(gitService.resetHard(repo, "--hard")).rejects.toThrow(
+    write(repo, "untracked.txt", "new\n");
+    write(repo, "staged.txt", "new\n");
+    git(repo, "add", "staged.txt");
+
+    await gitService.discardPaths(repo, ["untracked.txt", "staged.txt"]);
+
+    expect(fs.existsSync(path.join(repo, "untracked.txt"))).toBe(false);
+    expect(fs.existsSync(path.join(repo, "staged.txt"))).toBe(false);
+    expect((await gitService.getStatus(repo)).isClean).toBe(true);
+  });
+
+  it("handles a mix of both in one call", async () => {
+    const repo = makeRepo();
+    write(repo, "README.md", "# dirty\n");
+    write(repo, "extra.txt", "new\n");
+
+    await gitService.discardPaths(repo, ["README.md", "extra.txt"]);
+
+    expect((await gitService.getStatus(repo)).isClean).toBe(true);
+  });
+
+  it("is a no-op for an empty list", async () => {
+    const repo = makeRepo();
+    write(repo, "README.md", "# dirty\n");
+
+    await gitService.discardPaths(repo, []);
+
+    expect(fs.readFileSync(path.join(repo, "README.md"), "utf-8")).toBe(
+      "# dirty\n",
+    );
+  });
+
+  // These paths delete files, and they arrive over IPC.
+  it.each(["../outside.txt", "/etc/hosts", "--force", "a/../../b"])(
+    "refuses to touch %s",
+    async (badPath) => {
+      const repo = makeRepo();
+      await expect(gitService.discardPaths(repo, [badPath])).rejects.toThrow(
+        "Invalid repository path",
+      );
+    },
+  );
+
+  it("refuses the whole batch when one path is unsafe", async () => {
+    const repo = makeRepo();
+    write(repo, "README.md", "# dirty\n");
+
+    await expect(
+      gitService.discardPaths(repo, ["README.md", "../escape.txt"]),
+    ).rejects.toThrow("Invalid repository path");
+    // The safe path in the batch must not have been applied either.
+    expect(fs.readFileSync(path.join(repo, "README.md"), "utf-8")).toBe(
+      "# dirty\n",
+    );
+  });
+});
+
+describe("checkoutBranch", () => {
+  it("moves the checkout to an existing branch", async () => {
+    const repo = makeRepo();
+    git(repo, "branch", "feature");
+
+    await gitService.checkoutBranch(repo, "feature");
+
+    expect(await gitService.getCurrentBranch(repo)).toBe("feature");
+  });
+
+  // Uncommitted work that doesn't collide comes along — the panel warns about
+  // this rather than stashing behind the user's back.
+  it("carries uncommitted changes to the new branch", async () => {
+    const repo = makeRepo();
+    git(repo, "branch", "feature");
+    write(repo, "scratch.txt", "wip\n");
+
+    await gitService.checkoutBranch(repo, "feature");
+
+    expect(fs.readFileSync(path.join(repo, "scratch.txt"), "utf-8")).toBe("wip\n");
+  });
+
+  // git's own refusal is the error the user needs to see, so it propagates.
+  it("rejects when the working tree would be overwritten", async () => {
+    const repo = makeRepo();
+    git(repo, "checkout", "-b", "feature");
+    write(repo, "conflict.txt", "from feature\n");
+    git(repo, "add", ".");
+    git(repo, "commit", "-m", "feature file");
+    git(repo, "checkout", "main");
+    write(repo, "conflict.txt", "uncommitted\n");
+
+    await expect(gitService.checkoutBranch(repo, "feature")).rejects.toThrow();
+    expect(await gitService.getCurrentBranch(repo)).toBe("main");
+  });
+
+  it("rejects a branch name that would parse as a git option", async () => {
+    const repo = makeRepo();
+    await expect(gitService.checkoutBranch(repo, "--orphan")).rejects.toThrow(
       "Invalid git ref",
     );
+  });
+
+  it("rejects an unknown branch", async () => {
+    const repo = makeRepo();
+    await expect(gitService.checkoutBranch(repo, "nope")).rejects.toThrow();
   });
 });
 
@@ -447,5 +551,75 @@ describe("buildPerFileDiffHashes", () => {
 
   it("returns an empty map for empty input", () => {
     expect(buildPerFileDiffHashes("").size).toBe(0);
+  });
+});
+
+describe("parsePerFileDiffStats", () => {
+  const chunk = (name: string, body: string) =>
+    `diff --git a/${name} b/${name}\n--- a/${name}\n+++ b/${name}\n@@ -1 +1 @@\n${body}\n`;
+
+  it("counts added and removed lines per file", () => {
+    const diff =
+      chunk("a.ts", "+one\n+two\n-gone") + chunk("b.ts", "-only\n-removals");
+
+    const stats = parsePerFileDiffStats(diff);
+
+    expect(stats.get("a.ts")).toEqual({ additions: 2, deletions: 1, isNew: false });
+    expect(stats.get("b.ts")).toEqual({ additions: 0, deletions: 2, isNew: false });
+  });
+
+  // The `+++`/`---` file headers start with the same characters as content
+  // lines; counting them would inflate every file by one each way.
+  it("ignores the file headers", () => {
+    expect(parsePerFileDiffStats(chunk("a.ts", "+x"))).toEqual(
+      new Map([["a.ts", { additions: 1, deletions: 0, isNew: false }]]),
+    );
+  });
+
+  it("indexes a rename under both paths", () => {
+    const diff = `diff --git a/old.ts b/new.ts\n--- a/old.ts\n+++ b/new.ts\n@@ -1 +1 @@\n+x\n`;
+
+    const stats = parsePerFileDiffStats(diff);
+
+    expect(stats.get("new.ts")).toEqual({
+      additions: 1,
+      deletions: 0,
+      isNew: false,
+    });
+    expect(stats.get("old.ts")).toEqual(stats.get("new.ts"));
+  });
+
+  it("reports a file with no line changes as zero rather than omitting it", () => {
+    const stats = parsePerFileDiffStats(
+      `diff --git a/big.bin b/big.bin\nnew file\nBinary or large file (900000 bytes)`,
+    );
+
+    expect(stats.get("big.bin")).toEqual({
+      additions: 0,
+      deletions: 0,
+      isNew: true,
+    });
+  });
+
+  // Discarding a file that HEAD never had deletes it, so the flag that marks
+  // one has to survive the round trip from a real snapshot.
+  it("flags files that did not exist at the base ref", async () => {
+    const repo = makeRepo();
+    write(repo, "README.md", "# edited\n");
+    write(repo, "fresh.ts", "export const x = 1;\n");
+    write(repo, "staged.ts", "export const y = 2;\n");
+    git(repo, "add", "staged.ts");
+    const head = git(repo, "rev-parse", "HEAD");
+
+    const snapshot = await gitService.captureDiffSnapshot(repo, head);
+    const stats = parsePerFileDiffStats(snapshot.diffText);
+
+    expect(stats.get("fresh.ts")?.isNew).toBe(true);
+    expect(stats.get("staged.ts")?.isNew).toBe(true);
+    expect(stats.get("README.md")?.isNew).toBe(false);
+  });
+
+  it("returns an empty map for empty input", () => {
+    expect(parsePerFileDiffStats("").size).toBe(0);
   });
 });

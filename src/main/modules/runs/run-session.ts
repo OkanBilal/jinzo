@@ -126,6 +126,12 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   let liveDiffInFlight = false;
   let liveDiffPending = false;
   const pendingToolCalls = new Map<string, number>();
+  // callKey → DB tool call id, retained for the whole run. pendingToolCalls is
+  // emptied on completion, but subagent and background-task events arrive AFTER
+  // their tool call has settled (a backgrounded command reports its real result
+  // once the foreground call already returned "running in background"), so they
+  // need an anchor that outlives it.
+  const resolvedToolCalls = new Map<string, number>();
 
   // ─── Broadcast helpers (channel names + payload shapes preserved exactly) ───
   function broadcastEventPersisted(): void {
@@ -469,6 +475,7 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
         ? String(metadataToolCallId)
         : `${event.toolName}-${event.startedAt || Date.now()}`;
       pendingToolCalls.set(callKey, toolCallId);
+      resolvedToolCalls.set(callKey, toolCallId);
       return;
     }
     if (phase === "end" || phase === "complete") {
@@ -549,6 +556,66 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
     return true;
   }
 
+  /**
+   * Attach provider detail to an existing tool call's metadata under `key`.
+   *
+   * updateToolCall merges metadata with json_patch, so repeated patches from
+   * different owners accumulate instead of overwriting each other. Returns
+   * false when the tool call is unknown — an Agent/task event whose spawning
+   * call was never projected has nothing to attach to.
+   */
+  async function patchToolCallMetadata(
+    toolUseId: string | undefined,
+    key: "subagent" | "task",
+    detail: Record<string, unknown>,
+  ): Promise<boolean> {
+    if (!toolUseId) return false;
+    const toolCallId = resolvedToolCalls.get(toolUseId);
+    if (toolCallId === undefined) return false;
+    // Drop undefined fields so a later partial patch cannot blank an earlier one.
+    const clean = Object.fromEntries(
+      Object.entries(detail).filter(([, v]) => v !== undefined),
+    );
+    await runsRepo.updateToolCall(toolCallId, { metadata: { [key]: clean } });
+    return true;
+  }
+
+  async function projectSubagent(
+    event: Extract<WorkRunEvent, { type: "subagent" }>,
+  ): Promise<boolean> {
+    return patchToolCallMetadata(event.parentToolUseId, "subagent", {
+      phase: event.phase,
+      agentType: event.agentType,
+      agentId: event.agentId,
+      prompt: event.prompt,
+      result: event.result,
+      error: event.error,
+      updatedAt: event.ts ?? Date.now(),
+    });
+  }
+
+  async function projectTask(
+    event: Extract<WorkRunEvent, { type: "task" }>,
+  ): Promise<boolean> {
+    return patchToolCallMetadata(event.toolCallId, "task", {
+      phase: event.phase,
+      taskId: event.taskId,
+      status: event.status,
+      description: event.description,
+      subagentType: event.subagentType,
+      taskType: event.taskType,
+      summary: event.summary,
+      // Where a backgrounded command's real output landed. The run itself never
+      // carries that output, so this path is the only handle on it.
+      outputFile: event.outputFile,
+      lastToolName: event.lastToolName,
+      usage: event.usage,
+      error: event.error,
+      skipTranscript: event.skipTranscript,
+      updatedAt: event.ts ?? Date.now(),
+    });
+  }
+
   async function projectPromptSuggestion(
     event: Extract<WorkRunEvent, { type: "prompt_suggestion" }>,
   ): Promise<void> {
@@ -613,7 +680,12 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
         // Renderer-only live indicator; never persisted.
         broadcastContextUsage(event);
         break;
-      // WorkRunSubagentEvent currently has no projection — matches legacy behavior.
+      case "subagent":
+        didPersist = await projectSubagent(event);
+        break;
+      case "task":
+        didPersist = await projectTask(event);
+        break;
     }
     if (didPersist) broadcastEventPersisted();
   }

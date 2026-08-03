@@ -10,7 +10,6 @@ import type { ProjectIssue, SignalWithEntity } from "@/lib/redux/api";
 import {
   setSelectedFile,
   setActiveTab,
-  setSelectedFileContent,
   addContextFile,
   addContextIssue,
   addContextSignal,
@@ -28,6 +27,7 @@ import {
   getIssueEntityId,
 } from "@/features/workspace/utils/repo-utils";
 import { useActiveSpace } from "@/hooks/use-active-space";
+import { useOpenDiffInEditor } from "@/features/workspace/hooks/use-open-diff-in-editor";
 import { Button } from "@/components/ui";
 import { ActivitySection } from "./activity-section";
 
@@ -44,6 +44,7 @@ export function WorkspaceSidebar() {
   );
 
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("files");
+  const openDiffInEditor = useOpenDiffInEditor();
 
   // Get workspace data from the selected workspace ID
   const { data: workspace } = useGetWorkspaceQuery(workspaceId || "", {
@@ -129,28 +130,10 @@ export function WorkspaceSidebar() {
 
   const handleSelectDiffFile = useCallback(
     (filePath: string, diffContent: string) => {
-      // Show the diff in the editor by setting file + content
-      const fileName = filePath.split("/").pop() || filePath;
-      dispatch(
-        setSelectedFile({
-          name: fileName + ".diff",
-          fullPath: filePath,
-          type: "file",
-          extension: "diff",
-        }),
-      );
-      dispatch(
-        setSelectedFileContent({
-          content: diffContent,
-          size: diffContent.length,
-          isBinary: false,
-          encoding: "utf-8",
-        }),
-      );
-      dispatch(setActiveTab("editor"));
+      openDiffInEditor(filePath, diffContent);
       if (isMobile) dispatch(setRightPanelOpen(false));
     },
-    [dispatch, isMobile],
+    [openDiffInEditor, dispatch, isMobile],
   );
 
   const activeTab = useAppSelector(

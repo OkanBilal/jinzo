@@ -13,13 +13,16 @@ import {
   buildClaudeExecutableOptions,
   classifyOutcome,
   createClaudePermissionBridge,
+  createClaudeElicitationHandler,
   removeClaudeRuntimeSettings,
   writeClaudeRuntimeSettings,
   mapClaudePluginList,
   mapClaudePluginDetail,
   cleanGeneratedTitle,
   parseSimpleYaml,
+  mapTaskMessage,
 } from "./claude.driver";
+import type { ClaudeTaskIndex, SDKSystemMessage } from "./claude.driver";
 import fs from "node:fs";
 import {
   ALLOWED_TOOLS_SET,
@@ -783,5 +786,302 @@ describe("claude.driver / mapClaudePluginDetail", () => {
     expect(detail.skills).toEqual([]);
     expect(detail.mcpServers).toEqual([]);
     expect(detail.summary.interface?.displayName).toBe("ghost");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// Background/foreground task mapping (system:task_* messages).
+//
+// Payloads mirror what the bundled Claude CLI actually emits: a `sleep`
+// backgrounded into a local_bash task, and an Agent subagent task.
+// ─────────────────────────────────────────────────────────────
+
+describe("claude.driver / mapTaskMessage", () => {
+  const TS = 1_700_000_000_000;
+
+  function sys(msg: Partial<SDKSystemMessage>): SDKSystemMessage {
+    return {
+      type: "system",
+      uuid: "u1",
+      session_id: "s1",
+      ...msg,
+    } as SDKSystemMessage;
+  }
+
+  function newIndex(): ClaudeTaskIndex {
+    return new Map();
+  }
+
+  it("maps task_started and records the tool_use_id anchor", () => {
+    const index = newIndex();
+    const event = mapTaskMessage(
+      sys({
+        subtype: "task_started",
+        task_id: "bflwfagyw",
+        tool_use_id: "toolu_bash",
+        description: "sleep 45 && echo finished-ok",
+        task_type: "local_bash",
+      }),
+      index,
+      TS,
+    );
+
+    expect(event).toMatchObject({
+      type: "task",
+      phase: "started",
+      status: "running",
+      taskId: "bflwfagyw",
+      toolCallId: "toolu_bash",
+      description: "sleep 45 && echo finished-ok",
+      taskType: "local_bash",
+      ts: TS,
+    });
+    expect(index.get("bflwfagyw")?.toolUseId).toBe("toolu_bash");
+  });
+
+  it("maps task_progress with usage and last tool", () => {
+    const index = newIndex();
+    mapTaskMessage(
+      sys({ subtype: "task_started", task_id: "t1", tool_use_id: "toolu_agent", subagent_type: "general-purpose" }),
+      index,
+      TS,
+    );
+
+    const event = mapTaskMessage(
+      sys({
+        subtype: "task_progress",
+        task_id: "t1",
+        tool_use_id: "toolu_agent",
+        last_tool_name: "Bash",
+        summary: "Counting files",
+        usage: { total_tokens: 1200, tool_uses: 3, duration_ms: 4500 },
+      }),
+      index,
+      TS,
+    );
+
+    expect(event).toMatchObject({
+      phase: "progress",
+      status: "running",
+      lastToolName: "Bash",
+      summary: "Counting files",
+      subagentType: "general-purpose",
+      usage: { totalTokens: 1200, toolUses: 3, durationMs: 4500 },
+    });
+  });
+
+  it("resolves task_updated through the index — it carries no tool_use_id", () => {
+    const index = newIndex();
+    mapTaskMessage(
+      sys({ subtype: "task_started", task_id: "t1", tool_use_id: "toolu_agent" }),
+      index,
+      TS,
+    );
+
+    const event = mapTaskMessage(
+      sys({
+        subtype: "task_updated",
+        task_id: "t1",
+        patch: { status: "completed", end_time: 1785499819327 },
+      }),
+      index,
+      TS,
+    );
+
+    expect(event).toMatchObject({
+      phase: "updated",
+      status: "completed",
+      toolCallId: "toolu_agent",
+    });
+  });
+
+  it("maps task_notification to the terminal phase and keeps the output file", () => {
+    const index = newIndex();
+    mapTaskMessage(
+      sys({ subtype: "task_started", task_id: "bflwfagyw", tool_use_id: "toolu_bash" }),
+      index,
+      TS,
+    );
+
+    const event = mapTaskMessage(
+      sys({
+        subtype: "task_notification",
+        task_id: "bflwfagyw",
+        tool_use_id: "toolu_bash",
+        status: "completed",
+        summary: "sleep 45 && echo finished-ok",
+        output_file: "/tmp/claude-task-bflwfagyw.log",
+      }),
+      index,
+      TS,
+    );
+
+    expect(event).toMatchObject({
+      phase: "completed",
+      status: "completed",
+      outputFile: "/tmp/claude-task-bflwfagyw.log",
+      toolCallId: "toolu_bash",
+    });
+    // Terminal: the anchor is released so a recycled id cannot reattach.
+    expect(index.has("bflwfagyw")).toBe(false);
+  });
+
+  it("surfaces the summary as the error when a task fails", () => {
+    const index = newIndex();
+    const event = mapTaskMessage(
+      sys({
+        subtype: "task_notification",
+        task_id: "t9",
+        tool_use_id: "toolu_x",
+        status: "failed",
+        summary: "command exited 1",
+      }),
+      index,
+      TS,
+    );
+
+    expect(event).toMatchObject({ phase: "completed", status: "failed", error: "command exited 1" });
+  });
+
+  it("returns null when the task has no known tool call anchor", () => {
+    // task_updated for a task whose start was never seen (e.g. resumed session).
+    const event = mapTaskMessage(
+      sys({ subtype: "task_updated", task_id: "orphan", patch: { status: "running" } }),
+      newIndex(),
+      TS,
+    );
+    expect(event).toBeNull();
+  });
+
+  it("returns null without a task_id", () => {
+    const event = mapTaskMessage(
+      sys({ subtype: "task_started", tool_use_id: "toolu_bash" }),
+      newIndex(),
+      TS,
+    );
+    expect(event).toBeNull();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// MCP elicitation bridge. Without a handler the SDK auto-declines every
+// request, so these cover the paths that make a request reach the user.
+// ─────────────────────────────────────────────────────────────
+
+describe("claude.driver / elicitation handler", () => {
+  const FORM_REQUEST = {
+    serverName: "linear",
+    message: "Provide your workspace credentials",
+    mode: "form" as const,
+    requestedSchema: {
+      properties: { apiKey: { type: "string" } },
+      required: ["apiKey"],
+    },
+  };
+
+  function opts() {
+    return { signal: new AbortController().signal };
+  }
+
+  it("routes the request to the approval broker as an elicitation", async () => {
+    const requestApproval = vi.fn().mockResolvedValue({
+      requestId: "x",
+      approved: true,
+      answer: JSON.stringify({ apiKey: "sk-123" }),
+    });
+    const handler = createClaudeElicitationHandler({ runId: "run-1", requestApproval });
+
+    await expect(handler(FORM_REQUEST, opts())).resolves.toEqual({
+      action: "accept",
+      content: { apiKey: "sk-123" },
+    });
+    expect(requestApproval).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runId: "run-1",
+        kind: "elicitation",
+        serverName: "linear",
+        elicitationMode: "form",
+        question: "Provide your workspace credentials",
+        requestedSchema: FORM_REQUEST.requestedSchema,
+      }),
+    );
+  });
+
+  it("declines when the user dismisses", async () => {
+    const handler = createClaudeElicitationHandler({
+      runId: "run-1",
+      requestApproval: vi.fn().mockResolvedValue({ requestId: "x", approved: false }),
+    });
+    await expect(handler(FORM_REQUEST, opts())).resolves.toEqual({ action: "decline" });
+  });
+
+  // A URL elicitation is a browser round-trip; there is no content to send back.
+  it("accepts a url elicitation without content", async () => {
+    const handler = createClaudeElicitationHandler({
+      runId: "run-1",
+      requestApproval: vi.fn().mockResolvedValue({ requestId: "x", approved: true }),
+    });
+    await expect(
+      handler(
+        { serverName: "notion", message: "Authenticate", mode: "url", url: "https://x.test" },
+        opts(),
+      ),
+    ).resolves.toEqual({ action: "accept" });
+  });
+
+  // Sending content we know is malformed surfaces as an opaque server-side
+  // validation error; declining names the real problem.
+  it("declines a form accepted without usable content", async () => {
+    const handler = createClaudeElicitationHandler({
+      runId: "run-1",
+      requestApproval: vi
+        .fn()
+        .mockResolvedValue({ requestId: "x", approved: true, answer: "not json" }),
+    });
+    await expect(handler(FORM_REQUEST, opts())).resolves.toEqual({ action: "decline" });
+  });
+
+  it("drops values MCP cannot express rather than sending them", async () => {
+    const handler = createClaudeElicitationHandler({
+      runId: "run-1",
+      requestApproval: vi.fn().mockResolvedValue({
+        requestId: "x",
+        approved: true,
+        answer: JSON.stringify({ keep: "a", n: 2, flag: true, tags: ["x"], nested: { a: 1 } }),
+      }),
+    });
+    await expect(handler(FORM_REQUEST, opts())).resolves.toEqual({
+      action: "accept",
+      content: { keep: "a", n: 2, flag: true, tags: ["x"] },
+    });
+  });
+
+  it("cancels immediately when the signal is already aborted", async () => {
+    const requestApproval = vi.fn();
+    const controller = new AbortController();
+    controller.abort();
+    const handler = createClaudeElicitationHandler({ runId: "run-1", requestApproval });
+
+    await expect(handler(FORM_REQUEST, { signal: controller.signal })).resolves.toEqual({
+      action: "cancel",
+    });
+    expect(requestApproval).not.toHaveBeenCalled();
+  });
+
+  // A control stream can close while a dialog is parked; the broker entry has to
+  // be released too or the renderer keeps a dialog nothing will ever answer.
+  it("releases the broker entry when aborted mid-request", async () => {
+    const controller = new AbortController();
+    const cancelApproval = vi.fn();
+    const handler = createClaudeElicitationHandler({
+      runId: "run-1",
+      requestApproval: () => new Promise(() => {}),
+      cancelApproval,
+    });
+
+    const pending = handler(FORM_REQUEST, { signal: controller.signal });
+    controller.abort();
+    await expect(pending).resolves.toEqual({ action: "cancel" });
+    expect(cancelApproval).toHaveBeenCalledTimes(1);
   });
 });

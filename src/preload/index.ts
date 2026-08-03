@@ -316,8 +316,10 @@ const api = {
     // ── git operations (see CONTEXT.md "Workspace git operations") ──
     renameBranch: (id: string, newBranchName: string) =>
       ipcRenderer.invoke(CHANNELS.workspace.renameBranch, id, newBranchName),
-    discardChanges: (id: string) =>
-      ipcRenderer.invoke(CHANNELS.workspace.discardChanges, id),
+    switchBranch: (id: string, branch: string) =>
+      ipcRenderer.invoke(CHANNELS.workspace.switchBranch, id, branch),
+    discardPaths: (id: string, paths: string[]) =>
+      ipcRenderer.invoke(CHANNELS.workspace.discardPaths, id, paths),
     selectDirectory: () =>
       ipcRenderer.invoke(CHANNELS.workspace.selectDirectory),
     onScriptComplete: (

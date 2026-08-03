@@ -11,6 +11,7 @@ import {
   setDocumentViewerDoc,
   setBrowserPanelOpen,
   setRightPanelOpen,
+  setSessionPanelOpen,
   type DocumentViewerDoc,
 } from "@/lib/redux/slices/appSettingsSlice";
 
@@ -31,9 +32,11 @@ export function DocumentViewerProvider({ children }: { children: ReactNode }) {
   const open = useCallback(
     (doc: DocumentViewerDoc) => {
       // The doc viewer, browser panel and right panel are mutually exclusive —
-      // they all occupy the right edge. Close the others when opening a doc.
+      // they all occupy the right edge. Close the others when opening a doc,
+      // along with the session box that sits against that edge.
       dispatch(setBrowserPanelOpen(false));
       dispatch(setRightPanelOpen(false));
+      dispatch(setSessionPanelOpen(false));
       dispatch(setDocumentViewerDoc(doc));
       dispatch(setDocumentViewerOpen(true));
     },

@@ -89,6 +89,30 @@ function assertCloneUrl(url: string): void {
   }
 }
 
+/**
+ * A repo-relative path that this process is willing to overwrite or delete.
+ *
+ * Discarding a change rewrites and in some cases removes a file, and the paths
+ * arrive over IPC — so absolute paths, parent-directory escapes and leading
+ * dashes (which git would read as options) are all refused rather than
+ * normalized.
+ */
+export function assertRepoRelativePath(filePath: string): void {
+  if (
+    !filePath ||
+    filePath.startsWith("-") ||
+    filePath.startsWith("/") ||
+    filePath.includes("\0") ||
+    path.isAbsolute(filePath) ||
+    path
+      .normalize(filePath)
+      .split(path.sep)
+      .some((segment) => segment === "..")
+  ) {
+    throw new Error(`Invalid repository path: ${filePath}`);
+  }
+}
+
 // A ref starting with "-" would be parsed as an option by git, not a revision.
 function assertRef(ref: string): void {
   if (!ref || ref.startsWith("-") || /[\s\0]/.test(ref)) {
@@ -533,10 +557,80 @@ export const gitService = {
   },
 
   /** Hard-reset the working tree to a given ref and clean untracked files. */
-  async resetHard(rootPath: string, ref: string): Promise<void> {
-    assertRef(ref);
+  /**
+   * Check out an existing branch in this working tree.
+   *
+   * Deliberately a plain `git checkout <branch>`: git's own rules decide the
+   * outcome, and its refusals are the ones worth surfacing. Uncommitted work
+   * that doesn't collide comes along; work that would be overwritten makes git
+   * refuse, as does a branch already checked out in another worktree. Nothing
+   * is forced or stashed on the user's behalf.
+   *
+   * A name that exists only on the remote resolves the way it does on the
+   * command line — git creates the local tracking branch.
+   */
+  async checkoutBranch(rootPath: string, branch: string): Promise<void> {
+    assertRef(branch);
+    await getGit(rootPath).checkout(branch);
+  },
+
+  /**
+   * Discard the working-tree changes to specific files, restoring each to its
+   * HEAD state.
+   *
+   * A file that HEAD knows is checked back out. One HEAD doesn't have was
+   * created since the last commit, so its "HEAD state" is not existing: it is
+   * unstaged if staged and deleted from disk. That deletion is unrecoverable
+   * for an untracked file — git never had a copy.
+   *
+   * Paths are repo-relative and validated; everything runs behind `--` so a
+   * path can never be read as an option.
+   */
+  async discardPaths(rootPath: string, paths: string[]): Promise<void> {
+    if (paths.length === 0) return;
+    for (const filePath of paths) assertRepoRelativePath(filePath);
     const git = getGit(rootPath);
-    await git.reset(["--hard", ref]);
-    await git.clean("f", ["-d"]);
+
+    // One call rather than one per file: which of these exist in HEAD?
+    // A repo with no commits yet has no HEAD at all — then none of them do.
+    const inHead = new Set<string>();
+    try {
+      const listed = await git.raw([
+        "ls-tree",
+        "-r",
+        "--name-only",
+        "HEAD",
+        "--",
+        ...paths,
+      ]);
+      for (const line of listed.split("\n")) {
+        const name = line.trim();
+        if (name) inHead.add(name);
+      }
+    } catch {
+      // No HEAD — leave the set empty.
+    }
+
+    const committed = paths.filter((p) => inHead.has(p));
+    const created = paths.filter((p) => !inHead.has(p));
+
+    if (committed.length > 0) {
+      await git.raw(["checkout", "HEAD", "--", ...committed]);
+    }
+    if (created.length > 0) {
+      // --ignore-unmatch: the file may only ever have lived in the working
+      // tree, in which case there is no index entry to drop.
+      await git.raw([
+        "rm",
+        "--force",
+        "--ignore-unmatch",
+        "--cached",
+        "--",
+        ...created,
+      ]);
+      for (const filePath of created) {
+        fs.rmSync(path.join(rootPath, filePath), { force: true });
+      }
+    }
   },
 };
