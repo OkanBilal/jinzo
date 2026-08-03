@@ -19,10 +19,10 @@ import {
   useSetActiveSpaceMutation,
   useDetectInstalledClisQuery,
 } from "@/lib/redux/api";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
+import { setOnboardingCliAutoSelectApplied } from "@/lib/redux/slices/appSettingsSlice";
 import { type OnboardingAgentSlug } from "../onboarding-agents";
 import { useAgentSpaces } from "../hooks/use-agent-spaces";
-
-const CLI_AUTO_SELECT_FLAG = "mains:onboarding:cli-auto-select-applied";
 
 interface CliInstall {
   sections: { label: string; commands: string[] }[];
@@ -324,6 +324,10 @@ export function AgentComparisonStep() {
   const [setActiveSpace] = useSetActiveSpaceMutation();
   const { data: detectedClis } = useDetectInstalledClisQuery();
   const hasAppliedAutoSelect = useRef(false);
+  const dispatch = useAppDispatch();
+  const autoSelectApplied = useAppSelector(
+    (state) => state.appSettings.onboardingCliAutoSelectApplied,
+  );
 
   const { agentSpaces, visibleAgentCount, spacesBySlug, toggleAgent } =
     useAgentSpaces();
@@ -334,14 +338,14 @@ export function AgentComparisonStep() {
     if (hasAppliedAutoSelect.current) return;
     if (!detectedClis) return;
     if (agentSpaces.length === 0) return;
-    if (localStorage.getItem(CLI_AUTO_SELECT_FLAG) === "1") return;
+    if (autoSelectApplied) return;
 
     const installedSpaces = agentSpaces.filter(
       (s) => detectedClis[s.slug as OnboardingAgentSlug],
     );
 
     hasAppliedAutoSelect.current = true;
-    localStorage.setItem(CLI_AUTO_SELECT_FLAG, "1");
+    dispatch(setOnboardingCliAutoSelectApplied(true));
 
     if (installedSpaces.length === 0) {
       // Detection found nothing — likely PATH issue. Leave defaults alone.
@@ -385,6 +389,8 @@ export function AgentComparisonStep() {
     archiveSpace,
     setActiveSpace,
     navigate,
+    autoSelectApplied,
+    dispatch,
   ]);
 
   return (

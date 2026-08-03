@@ -16,6 +16,21 @@ export interface DocumentViewerDoc {
   docType: DocType;
 }
 
+export type ThemePreference = "light" | "dark" | "system";
+
+export type WorkspaceGrouping = "none" | "status" | "project";
+
+export type TrackerFilter = "all" | "issues" | "signals";
+
+/** Per-project state of the tracker section (issues + signals list). */
+export interface TrackerSectionState {
+  expanded: boolean;
+  filter: TrackerFilter;
+}
+
+export const isThemePreference = (value: unknown): value is ThemePreference =>
+  value === "light" || value === "dark" || value === "system";
+
 export interface AppSettingsState {
   sidebarCollapsed: boolean;
   rightPanelOpen: boolean;
@@ -38,6 +53,18 @@ export interface AppSettingsState {
   documentViewerWidth: number;
   /** The document currently loaded in the viewer (not persisted — avoids stale auto-reopen). */
   documentViewerDoc: DocumentViewerDoc | null;
+  /** Light / dark / follow-the-OS. Applied to `<html class="dark">`. */
+  theme: ThemePreference;
+  /** Whether the bottom terminal drawer is open. */
+  bottomTerminalOpen: boolean;
+  /** How the sidebar workspace list is grouped. */
+  workspaceListGrouping: WorkspaceGrouping;
+  /** Sidebar group key → expanded. Absent means expanded (the default). */
+  workspaceGroupExpanded: Record<string, boolean>;
+  /** Project id → tracker section state. Absent means collapsed, filter "all". */
+  trackerByProject: Record<string, TrackerSectionState>;
+  /** Onboarding ran its one-time "disable agents whose CLI is missing" pass. */
+  onboardingCliAutoSelectApplied: boolean;
 }
 
 const initialState: AppSettingsState = {
@@ -52,6 +79,12 @@ const initialState: AppSettingsState = {
   documentViewerOpen: false,
   documentViewerWidth: DOC_VIEWER_PANEL_WIDTH_DEFAULT,
   documentViewerDoc: null,
+  theme: "system",
+  bottomTerminalOpen: false,
+  workspaceListGrouping: "none",
+  workspaceGroupExpanded: {},
+  trackerByProject: {},
+  onboardingCliAutoSelectApplied: false,
 };
 
 const appSettingsSlice = createSlice({
@@ -94,6 +127,47 @@ const appSettingsSlice = createSlice({
     ) => {
       state.documentViewerDoc = action.payload;
     },
+    setTheme: (state, action: PayloadAction<ThemePreference>) => {
+      state.theme = action.payload;
+    },
+    setBottomTerminalOpen: (state, action: PayloadAction<boolean>) => {
+      state.bottomTerminalOpen = action.payload;
+    },
+    setWorkspaceListGrouping: (
+      state,
+      action: PayloadAction<WorkspaceGrouping>,
+    ) => {
+      state.workspaceListGrouping = action.payload;
+    },
+    setWorkspaceGroupExpanded: (
+      state,
+      action: PayloadAction<{ groupKey: string; expanded: boolean }>,
+    ) => {
+      state.workspaceGroupExpanded[action.payload.groupKey] =
+        action.payload.expanded;
+    },
+    setTrackerSectionState: (
+      state,
+      action: PayloadAction<{
+        projectId: string;
+        changes: Partial<TrackerSectionState>;
+      }>,
+    ) => {
+      const current = state.trackerByProject[action.payload.projectId] ?? {
+        expanded: false,
+        filter: "all",
+      };
+      state.trackerByProject[action.payload.projectId] = {
+        ...current,
+        ...action.payload.changes,
+      };
+    },
+    setOnboardingCliAutoSelectApplied: (
+      state,
+      action: PayloadAction<boolean>,
+    ) => {
+      state.onboardingCliAutoSelectApplied = action.payload;
+    },
   },
   // A new-run tab has no session yet: no run, no subagents, and whatever the
   // panel was showing belonged to the tab the user just left. Closing it here
@@ -123,5 +197,11 @@ export const {
   setDocumentViewerOpen,
   setDocumentViewerPanelWidth,
   setDocumentViewerDoc,
+  setTheme,
+  setBottomTerminalOpen,
+  setWorkspaceListGrouping,
+  setWorkspaceGroupExpanded,
+  setTrackerSectionState,
+  setOnboardingCliAutoSelectApplied,
 } = appSettingsSlice.actions;
 export default appSettingsSlice.reducer;

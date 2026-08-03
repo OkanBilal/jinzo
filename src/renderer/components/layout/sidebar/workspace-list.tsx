@@ -1,12 +1,10 @@
-import {
-  useState,
-  useEffect,
-  useMemo,
-  type MouseEvent,
-  type ReactNode,
-} from "react";
+import { useState, useMemo, type MouseEvent, type ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAppSelector } from "@/lib/redux/hooks";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
+import {
+  setWorkspaceGroupExpanded,
+  setWorkspaceListGrouping,
+} from "@/lib/redux/slices/appSettingsSlice";
 import { Button } from "@/components/ui";
 import { ArrowUp, Plus } from "@/components/ui/icons";
 import WorkspaceItem from "./workspace-item";
@@ -74,26 +72,27 @@ function WorkspaceGroupSection({
   onCreateWorktree?: () => void;
   children: ReactNode;
 }) {
-  const storageKey = `workspace-group-expanded-${group.key}`;
-  const [expanded, setExpanded] = useState(() => {
-    const stored = localStorage.getItem(storageKey);
-    return stored !== null ? stored === "true" : true;
-  });
-
-  useEffect(() => {
-    localStorage.setItem(storageKey, String(expanded));
-  }, [expanded, storageKey]);
+  const dispatch = useAppDispatch();
+  // Absent means expanded — a group the user has never touched starts open.
+  const expanded = useAppSelector(
+    (state) => state.appSettings.workspaceGroupExpanded[group.key] ?? true,
+  );
+  const toggleExpanded = () => {
+    dispatch(
+      setWorkspaceGroupExpanded({ groupKey: group.key, expanded: !expanded }),
+    );
+  };
 
   return (
     <div className="">
       <div
         role="button"
         tabIndex={0}
-        onClick={() => setExpanded((v) => !v)}
+        onClick={toggleExpanded}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
-            setExpanded((v) => !v);
+            toggleExpanded();
           }
         }}
         className="group/section w-full flex items-center gap-1.5 px-2 py-1 mb-px rounded-lg cursor-pointer hover:bg-primary/50 dark:hover:bg-primary/5 transition-colors"
@@ -170,15 +169,12 @@ export default function WorkspacesList({
   );
 
   // Grouping state
-  const [grouping, setGrouping] = useState<GroupingMode>(() => {
-    const stored = localStorage.getItem("workspace-list-grouping");
-    if (stored === "status" || stored === "project") return stored;
-    return "none";
-  });
-
-  useEffect(() => {
-    localStorage.setItem("workspace-list-grouping", grouping);
-  }, [grouping]);
+  const dispatch = useAppDispatch();
+  const grouping = useAppSelector(
+    (state) => state.appSettings.workspaceListGrouping,
+  );
+  const setGrouping = (mode: GroupingMode) =>
+    dispatch(setWorkspaceListGrouping(mode));
 
   // Project data for icons and grouping
   const { data: projects = [] } = useListProjectsQuery();

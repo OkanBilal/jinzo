@@ -1,17 +1,20 @@
-import { useState, useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import {
   useListProjectIssuesQuery,
   useGetSignalsByProjectQuery,
   type ProjectIssue,
   type SignalWithEntity,
 } from "@/lib/redux/api";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
+import {
+  setTrackerSectionState,
+  type TrackerFilter,
+} from "@/lib/redux/slices/appSettingsSlice";
 import { IssueListItem } from "./issue-list-item";
 import { SignalListItem } from "./signal-list-item";
 import { ArrowUp } from "@/components/ui/icons";
 import { Button } from "@/components/ui";
 import { Body } from "@/components/ui/text";
-
-type TrackerFilter = "all" | "issues" | "signals";
 
 type TrackerItem =
   | { kind: "issue"; data: ProjectIssue }
@@ -26,30 +29,8 @@ interface TrackerSectionProps {
   onAddSignalToContext?: (signal: SignalWithEntity) => void;
 }
 
-function getStorageKey(projectId: string | undefined): string {
-  return `tracker-section-${projectId ?? "none"}`;
-}
-
-function loadState(projectId: string | undefined): {
-  expanded: boolean;
-  filter: TrackerFilter;
-} {
-  try {
-    const raw = localStorage.getItem(getStorageKey(projectId));
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return {
-        expanded: parsed.expanded ?? true,
-        filter: ["all", "issues", "signals"].includes(parsed.filter)
-          ? parsed.filter
-          : "all",
-      };
-    }
-  } catch {
-    // ignore
-  }
-  return { expanded: false, filter: "all" };
-}
+/** Shared by every project that has never been opened. */
+const DEFAULT_TRACKER_STATE = { expanded: false, filter: "all" as TrackerFilter };
 
 const filters: { value: TrackerFilter; label: string }[] = [
   { value: "all", label: "All" },
@@ -71,25 +52,30 @@ export function TrackerSection({
   const { data: signals = [], isLoading: signalsLoading } =
     useGetSignalsByProjectQuery(projectId || "", { skip: !projectId });
 
-  const [state, setState] = useState(() => {
-    const loaded = loadState(projectId);
-    return { forProjectId: projectId, ...loaded };
-  });
+  // Keyed by project, so switching projects reads that project's state with no
+  // syncing effect — the selector already returns the right row.
+  const dispatch = useAppDispatch();
+  const { expanded, filter } = useAppSelector(
+    (state) =>
+      state.appSettings.trackerByProject[projectId ?? "none"] ??
+      DEFAULT_TRACKER_STATE,
+  );
 
-  let { expanded, filter } = state;
-  if (projectId !== state.forProjectId) {
-    const loaded = loadState(projectId);
-    expanded = loaded.expanded;
-    filter = loaded.filter;
-    setState({ forProjectId: projectId, expanded, filter });
-  }
-
-  useEffect(() => {
-    localStorage.setItem(
-      getStorageKey(projectId),
-      JSON.stringify({ expanded, filter })
+  const setExpanded = (next: boolean) =>
+    dispatch(
+      setTrackerSectionState({
+        projectId: projectId ?? "none",
+        changes: { expanded: next },
+      }),
     );
-  }, [expanded, filter, projectId]);
+
+  const setFilter = (next: TrackerFilter) =>
+    dispatch(
+      setTrackerSectionState({
+        projectId: projectId ?? "none",
+        changes: { filter: next },
+      }),
+    );
 
   const items = useMemo<TrackerItem[]>(() => {
     const list: TrackerItem[] = [];
@@ -112,9 +98,7 @@ export function TrackerSection({
       {/* Header */}
       <Button
         variant="subtle"
-        onClick={() =>
-          setState((prev) => ({ ...prev, expanded: !prev.expanded }))
-        }
+        onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center bg-primary/50 dark:bg-primary/5 glass-outline"
       >
         <ArrowUp
@@ -146,9 +130,7 @@ export function TrackerSection({
             {filters.map((f) => (
               <Button
                 key={f.value}
-                onClick={() =>
-                  setState((prev) => ({ ...prev, filter: f.value }))
-                }
+                onClick={() => setFilter(f.value)}
                 className={`px-2 py-0.5 text-xxs font-medium rounded-full transition-colors ${
                   filter === f.value
                     ? "bg-primary/80 dark:bg-primary/10 text-primary-900 dark:text-primary-100 glass-outline"

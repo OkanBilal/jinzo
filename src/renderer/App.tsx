@@ -10,7 +10,7 @@ import {
   MainContent,
 } from "./components/layout/main";
 import { shouldHideRightPanel, SESSION_PANEL_GUTTER } from "./lib/layout";
-import { useBottomTerminal, BottomTerminalProvider } from "./hooks/use-bottom-terminal";
+import { useBottomTerminal } from "./hooks/use-bottom-terminal";
 import { useBrowserPanel, BrowserPanelProvider } from "./hooks/use-browser-panel";
 import { BrowserPanel } from "./features/workspace/components/browser-panel";
 import { useDocumentViewer, DocumentViewerProvider } from "./hooks/use-document-viewer";
@@ -250,13 +250,11 @@ export default function App() {
       <ReduxProvider>
         <Router>
           <MainHeaderProvider>
-            <BottomTerminalProvider>
-              <BrowserPanelProvider>
-                <DocumentViewerProvider>
-                  <AppContent />
-                </DocumentViewerProvider>
-              </BrowserPanelProvider>
-            </BottomTerminalProvider>
+            <BrowserPanelProvider>
+              <DocumentViewerProvider>
+                <AppContent />
+              </DocumentViewerProvider>
+            </BrowserPanelProvider>
           </MainHeaderProvider>
         </Router>
       </ReduxProvider>
