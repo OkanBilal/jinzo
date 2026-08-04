@@ -58,7 +58,9 @@ export function useDeleteWorkspace() {
   const handleConfirmDelete = async () => {
     if (!workspaceToDelete) return;
 
-    const deletePromise = deleteWorkspace(workspaceToDelete).unwrap();
+    // Sidebar delete leaves the directory alone; removing it from disk is an
+    // opt-in offered only in Settings › Archive.
+    const deletePromise = deleteWorkspace({ id: workspaceToDelete }).unwrap();
     toast.promise(deletePromise, {
       loading: "Deleting workspace…",
       success: "Workspace deleted",

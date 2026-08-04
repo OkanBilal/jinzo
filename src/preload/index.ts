@@ -292,6 +292,7 @@ const api = {
   workspace: {
     // ── lifecycle ──
     list: () => ipcRenderer.invoke(CHANNELS.workspace.list),
+    listArchived: () => ipcRenderer.invoke(CHANNELS.workspace.listArchived),
     get: (id: string) => ipcRenderer.invoke(CHANNELS.workspace.get, id),
     listByAccount: (accountId: string) =>
       ipcRenderer.invoke(CHANNELS.workspace.listByAccount, accountId),
@@ -309,10 +310,12 @@ const api = {
       ipcRenderer.invoke(CHANNELS.workspace.createFromSource, payload),
     update: (id: string, payload: unknown) =>
       ipcRenderer.invoke(CHANNELS.workspace.update, id, payload),
-    delete: (id: string) =>
-      ipcRenderer.invoke(CHANNELS.workspace.delete, id),
+    delete: (id: string, options?: { removeWorktree?: boolean }) =>
+      ipcRenderer.invoke(CHANNELS.workspace.delete, id, options),
     archive: (id: string) =>
       ipcRenderer.invoke(CHANNELS.workspace.archive, id),
+    unarchive: (id: string) =>
+      ipcRenderer.invoke(CHANNELS.workspace.unarchive, id),
     // ── git operations (see CONTEXT.md "Workspace git operations") ──
     renameBranch: (id: string, newBranchName: string) =>
       ipcRenderer.invoke(CHANNELS.workspace.renameBranch, id, newBranchName),

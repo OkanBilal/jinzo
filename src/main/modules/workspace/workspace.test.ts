@@ -105,6 +105,7 @@ vi.mock("../git/git.service", () => ({
     discardPaths: vi.fn(),
     checkoutBranch: vi.fn(),
     captureDiffSnapshot: vi.fn(),
+    removeWorktree: vi.fn(),
   },
 }));
 
@@ -317,6 +318,40 @@ describe("workspaceRepo — workspace lifecycle", () => {
       expect(result!.isArchived).toBe(true);
     });
   });
+
+  describe("unarchive", () => {
+    it("sets isArchived back to false", async () => {
+      createWorkspace(db, { id: "a1", isArchived: true });
+
+      const result = await workspaceRepo.unarchive("a1");
+      expect(result).not.toBeNull();
+      expect(result!.isArchived).toBe(false);
+    });
+
+    it("returns the row to findAll's default view", async () => {
+      createWorkspace(db, { id: "a1", isArchived: true });
+      expect(await workspaceRepo.findAll()).toHaveLength(0);
+
+      await workspaceRepo.unarchive("a1");
+      expect(await workspaceRepo.findAll()).toHaveLength(1);
+    });
+  });
+
+  describe("findArchived", () => {
+    it("returns only archived workspaces — the complement of findAll", async () => {
+      createWorkspace(db, { id: "w1", isArchived: false });
+      createWorkspace(db, { id: "w2", isArchived: true });
+
+      const result = await workspaceRepo.findArchived();
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe("w2");
+    });
+
+    it("returns empty array when nothing is archived", async () => {
+      createWorkspace(db, { id: "w1", isArchived: false });
+      expect(await workspaceRepo.findArchived()).toEqual([]);
+    });
+  });
 });
 
 describe("workspaceService — workspace lifecycle", () => {
@@ -429,11 +464,205 @@ describe("workspaceService — workspace lifecycle", () => {
   });
 
   describe("delete", () => {
+    beforeEach(() => {
+      vi.mocked(gitService.removeWorktree).mockReset();
+    });
+
     it("deletes workspace", async () => {
       createWorkspace(db, { id: "ws1" });
       await workspaceService.delete("ws1");
 
       expect(await workspaceService.get("ws1")).toBeNull();
+    });
+
+    it("leaves the directory alone by default", async () => {
+      createWorkspace(db, {
+        id: "ws1",
+        metadata: JSON.stringify({
+          worktree: {
+            enabled: true,
+            name: "feat",
+            path: "/tmp/wt/feat",
+            sourcePath: "/tmp/repo",
+          },
+        }),
+      });
+
+      await workspaceService.delete("ws1");
+      expect(gitService.removeWorktree).not.toHaveBeenCalled();
+    });
+
+    it("removes the worktree when asked", async () => {
+      createWorkspace(db, {
+        id: "ws1",
+        metadata: JSON.stringify({
+          worktree: {
+            enabled: true,
+            name: "feat",
+            path: "/tmp/wt/feat",
+            sourcePath: "/tmp/repo",
+          },
+        }),
+      });
+
+      await workspaceService.delete("ws1", { removeWorktree: true });
+
+      expect(gitService.removeWorktree).toHaveBeenCalledWith(
+        "/tmp/repo",
+        "/tmp/wt/feat",
+      );
+      expect(await workspaceService.get("ws1")).toBeNull();
+    });
+
+    // A workspace that occupies the repo itself is the user's own checkout —
+    // removeWorktree must not reach for it.
+    it("ignores removeWorktree for a non-worktree workspace", async () => {
+      createWorkspace(db, {
+        id: "ws1",
+        rootPath: "/tmp/repo",
+        metadata: JSON.stringify({ worktree: { enabled: false } }),
+      });
+
+      await workspaceService.delete("ws1", { removeWorktree: true });
+
+      expect(gitService.removeWorktree).not.toHaveBeenCalled();
+      expect(await workspaceService.get("ws1")).toBeNull();
+    });
+
+    // Otherwise a worktree deleted by hand leaves a row nothing can remove.
+    it("still deletes the row when worktree removal fails", async () => {
+      vi.mocked(gitService.removeWorktree).mockRejectedValueOnce(
+        new Error("is not a working tree"),
+      );
+      createWorkspace(db, {
+        id: "ws1",
+        metadata: JSON.stringify({
+          worktree: {
+            enabled: true,
+            name: "feat",
+            path: "/tmp/wt/feat",
+            sourcePath: "/tmp/repo",
+          },
+        }),
+      });
+
+      await workspaceService.delete("ws1", { removeWorktree: true });
+      expect(await workspaceService.get("ws1")).toBeNull();
+    });
+  });
+
+  describe("listArchived", () => {
+    it("returns empty array when nothing is archived", async () => {
+      createWorkspace(db, { id: "ws1", isArchived: false });
+      expect(await workspaceService.listArchived()).toEqual([]);
+    });
+
+    it("resolves the project name, including for archived projects", async () => {
+      const project = createProject(db, {
+        id: "p1",
+        name: "Mains",
+        isArchived: true,
+      });
+      createWorkspace(db, {
+        id: "ws1",
+        projectId: project.id,
+        isArchived: true,
+      });
+
+      const [row] = await workspaceService.listArchived();
+      expect(row.projectName).toBe("Mains");
+    });
+
+    it("reports a null project name for a workspace with no project", async () => {
+      createWorkspace(db, { id: "ws1", isArchived: true });
+
+      const [row] = await workspaceService.listArchived();
+      expect(row.projectName).toBeNull();
+    });
+
+    it("exposes worktree metadata only for worktree workspaces", async () => {
+      createWorkspace(db, {
+        id: "wt",
+        isArchived: true,
+        metadata: JSON.stringify({
+          worktree: {
+            enabled: true,
+            name: "feat",
+            path: "/tmp/wt/feat",
+            sourcePath: "/tmp/repo",
+          },
+        }),
+      });
+      createWorkspace(db, {
+        id: "direct",
+        isArchived: true,
+        metadata: JSON.stringify({ worktree: { enabled: false } }),
+      });
+
+      const rows = await workspaceService.listArchived();
+      const byId = new Map(rows.map((r) => [r.id, r]));
+
+      expect(byId.get("wt")!.worktree).toMatchObject({ path: "/tmp/wt/feat" });
+      expect(byId.get("direct")!.worktree).toBeNull();
+    });
+
+    // A project's archiveScript is free to remove the directory, so the list
+    // has to be able to say the folder is gone.
+    it("reports a missing directory", async () => {
+      createWorkspace(db, { id: "ws1", isArchived: true, rootPath: "/gone" });
+      vi.mocked(existsSync).mockReturnValueOnce(false);
+
+      const [row] = await workspaceService.listArchived();
+      expect(row.pathExists).toBe(false);
+    });
+  });
+
+  describe("unarchive", () => {
+    it("clears isArchived", async () => {
+      createWorkspace(db, { id: "ws1", isArchived: true });
+
+      const result = await workspaceService.unarchive("ws1");
+      expect(result.isArchived).toBe(false);
+      expect(await workspaceService.listArchived()).toEqual([]);
+      expect(await workspaceService.list()).toHaveLength(1);
+    });
+
+    it("throws for a non-existent workspace", async () => {
+      await expect(workspaceService.unarchive("missing")).rejects.toThrow(
+        "Workspace not found",
+      );
+    });
+
+    // Unarchiving must not re-run setup or touch the repo — the row comes back
+    // and nothing else happens.
+    it("runs no scripts", async () => {
+      const project = createProject(db, {
+        id: "p1",
+        name: "ScriptProject",
+        setupScript: "echo setup",
+        archiveScript: "echo archive",
+      });
+      createWorkspace(db, {
+        id: "ws1",
+        projectId: project.id,
+        isArchived: true,
+      });
+      vi.mocked(execFile).mockClear();
+
+      await workspaceService.unarchive("ws1");
+      expect(execFile).not.toHaveBeenCalled();
+    });
+
+    // The directory can be gone by the time the user restores the workspace.
+    // That's the same state a deleted-by-hand workspace lands in, not an error.
+    it("restores a workspace whose directory is missing", async () => {
+      createWorkspace(db, { id: "ws1", isArchived: true, rootPath: "/gone" });
+      vi.mocked(existsSync).mockReturnValue(false);
+
+      const result = await workspaceService.unarchive("ws1");
+      expect(result.isArchived).toBe(false);
+
+      vi.mocked(existsSync).mockReturnValue(true);
     });
   });
 

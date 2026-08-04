@@ -1,5 +1,5 @@
 import { Space } from "@/lib/redux/api";
-import { parseIcon } from "@/lib/icon-registry";
+import { iconColorClass, parseIcon } from "@/lib/icon-registry";
 import { Button } from "@/components/ui";
 
 interface SpaceSelectorProps {
@@ -35,7 +35,11 @@ function SpaceSelector({
             {icon.type === "emoji" ? (
               <span className="text-lg font-medium">{icon.value}</span>
             ) : (
-              <icon.value className="size-4 text-primary-800 dark:text-primary" />
+              <icon.value
+                className={`size-4 ${
+                  iconColorClass(icon.color) || "text-primary-800 dark:text-primary"
+                }`}
+              />
             )}
           </Button>
         );

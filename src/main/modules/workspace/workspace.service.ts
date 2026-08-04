@@ -11,7 +11,9 @@ import { gitService, type DiffSnapshot } from "../git";
 import { appSettingsService } from "../appSettings/appSettings.service";
 import type { CreateProjectPayload, ProjectResponse } from "../projects/projects.dto";
 import type {
+  ArchivedWorkspaceResponse,
   CreateWorkspacePayload,
+  DeleteWorkspaceOptions,
   UpdateWorkspacePayload,
   WorkspaceMetadata,
   WorkspaceIntakePayload,
@@ -406,6 +408,34 @@ export const workspaceService = {
     return workspaceRepo.findAll();
   },
 
+  /**
+   * The archived workspaces, enriched for Settings › Archive.
+   *
+   * Projects are read once and joined in memory rather than per row: the list
+   * is small and every row would otherwise hit the same handful of projects.
+   */
+  async listArchived(): Promise<ArchivedWorkspaceResponse[]> {
+    const archived = await workspaceRepo.findArchived();
+    if (archived.length === 0) return [];
+
+    // Archived workspaces can belong to archived projects, so include those —
+    // otherwise the row loses its project name for no reason the user can see.
+    const projects = await projectsRepo.findAll(true);
+    const nameByProject = new Map(projects.map((p) => [p.id, p.name]));
+
+    return archived.map((workspace) => {
+      const worktree = workspace.metadata?.worktree;
+      return {
+        ...workspace,
+        projectName: workspace.projectId
+          ? (nameByProject.get(workspace.projectId) ?? null)
+          : null,
+        pathExists: workspacePathExists(workspace.rootPath),
+        worktree: worktree?.enabled ? worktree : null,
+      };
+    });
+  },
+
   async get(id: string): Promise<WorkspaceResponse | null> {
     return workspaceRepo.findById(id);
   },
@@ -713,7 +743,35 @@ export const workspaceService = {
     return updated;
   },
 
-  async delete(id: string): Promise<void> {
+  /**
+   * Delete the workspace row, and optionally its worktree directory.
+   *
+   * The directory is only ever removed for a worktree — `git worktree remove`
+   * on the path Mains created. A workspace that occupies the repo itself is
+   * the user's own checkout, so `removeWorktree` is ignored there rather than
+   * honoured against a directory we never made.
+   *
+   * The row goes regardless of what git does. A worktree whose directory was
+   * already deleted by hand (or by a project's archiveScript) makes `git
+   * worktree remove` fail, and refusing to delete the row over that would
+   * leave the user with an entry they cannot get rid of by any route.
+   */
+  async delete(id: string, options?: DeleteWorkspaceOptions): Promise<void> {
+    if (options?.removeWorktree) {
+      const workspace = await workspaceRepo.findById(id);
+      const worktree = workspace?.metadata?.worktree;
+      if (worktree?.enabled) {
+        try {
+          await gitService.removeWorktree(worktree.sourcePath, worktree.path);
+        } catch (err) {
+          console.error(
+            `[WorkspaceService] Failed to remove worktree at ${worktree.path}:`,
+            err,
+          );
+        }
+      }
+    }
+
     removeGitStateWatcher(id);
     await workspaceRepo.delete(id);
   },
@@ -772,6 +830,25 @@ export const workspaceService = {
     }
 
     return archived;
+  },
+
+  /**
+   * Put an archived workspace back into the active list.
+   *
+   * No script runs and nothing is touched on disk — archiving may have removed
+   * the directory via a project's archiveScript, and re-running setup on the
+   * user's behalf would be a side effect they never asked for. The row comes
+   * back; if its directory is gone the workspace surfaces as missing, the same
+   * state any deleted-by-hand workspace lands in. The git-state watcher is
+   * re-established by the next `listGitStates` sync.
+   */
+  async unarchive(id: string): Promise<WorkspaceResponse> {
+    const workspace = await workspaceRepo.findById(id);
+    if (!workspace) throw new Error("Workspace not found");
+
+    const unarchived = await workspaceRepo.unarchive(id);
+    if (!unarchived) throw new Error("Failed to unarchive workspace");
+    return unarchived;
   },
 
   // ─────────────────────────────────────────────────────────────

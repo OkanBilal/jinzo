@@ -44,6 +44,22 @@ export interface Workspace {
   updatedAt: Date;
 }
 
+/** Mirrors WorktreeMetadata in workspace.dto.ts. */
+export interface WorkspaceWorktree {
+  enabled: true;
+  name: string;
+  path: string;
+  sourcePath: string;
+}
+
+/** An archived workspace enriched for Settings › Archive. */
+export interface ArchivedWorkspace extends Workspace {
+  projectName: string | null;
+  pathExists: boolean;
+  /** Non-null only for worktree workspaces — the one case Delete can clean up. */
+  worktree: WorkspaceWorktree | null;
+}
+
 export interface CreateWorkspacePayload {
   id: string;
   accountId: string;
@@ -229,6 +245,11 @@ export const workspaceApi = baseApi.injectEndpoints({
       providesTags: ["Workspaces"],
     }),
 
+    listArchivedWorkspaces: builder.query<ArchivedWorkspace[], void>({
+      query: () => ({ handler: CHANNELS.workspace.listArchived }),
+      providesTags: ["Workspaces"],
+    }),
+
     // Absence rule: a missing workspace arrives as null data, not an error.
     getWorkspace: builder.query<Workspace | null, string>({
       query: (id) => ({
@@ -295,10 +316,15 @@ export const workspaceApi = baseApi.injectEndpoints({
       ],
     }),
 
-    deleteWorkspace: builder.mutation<void, string>({
-      query: (id) => ({
+    // `removeWorktree` is honoured only for worktree workspaces — see
+    // workspaceService.delete.
+    deleteWorkspace: builder.mutation<
+      void,
+      { id: string; removeWorktree?: boolean }
+    >({
+      query: ({ id, removeWorktree }) => ({
         handler: CHANNELS.workspace.delete,
-        args: [id],
+        args: [id, { removeWorktree }],
       }),
       invalidatesTags: ["Workspaces", "WorkspaceGitStates"],
     }),
@@ -306,6 +332,18 @@ export const workspaceApi = baseApi.injectEndpoints({
     archiveWorkspace: builder.mutation<Workspace, string>({
       query: (id) => ({
         handler: CHANNELS.workspace.archive,
+        args: [id],
+      }),
+      invalidatesTags: (_result, _error, id) => [
+        "Workspaces",
+        "WorkspaceGitStates",
+        { type: "Workspaces", id },
+      ],
+    }),
+
+    unarchiveWorkspace: builder.mutation<Workspace, string>({
+      query: (id) => ({
+        handler: CHANNELS.workspace.unarchive,
         args: [id],
       }),
       invalidatesTags: (_result, _error, id) => [
@@ -588,6 +626,7 @@ export const {
   // workspace lifecycle
   useListWorkspacesQuery,
   useLazyListWorkspacesQuery,
+  useListArchivedWorkspacesQuery,
   useGetWorkspaceQuery,
   useLazyGetWorkspaceQuery,
   useListWorkspacesByAccountQuery,
@@ -600,6 +639,7 @@ export const {
   useUpdateWorkspaceMutation,
   useDeleteWorkspaceMutation,
   useArchiveWorkspaceMutation,
+  useUnarchiveWorkspaceMutation,
   useSelectWorkspaceDirectoryMutation,
   useRenameWorkspaceBranchMutation,
   useSwitchWorkspaceBranchMutation,

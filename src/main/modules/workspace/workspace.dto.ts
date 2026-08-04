@@ -118,6 +118,38 @@ export interface WorkspaceListResponse {
   total: number;
 }
 
+/**
+ * An archived workspace, enriched for the Settings › Archive list.
+ *
+ * The extra fields all answer questions the list has to answer before the user
+ * can decide between Unarchive and Delete, and none of them are on the row:
+ * whether the directory survived archiving (a project's archiveScript is free
+ * to remove it), which project it belonged to, and whether deleting it can
+ * also clean up a worktree. Resolved server-side so the renderer doesn't fan
+ * out one call per row.
+ */
+export interface ArchivedWorkspaceResponse extends WorkspaceResponse {
+  /** Display name of the owning project, or null when the row has none. */
+  projectName: string | null;
+  /** Whether `rootPath` is still on disk. See `workspacePathExists`. */
+  pathExists: boolean;
+  /**
+   * Set only when this workspace lives in its own git worktree, which is the
+   * one case where deleting it can safely remove a directory from disk. Null
+   * for workspaces that occupy the repo itself — there the directory is the
+   * user's checkout and is never ours to delete.
+   */
+  worktree: WorktreeMetadata | null;
+}
+
+export interface DeleteWorkspaceOptions {
+  /**
+   * Also remove the workspace's worktree from disk. Ignored unless the
+   * workspace is a worktree — see `ArchivedWorkspaceResponse.worktree`.
+   */
+  removeWorktree?: boolean;
+}
+
 export interface ScriptCompleteEvent {
   workspaceId: string;
   script: "setup" | "archive";

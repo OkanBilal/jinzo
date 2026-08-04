@@ -5,7 +5,7 @@ import { useListProjectsQuery } from "@/lib/redux/api";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { setSidebarCollapsed } from "@/lib/redux/slices/appSettingsSlice";
 import { useIsMobile } from "@/lib/platform";
-import { parseIcon, type IconComponent } from "@/lib/icon-registry";
+import { iconColorClass, parseIcon, type IconComponent } from "@/lib/icon-registry";
 import {
   getSettingsRouteId,
   isSettingsNavItemActive,
@@ -100,7 +100,9 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                 let iconContent: React.ReactNode;
                 if (parsed && parsed.type === "icon") {
                   const IconComp = parsed.value as IconComponent;
-                  iconContent = <IconComp className="size-4" />;
+                  iconContent = (
+                    <IconComp className={`size-4 ${iconColorClass(parsed.color)}`} />
+                  );
                 } else if (parsed && parsed.type === "emoji") {
                   iconContent = (
                     <span className="text-sm leading-none">

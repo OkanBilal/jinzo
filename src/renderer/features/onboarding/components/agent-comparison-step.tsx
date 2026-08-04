@@ -198,8 +198,8 @@ function EnableButton({
         "group min-w-26 rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50",
         isSelected
           ? cn(
-              "bg-success text-white",
-              showPreview && "hover:bg-danger hover:text-white",
+              "glass-success text-white",
+              showPreview && "hover:glass-danger hover:text-white",
             )
           : cn(
               "bg-primary-500/10 text-primary-500 dark:text-primary-400",

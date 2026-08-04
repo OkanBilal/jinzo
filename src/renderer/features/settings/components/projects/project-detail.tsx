@@ -16,6 +16,7 @@ import { ProjectScriptsSection } from "./project-scripts-section";
 import { ProjectInstructionsSection } from "./project-instructions-section";
 import { ProjectSaveBar } from "./project-save-bar";
 import { extractErrorMessage } from "@/lib/extract-error-message";
+import { DEFAULT_ICON_COLOR, formatIcon } from "@/lib/icon-registry";
 
 interface ProjectDetailProps {
   id: string;
@@ -30,7 +31,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
   const [showLinkModal, setShowLinkModal] = useState(false);
 
   const [state, dispatch] = useReducer(formReducer, initialFormState);
-  const { defaultBranch, setupScript, runScript, archiveScript, commitInstructions, prInstructions, icon, iconMode, isIconPickerOpen, isDirty } = state;
+  const { defaultBranch, setupScript, runScript, archiveScript, commitInstructions, prInstructions, icon, iconMode, iconColor, isIconPickerOpen, isDirty } = state;
 
   // Sync form state when project data loads
   if (project !== state.prevProject) {
@@ -50,11 +51,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
   const handleSave = useCallback(async () => {
     if (saving || !project) return;
     try {
-      const iconValue = icon
-        ? iconMode === "icon"
-          ? `icon:${icon}`
-          : `emoji:${icon}`
-        : null;
+      const iconValue = formatIcon(iconMode, icon, iconColor);
 
       await updateProject({
         id: project.id,
@@ -73,16 +70,18 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
     } catch (err: any) {
       toast.error(extractErrorMessage(err, "Failed to save project settings"));
     }
-  }, [saving, project, icon, iconMode, defaultBranch, setupScript, runScript, archiveScript, commitInstructions, prInstructions, updateProject]);
+  }, [saving, project, icon, iconMode, iconColor, defaultBranch, setupScript, runScript, archiveScript, commitInstructions, prInstructions, updateProject]);
 
-  // Auto-save when icon changes (skip syncs from project load/switch via isDirty)
-  const prevIconRef = useRef(icon);
+  // Auto-save when the icon or its tint changes (skip syncs from project
+  // load/switch via isDirty)
+  const iconKey = `${icon}|${iconColor}`;
+  const prevIconRef = useRef(iconKey);
   useEffect(() => {
-    if (prevIconRef.current === icon) return;
-    prevIconRef.current = icon;
+    if (prevIconRef.current === iconKey) return;
+    prevIconRef.current = iconKey;
     if (!isDirty) return;
     if (project) handleSave();
-  }, [icon, isDirty, project, handleSave]);
+  }, [iconKey, isDirty, project, handleSave]);
 
   const lastSavedLabel = useMemo(() => {
     const ts = project?.updatedAt || project?.createdAt;
@@ -161,7 +160,12 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
             onSelectIcon={(name) => dispatch({ type: "SET_ICON", icon: name, iconMode: "icon" })}
             onSwitchMode={(mode) => dispatch({ type: "SET_ICON_MODE", iconMode: mode })}
             onClose={() => dispatch({ type: "SET_ICON_PICKER_OPEN", isOpen: false })}
-            onClear={() => dispatch({ type: "SET_ICON", icon: "", iconMode: "emoji" })}
+            onClear={() => {
+              dispatch({ type: "SET_ICON_COLOR", iconColor: DEFAULT_ICON_COLOR });
+              dispatch({ type: "SET_ICON", icon: "", iconMode: "emoji" });
+            }}
+            iconColor={iconColor}
+            onSelectColor={(color) => dispatch({ type: "SET_ICON_COLOR", iconColor: color })}
           />
         </SettingsRow>
         {/* <SettingsDivider />

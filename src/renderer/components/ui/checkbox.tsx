@@ -41,11 +41,11 @@ export function Checkbox({
       />
       <div
         className={cn(
-          "w-4 h-4 min-w-4 min-h-4 rounded-md border transition-colors duration-200 flex items-center justify-center",
+          "w-4 h-4 min-w-4 min-h-4 rounded-md glass-outline transition-colors duration-200 flex items-center justify-center",
           checked
-            ? "bg-primary-800 dark:bg-primary-200 border-primary-600 dark:border-primary-500"
-            : "bg-primary dark:bg-primary-800 border-primary-300 dark:border-primary-600/60",
-          !disabled && "hover:border-primary-500 dark:hover:border-primary-700",
+            ? "bg-primary-800 dark:bg-primary-200 glass-fill-primary dark:glass-fill-primary-800"
+            : "bg-primary dark:bg-primary-800 glass-fill-primary dark:glass-fill-primary-800",
+          !disabled && "hover:glass-fill-primary-800 dark:hover:glass-fill-primary-200",
         )}
       >
         {checked && <Check className="w-3 h-3 text-primary dark:text-primary-900" />}

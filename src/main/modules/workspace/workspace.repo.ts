@@ -41,6 +41,22 @@ export const workspaceRepo = {
     return rows.map(mapWorkspaceRow);
   },
 
+  /**
+   * The archived rows only — the complement of `findAll()`'s default.
+   *
+   * Ordered by `updatedAt`, which `archive()` bumps, so the list reads as
+   * "most recently archived first".
+   */
+  async findArchived(): Promise<WorkspaceResponse[]> {
+    const db = getDb();
+    const rows = await db
+      .select()
+      .from(workspaces)
+      .where(eq(workspaces.isArchived, true))
+      .orderBy(desc(workspaces.updatedAt));
+    return rows.map(mapWorkspaceRow);
+  },
+
   async findById(id: string): Promise<WorkspaceResponse | null> {
     const db = getDb();
     const rows = await db
@@ -157,6 +173,15 @@ export const workspaceRepo = {
     await db
       .update(workspaces)
       .set({ isArchived: true, updatedAt: sql`(unixepoch())` })
+      .where(eq(workspaces.id, id));
+    return this.findById(id);
+  },
+
+  async unarchive(id: string): Promise<WorkspaceResponse | null> {
+    const db = getDb();
+    await db
+      .update(workspaces)
+      .set({ isArchived: false, updatedAt: sql`(unixepoch())` })
       .where(eq(workspaces.id, id));
     return this.findById(id);
   },

@@ -1,19 +1,29 @@
 import { useRef } from "react";
 import { EmojiPicker } from "frimousse";
 import { useClickOutside } from "@/hooks/use-click-outside";
-import { availableIcons } from "@/lib/icon-registry";
+import {
+  availableIcons,
+  iconRegistry,
+  iconColorClass,
+  DEFAULT_ICON_COLOR,
+  ICON_COLORS,
+} from "@/lib/icon-registry";
 import { Button } from "@/components/ui";
 import { Close, SelectOption } from "@/components/ui/icons";
 
 function CurrentIcon({
   icon,
+  iconColor,
 }: {
   icon: string;
   iconMode: "emoji" | "icon";
+  iconColor?: string;
 }) {
   if (!icon) return null;
-  const IconComp = availableIcons.find((i) => i.name === icon)?.component;
-  if (IconComp) return <IconComp className="size-5" />;
+  // Registry rather than `availableIcons` — an icon already saved on the record
+  // must still render even when it is no longer offered in the grid.
+  const IconComp = iconRegistry[icon];
+  if (IconComp) return <IconComp className={`size-5 ${iconColorClass(iconColor)}`} />;
   return <span>{icon}</span>;
 }
 
@@ -29,6 +39,9 @@ interface SpaceIconPickerProps {
   onSwitchMode: (mode: IconPickerMode) => void;
   onClose: () => void;
   onClear?: () => void;
+  /** Tint applied to registry icons. Omit to hide the color row entirely. */
+  iconColor?: string;
+  onSelectColor?: (color: string) => void;
 }
 
 export default function SpaceIconPicker({
@@ -41,8 +54,11 @@ export default function SpaceIconPicker({
   onSwitchMode,
   onClose,
   onClear,
+  iconColor,
+  onSelectColor,
 }: SpaceIconPickerProps) {
   const pickerRef = useRef<HTMLDivElement>(null);
+  const tint = iconColorClass(iconColor);
 
   useClickOutside(pickerRef, () => {
     if (isOpen) onClose();
@@ -69,7 +85,7 @@ export default function SpaceIconPicker({
           {onClear && icon ? (
             <span className="group/icon relative flex items-center justify-center size-5">
               <span className="group-hover/icon:opacity-0 transition-opacity">
-                <CurrentIcon icon={icon} iconMode={iconMode} />
+                <CurrentIcon icon={icon} iconMode={iconMode} iconColor={iconColor} />
               </span>
               <span
                 role="button"
@@ -181,23 +197,52 @@ export default function SpaceIconPicker({
                 </EmojiPicker.Viewport>
               </EmojiPicker.Root>
             ) : (
-              <div className="grid grid-cols-5 gap-2">
-                {availableIcons.map(({ name, component: IconComp }) => (
-                  <Button
-                    key={name}
-                    type="button"
-                    onClick={() => onSelectIcon(name)}
-                    className={`flex items-center justify-center size-8 rounded-lg transition-colors cursor-pointer ${
-                      icon === name
-                        ? "bg-primary-950/15 dark:bg-primary/20 text-primary-700 dark:text-primary"
-                        : "hover:bg-primary-950/10 dark:hover:bg-primary/10 text-primary-700 dark:text-primary-200"
-                    }`}
-                    title={name}
-                  >
-                    <IconComp className="size-5.5" />
-                  </Button>
-                ))}
-              </div>
+              <>
+                {onSelectColor && (
+                  <div className="flex items-center justify-between gap-1 pb-3 mb-3 border-b border-primary-950/10 dark:border-primary/10">
+                    {ICON_COLORS.map(({ name, label, swatch }) => {
+                      const isSelected =
+                        (iconColor || DEFAULT_ICON_COLOR) === name;
+                      return (
+                        <Button
+                          key={name}
+                          type="button"
+                          onClick={() => onSelectColor(name)}
+                          title={label}
+                          aria-label={label}
+                          aria-pressed={isSelected}
+                          className={`flex items-center justify-center size-6 rounded-full cursor-pointer transition-colors ${
+                            isSelected
+                              ? "bg-primary-950/15 dark:bg-primary/20"
+                              : "hover:bg-primary-950/8 dark:hover:bg-primary/10"
+                          }`}
+                        >
+                          <span className={`size-4 rounded-full ${swatch}`} />
+                        </Button>
+                      );
+                    })}
+                  </div>
+                )}
+                <div className="grid grid-cols-5 gap-2">
+                  {availableIcons.map(({ name, component: IconComp }) => {
+                    return (
+                      <Button
+                        key={name}
+                        type="button"
+                        onClick={() => onSelectIcon(name)}
+                        className={`flex items-center justify-center size-8 rounded-lg transition-colors cursor-pointer ${
+                          icon === name
+                            ? "bg-primary-950/15 dark:bg-primary/20"
+                            : "hover:bg-primary-950/10 dark:hover:bg-primary/10"
+                        } ${tint || "text-primary-700 dark:text-primary-200"}`}
+                        title={name}
+                      >
+                        <IconComp className="size-5.5" />
+                      </Button>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
       </div>

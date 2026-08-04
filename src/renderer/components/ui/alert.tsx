@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Body, Label } from "./text";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,13 @@ interface AlertProps {
   onSecondary: () => void;
   isPrimaryLoading?: boolean;
   primaryButtonVariant?: "primary" | "danger";
+  /**
+   * Extra content between the description and the buttons — an opt-in the
+   * confirmation itself carries, such as "also remove the directory". Enter
+   * still fires the primary action, so anything focusable here must not need
+   * Enter of its own.
+   */
+  children?: ReactNode;
 }
 
 /**
@@ -43,6 +50,7 @@ export default function Alert({
   onPrimary,
   onSecondary,
   isPrimaryLoading = false,
+  children,
 }: AlertProps) {
   // Hide the native browser view while open so this alert isn't trapped behind it.
   useSuppressBrowserView(isOpen);
@@ -83,7 +91,7 @@ export default function Alert({
       <div
         ref={dialogRef}
         tabIndex={-1}
-        className="rounded-4xl p-6 glass-surface max-w-84 w-full animate-dropdown-in origin-center focus:outline-none"
+        className="rounded-4xl p-6 glass-surface max-w-90 w-full animate-dropdown-in origin-center focus:outline-none"
         role="dialog"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
@@ -94,6 +102,7 @@ export default function Alert({
         <Label className="font-normal text-s ">
           {description}
         </Label>
+        {children && <div className="mt-4">{children}</div>}
         <div className="flex gap-3 mt-6">
           <Button
             className="flex-1 rounded-full font-semibold"

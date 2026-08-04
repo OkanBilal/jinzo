@@ -1,5 +1,6 @@
 import { lazy, type ComponentType, type ElementType } from "react";
 import {
+  Archive,
   Branch,
   Chart,
   Codex,
@@ -28,6 +29,7 @@ const CodexSettings = lazy(() => import("./components/codex"));
 const CodexPlugins = lazy(() => import("./components/provider-plugins"));
 const CursorSettings = lazy(() => import("./components/cursor"));
 const ProjectsSettings = lazy(() => import("./components/projects"));
+const ArchiveSettings = lazy(() => import("./components/archive"));
 const BackendsSettings = lazy(() => import("@/features/relay/components/backends"));
 const DashboardPage = lazy(
   () => import("@/features/stats/components/dashboard-page"),
@@ -52,6 +54,7 @@ export type SettingsRouteId =
   | "codex-plugins"
   | "cursor"
   | "backends"
+  | "archive"
   | "dashboard";
 
 export type SettingsSection = {
@@ -77,6 +80,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   // Hidden from the Settings nav — surfaced as the top-level "Relay" route instead.
   { id: "backends", label: "Relay", icon: Relay, Component: BackendsSettings },
   { id: "dashboard", label: "Dashboard", icon: Chart, showInNav: true, Component: DashboardPage },
+  { id: "archive", label: "Archive", icon: Archive, showInNav: true, Component: ArchiveSettings },
 
   { id: "claude", label: "Claude", icon: Claude, Component: ClaudeSettings },
   {

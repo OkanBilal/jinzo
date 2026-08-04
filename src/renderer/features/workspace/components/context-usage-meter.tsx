@@ -6,6 +6,53 @@ interface ContextUsageRingProps {
   usage: ContextUsageSnapshot | null;
 }
 
+type Tone = "normal" | "warn" | "critical";
+
+/** Arc / bar / number colors keyed by fill severity, so the ring and the
+ *  tooltip always read as the same state. */
+const TONE = {
+  normal: {
+    stroke: "stroke-primary-500 dark:stroke-primary-300",
+    fill: "bg-primary-500 dark:bg-primary-300",
+    text: "text-primary-700 dark:text-primary-200",
+  },
+  warn: {
+    stroke: "stroke-amber-500",
+    fill: "bg-amber-500",
+    text: "text-amber-600 dark:text-amber-400",
+  },
+  critical: {
+    stroke: "stroke-red-500",
+    fill: "bg-red-500",
+    text: "text-red-600 dark:text-red-400",
+  },
+} satisfies Record<Tone, { stroke: string; fill: string; text: string }>;
+
+function MetricRow({
+  label,
+  value,
+  emphasis = false,
+}: {
+  label: string;
+  value: string;
+  emphasis?: boolean;
+}) {
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      <span className="text-primary-500 dark:text-primary-400">{label}</span>
+      <span
+        className={`tabular-nums ${
+          emphasis
+            ? "font-medium text-primary-950 dark:text-primary-100"
+            : "text-primary-600 dark:text-primary-300"
+        }`}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
 /**
  * Circular context-window indicator. The colored arc is the used portion, the
  * muted track is what remains. Hovering reveals a detailed breakdown. Turns
@@ -23,12 +70,13 @@ export function ContextUsageRing({ usage }: ContextUsageRingProps) {
       ? (usage.autoCompactThreshold / usage.maxTokens) * 100
       : undefined;
 
-  const arcClass =
+  const tone: Tone =
     pct >= 90
-      ? "stroke-red-500"
+      ? "critical"
       : thresholdPct != null && pct >= thresholdPct
-        ? "stroke-amber-500"
-        : "stroke-primary-500 dark:stroke-primary-300";
+        ? "warn"
+        : "normal";
+  const { stroke: arcClass, fill: barClass, text: toneText } = TONE[tone];
 
   const size = 27;
   const stroke = 2.5;
@@ -37,31 +85,58 @@ export function ContextUsageRing({ usage }: ContextUsageRingProps) {
   const dash = (circumference * pct) / 100;
 
   const tooltip = (
-    <div className="flex flex-col gap-0.5 py-0.5">
-      <span className="font-medium">Context window</span>
-      <span className="tabular-nums">
-        Used: {used.toLocaleString()} ({pct.toFixed(0)}%)
-      </span>
-      <span className="tabular-nums">Remaining: {remaining.toLocaleString()}</span>
-      <span className="tabular-nums text-primary-400 dark:text-primary-500">
-        Total: {usage.maxTokens.toLocaleString()}
-      </span>
-      {usage.model && (
-        <span className="text-primary-400 dark:text-primary-500">{usage.model}</span>
-      )}
-      {thresholdPct != null && (
-        <span className="text-primary-400 dark:text-primary-500">
-          Auto-compact at {thresholdPct.toFixed(0)}%
+    <div className="flex w-49 flex-col gap-2 text-xs">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-t font-medium uppercase tracking-wider text-primary-500 dark:text-primary-400">
+          Context window
         </span>
+        <span className={`text-s font-semibold tabular-nums ${toneText}`}>
+          {pct.toFixed(0)}%
+        </span>
+      </div>
+
+      <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-primary-200/70 dark:bg-primary-800">
+        <div
+          className={`h-full rounded-full transition-[width] duration-300 ${barClass}`}
+          style={{ width: `${Math.max(pct, pct > 0 ? 2 : 0)}%` }}
+        />
+        {thresholdPct != null && (
+          <span
+            className="absolute inset-y-0 w-px bg-primary-950/30 dark:bg-primary-100/40"
+            style={{ left: `${Math.min(thresholdPct, 100)}%` }}
+          />
+        )}
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <MetricRow label="Used" value={used.toLocaleString()} emphasis />
+        <MetricRow label="Remaining" value={remaining.toLocaleString()} />
+        <MetricRow label="Total" value={usage.maxTokens.toLocaleString()} />
+      </div>
+
+      {(usage.model || thresholdPct != null) && (
+        <div className="flex items-center justify-between gap-3 border-t border-primary-950/10 pt-1.5 text-xxs text-primary-500 dark:border-primary-100/10 dark:text-primary-400">
+          {usage.model && <span className="min-w-0 truncate">{usage.model}</span>}
+          {thresholdPct != null && (
+            <span className="shrink-0 tabular-nums">
+              compacts at {thresholdPct.toFixed(0)}%
+            </span>
+          )}
+        </div>
       )}
     </div>
   );
 
   return (
-    <Tooltip position="top" content={tooltip}>
+    <Tooltip position="top-left" content={tooltip} className="p-2.5 rounded-xl">
       <div
         className="relative flex items-center justify-center"
         style={{ width: size, height: size }}
+        role="meter"
+        aria-valuenow={Math.round(pct)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`Context window ${pct.toFixed(0)}% used`}
       >
         <svg width={size} height={size} className="-rotate-90">
           <circle

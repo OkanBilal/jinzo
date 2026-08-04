@@ -6,6 +6,7 @@ import { workspaceService } from "./workspace.service";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
 import type {
   CreateWorkspacePayload,
+  DeleteWorkspaceOptions,
   WorkspaceIntakePayload,
   UpdateWorkspacePayload,
   CreateActivityPayload,
@@ -24,6 +25,11 @@ export function registerWorkspaceIpc(): void {
   ipcMain.handle(
     CHANNELS.workspace.list,
     handle(() => workspaceService.list()),
+  );
+
+  ipcMain.handle(
+    CHANNELS.workspace.listArchived,
+    handle(() => workspaceService.listArchived()),
   );
 
   ipcMain.handle(
@@ -71,12 +77,19 @@ export function registerWorkspaceIpc(): void {
 
   ipcMain.handle(
     CHANNELS.workspace.delete,
-    handle((id: string) => workspaceService.delete(id)),
+    handle((id: string, options?: DeleteWorkspaceOptions) =>
+      workspaceService.delete(id, options),
+    ),
   );
 
   ipcMain.handle(
     CHANNELS.workspace.archive,
     handle((id: string) => workspaceService.archive(id)),
+  );
+
+  ipcMain.handle(
+    CHANNELS.workspace.unarchive,
+    handle((id: string) => workspaceService.unarchive(id)),
   );
 
   // ── git operations (see CONTEXT.md "Workspace git operations") ──
@@ -273,6 +286,7 @@ export function unregisterWorkspaceIpc(): void {
   [
     // lifecycle
     CHANNELS.workspace.list,
+    CHANNELS.workspace.listArchived,
     CHANNELS.workspace.get,
     CHANNELS.workspace.listByAccount,
     CHANNELS.workspace.listGitStates,
@@ -282,6 +296,7 @@ export function unregisterWorkspaceIpc(): void {
     CHANNELS.workspace.update,
     CHANNELS.workspace.delete,
     CHANNELS.workspace.archive,
+    CHANNELS.workspace.unarchive,
     CHANNELS.workspace.renameBranch,
     CHANNELS.workspace.switchBranch,
     CHANNELS.workspace.discardPaths,

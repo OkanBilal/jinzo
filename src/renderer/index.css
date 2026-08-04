@@ -750,6 +750,7 @@ html.mains-web.dark #root {
   --glass-fill-secondary: rgba(12, 12, 12, 0.42);
   --glass-fill-submit: rgba(43, 127, 255, 0.9);
   --glass-fill-danger: rgba(255, 68, 54, 0.9);
+  --glass-fill-success: rgba(13, 197, 94, 0.9);
 
   --glass-hover-button: rgba(255, 255, 255, 0.9);
   --glass-hover-primary: var(--color-primary-200);

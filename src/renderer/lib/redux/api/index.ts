@@ -245,6 +245,7 @@ export {
   // workspace lifecycle
   useListWorkspacesQuery,
   useLazyListWorkspacesQuery,
+  useListArchivedWorkspacesQuery,
   useListWorkspaceGitStatesQuery,
   useGetWorkspaceQuery,
   useLazyGetWorkspaceQuery,
@@ -257,6 +258,7 @@ export {
   useUpdateWorkspaceMutation,
   useDeleteWorkspaceMutation,
   useArchiveWorkspaceMutation,
+  useUnarchiveWorkspaceMutation,
   useSelectWorkspaceDirectoryMutation,
   useRenameWorkspaceBranchMutation,
   useSwitchWorkspaceBranchMutation,
@@ -290,6 +292,8 @@ export {
 } from "./workspaceApi";
 export type {
   Workspace,
+  ArchivedWorkspace,
+  WorkspaceWorktree,
   WorkspaceGitState,
   WorkspaceMetadata,
   WorkspaceStatus,
