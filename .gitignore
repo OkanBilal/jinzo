@@ -19,6 +19,7 @@ dist-web/
 .env.local
 .env.test
 .env.*.local
+.cursorrules.md
 
 # OS
 .DS_Store
