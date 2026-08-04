@@ -1,4 +1,4 @@
-// Vite Preload configuration
+// Vite Preload configuration for the Preload Process
 import { defineConfig } from 'vite';
 
 // https://vitejs.dev/config

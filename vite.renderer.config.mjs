@@ -1,4 +1,4 @@
-// Vite Renderer configuration
+// Vite Renderer configuration for the Renderer Process
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';

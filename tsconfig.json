@@ -1,4 +1,4 @@
-// TypeScript configuration
+// TypeScript configuration for the Renderer Process
 {
   "compilerOptions": {
     "target": "ES2020",
