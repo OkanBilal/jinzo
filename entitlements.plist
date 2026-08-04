@@ -11,7 +11,7 @@
     <!-- Required for unsigned prebuilt binaries: @github/copilot-*, node-pty prebuilds -->
     <key>com.apple.security.cs.disable-library-validation</key>
     <true/>
-    <!-- Allow AppleScript / Apple events to other apps (Music, System Events, …) under Hardened Runtime -->
+    <!-- Allow AppleScript / Apple events to other apps (Music, Mail, System Events, …) under Hardened Runtime -->
     <key>com.apple.security.automation.apple-events</key>
     <true/>
 </dict>

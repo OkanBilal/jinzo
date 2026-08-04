@@ -4,7 +4,7 @@ import { join } from "path";
 
 /**
  * Drizzle Studio configuration for RUNTIME database
- * Points to the actual database used by the running  app
+ * Points to the actual database used by the running app
  */
 
 // macOS: ~/Library/Application Support/mains/mains.db

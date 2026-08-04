@@ -5,7 +5,7 @@ import type { Config } from "drizzle-kit";
  *
  * IMPORTANT:
  * - drizzle-kit is ONLY used at development time (generate / push / studio)
- * - The `dbCredentials.url` here is NOT the runtime DB
+ * - The `dbCredentials.url` here is NOT the runtime DB 
  * - Runtime DB path is resolved inside Electron main process via:
  *     app.getPath("userData") + "/mains.db"
  */

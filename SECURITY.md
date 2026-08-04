@@ -35,6 +35,7 @@ The following are in scope:
 - Issues requiring physical access to the machine
 - Social engineering
 
+
 ## Disclosure
 
 We follow coordinated disclosure. After a fix is released, we will credit reporters (unless they prefer to remain anonymous) in the release notes.

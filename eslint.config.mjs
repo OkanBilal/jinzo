@@ -75,7 +75,7 @@ export default tseslint.config(
     },
   },
 
-  // Common TS rules
+  // Common TS rules for both Renderer and Main Process
   {
     files: ['**/*.{ts,tsx}'],
     rules: {

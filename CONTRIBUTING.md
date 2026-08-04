@@ -35,7 +35,7 @@ All layers are plain object literals — no classes, no dependency injection.
 3. Run checks before committing:
 
 ```bash
-npm run lint:fix    # Fix lint issues
+npm run lint:fix    # Fix lint 
 npm test            # Run all tests
 ```
 
