@@ -34,6 +34,16 @@ export const runsRepo = {
     return rows.map(mapRunRowToResponse);
   },
 
+  async findArchivedRuns(): Promise<RunResponse[]> {
+    const db = getDb();
+    const rows = await db
+      .select()
+      .from(runs)
+      .where(eq(runs.isArchived, true))
+      .orderBy(desc(runs.updatedAt));
+    return rows.map(mapRunRowToResponse);
+  },
+
   async findRunById(id: string): Promise<RunResponse | null> {
     const db = getDb();
     const rows = await db
@@ -144,6 +154,15 @@ export const runsRepo = {
     await db
       .update(runs)
       .set({ isArchived: true, updatedAt: sql`(unixepoch())` })
+      .where(eq(runs.id, id));
+    return this.findRunById(id);
+  },
+
+  async unarchiveRun(id: string): Promise<RunResponse | null> {
+    const db = getDb();
+    await db
+      .update(runs)
+      .set({ isArchived: false, updatedAt: sql`(unixepoch())` })
       .where(eq(runs.id, id));
     return this.findRunById(id);
   },

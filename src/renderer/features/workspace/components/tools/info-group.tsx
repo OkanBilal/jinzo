@@ -286,7 +286,7 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
                   </div>
                 </div>
                 {message && (
-                  <Text className="text-xs text-blue-900 dark:text-blue-100 mt-1.5">
+                  <Text className="text-xs  text-blue-900 dark:text-blue-100 mt-1.5">
                     {message}
                   </Text>
                 )}
@@ -313,7 +313,7 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
           <div className="flex flex-col items-end gap-2 max-w-[80%]">
             <div className="px-3.5 py-2 rounded-2xl bg-primary-50 dark:bg-primary/5 ">
               <div>
-                <Body className="whitespace-pre-wrap">{renderedMessage}</Body>
+                <Body className="leading-7 whitespace-pre-wrap">{renderedMessage}</Body>
               </div>
             </div>
             {previewAtt && (

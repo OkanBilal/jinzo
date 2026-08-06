@@ -23,6 +23,10 @@ import type { ReviewStartParams } from "./generated/v2/ReviewStartParams";
 import type { ReviewStartResponse } from "./generated/v2/ReviewStartResponse";
 import type { SkillsListParams } from "./generated/v2/SkillsListParams";
 import type { SkillsListResponse } from "./generated/v2/SkillsListResponse";
+import type { ThreadArchiveParams } from "./generated/v2/ThreadArchiveParams";
+import type { ThreadArchiveResponse } from "./generated/v2/ThreadArchiveResponse";
+import type { ThreadDeleteParams } from "./generated/v2/ThreadDeleteParams";
+import type { ThreadDeleteResponse } from "./generated/v2/ThreadDeleteResponse";
 import type { ThreadForkParams } from "./generated/v2/ThreadForkParams";
 import type { ThreadForkResponse } from "./generated/v2/ThreadForkResponse";
 import type { ThreadGoalClearParams } from "./generated/v2/ThreadGoalClearParams";
@@ -37,6 +41,8 @@ import type { ThreadResumeParams } from "./generated/v2/ThreadResumeParams";
 import type { ThreadResumeResponse } from "./generated/v2/ThreadResumeResponse";
 import type { ThreadStartParams } from "./generated/v2/ThreadStartParams";
 import type { ThreadStartResponse } from "./generated/v2/ThreadStartResponse";
+import type { ThreadUnarchiveParams } from "./generated/v2/ThreadUnarchiveParams";
+import type { ThreadUnarchiveResponse } from "./generated/v2/ThreadUnarchiveResponse";
 import type { ThreadUnsubscribeParams } from "./generated/v2/ThreadUnsubscribeParams";
 import type { ThreadUnsubscribeResponse } from "./generated/v2/ThreadUnsubscribeResponse";
 import type { TurnInterruptParams } from "./generated/v2/TurnInterruptParams";
@@ -79,6 +85,8 @@ export interface CodexAppServerRpc {
     PluginUninstallResponse
   >;
   "review/start": RpcMethod<ReviewStartParams, ReviewStartResponse>;
+  "thread/archive": RpcMethod<ThreadArchiveParams, ThreadArchiveResponse>;
+  "thread/delete": RpcMethod<ThreadDeleteParams, ThreadDeleteResponse>;
   "thread/fork": RpcMethod<ThreadForkParams, ThreadForkResponse>;
   "thread/goal/clear": RpcMethod<
     ThreadGoalClearParams,
@@ -89,6 +97,7 @@ export interface CodexAppServerRpc {
   "thread/read": RpcMethod<ThreadReadParams, ThreadReadResponse>;
   "thread/resume": RpcMethod<ThreadResumeParams, ThreadResumeResponse>;
   "thread/start": RpcMethod<ThreadStartParams, ThreadStartResponse>;
+  "thread/unarchive": RpcMethod<ThreadUnarchiveParams, ThreadUnarchiveResponse>;
   "thread/unsubscribe": RpcMethod<
     ThreadUnsubscribeParams,
     ThreadUnsubscribeResponse

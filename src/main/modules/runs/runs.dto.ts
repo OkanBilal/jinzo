@@ -63,6 +63,17 @@ export interface RunResponse {
   updatedAt: Date;
 }
 
+export interface ArchivedRunWorkspaceResponse {
+  id: string;
+  name: string;
+  isArchived: boolean;
+}
+
+/** An archived run enriched for Settings › Archive grouping. */
+export interface ArchivedRunResponse extends RunResponse {
+  workspace: ArchivedRunWorkspaceResponse | null;
+}
+
 // ─────────────────────────────────────────────────────────────
 // Run Context DTOs
 // ─────────────────────────────────────────────────────────────

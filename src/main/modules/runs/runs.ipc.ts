@@ -30,6 +30,11 @@ export function registerRunsIpc(): void {
   );
 
   ipcMain.handle(
+    CHANNELS.runs.listArchived,
+    handle(() => runsService.listArchivedRuns()),
+  );
+
+  ipcMain.handle(
     CHANNELS.runs.getById,
     handle((id: string) => runsService.getRunById(id)),
   );
@@ -87,6 +92,11 @@ export function registerRunsIpc(): void {
   ipcMain.handle(
     CHANNELS.runs.archive,
     handle((id: string) => runsService.archiveRun(id)),
+  );
+
+  ipcMain.handle(
+    CHANNELS.runs.unarchive,
+    handle((id: string) => runsService.unarchiveRun(id)),
   );
 
   ipcMain.handle(
@@ -187,6 +197,7 @@ export function registerRunsIpc(): void {
 export function unregisterRunsIpc(): void {
   [
     CHANNELS.runs.getAll,
+    CHANNELS.runs.listArchived,
     CHANNELS.runs.getById,
     CHANNELS.runs.getByAccount,
     CHANNELS.runs.getByWorkspace,
@@ -199,6 +210,7 @@ export function unregisterRunsIpc(): void {
     CHANNELS.runs.cancel,
     CHANNELS.runs.delete,
     CHANNELS.runs.archive,
+    CHANNELS.runs.unarchive,
     CHANNELS.runs.getDetails,
     CHANNELS.runs.execute,
     CHANNELS.runs.abort,

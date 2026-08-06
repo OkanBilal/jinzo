@@ -1,6 +1,7 @@
 import { SquareSpinner } from "./square-spinner";
 import { DownloadSpinner } from "./download-spinner";
 import { GenerateSpinner } from "./generate-spinner";
+import { CircleSpinner } from "./circle-spinner";
 
 export type AsciiSpinnerVariant =
   | "claude"
@@ -11,8 +12,10 @@ export type AsciiSpinnerVariant =
 
 /** Spinner shape. `square` is the diagonal grid; `download` is the falling-bar
  *  stream for "downloading…" affordances (e.g. CLI self-update buttons);
- *  `generate` is the randomly twinkling grid for "generating…" affordances. */
-export type AsciiSpinnerKind = "square" | "download" | "generate";
+ *  `generate` is the randomly twinkling grid for "generating…" affordances;
+ *  `circle` is the dot-ring with a clockwise-chasing highlight for
+ *  "in progress" affordances (e.g. the todo plan toast). */
+export type AsciiSpinnerKind = "square" | "download" | "generate" | "circle";
 
 const VARIANT_COLOR: Record<AsciiSpinnerVariant, string> = {
   claude: "text-claude",
@@ -43,7 +46,9 @@ export function AsciiSpinner({
       ? DownloadSpinner
       : kind === "generate"
         ? GenerateSpinner
-        : SquareSpinner;
+        : kind === "circle"
+          ? CircleSpinner
+          : SquareSpinner;
   return (
     <span
       className={`inline-flex items-center align-middle ${VARIANT_COLOR[variant ?? "null"]}`}

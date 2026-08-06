@@ -502,6 +502,12 @@ export interface WorkRunAdapter {
    */
   canResumeSession?(runId: string): Promise<boolean>;
 
+  /** Archive a persisted provider session without deleting its history. */
+  archiveSession?(runId: string): Promise<void>;
+
+  /** Restore a previously archived provider session. */
+  unarchiveSession?(runId: string): Promise<void>;
+
   /**
    * Delete a persisted session permanently.
    * @param runId - The session/run ID to delete
@@ -701,6 +707,8 @@ export interface ProviderDriver {
   // ── Pass-through methods (Core delegates 1:1 to the matching WorkRunAdapter method) ──
   shutdown?(): Promise<void>;
   canResumeSession?(runId: string): Promise<boolean>;
+  archiveSession?(runId: string): Promise<void>;
+  unarchiveSession?(runId: string): Promise<void>;
   deleteSession?(runId: string): Promise<void>;
   listModels?(): Promise<ModelInfo[]>;
   listCommands?(workspacePath?: string): Promise<CommandInfo[]>;
@@ -1625,6 +1633,10 @@ export interface AccountInfo {
     type: "claude";
     email: string;
     planType: string;
+  } | {
+    type: "copilot";
+    /** GitHub login name; null when the CLI doesn't report one. */
+    login: string | null;
   } | null;
   requiresOpenaiAuth: boolean;
   /**

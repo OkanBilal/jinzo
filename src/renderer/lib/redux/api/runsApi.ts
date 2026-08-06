@@ -44,6 +44,16 @@ export interface Run {
   updatedAt: number;
 }
 
+export interface ArchivedRunWorkspace {
+  id: string;
+  name: string;
+  isArchived: boolean;
+}
+
+export interface ArchivedRun extends Run {
+  workspace: ArchivedRunWorkspace | null;
+}
+
 export interface CreateRunPayload {
   id: string;
   accountId: string;
@@ -159,6 +169,13 @@ export const runsApi = baseApi.injectEndpoints({
         args: limit ? [limit] : [],
       }),
       providesTags: ["Runs"],
+    }),
+
+    listArchivedRuns: builder.query<ArchivedRun[], void>({
+      query: () => ({ handler: CHANNELS.runs.listArchived }),
+      // The response embeds workspace archive state, so either aggregate can
+      // make this list stale.
+      providesTags: ["Runs", "Workspaces"],
     }),
 
     // Absence rule: a missing run arrives as null data, not an error.
@@ -283,6 +300,14 @@ export const runsApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, id) => ["Runs", { type: "Runs", id }],
     }),
 
+    unarchiveRun: builder.mutation<Run, string>({
+      query: (id) => ({
+        handler: CHANNELS.runs.unarchive,
+        args: [id],
+      }),
+      invalidatesTags: (_result, _error, id) => ["Runs", { type: "Runs", id }],
+    }),
+
     getRunContext: builder.query<RunContext[], string>({
       query: (runId) => ({
         handler: CHANNELS.runContext.getByRun,
@@ -392,6 +417,7 @@ export const runsApi = baseApi.injectEndpoints({
 export const {
   useGetRunsQuery,
   useLazyGetRunsQuery,
+  useListArchivedRunsQuery,
   useGetRunByIdQuery,
   useLazyGetRunByIdQuery,
   useGetRunsByAccountQuery,
@@ -409,6 +435,7 @@ export const {
   useAbortRunMutation,
   useDeleteRunMutation,
   useArchiveRunMutation,
+  useUnarchiveRunMutation,
   useGetRunContextQuery,
   useLazyGetRunContextQuery,
   useAddRunContextMutation,

@@ -589,6 +589,31 @@ body[data-resizing] iframe {
   animation-delay: var(--gsq-delay, 0ms);
 }
 
+/*
+ * Circle spinner: the classic rotating ring in the square-spinner family's
+ * language — tiny squares on a circle, each pulsing in turn (per-dot phase set
+ * in circle-spinner.tsx) so the bright spot chases clockwise with a comet
+ * tail. Duration must match DUR_MS in circle-spinner.tsx; same
+ * ease-in-out-sine as the other spinners so the fades stay silky.
+ */
+@keyframes circleDotPulse {
+  0%, 100% { opacity: 0.12; transform: translate(-50%, -50%) scale(0.6); }
+  18%      { opacity: 1;    transform: translate(-50%, -50%) scale(1); }
+  60%      { opacity: 0.12; transform: translate(-50%, -50%) scale(0.6); }
+}
+
+.circle-dot {
+  position: absolute;
+  width: 24%;
+  height: 24%;
+  border-radius: 1px;
+  background: currentColor;
+  opacity: 0.12;
+  transform: translate(-50%, -50%) scale(0.6);
+  animation: circleDotPulse 900ms cubic-bezier(0.37, 0, 0.63, 1) infinite;
+  animation-delay: var(--cd-delay, 0ms);
+}
+
 @keyframes wizardModalIn {
   0% {
     opacity: 0;

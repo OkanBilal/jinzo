@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import { HashRouter as Router, useLocation } from "react-router-dom";
 import Sidebar from "./components/layout/sidebar";
 import RightPanel from "./components/layout/right-panel";
@@ -9,7 +9,12 @@ import {
   MainLayout,
   MainContent,
 } from "./components/layout/main";
-import { shouldHideRightPanel, SESSION_PANEL_GUTTER } from "./lib/layout";
+import {
+  shouldHideRightPanel,
+  SESSION_PANEL_GUTTER,
+  CONTENT_LEFT_VAR,
+  CONTENT_RIGHT_VAR,
+} from "./lib/layout";
 import { useBottomTerminal } from "./hooks/use-bottom-terminal";
 import { useBrowserPanel, BrowserPanelProvider } from "./hooks/use-browser-panel";
 import { BrowserPanel } from "./features/workspace/components/browser-panel";
@@ -132,6 +137,31 @@ function AppContent() {
       ? `calc(${SESSION_PANEL_WIDTH} + ${SESSION_PANEL_GUTTER})`
       : undefined;
 
+  // The content column's live edges — the same values MainContent gets as
+  // margins (plus the docked session box on the right). Published on `:root`
+  // so viewport-fixed overlays (the Toaster) can center over the content
+  // instead of the window. Onboarding renders full-screen without the shell,
+  // so the edges collapse to zero there.
+  const contentLeft =
+    isMobile || sidebarCollapsed ? EDGE_GUTTER : SIDEBAR_WIDTH;
+  const contentRight = isMobile ? EDGE_GUTTER : rightLaneWidth;
+  const shellVisible = onboardingCompleted || isWeb;
+  useLayoutEffect(() => {
+    const root = document.documentElement.style;
+    if (!shellVisible) {
+      root.setProperty(CONTENT_LEFT_VAR, "0px");
+      root.setProperty(CONTENT_RIGHT_VAR, "0px");
+      return;
+    }
+    root.setProperty(CONTENT_LEFT_VAR, contentLeft);
+    root.setProperty(
+      CONTENT_RIGHT_VAR,
+      contentInsetRight
+        ? `calc(${contentRight} + ${contentInsetRight})`
+        : contentRight,
+    );
+  }, [shellVisible, contentLeft, contentRight, contentInsetRight]);
+
   // Mobile: the sidebar is an overlay drawer — auto-close on navigation (and on
   // entering mobile) so the selected content is visible. Local UI state only.
   useEffect(() => {
@@ -192,8 +222,8 @@ function AppContent() {
         )}
         <Sidebar collapsed={sidebarCollapsed} />
         <MainContent
-          marginLeft={isMobile || sidebarCollapsed ? EDGE_GUTTER : SIDEBAR_WIDTH}
-          marginRight={isMobile ? EDGE_GUTTER : rightLaneWidth}
+          marginLeft={contentLeft}
+          marginRight={contentRight}
           contentInsetRight={contentInsetRight}
           hasRightPanel={
             !hideRightPanel && !isRightPanelOpen && !browserPanel.isOpen && !docViewer.isOpen

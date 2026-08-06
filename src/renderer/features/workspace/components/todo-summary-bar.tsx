@@ -1,12 +1,14 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { RunEvent } from "../types";
 import { resolveTool } from "../utils/resolve-tool";
-import { ArrowUp, Check } from "@/components/ui/icons";
-import { Button } from "@/components/ui";
+import { Check } from "@/components/ui/icons";
+import { AsciiSpinner, Button, toastStore } from "@/components/ui";
+import type { AsciiSpinnerVariant } from "@/components/ui";
 
 interface TodoSummaryBarProps {
   events: RunEvent[];
   structuralPlan?: StructuralPlanSnapshot | null;
+  variant?: AsciiSpinnerVariant;
 }
 
 interface TodoItem {
@@ -187,10 +189,18 @@ export function selectTodoSnapshot(
 }
 
 /**
- * Sticky widget rendered above the input that shows "X out of Y tasks
- * completed". Replaces the per-call TaskCreate/TaskUpdate cards in the message
- * timeline (those are filtered out by `groupConsecutiveToolCalls`) so users
- * see one continuously-updated plan instead of repeating snapshots.
+ * Toast-style plan widget floating at the top of the workspace content column
+ * (absolutely positioned against the page container — not the viewport, so it
+ * stays centered over the transcript when the embedded browser panel or the
+ * session box shrinks the content area; `content-inset` mirrors the latter).
+ * Same pill look as `Toaster`, but deliberately NOT routed through the toast
+ * store — it is run-scoped, continuously updated React state, not a queued
+ * message.
+ * Collapsed it shows a spinner + "Task N/M" + the active step; hovering
+ * expands it down and outward into the full checklist. Clicking pins it open.
+ * Replaces the per-call TaskCreate/TaskUpdate cards in the message timeline
+ * (those are filtered out by `groupConsecutiveToolCalls`) so users see one
+ * continuously-updated plan instead of repeating snapshots.
  *
  * Lifecycle: the parent mounts this only while the active run's status is
  * "running" (so it disappears when the run finishes). It also returns null on
@@ -199,8 +209,27 @@ export function selectTodoSnapshot(
 export function TodoSummaryBar({
   events,
   structuralPlan,
+  variant,
 }: TodoSummaryBarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
+  const collapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Real toasts render at the same top-center anchor (`Toaster`, z 99999).
+  // Track the store so this widget slides down while any are visible instead
+  // of overlapping them.
+  const activeToasts = useSyncExternalStore(
+    toastStore.subscribe,
+    toastStore.getSnapshot,
+    toastStore.getSnapshot,
+  );
+
+  useEffect(
+    () => () => {
+      if (collapseTimer.current) clearTimeout(collapseTimer.current);
+    },
+    [],
+  );
 
   // A provider-native structural plan is authoritative. Fall back to the
   // legacy tool-call projections for providers without this event stream.
@@ -212,25 +241,61 @@ export function TodoSummaryBar({
   if (!todos || todos.length === 0) return null;
 
   const completedCount = todos.filter((t) => t.status === "completed").length;
+  const allDone = completedCount === todos.length;
+  const currentStep = Math.min(completedCount + 1, todos.length);
   const inProgress = todos.find((t) => t.status === "in_progress");
+  const activeLabel =
+    inProgress?.content ??
+    (allDone
+      ? "All tasks completed"
+      : todos.find((t) => t.status === "pending")?.content);
+
+  const open = () => {
+    if (collapseTimer.current) clearTimeout(collapseTimer.current);
+    setIsExpanded(true);
+  };
+  // Small grace period so grazing the edge doesn't snap the panel shut.
+  const scheduleClose = () => {
+    if (collapseTimer.current) clearTimeout(collapseTimer.current);
+    collapseTimer.current = setTimeout(() => {
+      setIsExpanded(false);
+      setIsPinned(false);
+    }, 200);
+  };
 
   return (
-    <div className="w-full max-w-200 mx-auto mb-1">
-      <div className="rounded-2xl glass-surface overflow-hidden">
+    <div className="absolute top-0 inset-x-0 z-9990 flex justify-center pt-4 content-inset pointer-events-none">
+      <div
+        role="status"
+        onMouseEnter={open}
+        onMouseLeave={() => {
+          if (!isPinned) scheduleClose();
+        }}
+        style={{
+          transform:
+            activeToasts.length > 0
+              ? `translateY(${Math.min(activeToasts.length, 3) * 54}px)`
+              : undefined,
+        }}
+        className={`pointer-events-auto w-full overflow-hidden glass-outline bg-primary dark:bg-primary-950 text-primary-950 dark:text-primary transition-all duration-200 ease-out ${
+          isExpanded ? "max-w-130 rounded-3xl" : "max-w-80 rounded-3xl"
+        }`}
+      >
         <Button
-          onClick={() => setIsExpanded((v) => !v)}
-          className="group flex items-center gap-2 w-full px-4 py-3 cursor-pointer"
+          onClick={() => setIsPinned((v) => !v)}
+          className="flex items-center gap-3 w-full px-5 py-3 cursor-pointer"
         >
-          <ArrowUp
-            className={`size-3 text-primary-500 dark:text-primary-400 transition-transform duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
-          />
-          <Check className="size-3.5 text-primary-500 dark:text-primary-400 shrink-0" />
-          <span className="text-xs font-medium text-primary-700 dark:text-primary-300 shrink-0">
-            {completedCount} out of {todos.length} task{todos.length !== 1 ? "s" : ""} completed
+          {allDone ? (
+            <Check className="size-3.5 text-emerald-500 shrink-0" />
+          ) : (
+            <AsciiSpinner variant={variant} kind="circle" />
+          )}
+          <span className="text-sm font-medium whitespace-nowrap shrink-0 tabular-nums">
+            Task {currentStep}/{todos.length}
           </span>
-          {inProgress && !isExpanded && (
-            <span className="text-xs text-amber-600 dark:text-amber-400 truncate min-w-0">
-              • {inProgress.content}
+          {activeLabel && (
+            <span className="text-xs text-warning dark:text-warning truncate min-w-0 flex-1 text-left">
+              {activeLabel}
             </span>
           )}
         </Button>
@@ -240,7 +305,7 @@ export function TodoSummaryBar({
           style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
         >
           <div className="overflow-hidden min-h-0">
-            <ol className="border-t border-primary-200/40 dark:border-primary-700/30 px-4 py-3 space-y-1.5 max-h-72 overflow-y-auto">
+            <ol className="border-t border-primary-200/40 dark:border-primary-700/20 px-5 py-3 space-y-1.5 max-h-[50vh] overflow-y-auto">
               {todos.map((todo, idx) => {
                 const isDone = todo.status === "completed";
                 const isActive = todo.status === "in_progress";
@@ -250,18 +315,18 @@ export function TodoSummaryBar({
                     className="flex items-start gap-2.5 text-xs"
                   >
                     <span
-                      className={`mt-0.5 size-4 rounded-full border flex items-center justify-center shrink-0 ${
+                      className={`mt-0.5 size-4 rounded-full  flex items-center justify-center shrink-0 ${
                         isDone
-                          ? "border-emerald-500/60 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                          ? " bg-success/15 text-success dark:text-success"
                           : isActive
-                            ? "border-amber-500/70 bg-amber-500/20"
-                            : "border-primary-300/50 dark:border-primary-600/40"
+                            ? " bg-warning/20"
+                            : " bg-primary-300/50 dark:bg-primary-600/40"
                       }`}
                       aria-hidden
                     >
                       {isDone && <Check className="size-2.5" />}
                       {isActive && (
-                        <span className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
+                        <span className="size-1.5 rounded-full bg-warning animate-pulse" />
                       )}
                     </span>
                     <span className="text-primary-500 dark:text-primary-400 tabular-nums shrink-0 w-4 text-right">
