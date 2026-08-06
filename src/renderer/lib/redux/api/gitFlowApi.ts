@@ -108,8 +108,10 @@ export const gitFlowApi = baseApi.injectEndpoints({
         handler: CHANNELS.gitFlow.push,
         args: [workspaceId],
       }),
+      // Push now logs a workspace activity row — refresh that list too.
       invalidatesTags: (_result, _error, workspaceId) => [
         { type: "WorkspaceDiffs", id: workspaceId },
+        { type: "WorkspaceActivity", id: workspaceId },
       ],
     }),
 

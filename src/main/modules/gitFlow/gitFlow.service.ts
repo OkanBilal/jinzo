@@ -684,6 +684,12 @@ export const gitFlowService = {
     if (params.push) {
       await gitService.push(rootPath, { branch });
       pushed = true;
+      logWorkspaceActivity({
+        workspaceId: params.workspaceId,
+        type: "push",
+        title: "You pushed changes",
+        metadata: { branch },
+      });
     }
 
     return { ...result, pushed };
@@ -697,6 +703,12 @@ export const gitFlowService = {
       throw new Error("Cannot push while HEAD is detached");
     }
     await gitService.push(rootPath, { branch });
+    logWorkspaceActivity({
+      workspaceId,
+      type: "push",
+      title: "You pushed changes",
+      metadata: { branch },
+    });
     return { hash: "", summary: "Pushed", pushed: true };
   },
 
