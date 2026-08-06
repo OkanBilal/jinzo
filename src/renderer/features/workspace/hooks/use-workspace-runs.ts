@@ -6,6 +6,8 @@ import { toast } from "@/components/ui";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { runsApi, workspaceApi } from "@/lib/redux/api";
 import { mergeRunEvents } from "../utils/run-event-mappers";
+import { classifyRunErrorKind } from "../../../../shared/run-errors";
+import { getProviderVariantById } from "@/lib/provider-variants";
 import { createRunCache, pruneRunMap } from "../lib/run-cache";
 import { createRunStatusSyncPolicy } from "../lib/run-status-sync";
 import { useStreamingEvents } from "./use-streaming-events";
@@ -349,24 +351,23 @@ export function useWorkspaceRuns(
 
     if (run.status === "failed") {
       const lastError = run.lastError || "Run failed";
-      let isAuthError = /not logged in|not authenticated|gh auth login/i.test(lastError);
+      let isAuthError = classifyRunErrorKind(lastError) === "auth";
       if (!isAuthError && /exited with code/i.test(lastError)) {
         const artRes = await appApi.runArtifacts.getByRun(run.id);
         if (artRes.success && artRes.data) {
           isAuthError = artRes.data.some(
-            (a: { content: any }) =>
-              /not logged in|not authenticated|gh auth login/i.test(a.content ?? ""),
+            (a: { content: any }) => classifyRunErrorKind(a.content) === "auth",
           );
         }
       }
-      // Regex-based detection is fragile — providers should return a
-      // structured `lastErrorCode: "auth"` so this branch can go away.
       if (isAuthError) {
-        const isCopilot = /gh auth/i.test(lastError);
+        // The transcript renders a Sign in notice for this run — the toast
+        // just names the fix for anyone who dismisses it.
+        const loginCommand = getProviderVariantById(run.providerId)?.authLoginCommand;
         toast.error(
-          isCopilot
-            ? "GitHub CLI not authenticated — run `gh auth login` in your terminal"
-            : "Not logged in — run `claude login` in your terminal",
+          loginCommand
+            ? `Authentication expired — sign in from the session view or run \`${loginCommand}\``
+            : "Authentication expired — sign in from the session view",
           { duration: 8000 },
         );
       } else {

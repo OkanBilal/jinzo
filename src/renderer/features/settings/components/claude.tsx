@@ -86,7 +86,7 @@ export default function ClaudeSettings(
             : null
         }
         isApiKey={account?.type === "apiKey"}
-        notSignedInDescription="Run `claude login` in your terminal to authenticate"
+        notSignedInDescription="Run `claude auth login` in your terminal to authenticate"
       />
 
       {/* CLI version + self-update — `claude --version` / `claude update` */}

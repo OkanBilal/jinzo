@@ -1,8 +1,10 @@
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import { appApi, appEvents } from "@/lib/transport";
 import { Terminal, ITheme } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { useDarkMode } from "@/hooks/use-dark-mode";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
+import { clearPendingTerminalCommand } from "@/lib/redux/slices/workspaceSlice";
 
 const baseThemeColors = {
   dark: {
@@ -72,6 +74,11 @@ export function XtermTerminal({ id, rootPath, variant }: XtermTerminalProps) {
   const fitAddonRef = useRef<FitAddon | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
   const { darkMode } = useDarkMode();
+  const dispatch = useAppDispatch();
+  const pendingCommand = useAppSelector(
+    (state) => state.workspace.pendingTerminalCommand,
+  );
+  const [ptyReady, setPtyReady] = useState(false);
 
   const theme = useMemo(() => getTheme(variant, darkMode), [variant, darkMode]);
 
@@ -108,8 +115,16 @@ export function XtermTerminal({ id, rootPath, variant }: XtermTerminalProps) {
       fitAddon.fit();
     });
 
-    // Create the PTY backend
-    appApi.terminal.create({ id, cwd: rootPath });
+    // Create the PTY backend. Readiness is tracked so queued one-shot
+    // commands (useBottomTerminal().runCommand) aren't written into a PTY
+    // that doesn't exist yet.
+    let disposed = false;
+    setPtyReady(false);
+    void Promise.resolve(appApi.terminal.create({ id, cwd: rootPath })).then(
+      () => {
+        if (!disposed) setPtyReady(true);
+      },
+    );
 
     // PTY output → xterm
     const removeDataListener = appEvents.terminal.onData(
@@ -140,6 +155,7 @@ export function XtermTerminal({ id, rootPath, variant }: XtermTerminalProps) {
     resizeObserver.observe(container);
 
     cleanupRef.current = () => {
+      disposed = true;
       resizeObserver.disconnect();
       onDataDisposable.dispose();
       removeDataListener();
@@ -155,6 +171,14 @@ export function XtermTerminal({ id, rootPath, variant }: XtermTerminalProps) {
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, rootPath]);
+
+  // Write any queued one-shot command once the PTY exists. The shell buffers
+  // input arriving before its prompt, so a write right after create is safe.
+  useEffect(() => {
+    if (!ptyReady || !pendingCommand) return;
+    appApi.terminal.write(id, `${pendingCommand}\r`);
+    dispatch(clearPendingTerminalCommand());
+  }, [ptyReady, pendingCommand, id, dispatch]);
 
   return (
     <div

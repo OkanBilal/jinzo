@@ -298,7 +298,7 @@ Core tables:
 
 The four agent UIs share the single `/code` route and are distinguished by a **provider variant** — `claude | copilot | codex | cursor` (distinct from the DB `ProviderId`: `claude_code`, `copilot_cli`, `codex`, `cursor`). The active variant comes from the active space's `providerId` via `useSpaceProviderVariant`, not from the pathname.
 
-`src/renderer/lib/provider-variants.ts` is the single **variant descriptor** table: each variant's `providerId`, icon/accent classes, and capability facts (`permissionKey`, `permissionDefault`, `effortKey`, `thinkingCoupledToEffort`, `fastMode`, `supportsUltracode` / `supportsPlanMode` / `supportsGoalMode` / `supportsSkills`, plus `/code` wiring like `planExit`, `enableForkRun`, `enableSuggestions`). Read fields from `getProviderVariant(variant)` — never branch with an inline `variant === "..."` ternary or re-declare the union.
+`src/renderer/lib/provider-variants.ts` is the single **variant descriptor** table: each variant's `providerId`, icon/accent classes, and capability facts (`permissionKey`, `permissionDefault`, `effortKey`, `thinkingCoupledToEffort`, `fastMode`, `authLoginCommand`, `supportsUltracode` / `supportsPlanMode` / `supportsGoalMode` / `supportsSkills`, plus `/code` wiring like `planExit`, `enableForkRun`, `enableSuggestions`). Read fields from `getProviderVariant(variant)` — never branch with an inline `variant === "..."` ternary or re-declare the union.
 
 ### Icon System
 

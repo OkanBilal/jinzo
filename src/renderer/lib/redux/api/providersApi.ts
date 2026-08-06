@@ -421,6 +421,10 @@ export const providersApi = baseApi.injectEndpoints({
         args: [id],
       }),
       providesTags: (_result, _error, id) => [{ type: "ProviderAccountInfo", id }],
+      // Answering this spawns the provider CLI (version + auth status). The
+      // composer subscribes to it as a signed-out preflight, so keep results
+      // around well past the 60s default to avoid a CLI spawn per remount.
+      keepUnusedDataFor: 300,
     }),
 
     updateProviderCli: builder.mutation<CliUpdateResult, string>({

@@ -68,6 +68,13 @@ export interface ProviderVariantDescriptor {
   thinkingCoupledToEffort: boolean;
   fastMode: FastModeStyle;
 
+  /**
+   * Shell command that (re)authenticates this variant's CLI, offered when a
+   * run fails with an auth error or the account probe reports signed-out.
+   * Runs in the in-app terminal — the login flows are interactive.
+   */
+  authLoginCommand: string;
+
   // ── capability flags (drive UI gates and behavior) ──
   supportsUltracode: boolean;
   supportsPlanMode: boolean;
@@ -94,6 +101,7 @@ export const PROVIDER_VARIANTS: Record<ProviderVariant, ProviderVariantDescripto
     effortKey: "effortLevel",
     thinkingCoupledToEffort: false,
     fastMode: { kind: "boolean", key: "fastMode" },
+    authLoginCommand: "claude auth login",
     supportsUltracode: true,
     supportsPlanMode: false,
     supportsGoalMode: false,
@@ -113,6 +121,7 @@ export const PROVIDER_VARIANTS: Record<ProviderVariant, ProviderVariantDescripto
     effortKey: "modelReasoningEffort",
     thinkingCoupledToEffort: true,
     fastMode: { kind: "boolean", key: "fastMode" },
+    authLoginCommand: "gh auth login",
     supportsUltracode: false,
     supportsPlanMode: false,
     supportsGoalMode: false,
@@ -132,6 +141,7 @@ export const PROVIDER_VARIANTS: Record<ProviderVariant, ProviderVariantDescripto
     effortKey: "modelReasoningEffort",
     thinkingCoupledToEffort: true,
     fastMode: { kind: "serviceTier", key: "serviceTier", on: "fast", match: ["fast", "priority"] },
+    authLoginCommand: "codex login",
     supportsUltracode: false,
     supportsPlanMode: true,
     supportsGoalMode: true,
@@ -151,6 +161,7 @@ export const PROVIDER_VARIANTS: Record<ProviderVariant, ProviderVariantDescripto
     effortKey: "effortLevel",
     thinkingCoupledToEffort: false,
     fastMode: { kind: "boolean", key: "fastMode" },
+    authLoginCommand: "agent login",
     supportsUltracode: false,
     supportsPlanMode: false,
     supportsGoalMode: false,
