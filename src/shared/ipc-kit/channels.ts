@@ -231,6 +231,7 @@ export const CHANNELS = {
     fail: "runs:fail",
     fork: "runs:fork",
     getAll: "runs:getAll",
+    listArchived: "runs:listArchived",
     getByAccount: "runs:getByAccount",
     getById: "runs:getById",
     getByStatus: "runs:getByStatus",
@@ -241,6 +242,7 @@ export const CHANNELS = {
     toolApprovalRequest: "runs:toolApprovalRequest",
     toolApprovalResolved: "runs:toolApprovalResolved",
     toolApprovalResponse: "runs:toolApprovalResponse",
+    unarchive: "runs:unarchive",
     update: "runs:update",
   },
   shell: {

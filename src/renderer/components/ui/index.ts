@@ -76,6 +76,7 @@ export { AsciiSpinner } from "./ascii-spinner";
 export type { AsciiSpinnerVariant, AsciiSpinnerKind } from "./ascii-spinner";
 export { SquareSpinner } from "./square-spinner";
 export { DownloadSpinner } from "./download-spinner";
+export { CircleSpinner } from "./circle-spinner";
 
 // Error Boundary
 export { ErrorBoundary } from "./error-boundary";

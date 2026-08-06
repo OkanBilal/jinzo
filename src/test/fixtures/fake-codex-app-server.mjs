@@ -477,6 +477,15 @@ input.on("line", (line) => {
       respond(id, { status: "unsubscribed" });
       break;
 
+    case "thread/archive":
+    case "thread/delete":
+      respond(id, {});
+      break;
+
+    case "thread/unarchive":
+      respond(id, { thread: { id: params.threadId } });
+      break;
+
     case "experimentalFeature/list":
       respond(id, {
         data: [{

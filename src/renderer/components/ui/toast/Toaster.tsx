@@ -10,6 +10,11 @@ import type { ToastItemProps, ToastType } from "./types";
 import { Button } from "../button";
 import { Error, Success } from "../icons";
 import { AsciiSpinner } from "../ascii-spinner";
+import {
+  CONTENT_LEFT_VAR,
+  CONTENT_RIGHT_VAR,
+  LAYOUT_PANEL_ANIM_MS,
+} from "@/lib/layout";
 
 function getDefaultIcon(type: ToastType) {
   switch (type) {
@@ -126,8 +131,17 @@ export function Toaster() {
 
   return (
     <div
-      className="fixed top-0 left-0 right-0 flex flex-col items-center pt-10 gap-2.5 pointer-events-none"
-      style={{ zIndex: 99999 }}
+      className="fixed top-0 flex flex-col items-center pt-10 gap-2.5 pointer-events-none"
+      style={{
+        zIndex: 99999,
+        // Center over the content column, not the window: the edges published
+        // by AppContent fold in the sidebar, right-lane panel, and docked
+        // session box. Same duration as MainContent's margin transition so
+        // toasts slide with the panels instead of jumping.
+        left: `var(${CONTENT_LEFT_VAR}, 0px)`,
+        right: `var(${CONTENT_RIGHT_VAR}, 0px)`,
+        transition: `left ${LAYOUT_PANEL_ANIM_MS}ms ease-out, right ${LAYOUT_PANEL_ANIM_MS}ms ease-out`,
+      }}
       aria-label="Notifications"
     >
       {toasts.map((t, index) => (

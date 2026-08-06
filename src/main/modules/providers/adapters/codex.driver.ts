@@ -663,6 +663,14 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     }
   }
 
+  async function findThreadIdForRun(runId: string): Promise<string | null> {
+    return (
+      runCoordinator.getSessionThread(runId) ??
+      (await runsRepo.findRunById(runId))?.sessionId ??
+      null
+    );
+  }
+
   // ─────────────────────────────────────────────────────────────
   // WorkRunAdapter implementation
   // ─────────────────────────────────────────────────────────────
@@ -706,7 +714,30 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       return false;
     },
 
+    async archiveSession(runId: string): Promise<void> {
+      const threadId = await findThreadIdForRun(runId);
+      if (!threadId) return;
+
+      const server = await ensureServer();
+      await server.sendRequest("thread/archive", { threadId });
+      runCoordinator.deleteRun(runId);
+    },
+
+    async unarchiveSession(runId: string): Promise<void> {
+      const threadId = await findThreadIdForRun(runId);
+      if (!threadId) return;
+
+      const server = await ensureServer();
+      await server.sendRequest("thread/unarchive", { threadId });
+      runCoordinator.attachThread(runId, threadId);
+    },
+
     async deleteSession(runId: string): Promise<void> {
+      const threadId = await findThreadIdForRun(runId);
+      if (threadId) {
+        const server = await ensureServer();
+        await server.sendRequest("thread/delete", { threadId });
+      }
       runCoordinator.deleteRun(runId);
     },
 

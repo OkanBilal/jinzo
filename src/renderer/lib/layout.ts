@@ -44,6 +44,16 @@ export const BROWSER_PANEL_WIDTH_MAX = 960;
  */
 export const SESSION_PANEL_GUTTER = "0.4375rem";
 
+/**
+ * The content column's live left/right edges, published on `:root` by
+ * `AppContent` (sidebar, right-lane panel, and docked session box all fold in).
+ * Viewport-fixed overlays that should center over the *content* rather than
+ * the window (the `Toaster`) consume these with a `0px` fallback, paired with
+ * a `LAYOUT_PANEL_ANIM_MS` transition so they track the panel slide.
+ */
+export const CONTENT_LEFT_VAR = "--content-left";
+export const CONTENT_RIGHT_VAR = "--content-right";
+
 export const DOC_VIEWER_PANEL_WIDTH_VAR = "--doc-viewer-panel-width";
 export const DOC_VIEWER_PANEL_WIDTH_DEFAULT = 720; // 45rem
 export const DOC_VIEWER_PANEL_WIDTH_MIN = 480;

@@ -99,7 +99,7 @@ export function PlanDisplay({
     <div className="overflow-hidden rounded-2xl glass-surface flex flex-col my-4">
       <Button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center gap-2 px-4 py-2.5 cursor-pointer hover:bg-primary-100/50 dark:hover:bg-primary-500/10 transition-colors"
+        className="w-full flex items-center gap-2 px-6 py-3 cursor-pointer hover:bg-primary-100/50 dark:hover:bg-primary-500/10 transition-colors"
       >
         <Plan className="size-3.5 text-primary-500 shrink-0" />
         <span className="text-xs font-medium text-primary-500">
@@ -116,7 +116,7 @@ export function PlanDisplay({
           </span>
         )}
         {status === "failed" && (
-          <span className="text-xxs text-red-500">
+          <span className="text-xxs text-danger">
             Failed
           </span>
         )}
@@ -128,7 +128,7 @@ export function PlanDisplay({
       {/* Content — collapsible */}
       {isExpanded && (
         <>
-          <div className="relative px-4 pb-3 max-h-100 overflow-y-auto">
+          <div className="relative px-6 pb-3 max-h-100 overflow-y-auto">
             {/* Left accent bar */}
             <div className="prose prose-sm dark:prose-invert max-w-none">
               <ReactMarkdown
@@ -142,7 +142,7 @@ export function PlanDisplay({
 
           {/* Live approvals require a pending broker request; follow-ups require a finished run. */}
           {showActions && (
-            <div className="flex items-center justify-end gap-2 px-4 py-2.5 border-t border-primary-500/10 dark:border-primary-400/10 shrink-0">
+            <div className="flex items-center justify-end gap-2 px-6 py-2.5 border-t border-primary-500/10 dark:border-primary-400/10 shrink-0">
               <Button
                 variant="submit"
                 onClick={handleApply}

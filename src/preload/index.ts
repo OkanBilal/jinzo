@@ -418,6 +418,7 @@ const api = {
   },
   // Runs operations
   runs: {
+    listArchived: () => ipcRenderer.invoke(CHANNELS.runs.listArchived),
     getAll: (limit?: number) => ipcRenderer.invoke(CHANNELS.runs.getAll, limit),
     getById: (id: string) => ipcRenderer.invoke(CHANNELS.runs.getById, id),
     getByAccount: (accountId: string, limit?: number) =>
@@ -438,6 +439,8 @@ const api = {
     cancel: (id: string) => ipcRenderer.invoke(CHANNELS.runs.cancel, id),
     delete: (id: string) => ipcRenderer.invoke(CHANNELS.runs.delete, id),
     archive: (id: string) => ipcRenderer.invoke(CHANNELS.runs.archive, id),
+    unarchive: (id: string) =>
+      ipcRenderer.invoke(CHANNELS.runs.unarchive, id),
     // New methods for executing work runs
     getDetails: (runId: string) => ipcRenderer.invoke(CHANNELS.runs.getDetails, runId),
     execute: (payload: {

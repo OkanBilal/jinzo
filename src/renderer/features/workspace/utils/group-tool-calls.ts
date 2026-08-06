@@ -92,9 +92,9 @@ export function getToolType(content: string): string {
  * Strip Task plan tool calls (TaskCreate/TaskUpdate) out of the timeline.
  *
  * Each call is an incremental edit to the plan; rendering them inline produces
- * a noisy, repetitive timeline. Instead, the aggregated plan is surfaced as a
- * sticky `<TodoSummaryBar />` above the input, so the in-message cards become
- * redundant.
+ * a noisy, repetitive timeline. Instead, the aggregated plan is surfaced as the
+ * toast-style `<TodoSummaryBar />` pinned to the top of the viewport, so the
+ * in-message cards become redundant.
  */
 function stripTaskPlanEvents(events: RunEvent[]): RunEvent[] {
   return events.filter(

@@ -530,6 +530,22 @@
       "sha256": "0e17998362c085d594478d3fac2a330e89ab49669f8481e9f4791272932e3cfd"
     },
     {
+      "path": "v2/ThreadArchiveParams.ts",
+      "sha256": "63bf71301b897cf74c0a3b48c49ba61823d549de8f66f434e9e2eb705e594db2"
+    },
+    {
+      "path": "v2/ThreadArchiveResponse.ts",
+      "sha256": "d6c8715393f98c0de93e31ee024687f3ac6f766941d656871d977e401eebaf18"
+    },
+    {
+      "path": "v2/ThreadDeleteParams.ts",
+      "sha256": "d967e40d7e905587d54206d468d43748bb1291589551109af647d73f7723811d"
+    },
+    {
+      "path": "v2/ThreadDeleteResponse.ts",
+      "sha256": "a5f8fde2ad89346d0ec7f2b0ea4c7c952790823c276dd6a6b221f7810806f44c"
+    },
+    {
       "path": "v2/ThreadForkParams.ts",
       "sha256": "8d547b9aab993f44c26d3155a366b40d94d7a2953386041fb034c70cea45794f"
     },
@@ -608,6 +624,14 @@
     {
       "path": "v2/ThreadStatus.ts",
       "sha256": "374f9ea8a23a06808bda3435d0854aa92303547bc87a92046b6af22b6e962352"
+    },
+    {
+      "path": "v2/ThreadUnarchiveParams.ts",
+      "sha256": "50df685c2ddcc5cb002d57c70662d4d5ebc23b14bef71c448e36a3ad65b18ffd"
+    },
+    {
+      "path": "v2/ThreadUnarchiveResponse.ts",
+      "sha256": "fa9f1eda4cb375ce0fb7aac2a7e8c25d5dd5d7a7b0f30f716de1574bff7fe17a"
     },
     {
       "path": "v2/ThreadUnsubscribeParams.ts",

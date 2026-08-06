@@ -70,6 +70,17 @@ describe("runsRepo", () => {
     });
   });
 
+  describe("findArchivedRuns", () => {
+    it("returns archived runs only", async () => {
+      createRun(db, { id: "r1" });
+      createRun(db, { id: "r2", isArchived: true });
+
+      const result = await runsRepo.findArchivedRuns();
+
+      expect(result.map((run) => run.id)).toEqual(["r2"]);
+    });
+  });
+
   describe("findRunById", () => {
     it("returns run by id", async () => {
       createRun(db, { id: "r1" });
@@ -219,6 +230,16 @@ describe("runsRepo", () => {
 
       const result = await runsRepo.archiveRun("r1");
       expect(result!.isArchived).toBe(true);
+    });
+  });
+
+  describe("unarchiveRun", () => {
+    it("restores an archived run", async () => {
+      createRun(db, { id: "r1", isArchived: true });
+
+      const result = await runsRepo.unarchiveRun("r1");
+
+      expect(result!.isArchived).toBe(false);
     });
   });
 

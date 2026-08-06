@@ -156,6 +156,34 @@ describe("runsService", () => {
     });
   });
 
+  describe("listArchivedRuns", () => {
+    it("returns archived runs enriched with their workspace", async () => {
+      createWorkspace(db, { id: "ws1", name: "Website" });
+      createRun(db, {
+        id: "r1",
+        workspaceId: "ws1",
+        isArchived: true,
+      });
+      createRun(db, { id: "r2" });
+
+      const result = await runsService.listArchivedRuns();
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({
+        id: "r1",
+        workspace: { id: "ws1", name: "Website", isArchived: false },
+      });
+    });
+
+    it("keeps archived runs whose workspace is no longer attached", async () => {
+      createRun(db, { id: "r1", isArchived: true });
+
+      const [result] = await runsService.listArchivedRuns();
+
+      expect(result.workspace).toBeNull();
+    });
+  });
+
   describe("getRunById", () => {
     it("returns run when found", async () => {
       createRun(db, { id: "r1" });
@@ -398,11 +426,29 @@ describe("runsService", () => {
       expect(await runsService.getRunById("r1")).toBeNull();
     });
 
-    it("succeeds even when run does not exist", async () => {
-      await runsService.deleteRun("nonexistent");
+    it("returns error when run does not exist", async () => {
+      await expect(runsService.deleteRun("nonexistent")).rejects.toThrow(
+        "Run not found",
+      );
+    });
+
+    it("deletes the Codex thread before deleting the run", async () => {
+      createRun(db, {
+        id: "r1",
+        providerId: "codex",
+        sessionId: "thread-1",
+      });
+      const deleteSession = vi.fn();
+      vi.mocked(createWorkAdapter).mockReturnValue({ deleteSession } as any);
+
+      await runsService.deleteRun("r1");
+
+      expect(deleteSession).toHaveBeenCalledWith("r1");
+      expect(await runsService.getRunById("r1")).toBeNull();
     });
 
     it("returns error when repo throws", async () => {
+      createRun(db, { id: "r1" });
       vi.spyOn(runsRepo, "deleteRun").mockRejectedValueOnce(new Error("db error"));
       await expect(runsService.deleteRun("r1")).rejects.toThrow("db error");
     });
@@ -416,13 +462,107 @@ describe("runsService", () => {
       expect(result.isArchived).toBe(true);
     });
 
+    it("archives the Codex thread before archiving the run", async () => {
+      createRun(db, {
+        id: "r1",
+        providerId: "codex",
+        sessionId: "thread-1",
+      });
+      const archiveSession = vi.fn();
+      vi.mocked(createWorkAdapter).mockReturnValue({ archiveSession } as any);
+
+      const result = await runsService.archiveRun("r1");
+
+      expect(archiveSession).toHaveBeenCalledWith("r1");
+      expect(result.isArchived).toBe(true);
+    });
+
+    it("keeps the run active when Codex archiving fails", async () => {
+      createRun(db, {
+        id: "r1",
+        providerId: "codex",
+        sessionId: "thread-1",
+      });
+      vi.mocked(createWorkAdapter).mockReturnValue({
+        archiveSession: vi.fn().mockRejectedValue(new Error("archive failed")),
+      } as any);
+
+      await expect(runsService.archiveRun("r1")).rejects.toThrow(
+        "archive failed",
+      );
+      expect((await runsService.getRunById("r1"))!.isArchived).toBe(false);
+    });
+
     it("returns error for nonexistent run", async () => {
       await expect(runsService.archiveRun("nonexistent")).rejects.toThrow("Run not found");
     });
 
     it("returns error when repo throws", async () => {
+      createRun(db, { id: "r1" });
       vi.spyOn(runsRepo, "archiveRun").mockRejectedValueOnce(new Error("db error"));
       await expect(runsService.archiveRun("r1")).rejects.toThrow("db error");
+    });
+  });
+
+  describe("unarchiveRun", () => {
+    it("restores the Codex thread and run", async () => {
+      createWorkspace(db, { id: "w1" });
+      createRun(db, {
+        id: "r1",
+        workspaceId: "w1",
+        providerId: "codex",
+        sessionId: "thread-1",
+        isArchived: true,
+      });
+      const unarchiveSession = vi.fn();
+      vi.mocked(createWorkAdapter).mockReturnValue({ unarchiveSession } as any);
+
+      const result = await runsService.unarchiveRun("r1");
+
+      expect(unarchiveSession).toHaveBeenCalledWith("r1");
+      expect(result.isArchived).toBe(false);
+    });
+
+    it("returns error for a missing run", async () => {
+      await expect(runsService.unarchiveRun("missing")).rejects.toThrow(
+        "Run not found",
+      );
+    });
+
+    it("refuses to restore a run while its workspace is archived", async () => {
+      createWorkspace(db, { id: "w1", isArchived: true });
+      createRun(db, {
+        id: "r1",
+        workspaceId: "w1",
+        providerId: "codex",
+        sessionId: "thread-1",
+        isArchived: true,
+      });
+      const unarchiveSession = vi.fn();
+      vi.mocked(createWorkAdapter).mockReturnValue({ unarchiveSession } as any);
+
+      await expect(runsService.unarchiveRun("r1")).rejects.toThrow(
+        "Unarchive the workspace before restoring this run",
+      );
+      expect(unarchiveSession).not.toHaveBeenCalled();
+      expect((await runsService.getRunById("r1"))!.isArchived).toBe(true);
+    });
+
+    it("refuses to restore a run without a workspace", async () => {
+      createRun(db, {
+        id: "r1",
+        providerId: "codex",
+        sessionId: "thread-1",
+        isArchived: true,
+      });
+      const unarchiveSession = vi.fn();
+      vi.mocked(createWorkAdapter).mockReturnValue({ unarchiveSession } as any);
+
+      await expect(runsService.unarchiveRun("r1")).rejects.toThrow(
+        "Cannot restore a run without a workspace",
+      );
+      expect(unarchiveSession).not.toHaveBeenCalled();
+      expect((await runsService.getRunById("r1"))!.isArchived).toBe(true);
     });
   });
 

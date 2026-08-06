@@ -225,8 +225,11 @@ export function WorkspaceProviderPage({
 
   return (
     <PluginLogoProvider providerId={providerId}>
+    {/* `relative` anchors the absolutely-positioned TodoSummaryBar toast so it
+        centers over this content column (not the whole window — the embedded
+        browser panel is a native view layered above the renderer). */}
     <div
-      className={`flex flex-col h-full dark:bg-primary-950 ${routeTopRounding} overflow-hidden`}
+      className={`relative flex flex-col h-full dark:bg-primary-950 ${routeTopRounding} overflow-hidden`}
     >
       {/* `content-inset` on the transcript and composer, but not on the
           terminal below them: the session box only covers the top-right of the
@@ -316,14 +319,17 @@ export function WorkspaceProviderPage({
           />
         </div>
       )}
-      {/* Shown only while the active run is running, so it disappears on
-          completion. Gated on the run's status (which stays "running" for the
-          whole run) rather than `isLoading` (which only tracks the brief
-          start/continue IPC call, making the bar flash and vanish mid-run). */}
+      {/* Renders as a fixed toast-style pill at the top of the viewport (it
+          positions itself; mounting here only controls gating). Shown only
+          while the active run is running, so it disappears on completion.
+          Gated on the run's status (which stays "running" for the whole run)
+          rather than `isLoading` (which only tracks the brief start/continue
+          IPC call, making the bar flash and vanish mid-run). */}
       {ws.showEmptyState || ws.showNewRunTab || ws.activeRun?.status !== "running" ? null : (
         <TodoSummaryBar
           events={ws.currentEvents}
           structuralPlan={currentStructuralPlan}
+          variant={variant}
         />
       )}
 

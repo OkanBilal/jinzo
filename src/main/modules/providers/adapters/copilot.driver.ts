@@ -254,7 +254,13 @@ interface CopilotClientInterface {
    */
   listModels(): Promise<CopilotModelInfo[]>;
   getStatus(): Promise<{ version?: string; protocolVersion?: number }>;
-  getAuthStatus(): Promise<unknown>;
+  getAuthStatus(): Promise<{
+    isAuthenticated: boolean;
+    authType?: string;
+    host?: string;
+    login?: string;
+    statusMessage?: string;
+  }>;
   getLastSessionId(): Promise<string | undefined>;
   /** Client-scoped typed RPC surface (account quota, uncached model listing). */
   rpc?: {
@@ -1856,8 +1862,24 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
     async getAccountInfo(): Promise<AccountInfo> {
       const binaryPath = findCopilotBinaryPath() ?? config.binary ?? "copilot";
       const version = await readCopilotCliVersion(binaryPath);
+      // Probe the runtime's auth state — `account: null` is what the renderer's
+      // preflight treats as "signed out", so it must reflect reality, not a
+      // hardcoded placeholder. A client that can't start (CLI missing/broken)
+      // also reads as signed out, which is the right banner for that state too.
+      let account: AccountInfo["account"] = null;
+      try {
+        const copilotClient = await ensureClient();
+        const status = await copilotClient.getAuthStatus();
+        if (status?.isAuthenticated) {
+          account = { type: "copilot", login: status.login ?? null };
+        }
+      } catch (error) {
+        logWarn(
+          `getAccountInfo: auth status read failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
       return {
-        account: null,
+        account,
         requiresOpenaiAuth: false,
         cli: { version, channel: null, outdated: false },
       };

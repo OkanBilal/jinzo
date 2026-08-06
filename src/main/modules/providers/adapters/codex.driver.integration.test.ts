@@ -108,6 +108,44 @@ describe("codex.driver / app-server protocol", () => {
     });
   });
 
+  it("sends Codex thread archive, unarchive, and delete lifecycle requests", async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mains-codex-driver-"));
+    tempDirs.push(tempDir);
+    const logPath = path.join(tempDir, "protocol.jsonl");
+    process.env.MAINS_CODEX_FIXTURE_LOG = logPath;
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 2000,
+    });
+    drivers.push(driver);
+
+    await driver.createSession(request("run-archive"));
+    await driver.archiveSession?.("run-archive");
+    await driver.createSession(request("run-unarchive"));
+    await driver.unarchiveSession?.("run-unarchive");
+    await driver.createSession(request("run-delete"));
+    await driver.deleteSession?.("run-delete");
+
+    const messages = readProtocolLog(logPath);
+    expect(messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          method: "thread/archive",
+          params: { threadId: "thread-1" },
+        }),
+        expect.objectContaining({
+          method: "thread/unarchive",
+          params: { threadId: "thread-2" },
+        }),
+        expect.objectContaining({
+          method: "thread/delete",
+          params: { threadId: "thread-3" },
+        }),
+      ]),
+    );
+  });
+
   it("rejects Codex CLI versions older than the supported protocol", async () => {
     process.env.MAINS_CODEX_FIXTURE_VERSION = "0.145.0";
 

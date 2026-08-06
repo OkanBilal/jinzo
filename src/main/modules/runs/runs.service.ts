@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 
+import { PROVIDER_IDS } from "../../../shared/provider-ids";
 import { runsRepo } from "./runs.repo";
 import { providersService } from "../providers";
 import { workspaceService, assertWorkspacePathExists } from "../workspace";
@@ -17,6 +18,7 @@ import type {
   CreateRunPayload,
   UpdateRunPayload,
   RunResponse,
+  ArchivedRunResponse,
   CreateRunContextPayload,
   RunContextResponse,
   CreateRunArtifactPayload,
@@ -138,6 +140,32 @@ async function handlePreSessionFailure(runId: string, error: unknown): Promise<v
   broadcastStatusChangedPreSession(runId, "failed");
 }
 
+type RunSessionLifecycleAction = "archive" | "unarchive" | "delete";
+
+/** Keep Mains' archived-run state aligned with Codex's persisted thread store. */
+async function syncCodexRunSession(
+  run: RunResponse,
+  action: RunSessionLifecycleAction,
+): Promise<void> {
+  if (run.providerId !== PROVIDER_IDS.codex || !run.sessionId) return;
+
+  const provider = await providersService.getById(run.providerId);
+  if (!provider) throw new Error("Codex provider not found");
+
+  const adapter = createWorkAdapter(provider);
+  const lifecycleMethod =
+    action === "archive"
+      ? adapter.archiveSession
+      : action === "unarchive"
+        ? adapter.unarchiveSession
+        : adapter.deleteSession;
+
+  if (!lifecycleMethod) {
+    throw new Error(`Codex thread ${action} is not available`);
+  }
+  await lifecycleMethod.call(adapter, run.id);
+}
+
 // ─────────────────────────────────────────────────────────────
 // Runs Service
 //
@@ -150,6 +178,39 @@ export const runsService = {
   // ─── Run Operations ───
   async getAllRuns(limit?: number): Promise<RunResponse[]> {
     return runsRepo.findAllRuns(limit);
+  },
+
+  async listArchivedRuns(): Promise<ArchivedRunResponse[]> {
+    const archived = await runsRepo.findArchivedRuns();
+    if (archived.length === 0) return [];
+
+    const workspaceIds = [
+      ...new Set(
+        archived
+          .map((run) => run.workspaceId)
+          .filter((id): id is string => id !== null),
+      ),
+    ];
+    const workspaceEntries = await Promise.all(
+      workspaceIds.map(async (id) => [id, await workspaceService.get(id)] as const),
+    );
+    const workspaceById = new Map(workspaceEntries);
+
+    return archived.map((run) => {
+      const workspace = run.workspaceId
+        ? workspaceById.get(run.workspaceId)
+        : null;
+      return {
+        ...run,
+        workspace: workspace
+          ? {
+              id: workspace.id,
+              name: workspace.name,
+              isArchived: workspace.isArchived,
+            }
+          : null,
+      };
+    });
   },
 
   async getRunById(id: string): Promise<RunResponse | null> {
@@ -208,6 +269,9 @@ export const runsService = {
   },
 
   async deleteRun(id: string): Promise<void> {
+    const run = await runsRepo.findRunById(id);
+    if (!run) throw new Error("Run not found");
+    await syncCodexRunSession(run, "delete");
     await runsRepo.deleteRun(id);
   },
 
@@ -217,9 +281,31 @@ export const runsService = {
   },
 
   async archiveRun(id: string): Promise<RunResponse> {
+    const run = await runsRepo.findRunById(id);
+    if (!run) throw new Error("Run not found");
+    await syncCodexRunSession(run, "archive");
     const archived = await runsRepo.archiveRun(id);
     if (!archived) throw new Error("Run not found");
     return archived;
+  },
+
+  async unarchiveRun(id: string): Promise<RunResponse> {
+    const run = await runsRepo.findRunById(id);
+    if (!run) throw new Error("Run not found");
+    if (!run.workspaceId) {
+      throw new Error("Cannot restore a run without a workspace");
+    }
+    const workspace = await workspaceService.get(run.workspaceId);
+    if (!workspace) {
+      throw new Error("Cannot restore a run without a workspace");
+    }
+    if (workspace.isArchived) {
+      throw new Error("Unarchive the workspace before restoring this run");
+    }
+    await syncCodexRunSession(run, "unarchive");
+    const unarchived = await runsRepo.unarchiveRun(id);
+    if (!unarchived) throw new Error("Run not found");
+    return unarchived;
   },
 
   // ─── Run Context Operations ───

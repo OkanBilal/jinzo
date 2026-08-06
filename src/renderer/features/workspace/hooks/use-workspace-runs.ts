@@ -4,7 +4,11 @@ import type { Run, RunEvent, RunArtifact, ToolCall } from "../types";
 import type { RunTurn } from "@/lib/redux/api";
 import { toast } from "@/components/ui";
 import { useAppDispatch } from "@/lib/redux/hooks";
-import { runsApi, workspaceApi } from "@/lib/redux/api";
+import {
+  runsApi,
+  workspaceApi,
+  useArchiveRunMutation,
+} from "@/lib/redux/api";
 import { mergeRunEvents } from "../utils/run-event-mappers";
 import { classifyRunErrorKind } from "../../../../shared/run-errors";
 import { getProviderVariantById } from "@/lib/provider-variants";
@@ -144,6 +148,7 @@ export function useWorkspaceRuns(
   const [error, setError] = useState<string | null>(null);
   const { streamingEvents, clearAllStreams } = useStreamingEvents(activeRunId);
   const dispatch = useAppDispatch();
+  const [archiveRun] = useArchiveRunMutation();
 
   const eventsEndRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
@@ -737,9 +742,13 @@ export function useWorkspaceRuns(
   const closeTab = useCallback(
     async (runId: string) => {
       try {
-        await appApi.runs.archive(runId);
+        await archiveRun(runId).unwrap();
       } catch (error) {
         console.error("[useWorkspaceRuns] Failed to archive run:", error);
+        toast.error(
+          error instanceof Error ? error.message : "Failed to archive run",
+        );
+        return;
       }
 
       setRuns((prev) => {
@@ -767,7 +776,7 @@ export function useWorkspaceRuns(
         return next;
       });
     },
-    [activeRunId, loadRunDetails],
+    [activeRunId, archiveRun, loadRunDetails],
   );
 
   const selectTab = useCallback(

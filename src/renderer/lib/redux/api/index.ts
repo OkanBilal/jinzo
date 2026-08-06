@@ -342,6 +342,7 @@ export {
   runsApi,
   useGetRunsQuery,
   useLazyGetRunsQuery,
+  useListArchivedRunsQuery,
   useGetRunByIdQuery,
   useLazyGetRunByIdQuery,
   useGetRunsByAccountQuery,
@@ -359,6 +360,7 @@ export {
   useAbortRunMutation,
   useDeleteRunMutation,
   useArchiveRunMutation,
+  useUnarchiveRunMutation,
   useGetRunContextQuery,
   useLazyGetRunContextQuery,
   useAddRunContextMutation,
@@ -373,6 +375,8 @@ export {
 } from "./runsApi";
 export type {
   Run,
+  ArchivedRun,
+  ArchivedRunWorkspace,
   RunStatus,
   CreateRunPayload,
   UpdateRunPayload,

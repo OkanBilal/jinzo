@@ -222,6 +222,10 @@ export function createWorkRunAdapter(driver: ProviderDriver): WorkRunAdapter {
   if (driver.shutdown) adapter.shutdown = driver.shutdown.bind(driver);
   if (driver.canResumeSession)
     adapter.canResumeSession = driver.canResumeSession.bind(driver);
+  if (driver.archiveSession)
+    adapter.archiveSession = driver.archiveSession.bind(driver);
+  if (driver.unarchiveSession)
+    adapter.unarchiveSession = driver.unarchiveSession.bind(driver);
   if (driver.deleteSession)
     adapter.deleteSession = driver.deleteSession.bind(driver);
   if (driver.listModels) adapter.listModels = driver.listModels.bind(driver);
