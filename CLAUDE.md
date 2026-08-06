@@ -192,6 +192,7 @@ Core tables:
 - `run-session.ts` / `run-session-registry.ts` own the live session lifecycle and event persistence
 - Tool approval broker (`user-input-broker.ts`) bridges main↔renderer for interactive tool approvals
 - Runs support session resumption and continuation via `sessionId`
+- Run archiving: `runs:archive` / `runs:listArchived` / `runs:unarchive`, surfaced in Settings → Archive alongside archived workspaces. The service keeps the provider-side session in sync via the adapter's optional `archiveSession` / `unarchiveSession` (Codex threads are archived/unarchived on the app server)
 
 **Projects System** (`src/main/modules/projects/`)
 - Groups workspaces by shared git remote origin; owns `project_resources`
@@ -199,7 +200,7 @@ Core tables:
 - `findByRemoteOrigin`, `findOrCreate`, archive, `listBranchNames`, and the cross-aggregate `projects:listIssues` (project → resources → entities, orchestrated at the service layer)
 
 **Provider Adapters** (`src/main/modules/providers/adapters/`)
-- Unified `WorkRunAdapter` interface fronting four agent SDKs; typed events (log, tool_call, command, artifact, status, plan_update)
+- Unified `WorkRunAdapter` interface fronting four agent SDKs; typed events (log, tool_call, command, artifact, status, plan_update); optional `archiveSession` / `unarchiveSession` for providers with persisted server-side sessions (only the Codex driver implements them)
 - `adapter.factory.ts` — creates the correct driver by provider id
 - `claude.driver.ts` — Claude Code via `@anthropic-ai/claude-agent-sdk`
 - `copilot.driver.ts` — GitHub Copilot CLI via `@github/copilot-sdk`
@@ -289,7 +290,7 @@ Core tables:
 - **Hooks**: `use-kebab-case.ts` filenames, `useCamelCase` export names
 - **Components**: `kebab-case.tsx` filenames in feature dirs under `src/renderer/features/{name}/components/`
 - **Feature dirs**: `onboarding`, `pulse`, `relay`, `settings`, `stats`, `workspace`
-- **Shared input UI**: `src/renderer/components/ui/input/` (`input-form`, `rich-input-form`, `permission-mode-dropdown`, `model-select-dropdown`, `fast-mode-button`, `goal-button`, `dictation-button`, `file-upload-dropdown`, `compact-composer-controls`)
+- **Shared input UI**: `src/renderer/components/ui/input/` (`input-form`, `rich-input-form`, `permission-mode-dropdown`, `model-select-dropdown`, `fast-mode-button`, `goal-button`, `dictation-button`, `file-upload-dropdown`, `compact-composer-controls`, `send-button`)
 - **Routing**: HashRouter — page components in `src/renderer/routes/`
 - **Settings Routing**: `/settings?section={id}` — section ids live in `src/renderer/features/settings/settings-sections.tsx`: `general`, `git`, `connections`, `backends`, `dashboard`, `archive`, `claude`, `codex`, `codex-plugins`, `copilot`, `cursor`, `notifications`, `personalization`, `schedules`, `security`, `projects`
 - **Styling**: Tailwind CSS v4 (PostCSS-based)
