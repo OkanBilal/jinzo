@@ -432,6 +432,33 @@ function PluginDetail({
       detail.apps.length > 0 ||
       detail.mcpServers.length > 0);
 
+  // The detail read carries marketplace.json fallback fields (developer,
+  // category, website) that the list payload lacks — prefer it for the
+  // Information table. The header keeps using the list `iface` (its
+  // displayName is the humanized one).
+  const info = detail?.summary.interface ?? iface;
+  const normalizeRepoUrl = (u?: string | null) =>
+    (u ?? "").replace(/\.git$/, "").replace(/\/+$/, "");
+  // Source repo link — only when it's a real URL that isn't just the website.
+  const rawSourcePath = plugin.source?.path ?? "";
+  const sourceUrl =
+    /^https?:\/\//.test(rawSourcePath) &&
+    normalizeRepoUrl(rawSourcePath) !== normalizeRepoUrl(info?.websiteUrl)
+      ? rawSourcePath
+      : undefined;
+  const installCount = plugin.installs ?? detail?.uniqueInstalls ?? null;
+  const lastUpdated = detail?.lastUpdated ?? null;
+  const hasInformation = !!(
+    info?.category ||
+    info?.developerName ||
+    info?.websiteUrl ||
+    info?.privacyPolicyUrl ||
+    info?.termsOfServiceUrl ||
+    sourceUrl ||
+    installCount != null ||
+    lastUpdated
+  );
+
   return (
     <div className="mb-12">
       <Button
@@ -667,78 +694,85 @@ function PluginDetail({
         </div>
       )}
 
-      {/* Information table */}
-      <Heading3 className="mb-3">Information</Heading3>
-      <div className="rounded-xl border border-primary-200/60 dark:border-primary-800/20 divide-y divide-primary-200/60 dark:divide-primary-800/20">
-        {iface?.category && <InfoRow label="Category" value={iface.category} />}
-        {iface?.developerName && (
-          <InfoRow label="Developer" value={iface.developerName} />
-        )}
-        {iface?.websiteUrl && (
-          <InfoRow
-            label="Website"
-            value={
-              <a
-                href={iface.websiteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-500 dark:text-blue-400 hover:underline"
-                onClick={(e) => {
-                  e.preventDefault();
-                  window.open(iface.websiteUrl!, "_blank");
-                }}
-              >
-                {(() => {
-                  try {
-                    return new URL(iface.websiteUrl!).hostname;
-                  } catch {
-                    return iface.websiteUrl;
-                  }
-                })()}
-              </a>
-            }
-          />
-        )}
-        {iface?.privacyPolicyUrl && (
-          <InfoRow
-            label="Privacy Policy"
-            value={
-              <a
-                href={iface.privacyPolicyUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-500 dark:text-blue-400 hover:underline"
-                onClick={(e) => {
-                  e.preventDefault();
-                  window.open(iface.privacyPolicyUrl!, "_blank");
-                }}
-              >
-                View
-              </a>
-            }
-          />
-        )}
-        {iface?.termsOfServiceUrl && (
-          <InfoRow
-            label="Terms of Service"
-            value={
-              <a
-                href={iface.termsOfServiceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-500 dark:text-blue-400 hover:underline"
-                onClick={(e) => {
-                  e.preventDefault();
-                  window.open(iface.termsOfServiceUrl!, "_blank");
-                }}
-              >
-                View
-              </a>
-            }
-          />
-        )}
-      </div>
+      {/* Information table — hidden entirely when no row has data */}
+      {hasInformation && (
+        <>
+          <Heading3 className="mb-3">Information</Heading3>
+          <div className="rounded-xl border border-primary-200/60 dark:border-primary-800/20 divide-y divide-primary-200/60 dark:divide-primary-800/20">
+            {info?.category && <InfoRow label="Category" value={info.category} />}
+            {info?.developerName && (
+              <InfoRow label="Developer" value={info.developerName} />
+            )}
+            {installCount != null && (
+              <InfoRow
+                label="Installs"
+                value={installCount.toLocaleString("en-US")}
+              />
+            )}
+            {lastUpdated && (
+              <InfoRow
+                label="Updated"
+                value={new Date(lastUpdated).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })}
+              />
+            )}
+            {info?.websiteUrl && (
+              <InfoRow
+                label="Website"
+                value={<ExternalLinkValue url={info.websiteUrl} />}
+              />
+            )}
+            {sourceUrl && (
+              <InfoRow
+                label="Source"
+                value={<ExternalLinkValue url={sourceUrl} />}
+              />
+            )}
+            {info?.privacyPolicyUrl && (
+              <InfoRow
+                label="Privacy Policy"
+                value={<ExternalLinkValue url={info.privacyPolicyUrl} label="View" />}
+              />
+            )}
+            {info?.termsOfServiceUrl && (
+              <InfoRow
+                label="Terms of Service"
+                value={<ExternalLinkValue url={info.termsOfServiceUrl} label="View" />}
+              />
+            )}
+          </div>
+        </>
+      )}
     </div>
+  );
+}
+
+/** External link rendered as its hostname (or a fixed label), opened via window.open. */
+function ExternalLinkValue({ url, label }: { url: string; label?: string }) {
+  let text = label;
+  if (!text) {
+    try {
+      text = new URL(url).hostname;
+    } catch {
+      text = url;
+    }
+  }
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-blue-500 dark:text-blue-400 hover:underline"
+      onClick={(e) => {
+        e.preventDefault();
+        window.open(url, "_blank");
+      }}
+    >
+      {text}
+    </a>
   );
 }
 

@@ -612,7 +612,7 @@ export const workspaceActivity = sqliteTable(
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
     type: text("type", {
-      enum: ["diff", "review", "finding", "commit", "pr"],
+      enum: ["diff", "review", "finding", "commit", "pr", "push"],
     }).notNull(),
     title: text("title").notNull(),
     summary: text("summary"),

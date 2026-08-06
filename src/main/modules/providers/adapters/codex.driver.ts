@@ -353,7 +353,9 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
   let appServerStartPromise: Promise<CodexAppServer> | null = null;
   let codexVersionPromise: Promise<string | null> | null = null;
   let codexCompatibilityPromise: Promise<void> | null = null;
-  const titleGenerationModel = "gpt-5.4-mini";
+  // One-shot generation model (titles, commit messages, PR bodies): Codex's
+  // "fast and affordable agentic coding model" tier, at medium effort.
+  const titleGenerationModel = "gpt-5.6-luna";
   const runCoordinator = createCodexRunCoordinator({
     defaultModel: config.defaultModel,
     onReviewCompleted: persistCodexReviewFindings,
@@ -887,7 +889,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
             // reasoning effort can be unsupported by the title model (400),
             // and configured MCP servers stall/spam a one-shot run.
             "--ignore-user-config",
-            "-c", "model_reasoning_effort=low",
+            "-c", "model_reasoning_effort=medium",
             "-",
           ];
 
@@ -1013,7 +1015,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
           "--model", opts?.model ?? titleGenerationModel,
           // Same overrides as title generation — see comment there.
           "--ignore-user-config",
-          "-c", "model_reasoning_effort=low",
+          "-c", "model_reasoning_effort=medium",
           "-",
         ];
 

@@ -692,8 +692,9 @@ async function initializeApp() {
   try {
     console.log("Initializing application...");
 
-    // Augment PATH early so provider binaries are discoverable in packaged app
-    augmentPathForPackagedApp();
+    // Augment PATH early so provider binaries are discoverable in packaged app.
+    // The login-shell read only runs packaged: dev inherits the terminal's PATH.
+    augmentPathForPackagedApp(app.isPackaged);
 
     // Headless backend mode (`--serve`): boot the WebSocket backend and create no
     // window. startBackendServer handles DB init, module registration, and the WS

@@ -108,8 +108,10 @@ export const gitFlowApi = baseApi.injectEndpoints({
         handler: CHANNELS.gitFlow.push,
         args: [workspaceId],
       }),
+      // Push now logs a workspace activity row — refresh that list too.
       invalidatesTags: (_result, _error, workspaceId) => [
         { type: "WorkspaceDiffs", id: workspaceId },
+        { type: "WorkspaceActivity", id: workspaceId },
       ],
     }),
 
@@ -126,7 +128,14 @@ export const gitFlowApi = baseApi.injectEndpoints({
 
     generateCommitMessageGitFlow: builder.mutation<
       string,
-      { workspaceId: string; providerId: string; model?: string; includeUnstaged?: boolean }
+      {
+        workspaceId: string;
+        providerId: string;
+        model?: string;
+        includeUnstaged?: boolean;
+        /** Read-only prefill: summarize without staging as a side effect. */
+        preview?: boolean;
+      }
     >({
       query: (payload) => ({
         handler: CHANNELS.gitFlow.generateCommitMessage,

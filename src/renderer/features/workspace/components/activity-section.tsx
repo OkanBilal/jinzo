@@ -23,6 +23,8 @@ function ActivityIcon({ type }: { type: WorkspaceActivity["type"] }) {
       return <Commit className="size-5 text-primary-700 dark:text-primary-300  shrink-0" />;
     case "pr":
       return <PullRequest className="size-4 text-primary-700 dark:text-primary-300  shrink-0" />;
+    case "push":
+      return <ArrowUp className="size-4 text-primary-700 dark:text-primary-300  shrink-0" />;
   }
 }
 
@@ -43,6 +45,11 @@ function activityDetail(activity: WorkspaceActivity): string | null {
     }
     case "commit":
       return activity.title;
+    // The PR body travels in `summary` — expanding the row shows it.
+    case "pr":
+      return activity.summary || null;
+    case "push":
+      return meta?.branch ? `Pushed ${meta.branch}` : null;
     default:
       return null;
   }

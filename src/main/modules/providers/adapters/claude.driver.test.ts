@@ -654,6 +654,32 @@ describe("claude.driver / mapClaudePluginList", () => {
     });
   });
 
+  it("falls back to the marketplace manifest when the catalog lacks the entry", () => {
+    const list = {
+      available: [
+        { pluginId: "mp-skills@official", name: "mp-skills", marketplaceName: "official", source: {} },
+      ],
+    };
+    const manifests = {
+      official: {
+        "mp-skills": {
+          name: "mp-skills",
+          description: "Manifest description",
+          author: { name: "Matt Pocock" },
+          category: "development",
+          homepage: "https://github.com/mattpocock/skills",
+        },
+      },
+    };
+    const res = mapClaudePluginList(list, [], {}, {}, manifests);
+    expect(res.marketplaces[0].plugins[0].interface).toMatchObject({
+      category: "development",
+      developerName: "Matt Pocock",
+      websiteUrl: "https://github.com/mattpocock/skills",
+      shortDescription: "Manifest description",
+    });
+  });
+
   it("leaves displayName undefined when the catalog has none (UI humanizes the slug)", () => {
     const res = mapClaudePluginList(
       { available: [{ pluginId: "agent-sdk-dev@official", name: "agent-sdk-dev", source: {} }] },
@@ -786,6 +812,59 @@ describe("claude.driver / mapClaudePluginDetail", () => {
     expect(detail.skills).toEqual([]);
     expect(detail.mcpServers).toEqual([]);
     expect(detail.summary.interface?.displayName).toBe("ghost");
+  });
+
+  it("falls back to the marketplace.json manifest entry when the catalog lacks the plugin", () => {
+    const manifestEntry = {
+      name: "mattpocock-skills",
+      description: "Matt Pocock's agent skills for real engineering.",
+      author: { name: "Matt Pocock" },
+      category: "development",
+      homepage: "https://github.com/mattpocock/skills",
+      source: { source: "url", url: "https://github.com/mattpocock/skills.git" },
+    };
+    const detail = mapClaudePluginDetail(
+      {},
+      {},
+      "mattpocock-skills",
+      "/m/claude-plugins-official",
+      manifestEntry,
+    );
+
+    expect(detail.description).toBe("Matt Pocock's agent skills for real engineering.");
+    expect(detail.summary.interface).toMatchObject({
+      developerName: "Matt Pocock",
+      category: "development",
+      websiteUrl: "https://github.com/mattpocock/skills",
+    });
+    expect(detail.summary.source.path).toBe("https://github.com/mattpocock/skills");
+    expect(detail.uniqueInstalls).toBeNull();
+    expect(detail.lastUpdated).toBeNull();
+  });
+
+  it("prefers catalog fields over the manifest and surfaces installs/lastUpdated", () => {
+    const enriched = {
+      ...catalog,
+      "frontend-design@claude-plugins-official": {
+        ...(catalog["frontend-design@claude-plugins-official"] as Record<string, any>),
+        unique_installs: 1234,
+        last_updated: "2025-12-01T16:03:02-08:00",
+      },
+    };
+    const detail = mapClaudePluginDetail(
+      enriched,
+      {},
+      "frontend-design",
+      "/m/claude-plugins-official",
+      { name: "frontend-design", author: { name: "Someone Else" }, category: "other" },
+    );
+
+    expect(detail.summary.interface).toMatchObject({
+      developerName: "Anthropic",
+      category: "development",
+    });
+    expect(detail.uniqueInstalls).toBe(1234);
+    expect(detail.lastUpdated).toBe("2025-12-01T16:03:02-08:00");
   });
 });
 

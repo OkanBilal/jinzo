@@ -108,7 +108,7 @@ export interface WorkspaceIntakePayload {
 // ── Activity ──
 // ─────────────────────────────────────────────────────────────
 
-export type ActivityType = "diff" | "review" | "finding" | "commit" | "pr";
+export type ActivityType = "diff" | "review" | "finding" | "commit" | "pr" | "push";
 
 export interface WorkspaceActivity {
   id: string;
