@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, type ReactNode } from "react";
+import { useState, useCallback, useEffect, useRef, type ReactNode } from "react";
 import NumberFlow from "@number-flow/react";
 import {
   Commit,
@@ -11,9 +11,11 @@ import {
   Undo,
   Check,
   Refresh,
+  Sparkles,
 } from "@/components/ui/icons";
 import {
   Alert,
+  AsciiSpinner,
   Button,
   Caption,
   Checkbox,
@@ -27,6 +29,8 @@ import {
   useCommitGitFlowMutation,
   usePushGitFlowMutation,
   useCreatePrGitFlowMutation,
+  useGenerateCommitMessageGitFlowMutation,
+  useGeneratePrBodyGitFlowMutation,
   useResyncWorkspaceDiffMutation,
   useGetPublishPreflightQuery,
   usePublishRepoMutation,
@@ -107,8 +111,9 @@ interface GitActionsSectionProps {
 /**
  * Working-tree state and the git actions for the active workspace, as a menu:
  * every line is a `PanelItem`, and the two action rows open their form in
- * place instead of swapping the panel's contents. Both can be open at once —
- * whether a row is *usable* is the enable/disable rules below, not exclusivity.
+ * place instead of swapping the panel's contents. Commit and PR are mutually
+ * exclusive (opening one closes the other); the other rows stack freely, and
+ * whether a row is *usable* is the enable/disable rules below.
  *
  * Mounted only while the session panel is open (`DropdownMenu` renders nothing
  * when closed), so its form state resets on close and its status query starts
@@ -121,10 +126,6 @@ export function GitActionsSection({
 }: GitActionsSectionProps) {
   const activeWorkspaceId = useAppSelector(
     (state) => state.workspace.activeWorkspaceId,
-  );
-  const model = useAppSelector(
-    (state) =>
-      providerId ? state.workspace.selectedModelByProvider[providerId] : undefined,
   );
 
   const openFileInEditor = useOpenFileInEditor();
@@ -157,12 +158,18 @@ export function GitActionsSection({
   const [publishAdvanced, setPublishAdvanced] = useState(false);
 
   const isSectionOpen = (section: Section) => openSections.includes(section);
+  // Commit and PR are mutually exclusive — both forms answer "what happens to
+  // my changes next", so opening one closes the other. The rest stack freely.
+  const EXCLUSIVE_WITH: Partial<Record<Section, Section>> = {
+    commit: "pr",
+    pr: "commit",
+  };
   const toggleSection = (section: Section) =>
-    setOpenSections((prev) =>
-      prev.includes(section)
-        ? prev.filter((s) => s !== section)
-        : [...prev, section],
-    );
+    setOpenSections((prev) => {
+      if (prev.includes(section)) return prev.filter((s) => s !== section);
+      const rival = EXCLUSIVE_WITH[section];
+      return [...(rival ? prev.filter((s) => s !== rival) : prev), section];
+    });
 
   const { data: status, refetch } = useGetGitFlowStatusQuery(activeWorkspaceId!, {
     skip: !activeWorkspaceId,
@@ -194,6 +201,16 @@ export function GitActionsSection({
   const [commitGitFlow] = useCommitGitFlowMutation();
   const [pushGitFlow] = usePushGitFlowMutation();
   const [createPrGitFlow] = useCreatePrGitFlowMutation();
+  // Explicit "Generate" buttons in the commit / PR forms: fill the fields with
+  // a one-shot model call so the action button itself stays instant. Leaving
+  // the fields blank and clicking Commit / Create PR still generates inline
+  // (the original flow).
+  const [generateCommitMessage, { isLoading: generatingMessage }] =
+    useGenerateCommitMessageGitFlowMutation();
+  const [generatePrBody, { isLoading: generatingPr }] =
+    useGeneratePrBodyGitFlowMutation();
+  /** Bumped on commit so an in-flight generation for the old changeset is dropped. */
+  const prefillSeqRef = useRef(0);
   const [publishRepo] = usePublishRepoMutation();
   const [discardWorkspacePaths] = useDiscardWorkspacePathsMutation();
   // On demand only: the diff text is fetched when a file row is clicked, not
@@ -221,6 +238,35 @@ export function GitActionsSection({
   // choice the user would have made via a worktree.
   const isDefaultBranch = status?.isDefaultBranch ?? false;
 
+  // A row that turns unusable closes its own accordion: after a commit+push or
+  // a full revert its row goes disabled, and a disabled row can't be clicked —
+  // the open form would otherwise stick until the panel is reopened. Mirrors
+  // each row's `disabled` rule below.
+  const pruneOpenSections = useCallback((s: typeof status) => {
+    if (!s) return;
+    const hasCh = (s.changedFiles ?? 0) > 0;
+    const canP = (s.ahead ?? 0) > 0 || !s.hasUpstream;
+    const remote = s.hasRemote ?? true;
+    const onDefault = s.isDefaultBranch ?? false;
+    setOpenSections((prev) => {
+      const next = prev.filter((sec) => {
+        if (sec === "changes") return hasCh;
+        if (sec === "commit") return hasCh || canP;
+        if (sec === "pr") return remote && !onDefault;
+        if (sec === "publish") return !remote;
+        return true;
+      });
+      return next.length === prev.length ? prev : next;
+    });
+  }, []);
+
+  // Every status refresh funnels through here so stale accordions close as
+  // soon as the fresh state lands, whatever triggered the change.
+  const refreshStatus = useCallback(async () => {
+    const res = await refetch();
+    pruneOpenSections(res.data);
+  }, [refetch, pruneOpenSections]);
+
   // Default publish target from the gh preflight (authed login + repo name).
   // The input falls back to this until the user types, so no prefill effect
   // (and no cascading-render setState) is needed.
@@ -238,11 +284,11 @@ export function GitActionsSection({
     setIsManualRefresh(true);
     resyncWorkspaceDiff(activeWorkspaceId);
     try {
-      await refetch();
+      await refreshStatus();
     } finally {
       setIsManualRefresh(false);
     }
-  }, [activeWorkspaceId, isManualRefresh, refetch, resyncWorkspaceDiff]);
+  }, [activeWorkspaceId, isManualRefresh, refreshStatus, resyncWorkspaceDiff]);
 
   /**
    * Open a changed file as a diff. The row belongs to a list of *changes*, so a
@@ -316,7 +362,7 @@ export function GitActionsSection({
             ? `Reverted ${paths[0].split("/").pop()}`
             : `Reverted ${paths.length} files`,
         );
-        refetch();
+        refreshStatus();
       } catch (err) {
         toast.error(extractErrorMessage(err, "Failed to revert changes."));
       } finally {
@@ -324,7 +370,7 @@ export function GitActionsSection({
         setConfirmDiscard(null);
       }
     },
-    [activeWorkspaceId, discarding, discardWorkspacePaths, refetch],
+    [activeWorkspaceId, discarding, discardWorkspacePaths, refreshStatus],
   );
 
   const runBranchSwitch = useCallback(
@@ -337,7 +383,7 @@ export function GitActionsSection({
           branch,
         }).unwrap();
         toast.success(`Switched to ${branch}`);
-        refetch();
+        refreshStatus();
       } catch (err) {
         // git refuses a checkout that would overwrite local work, or one whose
         // branch is checked out in another worktree. Its message says which.
@@ -347,7 +393,7 @@ export function GitActionsSection({
         setConfirmBranch(null);
       }
     },
-    [activeWorkspaceId, switchingBranch, switchWorkspaceBranch, refetch],
+    [activeWorkspaceId, switchingBranch, switchWorkspaceBranch, refreshStatus],
   );
 
   /**
@@ -380,39 +426,94 @@ export function GitActionsSection({
       if (workspaceId !== activeWorkspaceId || timer) return;
       timer = setTimeout(() => {
         timer = null;
-        refetch();
+        refreshStatus();
       }, 400);
     });
     return () => {
       off();
       if (timer) clearTimeout(timer);
     };
-  }, [activeWorkspaceId, refetch]);
+  }, [activeWorkspaceId, refreshStatus]);
+
+  /**
+   * The Generate button in the commit form: fills the textarea with a model-
+   * written message (overwriting what's there — the click is deliberate).
+   * `preview: true` keeps the index untouched; the seq guard drops a result
+   * that lands after a commit already emptied the field.
+   */
+  const handleGenerateMessage = useCallback(() => {
+    if (!activeWorkspaceId || !providerId || generatingMessage) return;
+    const seq = prefillSeqRef.current;
+    generateCommitMessage({
+      workspaceId: activeWorkspaceId,
+      providerId,
+      includeUnstaged,
+      preview: true,
+    })
+      .unwrap()
+      .then((generated) => {
+        if (prefillSeqRef.current !== seq) return;
+        setMessage(generated);
+      })
+      .catch((err) =>
+        toast.error(extractErrorMessage(err, "Failed to generate a commit message.")),
+      );
+  }, [
+    activeWorkspaceId,
+    providerId,
+    generatingMessage,
+    includeUnstaged,
+    generateCommitMessage,
+  ]);
+
+  /** Same explicit generation for the PR form — fills title + body. */
+  const handleGeneratePr = useCallback(() => {
+    if (!activeWorkspaceId || !providerId || generatingPr) return;
+    generatePrBody({ workspaceId: activeWorkspaceId, providerId })
+      .unwrap()
+      .then((generated) => {
+        setPrTitle(generated.title);
+        setPrBody(generated.body);
+      })
+      .catch((err) =>
+        toast.error(extractErrorMessage(err, "Failed to generate the PR description.")),
+      );
+  }, [activeWorkspaceId, providerId, generatingPr, generatePrBody]);
 
   const handleCommit = useCallback(
     async (push: boolean) => {
       if (!activeWorkspaceId || pending) return;
       setPending(push ? "commitPush" : "commit");
+      // Persistent loading toast: the toast store is global, so the progress
+      // stays visible (and the outcome lands) even if the panel closes and
+      // this component unmounts mid-operation. Success/error reuse the id to
+      // swap the same toast in place.
+      const toastId = toast.loading(
+        push ? "Committing and pushing…" : "Committing…",
+      );
       try {
         const result = await commitGitFlow({
           workspaceId: activeWorkspaceId,
           message: message.trim() || undefined,
           includeUnstaged,
           providerId,
-          model,
           push,
         }).unwrap();
+        prefillSeqRef.current++;
         setMessage("");
         toast.success(
           push ? "Committed and pushed" : `Committed ${result.summary}`,
+          { id: toastId },
         );
         // Refresh the panel's live status in place for both commit and
         // commit+push. getGitFlowStatus isn't WorkspaceDiffs-tagged (to avoid a
         // resync cascade), so it needs an explicit refetch after the mutation —
         // otherwise the dropdown keeps showing the pre-commit changes.
-        refetch();
+        refreshStatus();
       } catch (err) {
-        toast.error(typeof err === "string" ? err : "Commit failed");
+        toast.error(typeof err === "string" ? err : "Commit failed", {
+          id: toastId,
+        });
       } finally {
         setPending(null);
       }
@@ -424,28 +525,31 @@ export function GitActionsSection({
       message,
       includeUnstaged,
       providerId,
-      model,
-      refetch,
+      refreshStatus,
     ],
   );
 
   const handlePush = useCallback(async () => {
     if (!activeWorkspaceId || pending) return;
     setPending("push");
+    const toastId = toast.loading("Pushing…");
     try {
       await pushGitFlow(activeWorkspaceId).unwrap();
-      toast.success("Pushed");
-      refetch();
+      toast.success("Pushed", { id: toastId });
+      refreshStatus();
     } catch (err) {
-      toast.error(typeof err === "string" ? err : "Push failed");
+      toast.error(typeof err === "string" ? err : "Push failed", {
+        id: toastId,
+      });
     } finally {
       setPending(null);
     }
-  }, [activeWorkspaceId, pending, pushGitFlow, refetch]);
+  }, [activeWorkspaceId, pending, pushGitFlow, refreshStatus]);
 
   const handleCreatePr = useCallback(async () => {
     if (!activeWorkspaceId || pending) return;
     setPending("pr");
+    const toastId = toast.loading("Creating pull request…");
     try {
       const result = await createPrGitFlow({
         workspaceId: activeWorkspaceId,
@@ -453,13 +557,14 @@ export function GitActionsSection({
         body: prBody.trim() || undefined,
         draft: prDraft,
         providerId,
-        model,
       }).unwrap();
-      toast.success("Pull request created");
+      toast.success("Pull request created", { id: toastId });
       if (result.url) window.api.shell.openExternal(result.url);
       onClose();
     } catch (err) {
-      toast.error(typeof err === "string" ? err : "Failed to create PR");
+      toast.error(typeof err === "string" ? err : "Failed to create PR", {
+        id: toastId,
+      });
     } finally {
       setPending(null);
     }
@@ -471,7 +576,6 @@ export function GitActionsSection({
     prBody,
     prDraft,
     providerId,
-    model,
     onClose,
   ]);
 
@@ -498,7 +602,7 @@ export function GitActionsSection({
       setOpenSections((prev) => prev.filter((s) => s !== "publish"));
       setPublishOwnerRepo("");
       setPublishAdvanced(false);
-      refetch();
+      refreshStatus();
     } catch (err) {
       toast.error(extractErrorMessage(err, "Failed to publish repository."));
     } finally {
@@ -513,7 +617,7 @@ export function GitActionsSection({
     publishPrivate,
     publishRemote,
     publishSsh,
-    refetch,
+    refreshStatus,
   ]);
 
   if (!activeWorkspaceId) return null;
@@ -630,19 +734,45 @@ export function GitActionsSection({
       />
       <PanelCollapse isOpen={isSectionOpen("commit")}>
         <div className={`${PANEL_ROW_X} pt-2`}>
-          <Textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => {
-              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                e.preventDefault();
-                if (hasChanges && !busy) handleCommit(false);
+          <div className="relative">
+            <Textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                  e.preventDefault();
+                  if (hasChanges && !busy) handleCommit(false);
+                }
+              }}
+              rows={3}
+              placeholder={
+                generatingMessage
+                  ? "Generating commit message…"
+                  : "Commit message (leave blank to generate)…"
               }
-            }}
-            rows={3}
-            placeholder="Commit message (leave blank to generate)…"
-            className="w-full resize-none text-xs"
-          />
+              className="w-full resize-none text-xs pb-8"
+            />
+            <Button
+              type="button"
+              onClick={handleGenerateMessage}
+              disabled={!hasChanges || busy || generatingMessage}
+              tooltip="Generate a commit message from the changes"
+              tooltipPosition="top-left"
+              className="absolute glass-primary bottom-3 right-2 flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-primary-500 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-100 bg-primary-100/60 hover:bg-primary-200/60 dark:bg-primary-800/40 dark:hover:bg-primary-700/40 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {generatingMessage ? (
+                <>
+                  <AsciiSpinner kind="generate" className="size-3" />
+                  Generating
+                </>
+              ) : (
+                <>
+                  <Sparkles className="size-3" />
+                  Generate
+                </>
+              )}
+            </Button>
+          </div>
           <label className="mt-1 mb-2 flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-300">
             <Checkbox
               checked={includeUnstaged}
@@ -699,16 +829,46 @@ export function GitActionsSection({
                 type="text"
                 value={prTitle}
                 onChange={(e) => setPrTitle(e.target.value)}
-                placeholder="PR title (leave blank to generate)…"
+                placeholder={
+                  generatingPr
+                    ? "Generating PR title…"
+                    : "PR title (leave blank to generate)…"
+                }
                 className="w-full text-xs"
               />
-              <Textarea
-                value={prBody}
-                onChange={(e) => setPrBody(e.target.value)}
-                rows={4}
-                placeholder="Description (optional, leave blank to generate)…"
-                className="w-full text-xs"
-              />
+              <div className="relative">
+                <Textarea
+                  value={prBody}
+                  onChange={(e) => setPrBody(e.target.value)}
+                  rows={4}
+                  placeholder={
+                    generatingPr
+                      ? "Generating description…"
+                      : "Description (optional, leave blank to generate)…"
+                  }
+                  className="w-full text-xs pb-8"
+                />
+                <Button
+                  type="button"
+                  onClick={handleGeneratePr}
+                  disabled={busy || generatingPr}
+                  tooltip="Generate the title and description from the branch"
+                  tooltipPosition="top-left"
+                  className="absolute glass-primary bottom-3 right-2 flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-primary-500 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-100 bg-primary-100/60 hover:bg-primary-200/60 dark:bg-primary-800/40 dark:hover:bg-primary-700/40 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {generatingPr ? (
+                    <>
+                      <AsciiSpinner kind="generate" className="size-3" />
+                      Generating
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="size-3" />
+                      Generate
+                    </>
+                  )}
+                </Button>
+              </div>
               <label className="mb-1 -mt-1 flex cursor-pointer select-none items-center gap-2 text-s text-primary-600 dark:text-primary-300">
                 <Checkbox
                   checked={prDraft}

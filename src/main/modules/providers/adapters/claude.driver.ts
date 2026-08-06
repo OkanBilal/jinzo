@@ -2781,11 +2781,26 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
           return empty(msg || null);
         }
 
+        // Manifest fallback for plugins the catalog cache hasn't indexed yet.
+        const manifestsByMarketplace: Record<
+          string,
+          Record<string, Record<string, any>>
+        > = {};
+        for (const raw of mpJson ?? []) {
+          const mp = raw as Record<string, unknown>;
+          if (mp && typeof mp.name === "string" && typeof mp.installLocation === "string") {
+            manifestsByMarketplace[mp.name] = readMarketplaceManifestPlugins(
+              mp.installLocation,
+            );
+          }
+        }
+
         const result = mapClaudePluginList(
           listJson,
           mpJson,
           readPluginCatalogPlugins(),
           readInstalledShaById(),
+          manifestsByMarketplace,
         );
         cachedPlugins = result;
         cachedPluginsTimestamp = now;
@@ -2814,7 +2829,15 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       } else {
         for (const id of readInstalledPluginIds()) installedEnabled[id] = true;
       }
-      return mapClaudePluginDetail(catalogPlugins, installedEnabled, pluginName, marketplacePath);
+      const manifestEntry =
+        readMarketplaceManifestPlugins(marketplacePath)[pluginName] ?? null;
+      return mapClaudePluginDetail(
+        catalogPlugins,
+        installedEnabled,
+        pluginName,
+        marketplacePath,
+        manifestEntry,
+      );
     },
 
     async installPlugin(pluginId: string, scope?: "user" | "project" | "local"): Promise<void> {
@@ -3218,6 +3241,28 @@ function readPluginCatalogPlugins(): Record<string, unknown> {
   return plugins && typeof plugins === "object" ? plugins : {};
 }
 
+/**
+ * Plugin entries from a cloned marketplace's `.claude-plugin/marketplace.json`,
+ * keyed by plugin name. Fallback metadata source for plugins the catalog cache
+ * hasn't indexed yet — the cache lags the manifest, so newly added marketplace
+ * plugins (author/category/homepage) appear here first.
+ */
+function readMarketplaceManifestPlugins(
+  marketplacePath: string,
+): Record<string, Record<string, any>> {
+  if (!marketplacePath) return {};
+  const data = readJsonFileSafe(
+    path.join(marketplacePath, ".claude-plugin", "marketplace.json"),
+  );
+  const out: Record<string, Record<string, any>> = {};
+  for (const raw of Array.isArray(data?.plugins) ? data.plugins : []) {
+    if (raw && typeof raw === "object" && typeof raw.name === "string") {
+      out[raw.name] = raw as Record<string, any>;
+    }
+  }
+  return out;
+}
+
 /** Installed plugin ids (keys of installed_plugins.json). */
 function readInstalledPluginIds(): string[] {
   const data = readJsonFileSafe(path.join(pluginsDir(), "installed_plugins.json"));
@@ -3350,6 +3395,7 @@ export function mapClaudePluginList(
   marketplaces: unknown[] | null,
   catalogPlugins: Record<string, unknown> = {},
   installedShaById: Record<string, string> = {},
+  manifestsByMarketplace: Record<string, Record<string, Record<string, any>>> = {},
 ): PluginListResponse {
   // Index installed plugins by id for installed/enabled lookup.
   const installedById = new Map<string, { enabled: boolean; installPath?: string }>();
@@ -3398,14 +3444,31 @@ export function mapClaudePluginList(
     const name = typeof a.name === "string" ? a.name : id.split("@")[0];
     // Enrich category/developer/homepage from the catalog cache (the
     // `--available` payload omits them) so the UI can group by category.
+    // The cloned marketplace.json is the fallback: the catalog cache lags the
+    // manifest, so newly added plugins only carry metadata there.
     const catEntry = catalogPlugins[id] as Record<string, any> | undefined;
     const me = (catEntry?.marketplace_entry as Record<string, any>) ?? {};
+    const mf = manifestsByMarketplace[marketplaceName]?.[name] ?? {};
+    const mfAuthor =
+      typeof mf.author === "string" ? mf.author : (mf.author?.name as string | undefined);
     const desc =
       (typeof a.description === "string" && a.description) ||
-      (typeof me.description === "string" ? me.description : undefined);
-    const category = typeof me.category === "string" ? me.category : undefined;
-    const developerName = typeof me.author?.name === "string" ? me.author.name : undefined;
-    const websiteUrl = typeof me.homepage === "string" ? me.homepage : undefined;
+      (typeof me.description === "string" ? me.description : undefined) ||
+      (typeof mf.description === "string" ? mf.description : undefined);
+    const category =
+      typeof me.category === "string"
+        ? me.category
+        : typeof mf.category === "string"
+          ? mf.category
+          : undefined;
+    const developerName =
+      typeof me.author?.name === "string" ? me.author.name : mfAuthor;
+    const websiteUrl =
+      typeof me.homepage === "string"
+        ? me.homepage
+        : typeof mf.homepage === "string"
+          ? mf.homepage
+          : undefined;
     const displayName = typeof me.displayName === "string" ? me.displayName : undefined;
     const installs =
       typeof a.installCount === "number"
@@ -3489,6 +3552,7 @@ export function mapClaudePluginDetail(
   installedEnabled: Record<string, boolean>,
   pluginName: string,
   marketplacePath: string,
+  manifestEntry: Record<string, any> | null = null,
 ): PluginDetail {
   const marketplaceName = marketplacePath ? path.basename(marketplacePath) : "";
   let pluginId = marketplaceName ? `${pluginName}@${marketplaceName}` : "";
@@ -3503,10 +3567,31 @@ export function mapClaudePluginDetail(
   }
   if (!pluginId) pluginId = `${pluginName}@${marketplaceName || "unknown"}`;
 
+  // The catalog cache entry wins; the marketplace.json manifest entry fills
+  // the gaps for plugins the cache hasn't indexed yet.
   const me = (entry?.marketplace_entry as Record<string, any>) ?? {};
+  const mf = manifestEntry ?? {};
   const comps = (entry?.components as Record<string, any>) ?? {};
-  const author = (me.author as Record<string, any>) ?? {};
-  const description = typeof me.description === "string" ? me.description : null;
+  const rawAuthor = me.author ?? mf.author;
+  const authorName =
+    typeof rawAuthor === "string" ? rawAuthor : (rawAuthor?.name as string | undefined);
+  const description =
+    (typeof me.description === "string" ? me.description : null) ??
+    (typeof mf.description === "string" ? mf.description : null);
+  const category =
+    typeof me.category === "string"
+      ? me.category
+      : typeof mf.category === "string"
+        ? mf.category
+        : undefined;
+  const homepage =
+    typeof me.homepage === "string"
+      ? me.homepage
+      : typeof mf.homepage === "string"
+        ? mf.homepage
+        : undefined;
+  const manifestSourceUrl =
+    typeof mf.source === "string" ? mf.source : (mf.source?.url as string | undefined);
   const installed = pluginId in installedEnabled;
   const enabled = installedEnabled[pluginId] ?? false;
   const resolvedMarketplace = marketplaceName || pluginId.split("@")[1] || "";
@@ -3525,7 +3610,10 @@ export function mapClaudePluginDetail(
     summary: {
       id: pluginId,
       name: pluginName,
-      source: { type: "git", path: (me.homepage as string) ?? (me.source as string) ?? "" },
+      source: {
+        type: "git",
+        path: homepage ?? (me.source as string) ?? manifestSourceUrl ?? "",
+      },
       installed,
       enabled,
       installPolicy: "AVAILABLE",
@@ -3534,10 +3622,10 @@ export function mapClaudePluginDetail(
         displayName: (me.name as string) ?? pluginName,
         shortDescription: description ?? undefined,
         longDescription: description ?? undefined,
-        developerName: (author.name as string) ?? undefined,
-        category: (me.category as string) ?? undefined,
+        developerName: authorName,
+        category,
         capabilities: [],
-        websiteUrl: (me.homepage as string) ?? undefined,
+        websiteUrl: homepage,
         screenshots: [],
       },
     },
@@ -3545,6 +3633,10 @@ export function mapClaudePluginDetail(
     skills,
     apps: [],
     mcpServers,
+    uniqueInstalls:
+      typeof entry?.unique_installs === "number" ? (entry.unique_installs as number) : null,
+    lastUpdated:
+      typeof entry?.last_updated === "string" ? (entry.last_updated as string) : null,
   };
 }
 

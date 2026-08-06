@@ -56,6 +56,7 @@ export function registerGitFlowIpc(): void {
         providerId: string;
         model?: string;
         includeUnstaged?: boolean;
+        preview?: boolean;
       }) => gitFlowService.generateCommitMessage(payload),
     ),
   );

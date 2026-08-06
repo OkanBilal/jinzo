@@ -19,14 +19,79 @@ function logWarn(...args: unknown[]): void {
 // ─────────────────────────────────────────────────────────────
 
 /**
- * Augment process.env.PATH with common macOS binary directories.
- * Packaged macOS apps launched from Finder/Dock get a minimal PATH
- * (/usr/bin:/bin:/usr/sbin:/sbin), missing user-installed binaries.
- * Call this early in app startup, before any provider initialization.
+ * The user's real PATH, read from their login shell (the fix-path pattern).
+ * Version managers (nvm, fnm, volta, asdf) put node on the PATH from shell
+ * init files, so no static directory list can find their binaries — only the
+ * shell itself knows. Sentinels bracket the value because an interactive rc
+ * can print arbitrary output around it. Returns null when the read fails
+ * (missing shell, hung rc file, no PATH in output) — callers fall back to
+ * the static list.
  */
-export function augmentPathForPackagedApp(): void {
+function readLoginShellPath(): string | null {
+  if (process.platform === "win32") return null;
+  const shell = process.env.SHELL || "/bin/zsh";
+  const marker = "__mains_login_path__";
+  try {
+    // ${PATH} must be braced: the trailing marker starts with underscores, and
+    // zsh would otherwise read `$PATH__mains...` as one (undefined) variable.
+    const out = execFileSync(shell, ["-ilc", `printf '%s' "${marker}\${PATH}${marker}"`], {
+      encoding: "utf8",
+      timeout: 3000,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    const parts = out.split(marker);
+    const captured = parts.length >= 3 ? parts[1] : null;
+    return captured && captured.includes("/") ? captured : null;
+  } catch (error) {
+    logWarn(
+      "Login shell PATH read failed:",
+      error instanceof Error ? error.message : String(error),
+    );
+    return null;
+  }
+}
+
+/**
+ * Merge PATH sources into one deduped list. Login-shell dirs come first (its
+ * node/gh win over anything stale), then the inherited PATH, then the static
+ * safety net. Pure — exposed for tests.
+ */
+export function mergePathDirs(
+  loginShellPath: string | null,
+  currentPath: string,
+  extraDirs: string[],
+): string {
+  const seen = new Set<string>();
+  const merged: string[] = [];
+  const dirs = [
+    ...(loginShellPath ? loginShellPath.split(path.delimiter) : []),
+    ...currentPath.split(path.delimiter),
+    ...extraDirs,
+  ];
+  for (const dir of dirs) {
+    if (dir && !seen.has(dir)) {
+      seen.add(dir);
+      merged.push(dir);
+    }
+  }
+  return merged.join(path.delimiter);
+}
+
+/**
+ * Make process.env.PATH match what a terminal would see. Packaged macOS apps
+ * launched from Finder/Dock get a minimal PATH (/usr/bin:/bin:...), so child
+ * processes — git hooks spawned via simple-git (husky needs `node`!), gh,
+ * provider CLIs — can't find user-installed binaries. The login-shell PATH is
+ * the source of truth; the static list below is the fallback when reading it
+ * fails. Call this early in app startup, before any provider initialization.
+ *
+ * `readLoginShell` should be `app.isPackaged`: in dev the terminal already
+ * handed us the full PATH, so the shell read would only add startup latency —
+ * and demote session-level overrides (`nvm use` in the launching terminal).
+ */
+export function augmentPathForPackagedApp(readLoginShell: boolean): void {
   const homeDir = os.homedir();
-  const additionalPaths = [
+  const fallbackPaths = [
     path.join(homeDir, ".local", "bin"),
     "/opt/homebrew/bin",
     "/usr/local/bin",
@@ -35,12 +100,15 @@ export function augmentPathForPackagedApp(): void {
   ];
 
   const currentPath = process.env.PATH || "";
-  const currentDirs = new Set(currentPath.split(path.delimiter));
-
-  const newDirs = additionalPaths.filter((d) => !currentDirs.has(d));
-  if (newDirs.length > 0) {
-    process.env.PATH = currentPath + path.delimiter + newDirs.join(path.delimiter);
-    logInfo("Augmented PATH with:", newDirs.join(", "));
+  const loginShellPath = readLoginShell ? readLoginShellPath() : null;
+  const merged = mergePathDirs(loginShellPath, currentPath, fallbackPaths);
+  if (merged !== currentPath) {
+    process.env.PATH = merged;
+    logInfo(
+      loginShellPath
+        ? "Adopted login shell PATH"
+        : "Augmented PATH with static fallback dirs",
+    );
   }
 }
 

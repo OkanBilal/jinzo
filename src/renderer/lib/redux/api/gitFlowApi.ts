@@ -126,7 +126,14 @@ export const gitFlowApi = baseApi.injectEndpoints({
 
     generateCommitMessageGitFlow: builder.mutation<
       string,
-      { workspaceId: string; providerId: string; model?: string; includeUnstaged?: boolean }
+      {
+        workspaceId: string;
+        providerId: string;
+        model?: string;
+        includeUnstaged?: boolean;
+        /** Read-only prefill: summarize without staging as a side effect. */
+        preview?: boolean;
+      }
     >({
       query: (payload) => ({
         handler: CHANNELS.gitFlow.generateCommitMessage,

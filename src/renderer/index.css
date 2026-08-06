@@ -569,6 +569,26 @@ body[data-resizing] iframe {
 .tool-square::before { animation-delay: var(--tsq-d1, 0ms); }
 .tool-square::after  { animation-delay: var(--tsq-d2, 0ms); }
 
+/*
+ * Generate spinner: each tiny square twinkles independently at a random phase
+ * and tempo (per-cell vars set in generate-spinner.tsx), giving a soft
+ * "generative sparkle" rather than the tool spinner's diagonal sweeps. Same
+ * ease-in-out-sine as toolSquarePulse so the fades stay silky.
+ */
+@keyframes generateSquareTwinkle {
+  0%, 100% { opacity: 0.08; transform: scale(0.4); }
+  50%      { opacity: 1;    transform: scale(1); }
+}
+
+.generate-square {
+  border-radius: 1px;
+  background: currentColor;
+  opacity: 0.08;
+  animation: generateSquareTwinkle var(--gsq-dur, 1400ms)
+    cubic-bezier(0.37, 0, 0.63, 1) infinite;
+  animation-delay: var(--gsq-delay, 0ms);
+}
+
 @keyframes wizardModalIn {
   0% {
     opacity: 0;

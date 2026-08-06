@@ -25,10 +25,29 @@ vi.mock("../git", () => ({
     getRemotes: vi.fn(),
     stageFiles: vi.fn(),
     getStagedDiff: vi.fn(),
+    getDiff: vi.fn(),
     commit: vi.fn(),
     getHeadSha: vi.fn(),
     push: vi.fn(),
   },
+}));
+
+const { generateTextMock } = vi.hoisted(() => ({
+  generateTextMock: vi.fn(),
+}));
+
+vi.mock("../providers/providers.service", () => ({
+  providersService: {
+    getById: vi.fn().mockResolvedValue({
+      id: "claude_code",
+      displayName: "Claude",
+      defaultModel: "some-big-chat-model",
+    }),
+  },
+}));
+
+vi.mock("../providers/adapters/adapter.factory", () => ({
+  createWorkAdapter: vi.fn(() => ({ generateText: generateTextMock })),
 }));
 
 vi.mock("../projects", () => ({
@@ -166,5 +185,41 @@ describe("gitFlowService — live branch invariants", () => {
 
     expect(gitMock.push).not.toHaveBeenCalled();
     expect(execFileMock).not.toHaveBeenCalled();
+  });
+
+  describe("generateCommitMessage", () => {
+    it("preview mode reads the diffs without staging and omits the model", async () => {
+      gitMock.getStagedDiff.mockResolvedValue("staged-hunk");
+      gitMock.getDiff.mockResolvedValue("working-hunk");
+      generateTextMock.mockResolvedValue("feat: do the thing");
+
+      const message = await gitFlowService.generateCommitMessage({
+        workspaceId: "ws-1",
+        providerId: "claude_code",
+        preview: true,
+      });
+
+      expect(message).toBe("feat: do the thing");
+      // Prefill must not mutate the index as a read side effect.
+      expect(gitMock.stageFiles).not.toHaveBeenCalled();
+      const [prompt, opts] = generateTextMock.mock.calls[0];
+      expect(prompt).toContain("staged-hunk");
+      expect(prompt).toContain("working-hunk");
+      // No model → the driver's cheap one-shot default, not the chat model.
+      expect(opts.model).toBeUndefined();
+    });
+
+    it("non-preview mode stages before reading the staged diff", async () => {
+      gitMock.getStagedDiff.mockResolvedValue("staged-hunk");
+      generateTextMock.mockResolvedValue("fix: stage first");
+
+      await gitFlowService.generateCommitMessage({
+        workspaceId: "ws-1",
+        providerId: "claude_code",
+      });
+
+      expect(gitMock.stageFiles).toHaveBeenCalledWith("/repo");
+      expect(gitMock.getDiff).not.toHaveBeenCalled();
+    });
   });
 });

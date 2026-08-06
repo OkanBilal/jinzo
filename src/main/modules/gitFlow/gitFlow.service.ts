@@ -388,6 +388,12 @@ export const gitFlowService = {
     model?: string;
     includeUnstaged?: boolean;
     stagedDiff?: string;
+    /**
+     * Fill-the-form path (the Generate button in the commit form): summarize
+     * what WOULD be committed without touching the index — staging as a read
+     * side effect would surprise anyone watching `git status` in a terminal.
+     */
+    preview?: boolean;
   }): Promise<string> {
     let rootPath = params.rootPath;
     if (!rootPath) {
@@ -396,11 +402,20 @@ export const gitFlowService = {
 
     let diff = params.stagedDiff;
     if (diff === undefined) {
-      await this.stage(
-        rootPath,
-        params.includeUnstaged === false ? "none" : "all",
-      );
-      diff = await gitService.getStagedDiff(rootPath);
+      if (params.preview) {
+        const staged = await gitService.getStagedDiff(rootPath).catch(() => "");
+        const working =
+          params.includeUnstaged === false
+            ? ""
+            : await gitService.getDiff(rootPath).catch(() => "");
+        diff = [staged, working].filter(Boolean).join("\n");
+      } else {
+        await this.stage(
+          rootPath,
+          params.includeUnstaged === false ? "none" : "all",
+        );
+        diff = await gitService.getStagedDiff(rootPath);
+      }
     }
     if (!diff.trim()) throw new Error("No staged changes to summarize");
 
@@ -431,9 +446,12 @@ export const gitFlowService = {
 
     const prompt = `Write a commit message for these staged changes:\n\n${diff.slice(0, MAX_DIFF_CHARS)}`;
 
+    // No model fallback on purpose: left undefined, the driver picks its cheap
+    // one-shot default (e.g. Haiku for Claude) — a commit message doesn't need
+    // the chat model, and the big ones make the commit button hang for 10s+.
     const text = await adapter.generateText(prompt, {
       system,
-      model: params.model ?? provider.defaultModel ?? undefined,
+      model: params.model,
     });
     const message = cleanGenerated(text);
     if (!message) throw new Error("Empty commit message generated");
@@ -523,10 +541,12 @@ export const gitFlowService = {
       .filter(Boolean)
       .join("\n");
 
+    // Same cheap-default reasoning as generateCommitMessage: no model → the
+    // driver's fast one-shot default.
     const text = cleanGenerated(
       await adapter.generateText(prompt, {
         system,
-        model: params.model ?? provider.defaultModel ?? undefined,
+        model: params.model,
       }),
     );
 

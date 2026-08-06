@@ -1732,4 +1732,8 @@ export interface PluginDetail {
   skills: PluginSkillSummary[];
   apps: PluginAppSummary[];
   mcpServers: string[];
+  /** Marketplace-reported install count — only known for catalog-indexed plugins. */
+  uniqueInstalls?: number | null;
+  /** ISO timestamp of the plugin's last marketplace update, if known. */
+  lastUpdated?: string | null;
 }
