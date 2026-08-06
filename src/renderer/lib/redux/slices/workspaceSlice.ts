@@ -90,6 +90,11 @@ export interface WorkspaceState {
   openNoteTabs: ReviewTab[];
   pendingGoal: string | null;
   pendingAutoExecute: boolean;
+  /**
+   * One-shot command queued for the bottom terminal (e.g. a provider login).
+   * Consumed and cleared by XtermTerminal once the PTY is ready.
+   */
+  pendingTerminalCommand: string | null;
   pendingReviewTarget: {
     type: "uncommittedChanges" | "baseBranch" | "commit" | "custom";
     branch?: string;
@@ -121,6 +126,7 @@ const initialState: WorkspaceState = {
   openNoteTabs: [],
   pendingGoal: null,
   pendingAutoExecute: false,
+  pendingTerminalCommand: null,
   pendingReviewTarget: null,
 };
 
@@ -327,6 +333,12 @@ const workspaceSlice = createSlice({
       state.pendingGoal = null;
       state.pendingAutoExecute = false;
     },
+    setPendingTerminalCommand: (state, action: PayloadAction<string>) => {
+      state.pendingTerminalCommand = action.payload;
+    },
+    clearPendingTerminalCommand: (state) => {
+      state.pendingTerminalCommand = null;
+    },
     setPendingReviewTarget: (state, action: PayloadAction<WorkspaceState["pendingReviewTarget"]>) => {
       state.pendingReviewTarget = action.payload;
     },
@@ -377,6 +389,8 @@ export const {
   setPendingGoal,
   setPendingAutoExecute,
   clearPendingGoal,
+  setPendingTerminalCommand,
+  clearPendingTerminalCommand,
   setPendingReviewTarget,
   clearPendingReviewTarget,
 } = workspaceSlice.actions;

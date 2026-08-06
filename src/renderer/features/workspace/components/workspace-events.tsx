@@ -29,6 +29,8 @@ import {
 const EMPTY_TURNS: RunTurn[] = [];
 import { isIssueTab, getIssueEntityId, isSignalTab, getSignalEntityId, isNoteTab, getNoteId, isNewRunTab } from "../utils/repo-utils";
 import { AsciiLoader } from "./ascii-loader";
+import { ProviderAuthNotice } from "./provider-auth-notice";
+import { classifyRunErrorKind } from "../../../../shared/run-errors";
 import { ArrowUp, Fork } from "@/components/ui/icons";
 import { useGetAppSettingsQuery } from "@/lib/redux/api";
 import { isDocumentRenderImage } from "@/lib/document-viewer";
@@ -183,7 +185,7 @@ function SessionTimeBar({
             onClick={handleFork}
             className="flex items-center gap-1 ml-0.5 hover:text-primary-900 dark:hover:text-primary-100 transition-colors cursor-pointer"
           >
-            <Fork className="size-4" />
+            <Fork className="size-3.5" />
           </Button>
         </>
       )}
@@ -670,6 +672,14 @@ export function WorkspaceEvents({
                   </div>
                 );
               })}
+              {activeRun?.status === "failed" &&
+                classifyRunErrorKind(activeRun.lastError) === "auth" && (
+                  <ProviderAuthNotice
+                    variant={variant}
+                    title="Authentication expired"
+                    message={activeRun.lastError}
+                  />
+                )}
               {isRunning && !hasActiveImageGeneration && (
                 <AsciiLoader thinkingText={latestThinking} />
               )}

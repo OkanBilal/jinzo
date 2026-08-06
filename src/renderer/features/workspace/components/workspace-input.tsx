@@ -8,7 +8,7 @@ import { addContextFile, addContextIssue, addContextSkill, removeContextSkill } 
 import type { UploadedFile, RichInputFormHandle, RichSkillChipData, RichFileChipData } from "@/components/ui";
 import { useSpaceProviderVariant } from "@/hooks/use-space-provider-variant";
 import { useIsMobile } from "@/lib/platform";
-import { Button, RichInputForm } from "@/components/ui";
+import { RichInputForm } from "@/components/ui";
 import {
   UnifiedContextDropdown,
   type UnifiedContextTrigger,
@@ -17,8 +17,11 @@ import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
 import { ContextChips } from "./context-chips";
 import { InputToolbar } from "./input-toolbar";
 import { ContextUsageRing } from "./context-usage-meter";
+import { ProviderAuthNotice } from "./provider-auth-notice";
 import { useContextUsage } from "../hooks/use-context-usage";
 import { useProviderModels } from "../hooks/use-provider-models";
+import { getProviderVariantById } from "@/lib/provider-variants";
+import { useGetProviderAccountInfoQuery } from "@/lib/redux/api";
 
 const EMPTY_CONTEXT_FILES: FileNode[] = [];
 const EMPTY_CONTEXT_ISSUES: ContextIssue[] = [];
@@ -181,6 +184,22 @@ export function WorkspaceInput({
   );
 
   const contextUsage = useContextUsage(activeRun?.id ?? null);
+
+  // Preflight auth probe: catches "signed out entirely" before the first run
+  // is even sent. Refresh-token failures can't be predicted from local state —
+  // those surface post-run via the transcript auth notice instead.
+  const {
+    data: accountInfo,
+    refetch: refetchAccountInfo,
+    isFetching: isFetchingAccountInfo,
+  } = useGetProviderAccountInfoQuery(activeProviderId, {
+    skip: !activeProviderId,
+    refetchOnFocus: false,
+  });
+  const providerSignedOut = !!accountInfo && accountInfo.account === null;
+  // The providerId prop can override the space's provider — resolve the
+  // descriptor from the id actually in use.
+  const activeDescriptor = getProviderVariantById(activeProviderId) ?? spaceProvider;
 
   // Cmd+P to focus input
   useEffect(() => {
@@ -522,22 +541,21 @@ export function WorkspaceInput({
 
   return (
     <>
-          {authErrorMessage && (
-        <div className="w-full max-w-200 mx-auto  px-3 py-2 rounded-xl text-yellow-500/80 bg-yellow-500/10  dark:bg-yellow-300/10  dark:text-yellow-200/80 text-xs flex items-center justify-between">
-          <span>
-            <span className="font-medium">Auth required:</span>{" "}
-            {authErrorMessage}
-          </span>
-          <Button
-            type="button"
-            variant="subtle"
-            onClick={() => void refetchModels()}
-            isLoading={isFetchingModels}
-            className="ml-3 shrink-0 px-2 py-1 rounded-md bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-600/80 dark:text-yellow-200/80 transition-colors cursor-pointer "
-          >
-            Check Auth
-          </Button>
-        </div>
+          {(authErrorMessage || providerSignedOut) && (
+        <ProviderAuthNotice
+          variant={activeDescriptor.variant}
+          title="Auth required"
+          message={
+            authErrorMessage ??
+            `${activeDescriptor.label} CLI is not signed in`
+          }
+          onRecheck={() => {
+            void refetchModels();
+            void refetchAccountInfo();
+          }}
+          isRechecking={isFetchingModels || isFetchingAccountInfo}
+          className="w-full max-w-200 mx-auto"
+        />
       )}
 
     <div

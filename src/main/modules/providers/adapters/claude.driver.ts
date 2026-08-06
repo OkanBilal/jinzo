@@ -2127,6 +2127,37 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
   }
 
   /**
+   * Read login state via `claude auth status --json`. Returns undefined when
+   * the CLI predates the `auth` subcommand (or output is unparseable) so the
+   * caller can fall back to the SDK control query; null means definitively
+   * signed out.
+   */
+  async function readAccountFromAuthStatus(): Promise<
+    AccountInfo["account"] | undefined
+  > {
+    const { stdout } = await runClaudeCli(["auth", "status", "--json"], 15000);
+    // A signed-out status can exit non-zero but still print JSON — parse
+    // stdout regardless of exit code.
+    const jsonStart = stdout.indexOf("{");
+    if (jsonStart === -1) return undefined;
+    try {
+      const status = JSON.parse(stdout.slice(jsonStart));
+      if (typeof status?.loggedIn !== "boolean") return undefined;
+      if (!status.loggedIn) return null;
+      if (typeof status.email === "string" && status.email) {
+        return {
+          type: "claude",
+          email: status.email,
+          planType: status.subscriptionType ?? status.orgName ?? "",
+        };
+      }
+      return { type: "apiKey" };
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
    * One-shot, tool-free text generation via a cheap model. Shared by the
    * generateText() and generateTitle() driver methods.
    */
@@ -2840,8 +2871,16 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     async getAccountInfo(): Promise<AccountInfo> {
       const cli = { version: await getClaudeVersion(), channel: null, outdated: false };
 
-      // Read the logged-in account via a lightweight control query (same pattern
-      // as listModels — prompt:"" never sends a turn). Falls back to no account.
+      // Fast path: read login state straight from the CLI — detects the
+      // signed-out case definitively and skips spawning an SDK query process.
+      const fromAuthStatus = await readAccountFromAuthStatus();
+      if (fromAuthStatus !== undefined) {
+        return { account: fromAuthStatus, requiresOpenaiAuth: false, cli };
+      }
+
+      // Legacy fallback (CLI without `auth status`): read the account via a
+      // lightweight control query (same pattern as listModels — prompt:""
+      // never sends a turn). Falls back to no account.
       let account: AccountInfo["account"] = null;
       try {
         await ensureSDK();

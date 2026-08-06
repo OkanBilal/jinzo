@@ -1,12 +1,20 @@
 import { useCallback } from "react";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { setBottomTerminalOpen } from "@/lib/redux/slices/appSettingsSlice";
+import { setPendingTerminalCommand } from "@/lib/redux/slices/workspaceSlice";
 
 interface BottomTerminalState {
   isOpen: boolean;
   toggle: () => void;
   open: () => void;
   close: () => void;
+  /**
+   * Open the drawer and run a one-shot shell command in it (e.g. a provider
+   * login). The command is queued in redux and written by XtermTerminal once
+   * the PTY exists — writing directly here would race PTY creation when the
+   * drawer was closed.
+   */
+  runCommand: (command: string) => void;
 }
 
 /**
@@ -31,5 +39,13 @@ export function useBottomTerminal(): BottomTerminalState {
     dispatch(setBottomTerminalOpen(false));
   }, [dispatch]);
 
-  return { isOpen, toggle, open, close };
+  const runCommand = useCallback(
+    (command: string) => {
+      dispatch(setPendingTerminalCommand(command));
+      dispatch(setBottomTerminalOpen(true));
+    },
+    [dispatch],
+  );
+
+  return { isOpen, toggle, open, close, runCommand };
 }

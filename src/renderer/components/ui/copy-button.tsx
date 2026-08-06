@@ -27,7 +27,7 @@ export function CopyButton({
       onClick={() => void copy(text)}
       className={className}
     >
-      {isCopied ? <Check className="size-4" /> : <Clipboard className="size-4" />}
+      {isCopied ? <Check className="size-3.5" /> : <Clipboard className="size-3.5" />}
     </Button>
   );
 }
