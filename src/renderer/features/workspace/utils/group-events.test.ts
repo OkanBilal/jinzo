@@ -20,6 +20,46 @@ function baseEvents(): RunEvent[] {
   ];
 }
 
+describe("groupEvents", () => {
+  it("merges consecutive image artifacts into one response group", () => {
+    const groups = groupEvents([
+      ev({ id: "i1", metadata: { kind: "image", path: "/a/1.png" } }),
+      ev({ id: "i2", metadata: { kind: "image", path: "/a/2.png" } }),
+      ev({ id: "i3", metadata: { kind: "image", path: "/a/3.png" } }),
+      ev({ id: "r1", content: "done", metadata: { kind: "report" } }),
+    ]);
+    expect(groups).toHaveLength(2);
+    expect(groups[0].type).toBe("response");
+    expect(groups[0].events.map((e) => e.id)).toEqual(["i1", "i2", "i3"]);
+    expect(groups[1].events[0].id).toBe("r1");
+  });
+
+  it("does not merge image artifacts separated by a text response", () => {
+    const groups = groupEvents([
+      ev({ id: "i1", metadata: { kind: "image", path: "/a/1.png" } }),
+      ev({ id: "r1", content: "and another", metadata: { kind: "report" } }),
+      ev({ id: "i2", metadata: { kind: "image", path: "/a/2.png" } }),
+    ]);
+    expect(groups).toHaveLength(3);
+    expect(groups.map((g) => g.events.length)).toEqual([1, 1, 1]);
+  });
+
+  it("keeps a stable group id while images stream in, so reconciliation matches", () => {
+    const first = groupEvents([
+      ev({ id: "i1", metadata: { kind: "image", path: "/a/1.png" } }),
+    ]);
+    const second = groupEvents([
+      ev({ id: "i1", metadata: { kind: "image", path: "/a/1.png" } }),
+      ev({ id: "i2", metadata: { kind: "image", path: "/a/2.png" } }),
+    ]);
+    expect(second[0].id).toBe(first[0].id);
+    // Grown group must NOT be reused by reference — the new image has to render.
+    const result = reconcileEventGroups(first, second);
+    expect(result[0]).not.toBe(first[0]);
+    expect(result[0].events).toHaveLength(2);
+  });
+});
+
 describe("reconcileEventGroups", () => {
   it("returns the same array reference when nothing changed", () => {
     const prev = groupEvents(baseEvents());

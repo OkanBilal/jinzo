@@ -96,8 +96,29 @@ export function groupEvents(events: RunEvent[]): EventGroup[] {
       }
       const isUserPrompt = event.metadata?.kind === "user-prompt";
       const isPromptSuggestion = event.metadata?.kind === "prompt_suggestion";
+      const isImage = event.metadata?.kind === "image";
 
-      if (isPromptSuggestion) {
+      if (isImage) {
+        // Merge consecutive image artifacts into one group so multiple
+        // generated images render side by side as a gallery row.
+        const lastGroup = groups[groups.length - 1];
+        const lastIsImageGroup =
+          lastGroup?.type === "response" &&
+          lastGroup.events[0]?.type === "artifact" &&
+          lastGroup.events[0]?.metadata?.kind === "image";
+        if (lastIsImageGroup) {
+          lastGroup.events.push(event);
+          lastGroup.endTime = event.timestamp;
+        } else {
+          groups.push({
+            id: `response-${event.id}`,
+            type: "response",
+            events: [event],
+            startTime: event.timestamp,
+            endTime: event.timestamp,
+          });
+        }
+      } else if (isPromptSuggestion) {
         // Merge consecutive suggestions into one group
         const lastGroup = groups[groups.length - 1];
         if (lastGroup?.type === "prompt_suggestion") {
