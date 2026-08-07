@@ -34,6 +34,13 @@ export interface FileContentResponse {
   size: number;
   isBinary: boolean;
   encoding: "utf-8" | "binary";
+  /** Disk mtime of the content read — baseline for optimistic-concurrency writes. */
+  mtimeMs?: number;
+}
+
+export interface WriteFileTextResponse {
+  size: number;
+  mtimeMs: number;
 }
 
 export type { ServiceResponse } from "../../../../shared/ipc-kit/service-response";

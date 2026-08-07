@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { FileExplorer } from "@/features/workspace/components/file-explorer";
 import type { FileNode } from "@/features/workspace/types/file-explorer";
@@ -15,6 +15,8 @@ import {
   addContextSignal,
   openIssueTab,
   openSignalTab,
+  toggleExplorerPath,
+  expandExplorerPaths,
 } from "@/lib/redux/slices/workspaceSlice";
 import { setRightPanelOpen } from "@/lib/redux/slices/appSettingsSlice";
 import { useIsMobile } from "@/lib/platform";
@@ -61,6 +63,41 @@ export function WorkspaceSidebar() {
 
   const changedFilesCount = diff?.files?.length ?? 0;
   const rootPath = workspace?.rootPath;
+
+  // Explorer selection + expansion live in Redux so the tree keeps its shape
+  // across tab switches and panel toggles (both unmount FileExplorer).
+  const selectedFile = useAppSelector((state) => state.workspace.selectedFile);
+  const explorerExpandedPaths = useAppSelector(
+    (state) => state.workspace.explorerExpandedPaths,
+  );
+  const expandedPathSet = useMemo(
+    () => new Set(explorerExpandedPaths),
+    [explorerExpandedPaths],
+  );
+  const handleToggleExpand = useCallback(
+    (path: string) => {
+      dispatch(toggleExplorerPath(path));
+    },
+    [dispatch],
+  );
+
+  // Reveal the selected file: expand its ancestor folders no matter how it
+  // was opened (tree click, file search, "@" menu, diff link).
+  useEffect(() => {
+    const fullPath = selectedFile?.fullPath;
+    if (!fullPath || !rootPath) return;
+    const root = rootPath.replace(/\/$/, "");
+    if (!fullPath.startsWith(`${root}/`)) return;
+    const parts = fullPath.slice(root.length + 1).split("/").slice(0, -1);
+    if (parts.length === 0) return;
+    const ancestors: string[] = [];
+    let acc = root;
+    for (const part of parts) {
+      acc = `${acc}/${part}`;
+      ancestors.push(acc);
+    }
+    dispatch(expandExplorerPaths(ancestors));
+  }, [selectedFile?.fullPath, rootPath, dispatch]);
 
   const handleFileSelect = useCallback(
     (node: FileNode) => {
@@ -215,6 +252,9 @@ export function WorkspaceSidebar() {
               rootPath={rootPath}
               onFileSelect={handleFileSelect}
               onAddToContext={handleAddToContext}
+              selectedPath={selectedFile?.fullPath ?? null}
+              expandedPaths={expandedPathSet}
+              onToggleExpand={handleToggleExpand}
               initialDepth={2}
               className="flex-1 min-h-0"
             />

@@ -77,6 +77,12 @@ export interface WorkspaceState {
   selectedFileContent: FileContentResponse | null;
   isLoadingFileContent: boolean;
   fileContentError: string | null;
+  /**
+   * Expanded directory paths in the Files tree. Lives here (not in the
+   * component) so the tree survives tab switches and panel toggles, which
+   * unmount the explorer.
+   */
+  explorerExpandedPaths: string[];
   activeTab: "editor" | string;
   /** Tab that was active before "editor" was opened — used to restore on editor close. */
   previousNonEditorTab: string | null;
@@ -114,6 +120,7 @@ const initialState: WorkspaceState = {
   selectedFileContent: null,
   isLoadingFileContent: false,
   fileContentError: null,
+  explorerExpandedPaths: [],
   activeTab: "editor",
   previousNonEditorTab: null,
   contextFiles: [],
@@ -142,6 +149,7 @@ const workspaceSlice = createSlice({
         state.selectedFileContent = null;
         state.fileContentError = null;
         state.isLoadingFileContent = false;
+        state.explorerExpandedPaths = [];
         state.previousNonEditorTab = null;
         // The tab is a single global field, so it would otherwise still name a
         // run belonging to the workspace being left. "editor" is the neutral
@@ -157,6 +165,7 @@ const workspaceSlice = createSlice({
         state.selectedFileContent = null;
         state.fileContentError = null;
         state.isLoadingFileContent = false;
+        state.explorerExpandedPaths = [];
         state.previousNonEditorTab = null;
         state.activeTab = "editor";
       }
@@ -194,6 +203,19 @@ const workspaceSlice = createSlice({
       state.selectedFileContent = null;
       state.fileContentError = null;
       state.isLoadingFileContent = false;
+    },
+    toggleExplorerPath: (state, action: PayloadAction<string>) => {
+      const idx = state.explorerExpandedPaths.indexOf(action.payload);
+      if (idx === -1) state.explorerExpandedPaths.push(action.payload);
+      else state.explorerExpandedPaths.splice(idx, 1);
+    },
+    // Union merge — used to reveal a selected file by expanding its ancestors.
+    expandExplorerPaths: (state, action: PayloadAction<string[]>) => {
+      for (const path of action.payload) {
+        if (!state.explorerExpandedPaths.includes(path)) {
+          state.explorerExpandedPaths.push(path);
+        }
+      }
     },
     setActiveTab: (state, action: PayloadAction<"editor" | string>) => {
       // Remember which tab the user was on before opening the editor so we can
@@ -359,6 +381,8 @@ export const {
   setFileContentLoading,
   setFileContentError,
   clearSelectedFile,
+  toggleExplorerPath,
+  expandExplorerPaths,
   setActiveTab,
   addContextFile,
   removeContextFile,

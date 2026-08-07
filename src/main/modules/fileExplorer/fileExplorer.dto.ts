@@ -64,12 +64,32 @@ export interface FileContentResponse {
   size: number;
   isBinary: boolean;
   encoding: "utf-8" | "binary";
+  /** Disk mtime of the content read — baseline for optimistic-concurrency writes. */
+  mtimeMs?: number;
 }
 
 // Read file text options
 export interface ReadFileTextOptions {
   filePath: string;
   maxSizeBytes?: number; // Default 2MB
+}
+
+// Write file text options — overwrites an existing regular file
+export interface WriteFileTextOptions {
+  filePath: string;
+  content: string;
+  /**
+   * Optimistic-concurrency guard: when set, the write is rejected with
+   * "File changed on disk" unless the file's current mtime matches. Callers
+   * get the baseline from readFileText and the refreshed value from each
+   * successful write.
+   */
+  expectedMtimeMs?: number;
+}
+
+export interface WriteFileTextResponse {
+  size: number;
+  mtimeMs: number;
 }
 
 // Max file size constant (2MB)
