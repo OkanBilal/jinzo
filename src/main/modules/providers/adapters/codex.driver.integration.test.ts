@@ -82,6 +82,9 @@ afterEach(async () => {
 });
 
 describe("codex.driver / app-server protocol", () => {
+  // First test in the file pays the cold start (fixture process spawn + first
+  // handshake), which can exceed the default 5s when the full suite saturates
+  // the CPU — it passes alone. Explicit timeout like the app-server exit test.
   it("identifies the real Mains version during initialization", async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mains-codex-driver-"));
     tempDirs.push(tempDir);
@@ -106,7 +109,7 @@ describe("codex.driver / app-server protocol", () => {
         version: "0.4.2",
       },
     });
-  });
+  }, 15_000);
 
   it("sends Codex thread archive, unarchive, and delete lifecycle requests", async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mains-codex-driver-"));
