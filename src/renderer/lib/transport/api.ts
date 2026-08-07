@@ -78,8 +78,14 @@ export const appApi = {
     readFileText: method<typeof window.api.fileExplorer.readFileText>(
       CHANNELS.fileExplorer.readFileText,
     ),
+    writeFileText: method<typeof window.api.fileExplorer.writeFileText>(
+      CHANNELS.fileExplorer.writeFileText,
+    ),
     listDir: method<typeof window.api.fileExplorer.listDir>(
       CHANNELS.fileExplorer.listDir,
+    ),
+    searchFiles: method<typeof window.api.fileExplorer.searchFiles>(
+      CHANNELS.fileExplorer.searchFiles,
     ),
   },
   workspace: {

@@ -1,4 +1,4 @@
-import { memo, useState, useCallback } from "react";
+import { memo, useState, useCallback, useEffect, useRef } from "react";
 import type { FileNode } from "@/features/workspace/types/file-explorer";
 import { FileIconComponent } from "./file-icon";
 import { ArrowUp, Plus } from "@/components/ui/icons";
@@ -8,10 +8,12 @@ interface FileTreeNodeProps {
   node: FileNode;
   depth: number;
   selectedPath: string | null;
+  /** Controlled expansion — lives in Redux so it survives explorer remounts. */
+  expandedPaths: ReadonlySet<string>;
+  onToggleExpand: (path: string) => void;
   onSelect: (node: FileNode) => void;
   onExpand?: (node: FileNode) => Promise<FileNode[] | undefined>;
   onAddToContext?: (node: FileNode) => void;
-  defaultExpanded?: boolean;
   index?: number;
 }
 
@@ -19,13 +21,13 @@ export const FileTreeNode = memo(function FileTreeNode({
   node,
   depth,
   selectedPath,
+  expandedPaths,
+  onToggleExpand,
   onSelect,
   onExpand,
   index,
   onAddToContext,
-  defaultExpanded = false,
 }: FileTreeNodeProps) {
-  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [children, setChildren] = useState<FileNode[] | undefined>(
     node.children,
   );
@@ -33,9 +35,48 @@ export const FileTreeNode = memo(function FileTreeNode({
   const [childrenLoaded, setChildrenLoaded] = useState(
     node.children !== undefined && node.children.length > 0,
   );
+  const rowRef = useRef<HTMLDivElement | null>(null);
 
   const isDirectory = node.type === "directory";
+  const isExpanded = isDirectory && expandedPaths.has(node.fullPath);
   const isSelected = selectedPath === node.fullPath;
+
+  // Lazy-load children whenever this node is expanded without loaded children
+  // — covers both the first click and re-expansion after a remount (tab
+  // switch / panel toggle), where expansion state comes back from Redux but
+  // the fetched children were lost with the component.
+  // `isLoading` must stay OUT of the deps: it flips inside this effect, and
+  // re-running on it would fire the cleanup mid-fetch and cancel the load.
+  useEffect(() => {
+    if (!isDirectory || !isExpanded || childrenLoaded || !onExpand) {
+      return;
+    }
+    let cancelled = false;
+    setIsLoading(true);
+    onExpand(node)
+      .then((loadedChildren) => {
+        if (cancelled) return;
+        setChildren(loadedChildren || []);
+        setChildrenLoaded(true);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+      setIsLoading(false);
+    };
+  }, [isDirectory, isExpanded, childrenLoaded, onExpand, node]);
+
+  // After a remount, bring the still-selected file back into view.
+  useEffect(() => {
+    if (isSelected) {
+      rowRef.current?.scrollIntoView({ block: "nearest" });
+    }
+    // Mount-only: re-running on every selection change would fight the user's
+    // own scrolling.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const showChevron =
     isDirectory &&
@@ -43,23 +84,12 @@ export const FileTreeNode = memo(function FileTreeNode({
       (node.hasChildren === undefined && !childrenLoaded) ||
       (children !== undefined && children.length > 0));
 
-  const handleClick = useCallback(async () => {
+  const handleClick = useCallback(() => {
     onSelect(node);
-
     if (isDirectory) {
-      if (!isExpanded && onExpand && !childrenLoaded) {
-        setIsLoading(true);
-        try {
-          const loadedChildren = await onExpand(node);
-          setChildren(loadedChildren || []);
-          setChildrenLoaded(true);
-        } finally {
-          setIsLoading(false);
-        }
-      }
-      setIsExpanded((prev) => !prev);
+      onToggleExpand(node.fullPath);
     }
-  }, [node, isDirectory, isExpanded, onExpand, childrenLoaded, onSelect]);
+  }, [node, isDirectory, onSelect, onToggleExpand]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -86,6 +116,7 @@ export const FileTreeNode = memo(function FileTreeNode({
   return (
     <div className="select-none space-y-0.5">
       <div
+        ref={rowRef}
         role="treeitem"
         tabIndex={0}
         aria-expanded={isDirectory ? isExpanded : undefined}
@@ -148,6 +179,8 @@ export const FileTreeNode = memo(function FileTreeNode({
               node={child}
               depth={depth + 1}
               selectedPath={selectedPath}
+              expandedPaths={expandedPaths}
+              onToggleExpand={onToggleExpand}
               onSelect={onSelect}
               onExpand={onExpand}
               onAddToContext={onAddToContext}

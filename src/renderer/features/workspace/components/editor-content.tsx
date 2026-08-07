@@ -132,8 +132,12 @@ export function EditorContent({ className = "" }: EditorContentProps) {
       <div className="flex-1 min-h-0 py-2 overflow-hidden noscrollbar">
         <Suspense fallback={null}>
           <CodeViewer
+            key={selectedFile.fullPath}
             content={selectedFileContent.content}
             filename={selectedFile.name}
+            filePath={selectedFile.fullPath}
+            mtimeMs={selectedFileContent.mtimeMs}
+            workspaceId={activeWorkspaceId ?? undefined}
             className="h-full"
           />
         </Suspense>

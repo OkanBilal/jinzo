@@ -6,6 +6,8 @@ import type {
   FileTreeResponse,
   FileContentResponse,
   ReadFileTextOptions,
+  WriteFileTextOptions,
+  WriteFileTextResponse,
   DirEntry,
   ListDirOptions,
   SearchFilesOptions,
@@ -416,6 +418,7 @@ export const fileExplorerService = {
           size: stats.size,
           isBinary: true,
           encoding: "binary",
+          mtimeMs: stats.mtimeMs,
         };
       }
 
@@ -433,6 +436,7 @@ export const fileExplorerService = {
             size: stats.size,
             isBinary: true,
             encoding: "binary",
+            mtimeMs: stats.mtimeMs,
           };
         }
       }
@@ -442,6 +446,7 @@ export const fileExplorerService = {
         size: stats.size,
         isBinary: false,
         encoding: "utf-8",
+        mtimeMs: stats.mtimeMs,
       };
     } catch (error) {
       // Domain messages pass through; raw fs errors get mapped.
@@ -454,6 +459,68 @@ export const fileExplorerService = {
       }
       console.error("[FileExplorer] Failed to read file text:", error);
       throwFsError(error, "File does not exist", "Failed to read file");
+    }
+  },
+
+  /**
+   * Overwrite an existing regular file with UTF-8 text. The target must
+   * already exist — this backs in-place editing of previewed files, not
+   * file creation. Symlinks are resolved first so the regular-file check
+   * applies to the real target, and the same 2MB cap as readFileText keeps
+   * the renderer round-trip bounded.
+   */
+  async writeFileText(
+    options: WriteFileTextOptions
+  ): Promise<WriteFileTextResponse> {
+    const { filePath, content, expectedMtimeMs } = options;
+
+    const byteLength = Buffer.byteLength(content, "utf-8");
+    if (byteLength > MAX_FILE_SIZE_BYTES) {
+      const sizeMB = (byteLength / (1024 * 1024)).toFixed(2);
+      const limitMB = (MAX_FILE_SIZE_BYTES / (1024 * 1024)).toFixed(0);
+      throw new Error(
+        `Content too large (${sizeMB}MB). Maximum size is ${limitMB}MB`,
+      );
+    }
+
+    const normalizedPath = path.resolve(filePath);
+
+    let realPath: string;
+    try {
+      realPath = await fs.realpath(normalizedPath);
+    } catch (error) {
+      throwFsError(error, "File does not exist", "Failed to write file");
+    }
+
+    try {
+      const stats = await fs.lstat(realPath);
+      if (!stats.isFile()) {
+        if (stats.isDirectory()) {
+          throw new Error("Cannot write to a directory");
+        }
+        throw new Error("Cannot write to non-regular file");
+      }
+
+      // Optimistic-concurrency guard: agents write to workspace files too, so
+      // a stale editor buffer must not silently clobber a newer file.
+      if (expectedMtimeMs !== undefined && stats.mtimeMs !== expectedMtimeMs) {
+        throw new Error("File changed on disk");
+      }
+
+      await fs.writeFile(realPath, content, "utf-8");
+      const after = await fs.stat(realPath);
+      return { size: byteLength, mtimeMs: after.mtimeMs };
+    } catch (error) {
+      // Domain messages pass through; raw fs errors get mapped.
+      if (
+        error instanceof Error &&
+        !(error as NodeJS.ErrnoException).code &&
+        error.message
+      ) {
+        throw error;
+      }
+      console.error("[FileExplorer] Failed to write file text:", error);
+      throwFsError(error, "File does not exist", "Failed to write file");
     }
   },
 

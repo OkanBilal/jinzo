@@ -215,6 +215,7 @@ describe("fileExplorerService", () => {
       expect(result.isBinary).toBe(false);
       expect(result.encoding).toBe("utf-8");
       expect(result.size).toBeGreaterThan(0);
+      expect(result.mtimeMs).toBe((await fs.stat(filePath)).mtimeMs);
     });
 
     it("reads a file outside the workspace dir", async () => {
@@ -299,6 +300,117 @@ describe("fileExplorerService", () => {
       const result = await fileExplorerService.readFileText({ filePath });
       expect(result.content).toBe("Héllo wörld 日本語 🎉");
       expect(result.isBinary).toBe(false);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // writeFileText
+  // ─────────────────────────────────────────────────────────────
+  describe("writeFileText", () => {
+    it("overwrites an existing file and returns the new mtime", async () => {
+      const filePath = path.join(tmpDir, "code.ts");
+      await fs.writeFile(filePath, "const x = 1;");
+
+      const result = await fileExplorerService.writeFileText({
+        filePath,
+        content: "const x = 2;",
+      });
+      expect(result.size).toBe(Buffer.byteLength("const x = 2;"));
+      expect(await fs.readFile(filePath, "utf-8")).toBe("const x = 2;");
+      expect(result.mtimeMs).toBe((await fs.stat(filePath)).mtimeMs);
+    });
+
+    it("accepts a write when expectedMtimeMs matches", async () => {
+      const filePath = path.join(tmpDir, "code.ts");
+      await fs.writeFile(filePath, "v1");
+      const read = await fileExplorerService.readFileText({ filePath });
+
+      const result = await fileExplorerService.writeFileText({
+        filePath,
+        content: "v2",
+        expectedMtimeMs: read.mtimeMs,
+      });
+      expect(await fs.readFile(filePath, "utf-8")).toBe("v2");
+      expect(result.mtimeMs).not.toBe(read.mtimeMs);
+    });
+
+    it("rejects a write when the file changed on disk", async () => {
+      const filePath = path.join(tmpDir, "code.ts");
+      await fs.writeFile(filePath, "v1");
+      const read = await fileExplorerService.readFileText({ filePath });
+
+      // Simulate an external writer (e.g. an agent) touching the file
+      await fs.writeFile(filePath, "external change");
+      await fs.utimes(filePath, new Date(), new Date(Date.now() + 5000));
+
+      await expect(
+        fileExplorerService.writeFileText({
+          filePath,
+          content: "v2",
+          expectedMtimeMs: read.mtimeMs,
+        }),
+      ).rejects.toThrow("File changed on disk");
+      expect(await fs.readFile(filePath, "utf-8")).toBe("external change");
+    });
+
+    it("writes UTF-8 content with special characters", async () => {
+      const filePath = path.join(tmpDir, "unicode.txt");
+      await fs.writeFile(filePath, "old");
+
+      await fileExplorerService.writeFileText({
+        filePath,
+        content: "Héllo wörld 日本語 🎉",
+      });
+      expect(await fs.readFile(filePath, "utf-8")).toBe("Héllo wörld 日本語 🎉");
+    });
+
+    it("writes through symlinks to the real target", async () => {
+      const outsideDir = await makeTmpDir();
+      const outsideFile = path.join(outsideDir, "target.txt");
+      await fs.writeFile(outsideFile, "original");
+
+      const symlinkPath = path.join(tmpDir, "link");
+      await fs.symlink(outsideFile, symlinkPath);
+
+      await fileExplorerService.writeFileText({
+        filePath: symlinkPath,
+        content: "updated",
+      });
+      expect(await fs.readFile(outsideFile, "utf-8")).toBe("updated");
+
+      await fs.rm(outsideDir, { recursive: true, force: true });
+    });
+
+    it("rejects non-existent files (no creation)", async () => {
+      await expect(
+        fileExplorerService.writeFileText({
+          filePath: path.join(tmpDir, "nope.txt"),
+          content: "x",
+        }),
+      ).rejects.toThrow("File does not exist");
+    });
+
+    it("rejects writing to a directory", async () => {
+      const dirPath = path.join(tmpDir, "subdir");
+      await fs.mkdir(dirPath);
+
+      await expect(
+        fileExplorerService.writeFileText({ filePath: dirPath, content: "x" }),
+      ).rejects.toThrow("directory");
+    });
+
+    it("rejects content exceeding the size cap", async () => {
+      const filePath = path.join(tmpDir, "big.txt");
+      await fs.writeFile(filePath, "small");
+
+      await expect(
+        fileExplorerService.writeFileText({
+          filePath,
+          content: "x".repeat(2 * 1024 * 1024 + 1),
+        }),
+      ).rejects.toThrow("Content too large");
+      // Original content is untouched when the cap rejects the write
+      expect(await fs.readFile(filePath, "utf-8")).toBe("small");
     });
   });
 

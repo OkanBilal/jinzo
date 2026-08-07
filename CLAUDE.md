@@ -240,6 +240,7 @@ Core tables:
 **File Explorer Module** (`src/main/modules/fileExplorer/`)
 - Secure filesystem operations within workspace boundaries
 - Path traversal prevention, symlink escape detection, file size limits (2MB), binary detection
+- `fileExplorer:writeFileText` backs auto-save in the code viewer: overwrites an existing regular file only (no creation), same 2MB cap as reads, optional `expectedMtimeMs` optimistic-concurrency guard ("File changed on disk") so a stale editor buffer can't clobber agent writes
 
 **Space System** (`src/main/modules/space/`)
 - User-defined profiles with systemPrompt, model, icon, themeConfig, `providerId`, `mode`, sortOrder, archive flag

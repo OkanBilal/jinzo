@@ -85,6 +85,7 @@ export const CHANNELS = {
     readFile: "fileExplorer:readFile",
     readFileText: "fileExplorer:readFileText",
     searchFiles: "fileExplorer:searchFiles",
+    writeFileText: "fileExplorer:writeFileText",
   },
   // NOTE: there is deliberately no `git` namespace — the git module is
   // main-process-internal. Renderer-triggered git effects are workspace/gitFlow

@@ -648,6 +648,16 @@ const api = {
       includeHidden?: boolean;
       excludePatterns?: string[];
     }) => ipcRenderer.invoke(CHANNELS.fileExplorer.searchFiles, options),
+    /**
+     * Overwrite an existing regular file with UTF-8 text. Same 2MB cap and
+     * regular-file safeguards as readFileText; does not create new files.
+     * Pass expectedMtimeMs to reject the write if the file changed on disk.
+     */
+    writeFileText: (options: {
+      filePath: string;
+      content: string;
+      expectedMtimeMs?: number;
+    }) => ipcRenderer.invoke(CHANNELS.fileExplorer.writeFileText, options),
   },
   // NOTE: there is deliberately no `git` namespace — the git module is
   // main-process-internal. Renderer-triggered git effects are workspace/gitFlow

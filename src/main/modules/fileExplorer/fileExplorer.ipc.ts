@@ -5,6 +5,7 @@ import { CHANNELS } from "../../../shared/ipc-kit/channels";
 import type {
   ReadDirectoryOptions,
   ReadFileTextOptions,
+  WriteFileTextOptions,
   ListDirOptions,
   SearchFilesOptions,
 } from "./fileExplorer.dto";
@@ -49,6 +50,11 @@ export function registerFileExplorerIpc(): void {
     CHANNELS.fileExplorer.searchFiles,
     handle((options: SearchFilesOptions) => fileExplorerService.searchFiles(options)),
   );
+
+  ipcMain.handle(
+    CHANNELS.fileExplorer.writeFileText,
+    handle((options: WriteFileTextOptions) => fileExplorerService.writeFileText(options)),
+  );
 }
 
 export function unregisterFileExplorerIpc(): void {
@@ -60,5 +66,6 @@ export function unregisterFileExplorerIpc(): void {
     CHANNELS.fileExplorer.readFileText,
     CHANNELS.fileExplorer.listDir,
     CHANNELS.fileExplorer.searchFiles,
+    CHANNELS.fileExplorer.writeFileText,
   ].forEach((channel) => ipcMain.removeHandler(channel));
 }

@@ -264,7 +264,7 @@ export function WriteDisplay({
               style={
                 {
                   "--diffs-font-size": "12px",
-                  "--diffs-font-family": "'Geist Mono', monospace",
+                  "--diffs-font-family": "ui-monospace, monospace",
                 } as React.CSSProperties
               }
               options={{
