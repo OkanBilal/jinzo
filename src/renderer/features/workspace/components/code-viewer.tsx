@@ -237,7 +237,7 @@ export function CodeViewer({
           {saveState === "error" ? (
             <>
               <span
-                className="text-xs text-danger max-w-64 truncate"
+                className="text-xs text-danger max-w-100 truncate"
                 title={saveError ?? undefined}
               >
                 {saveError}
@@ -261,8 +261,9 @@ export function CodeViewer({
                 </>
               ) : (
                 <Button
+                  variant="submit"
                   onClick={handleRetry}
-                  className="px-2 cursor-pointer py-0.5 text-xxs rounded-sm font-medium transition-colors bg-blue-500/13 text-blue-400"
+                  className="px-2 py-1 text-xs!"
                 >
                   Retry
                 </Button>
