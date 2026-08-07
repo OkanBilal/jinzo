@@ -33,7 +33,16 @@ import { appSettingsService } from "../appSettings";
 
 const execFileAsync = promisify(execFile);
 
-const MAX_DIFF_CHARS = 12_000;
+// ~25k tokens — comfortably within the one-shot model's context while keeping
+// the generate call fast. Diffs beyond this are cut with an explicit marker so
+// the model knows it saw a prefix, not the whole changeset.
+const MAX_DIFF_CHARS = 100_000;
+
+/** Cap a diff for the generation prompt, flagging the cut when one happens. */
+function truncateDiff(diff: string): string {
+  if (diff.length <= MAX_DIFF_CHARS) return diff;
+  return `${diff.slice(0, MAX_DIFF_CHARS)}\n\n[diff truncated — showing the first ${MAX_DIFF_CHARS.toLocaleString("en-US")} of ${diff.length.toLocaleString("en-US")} characters]`;
+}
 
 /** A file in the working tree's diff, as the session panel lists it. */
 export interface ChangedFile {
@@ -444,7 +453,7 @@ export const gitFlowService = {
       .filter(Boolean)
       .join("\n");
 
-    const prompt = `Write a commit message for these staged changes:\n\n${diff.slice(0, MAX_DIFF_CHARS)}`;
+    const prompt = `Write a commit message for these staged changes:\n\n${truncateDiff(diff)}`;
 
     // No model fallback on purpose: left undefined, the driver picks its cheap
     // one-shot default (e.g. Haiku for Claude) — a commit message doesn't need
@@ -536,7 +545,7 @@ export const gitFlowService = {
     const prompt = [
       "Write a pull request title and body for this branch.",
       commits ? `\nRecent commits:\n${commits}` : "",
-      diff ? `\nDiff:\n${diff.slice(0, MAX_DIFF_CHARS)}` : "",
+      diff ? `\nDiff:\n${truncateDiff(diff)}` : "",
     ]
       .filter(Boolean)
       .join("\n");
