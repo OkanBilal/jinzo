@@ -423,20 +423,51 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
   }
 
   if (event.type === "artifact" && event.metadata?.kind === "image") {
-    const absPath = (event.metadata?.path as string | undefined) ?? "";
-    if (!absPath) return null;
-    const fileName =
-      (event.metadata?.fileName as string | undefined) ??
-      absPath.split("/").pop() ??
-      "image";
+    // Consecutive image artifacts arrive merged into one group (see
+    // `groupEvents`) — a single image keeps the file-card layout, several
+    // render side by side as a gallery of tiles.
+    const images = group.events
+      .filter(
+        (e) => e.type === "artifact" && e.metadata?.kind === "image",
+      )
+      .map((e) => {
+        const absPath = (e.metadata?.path as string | undefined) ?? "";
+        return {
+          absPath,
+          fileName:
+            (e.metadata?.fileName as string | undefined) ??
+            absPath.split("/").pop() ??
+            "image",
+        };
+      })
+      .filter((img) => img.absPath);
+    if (images.length === 0) return null;
     return (
       <div className="overflow-hidden">
-        <ImageArtifact
-          key={absPath}
-          absPath={absPath}
-          fileName={fileName}
-          onPreview={setPreviewAtt}
-        />
+        {images.length === 1 ? (
+          <ImageArtifact
+            key={images[0].absPath}
+            absPath={images[0].absPath}
+            fileName={images[0].fileName}
+            onPreview={setPreviewAtt}
+          />
+        ) : (
+          <div
+            className={`grid gap-2 ${
+              images.length === 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"
+            }`}
+          >
+            {images.map((img) => (
+              <ImageArtifact
+                key={img.absPath}
+                absPath={img.absPath}
+                fileName={img.fileName}
+                onPreview={setPreviewAtt}
+                variant="tile"
+              />
+            ))}
+          </div>
+        )}
         {previewAtt && (
           <ImagePreviewModal
             name={previewAtt.name}
@@ -497,10 +528,13 @@ function ImageArtifact({
   absPath,
   fileName,
   onPreview,
+  variant = "card",
 }: {
   absPath: string;
   fileName: string;
   onPreview: (att: { name: string; dataUrl: string }) => void;
+  /** `card` = full-width file row; `tile` = compact gallery cell for multi-image groups. */
+  variant?: "card" | "tile";
 }) {
   const url = useLocalImageUrl(absPath);
   const { revealInFolder } = useCapabilities();
@@ -550,6 +584,95 @@ function ImageArtifact({
     void window.api.shell.showItemInFolder(absPath);
   };
 
+  const menu = (
+    <DropdownMenu
+      isOpen={menuOpen}
+      position={menuPos}
+      onClose={() => setMenuOpen(false)}
+      minWidth={240}
+      origin="top-right"
+    >
+      <DropdownMenuItem onClick={openInMains}>
+        <Mains className="size-4 shrink-0" />
+        Show Image
+      </DropdownMenuItem>
+      {revealInFolder && (
+        <DropdownMenuItem onClick={showInFinder}>
+          <Finder className="size-4 shrink-0" />
+          Show in Finder
+        </DropdownMenuItem>
+      )}
+      {isFetching ? (
+        <div className="px-3 py-2 text-xs text-primary-500 dark:text-primary-400">
+          Loading applications…
+        </div>
+      ) : (
+        handlerApps.map((app) => (
+          <DropdownMenuItem
+            key={app.bundleId}
+            onClick={() => openWithBundle(app.bundleId)}
+          >
+            {app.icon ? (
+              <img
+                src={app.icon}
+                alt=""
+                draggable={false}
+                className="size-4 shrink-0 rounded-sm"
+              />
+            ) : (
+              <External className="size-4 shrink-0 opacity-70" />
+            )}
+            <span className="truncate">{app.name}</span>
+          </DropdownMenuItem>
+        ))
+      )}
+    </DropdownMenu>
+  );
+
+  if (variant === "tile") {
+    return (
+      <div
+        className="group/image-tile relative overflow-hidden rounded-3xl bg-primary-50 dark:bg-primary-900/85 shadow-sm"
+        title={absPath}
+      >
+        <Button
+          type="button"
+          onClick={openInMains}
+          className="block w-full cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+          aria-label={`Preview ${fileName} in Mains`}
+        >
+          <div className="aspect-4/3 w-full flex items-center justify-center overflow-hidden">
+            {url && !thumbFailed ? (
+              <img
+                src={url}
+                alt={fileName}
+                className="size-full object-cover"
+                loading="lazy"
+                draggable={false}
+                onError={() => setThumbFailed(true)}
+              />
+            ) : (
+              <Picture className="size-7 text-primary-400 dark:text-primary-500" />
+            )}
+          </div>
+        </Button>
+        <div className="absolute inset-x-0 bottom-0 px-2.5 pb-2 pt-6 bg-linear-to-t from-black/60 to-transparent opacity-0 group-hover/image-tile:opacity-100 transition-opacity pointer-events-none">
+          <span className="block text-xs text-white truncate">{fileName}</span>
+        </div>
+        <Button
+          ref={openBtnRef}
+          type="button"
+          onClick={openMenu}
+          className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-white bg-black/50 hover:bg-black/70 opacity-0 group-hover/image-tile:opacity-100 transition-opacity cursor-pointer"
+        >
+          Open
+          <ArrowUp className="size-3 rotate-180" />
+        </Button>
+        {menu}
+      </div>
+    );
+  }
+
   return (
     <div
       className="relative flex items-center gap-3 w-full max-w-xl rounded-2xl bg-primary-50 dark:bg-primary-900/85 px-3 py-2.5 shadow-sm"
@@ -597,48 +720,7 @@ function ImageArtifact({
         Open
         <ArrowUp className="size-3.5  rotate-180" />
       </Button>
-      <DropdownMenu
-        isOpen={menuOpen}
-        position={menuPos}
-        onClose={() => setMenuOpen(false)}
-        minWidth={240}
-        origin="top-right"
-      >
-        <DropdownMenuItem onClick={openInMains}>
-          <Mains className="size-4 shrink-0" />
-          Show Image
-        </DropdownMenuItem>
-        {revealInFolder && (
-          <DropdownMenuItem onClick={showInFinder}>
-            <Finder className="size-4 shrink-0" />
-            Show in Finder
-          </DropdownMenuItem>
-        )}
-        {isFetching ? (
-          <div className="px-3 py-2 text-xs text-primary-500 dark:text-primary-400">
-            Loading applications…
-          </div>
-        ) : (
-          handlerApps.map((app) => (
-            <DropdownMenuItem
-              key={app.bundleId}
-              onClick={() => openWithBundle(app.bundleId)}
-            >
-              {app.icon ? (
-                <img
-                  src={app.icon}
-                  alt=""
-                  draggable={false}
-                  className="size-4 shrink-0 rounded-sm"
-                />
-              ) : (
-                <External className="size-4 shrink-0 opacity-70" />
-              )}
-              <span className="truncate">{app.name}</span>
-            </DropdownMenuItem>
-          ))
-        )}
-      </DropdownMenu>
+      {menu}
     </div>
   );
 }
