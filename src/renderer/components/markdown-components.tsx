@@ -1,6 +1,79 @@
+import type { ReactNode } from "react";
 import { Components } from "react-markdown";
 
 import { proxiedImageSrc } from "@/lib/proxied-image-src";
+import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
+import { useOpenFileInEditor } from "@/features/workspace/hooks/use-open-file-in-editor";
+
+/**
+ * Split a trailing line locator off a file href: `path.ts:114`,
+ * `path.ts:114:7`, or `path.ts#L114-120` all resolve to `path.ts`.
+ */
+function splitFileHref(href: string): { path: string; line?: number } {
+  const hash = href.match(/^(.*?)#L(\d+)(?:-\d+)?$/);
+  if (hash) return { path: hash[1], line: Number(hash[2]) };
+  const colon = href.match(/^(.*?):(\d+)(?::\d+)?$/);
+  if (colon) return { path: colon[1], line: Number(colon[2]) };
+  return { path: href };
+}
+
+/**
+ * Href with no URL scheme whose last segment looks like a file — an agent's
+ * reference to a workspace file rather than a web link.
+ */
+function isFileHref(href: string): boolean {
+  if (!href || href.startsWith("#") || href.startsWith("//")) return false;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(href)) return false;
+  const last = href.split("/").pop() ?? "";
+  return /\.[A-Za-z0-9]+$/.test(last) || href.includes("/");
+}
+
+/**
+ * File references render as an icon chip and open in the editor tab; real
+ * URLs open in the system browser.
+ */
+function MarkdownLink({ href, children }: { href?: string; children?: ReactNode }) {
+  const openFileInEditor = useOpenFileInEditor();
+
+  const target = href ? splitFileHref(href) : null;
+  if (href && target && isFileHref(target.path)) {
+    const basename = target.path.split("/").pop() ?? target.path;
+    const dotIdx = basename.lastIndexOf(".");
+    const extension =
+      dotIdx > 0 && dotIdx < basename.length - 1
+        ? basename.slice(dotIdx + 1)
+        : undefined;
+    return (
+      <button
+        type="button"
+        onClick={() => openFileInEditor(target.path)}
+        title={href}
+        className="inline-flex align-middle items-center gap-1 px-1.5 mb-0.5 h-6 mx-0.5 rounded-lg text-xs font-medium leading-none select-none bg-primary-50 dark:bg-primary-300/10 text-primary-800 dark:text-primary-200 cursor-pointer hover:bg-primary-200/60 dark:hover:bg-primary-300/20 transition-colors"
+      >
+        <FileIconComponent
+          extension={extension}
+          fileName={basename}
+          className="size-3.5 shrink-0"
+        />
+        <span className="leading-none truncate max-w-60">{children}</span>
+      </button>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        if (href) {
+          window.api.shell.openExternal(href);
+        }
+      }}
+      className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 underline cursor-pointer inline"
+    >
+      {children}
+    </button>
+  );
+}
 
 /**
  * Custom ReactMarkdown component overrides for consistent styling.
@@ -90,19 +163,7 @@ export const  markdownComponents: Components = {
   pre: ({ children }) => (
     <pre className="my-2 rounded-xl  overflow-hidden bg-primary-50 dark:bg-primary/10">{children}</pre>
   ),
-  a: ({ href, children }) => (
-    <button
-      type="button"
-      onClick={() => {
-        if (href) {
-          window.api.shell.openExternal(href);
-        }
-      }}
-      className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 underline cursor-pointer inline"
-    >
-      {children}
-    </button>
-  ),
+  a: ({ href, children }) => <MarkdownLink href={href}>{children}</MarkdownLink>,
   blockquote: ({ children }) => (
     <blockquote className="border-l-4 border-primary-400 dark:border-primary-600 pl-4 py-1 my-2 italic text-primary-700 dark:text-primary-300">
       {children}

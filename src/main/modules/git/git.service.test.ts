@@ -671,3 +671,34 @@ describe("parsePerFileDiffStats", () => {
     expect(parsePerFileDiffStats("").size).toBe(0);
   });
 });
+
+describe("listNonIgnoredFiles", () => {
+  it("lists tracked and untracked files but not gitignored ones", async () => {
+    const repo = makeRepo();
+    write(repo, ".gitignore", "ignored.txt\nbuild/\n");
+    write(repo, "ignored.txt", "x");
+    fs.mkdirSync(path.join(repo, "build"));
+    write(repo, "build/out.js", "x");
+    fs.mkdirSync(path.join(repo, "src"));
+    write(repo, "src/app.ts", "x");
+    // Nested .gitignore rules must apply too.
+    write(repo, "src/.gitignore", "local.ts\n");
+    write(repo, "src/local.ts", "x");
+
+    const files = await gitService.listNonIgnoredFiles(repo);
+    expect(files).toContain("README.md");
+    expect(files).toContain("src/app.ts");
+    expect(files).toContain(".gitignore");
+    expect(files).not.toContain("ignored.txt");
+    expect(files).not.toContain("build/out.js");
+    expect(files).not.toContain("src/local.ts");
+  });
+
+  it("omits tracked files deleted from the working tree", async () => {
+    const repo = makeRepo();
+    fs.rmSync(path.join(repo, "README.md"));
+
+    const files = await gitService.listNonIgnoredFiles(repo);
+    expect(files).not.toContain("README.md");
+  });
+});

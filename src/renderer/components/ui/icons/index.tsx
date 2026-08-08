@@ -15,6 +15,7 @@ export { default as Check } from "./check";
 export { default as ChevronDown } from "./chevron-down";
 export { default as ChevronLeft } from "./chevron-left";
 export { default as ChevronUp } from "./chevron-up";
+export { default as CollapseAll } from "./collapse-all";
 export { default as Clipboard } from "./clipboard";
 export { default as Edit } from "./edit";
 export { default as Close } from "./close";

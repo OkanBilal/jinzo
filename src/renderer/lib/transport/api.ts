@@ -87,6 +87,9 @@ export const appApi = {
     searchFiles: method<typeof window.api.fileExplorer.searchFiles>(
       CHANNELS.fileExplorer.searchFiles,
     ),
+    getPathInfo: method<typeof window.api.fileExplorer.getPathInfo>(
+      CHANNELS.fileExplorer.getPathInfo,
+    ),
   },
   workspace: {
     getLatestDiff: method<typeof window.api.workspace.getLatestDiff>(

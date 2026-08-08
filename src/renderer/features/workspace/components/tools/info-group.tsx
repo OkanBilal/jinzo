@@ -141,6 +141,41 @@ function PromptFileInlineChip({ file }: { file: PromptFileMeta }) {
 
 const REGEX_ESC = /[.*+?^${}()|[\]\\]/g;
 
+// Matches the code-selection mention token the composer serializes
+// (`@/abs/path#L19-24` or `@/abs/path#L19`). Self-describing — the chip is
+// rendered from the token alone, no run metadata needed.
+const CODE_SELECTION_TOKEN_SRC = "@(?<code>\\/[^\\s#]+#L\\d+(?:-\\d+)?)(?![\\w-])";
+const CODE_SELECTION_TEST_RE = new RegExp(CODE_SELECTION_TOKEN_SRC);
+
+function PromptCodeSelectionInlineChip({ token }: { token: string }) {
+  const hashIdx = token.lastIndexOf("#L");
+  const fullPath = token.slice(0, hashIdx);
+  const range = token.slice(hashIdx + 2);
+  const basename = fullPath.split("/").pop() ?? fullPath;
+  const dotIdx = basename.lastIndexOf(".");
+  const extension =
+    dotIdx > 0 && dotIdx < basename.length - 1
+      ? basename.slice(dotIdx + 1)
+      : undefined;
+  return (
+    <span
+      className="inline-flex align-middle items-center gap-1 px-1.5 mb-0.5 h-6 mx-0.5 rounded-lg text-xs font-medium leading-none select-none bg-primary dark:bg-primary-300/10 dark:text-primary-200 text-primary-800"
+      title={token}
+    >
+      <span className="inline-flex items-center justify-center size-3.5 shrink-0">
+        <FileIconComponent
+          extension={extension}
+          fileName={basename}
+          className="size-3.5"
+        />
+      </span>
+      <span className="leading-none font-mono">
+        {basename}:{range}
+      </span>
+    </span>
+  );
+}
+
 /**
  * Tokenizes a user prompt message and renders `$<skillname>` / `@<path>` substrings as inline chips.
  * Tolerates a duplicated `:<name>` suffix produced by older skill serializations so legacy runs
@@ -154,7 +189,8 @@ function renderMessageWithChips(
   matchedFilePaths: Set<string>,
 ) {
   if (!message) return null;
-  if (skills.length === 0 && files.length === 0) return message;
+  const hasCodeToken = CODE_SELECTION_TEST_RE.test(message);
+  if (skills.length === 0 && files.length === 0 && !hasCodeToken) return message;
   const skillByName = new Map(skills.map((s) => [s.name, s]));
   const fileByPath = new Map(files.map((f) => [f.fullPath, f]));
   const parts: string[] = [];
@@ -164,6 +200,11 @@ function renderMessageWithChips(
       .sort((a, b) => b.length - a.length)
       .map((n) => n.replace(REGEX_ESC, "\\$&"));
     parts.push(`\\$(?<skill>${names.join("|")})(?::[\\w-]+)?(?![\\w-])`);
+  }
+  // Before the file alternative: a code token extends a file path, so at the
+  // same `@` the plain-path alternative would otherwise win and strand `#L…`.
+  if (hasCodeToken) {
+    parts.push(CODE_SELECTION_TOKEN_SRC);
   }
   if (files.length > 0) {
     const paths = files
@@ -185,6 +226,7 @@ function renderMessageWithChips(
     }
     const skillName = match.groups?.skill;
     const filePath = match.groups?.file;
+    const codeToken = match.groups?.code;
     if (skillName) {
       const skill = skillByName.get(skillName);
       out.push(
@@ -194,6 +236,8 @@ function renderMessageWithChips(
           <span key={`t${key++}`}>{match[0]}</span>
         ),
       );
+    } else if (codeToken) {
+      out.push(<PromptCodeSelectionInlineChip key={`c${key++}`} token={codeToken} />);
     } else if (filePath) {
       const file = fileByPath.get(filePath);
       if (file) {

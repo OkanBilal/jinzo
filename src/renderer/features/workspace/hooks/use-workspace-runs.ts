@@ -57,12 +57,53 @@ type BrowserContextSelection = {
   screenshotMimeType: string;
 };
 
+type CodeContextSelection = {
+  id: string;
+  filePath: string;
+  fileName: string;
+  startLine: number;
+  endLine: number;
+  text: string;
+};
+
 type InitialContextItem = {
   kind: "file" | "diff" | "selection" | "note";
   ref?: string;
   content?: string;
   metadata?: Record<string, unknown>;
 };
+
+/** Build "selection" context items from editor code selections. */
+function codeSelectionsToContext(
+  selections: CodeContextSelection[] | undefined,
+): InitialContextItem[] {
+  if (!selections?.length) return [];
+  return selections.map((sel) => {
+    const range =
+      sel.startLine === sel.endLine
+        ? `line ${sel.startLine}`
+        : `lines ${sel.startLine}-${sel.endLine}`;
+    // Matches the inline chip token (`@<path>#L<range>`) so the mention in the
+    // message and the `[selection: ...]` context header refer to the same thing.
+    const refRange =
+      sel.startLine === sel.endLine
+        ? `L${sel.startLine}`
+        : `L${sel.startLine}-${sel.endLine}`;
+    return {
+      kind: "selection" as const,
+      ref: `${sel.filePath}#${refRange}`,
+      content: `Code selection from ${sel.filePath} (${range}):\n\n${sel.text}`,
+      metadata: {
+        source: "editor",
+        id: sel.id,
+        filePath: sel.filePath,
+        fileName: sel.fileName,
+        startLine: sel.startLine,
+        endLine: sel.endLine,
+      },
+    };
+  });
+}
 
 /** Build attachments + initialContext from browser selections. Screenshots go as image attachments; structural data goes as "selection" context items. */
 function browserSelectionsToPayload(
@@ -555,6 +596,7 @@ export function useWorkspaceRuns(
       contextSignals?: ContextSignal[],
       contextBrowserSelections?: BrowserContextSelection[],
       contextSkills?: ContextSkill[],
+      contextCodeSelections?: CodeContextSelection[],
     ) => {
       if (!goal.trim() || !selectedWorkspace || !selectedProvider) {
         toast.error("Please fill in all required fields");
@@ -562,6 +604,7 @@ export function useWorkspaceRuns(
       }
 
       const browserPayload = browserSelectionsToPayload(contextBrowserSelections);
+      const codeSelectionContext = codeSelectionsToContext(contextCodeSelections);
       const mergedAttachments =
         browserPayload.attachments.length > 0 || attachments?.length
           ? [...(attachments ?? []), ...browserPayload.attachments]
@@ -574,7 +617,7 @@ export function useWorkspaceRuns(
           providerId: selectedProvider,
           goal: goal.trim(),
           model: model || undefined,
-          initialContext: browserPayload.initialContext,
+          initialContext: [...browserPayload.initialContext, ...codeSelectionContext],
           attachments: mergedAttachments,
           contextIssues: contextIssues?.map(i => ({ provider: i.provider, number: i.number, title: i.title, body: i.body })),
           contextFiles: contextFiles?.map(f => ({ path: f.fullPath })),
@@ -612,6 +655,7 @@ export function useWorkspaceRuns(
     model?: string,
     contextBrowserSelections?: BrowserContextSelection[],
     contextSkills?: ContextSkill[],
+    contextCodeSelections?: CodeContextSelection[],
   ) => {
     if (!message.trim()) {
       setError("Please enter a message");
@@ -619,6 +663,7 @@ export function useWorkspaceRuns(
     }
 
     const browserPayload = browserSelectionsToPayload(contextBrowserSelections);
+    const codeSelectionContext = codeSelectionsToContext(contextCodeSelections);
     const mergedAttachments =
       browserPayload.attachments.length > 0 || attachments?.length
         ? [...(attachments ?? []), ...browserPayload.attachments]
@@ -631,7 +676,7 @@ export function useWorkspaceRuns(
         message: message.trim(),
         model: model || undefined,
         attachments: mergedAttachments,
-        additionalContext: browserPayload.initialContext,
+        additionalContext: [...browserPayload.initialContext, ...codeSelectionContext],
         contextIssues: contextIssues?.map(i => ({ provider: i.provider, number: i.number, title: i.title, body: i.body })),
         contextFiles: contextFiles?.map(f => ({ path: f.fullPath })),
         contextSignals: contextSignals?.map(s => ({ source: s.source, level: s.level, category: s.category, title: s.title, body: s.body, stackTrace: s.stackTrace, eventCount: s.eventCount })),

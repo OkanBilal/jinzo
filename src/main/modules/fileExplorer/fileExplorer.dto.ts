@@ -106,28 +106,22 @@ export const MAX_READ_DIRECTORY_NODES = 20_000;
 // Deeper trees must opt in explicitly via the `depth` option.
 export const DEFAULT_READ_DIRECTORY_DEPTH = 2;
 
-// Default patterns to exclude (common IDE/build artifacts)
-// NOTE: Do NOT add source folders like "main", "renderer", "preload", "src" here
+// Default patterns to exclude from listings. Mirrors VS Code's `files.exclude`
+// defaults: everything is visible (dotfiles, node_modules, build output)
+// except VCS internals and OS metadata files.
 export const DEFAULT_EXCLUDE_PATTERNS = [
-  "node_modules",
-  "package-lock.json",
-  "yarn.lock",
-  "pnpm-lock.yaml",
   ".git",
   ".svn",
   ".hg",
-  "dist",
-  "build",
-  "out",
-  ".cache",
-  ".next",
-  ".nuxt",
-  "__pycache__",
-  ".pytest_cache",
-  "target",
-  ".idea",
-  ".vscode",
-  "*.log",
+  "CVS",
   ".DS_Store",
   "Thumbs.db",
+];
+
+// Search walks the whole tree, so it additionally skips dependency dirs —
+// mirrors VS Code's `search.exclude` (files.exclude + node_modules etc.).
+export const DEFAULT_SEARCH_EXCLUDE_PATTERNS = [
+  ...DEFAULT_EXCLUDE_PATTERNS,
+  "node_modules",
+  "bower_components",
 ];

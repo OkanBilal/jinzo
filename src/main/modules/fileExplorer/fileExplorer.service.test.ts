@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { promises as fs } from "fs";
+import { execFileSync } from "node:child_process";
 import * as path from "path";
 import * as os from "os";
 import { fileExplorerService } from "./fileExplorer.service";
@@ -55,11 +56,26 @@ describe("fileExplorerService", () => {
       expect(dirA!.children).toEqual([]); // depth limit prevents reading children
     });
 
-    it("excludes hidden files by default", async () => {
+    it("includes hidden files by default (VS Code parity), still hiding VCS internals", async () => {
+      await fs.writeFile(path.join(tmpDir, ".hidden"), "secret");
+      await fs.writeFile(path.join(tmpDir, "visible.txt"), "hi");
+      await fs.mkdir(path.join(tmpDir, ".git"));
+
+      const result = await fileExplorerService.readDirectory({ rootPath: tmpDir });
+      const names = result.root.children!.map((c) => c.name);
+      expect(names).toContain(".hidden");
+      expect(names).toContain("visible.txt");
+      expect(names).not.toContain(".git");
+    });
+
+    it("excludes hidden files when requested", async () => {
       await fs.writeFile(path.join(tmpDir, ".hidden"), "secret");
       await fs.writeFile(path.join(tmpDir, "visible.txt"), "hi");
 
-      const result = await fileExplorerService.readDirectory({ rootPath: tmpDir });
+      const result = await fileExplorerService.readDirectory({
+        rootPath: tmpDir,
+        includeHidden: false,
+      });
       expect(result.totalFiles).toBe(1);
       expect(result.root.children![0].name).toBe("visible.txt");
     });
@@ -450,12 +466,24 @@ describe("fileExplorerService", () => {
       expect(fullDir!.hasChildren).toBe(true);
     });
 
-    it("excludes hidden files by default", async () => {
+    it("includes hidden files by default (VS Code parity)", async () => {
       await fs.writeFile(path.join(tmpDir, ".hidden"), "x");
       await fs.writeFile(path.join(tmpDir, "visible.txt"), "y");
 
       const result = await fileExplorerService.listDir({
         dirPath: tmpDir,
+        excludePatterns: [],
+      });
+      expect(result.map((e) => e.name).sort()).toEqual([".hidden", "visible.txt"]);
+    });
+
+    it("excludes hidden files when requested", async () => {
+      await fs.writeFile(path.join(tmpDir, ".hidden"), "x");
+      await fs.writeFile(path.join(tmpDir, "visible.txt"), "y");
+
+      const result = await fileExplorerService.listDir({
+        dirPath: tmpDir,
+        includeHidden: false,
         excludePatterns: [],
       });
       expect(result).toHaveLength(1);
@@ -483,6 +511,37 @@ describe("fileExplorerService", () => {
       const file = result.find((e) => e.name === "test.js");
       expect(file!.size).toBeGreaterThan(0);
       expect(file!.hasChildren).toBe(false);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // searchFiles
+  // ─────────────────────────────────────────────────────────────
+  describe("searchFiles", () => {
+    it("skips hidden files by default outside a git repo", async () => {
+      await fs.writeFile(path.join(tmpDir, ".hidden.txt"), "x");
+      await fs.writeFile(path.join(tmpDir, "kept.txt"), "y");
+
+      const result = await fileExplorerService.searchFiles({
+        rootPath: tmpDir,
+        query: "txt",
+      });
+      expect(result.map((e) => e.name)).toEqual(["kept.txt"]);
+    });
+
+    it("respects .gitignore inside a git repository", async () => {
+      execFileSync("git", ["init"], { cwd: tmpDir });
+      await fs.writeFile(path.join(tmpDir, ".gitignore"), "ignored.txt\n");
+      await fs.writeFile(path.join(tmpDir, "ignored.txt"), "x");
+      await fs.writeFile(path.join(tmpDir, "kept.txt"), "y");
+      await fs.writeFile(path.join(tmpDir, ".hidden.txt"), "z");
+
+      const result = await fileExplorerService.searchFiles({
+        rootPath: tmpDir,
+        query: "txt",
+      });
+      expect(result.map((e) => e.name)).toEqual(["kept.txt"]);
+      expect(result[0].fullPath).toBe(path.join(tmpDir, "kept.txt"));
     });
   });
 });

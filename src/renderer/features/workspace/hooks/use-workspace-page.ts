@@ -15,6 +15,8 @@ import {
   clearContextSkills,
   removeContextBrowserSelection,
   clearContextBrowserSelections,
+  removeContextCodeSelection,
+  clearContextCodeSelections,
   clearIssueTabs,
   clearSignalTabs,
   clearNoteTabs,
@@ -58,6 +60,9 @@ export function useWorkspacePage(providerId: string) {
   const contextBrowserSelections = useAppSelector(
     (state) => state.workspace.contextBrowserSelections,
   );
+  const contextCodeSelections = useAppSelector(
+    (state) => state.workspace.contextCodeSelections,
+  );
   const openIssueTabs = useAppSelector(
     (state) => state.workspace.openIssueTabs,
   );
@@ -75,6 +80,9 @@ export function useWorkspacePage(providerId: string) {
   );
   const pendingReviewTarget = useAppSelector(
     (state) => state.workspace.pendingReviewTarget,
+  );
+  const previousNonEditorTab = useAppSelector(
+    (state) => state.workspace.previousNonEditorTab,
   );
 
   const [goal, setGoal] = useState("");
@@ -106,6 +114,7 @@ export function useWorkspacePage(providerId: string) {
     dispatch(clearContextSignals());
     dispatch(clearContextSkills());
     dispatch(clearContextBrowserSelections());
+    dispatch(clearContextCodeSelections());
     dispatch(clearIssueTabs());
     dispatch(clearSignalTabs());
     dispatch(clearNoteTabs());
@@ -179,15 +188,53 @@ export function useWorkspacePage(providerId: string) {
 
   const activeRunId = isRunTab(activeTab) ? activeTab : null;
 
+  // ── Composer send target ──
+  // On the editor tab the composer has no run context of its own, so every
+  // send used to start a fresh run. Default the target to the run tab the
+  // user came from (previousNonEditorTab); the target pill in the composer
+  // lets them retarget to another run or an explicit new chat. On run tabs
+  // the target is simply that run, as before.
+  // The override is stamped with the tab/workspace it was chosen on and
+  // simply ignored once either changes — no reset effect needed.
+  const [composeTargetOverride, setComposeTargetOverride] = useState<{
+    tab: string;
+    workspace: string | undefined;
+    value: string | "new";
+  } | null>(null);
+  const overrideValue =
+    composeTargetOverride &&
+    composeTargetOverride.tab === activeTab &&
+    composeTargetOverride.workspace === workspaceId
+      ? composeTargetOverride.value
+      : null;
+
+  const isRetargetable = activeTab === "editor" && runs.length > 0;
+  const fallbackTargetRunId =
+    previousNonEditorTab &&
+    isRunTab(previousNonEditorTab) &&
+    runs.some((r) => r.id === previousNonEditorTab)
+      ? previousNonEditorTab
+      : null;
+  const composeTargetRunId = isRunTab(activeTab)
+    ? activeTab
+    : !isRetargetable || overrideValue === "new"
+      ? null
+      : overrideValue && runs.some((r) => r.id === overrideValue)
+        ? overrideValue
+        : fallbackTargetRunId;
+  const composeTargetRun = composeTargetRunId
+    ? runs.find((r) => r.id === composeTargetRunId)
+    : undefined;
+
   useEffect(() => {
     const checkResume = async () => {
       if (
-        activeRunId &&
-        activeRun &&
-        activeRun.status !== "running" &&
-        activeRun.status !== "queued"
+        composeTargetRunId &&
+        composeTargetRun &&
+        composeTargetRun.status !== "running" &&
+        composeTargetRun.status !== "queued"
       ) {
-        const resumable = await checkCanResume(activeRunId);
+        const resumable = await checkCanResume(composeTargetRunId);
         setCanResume(resumable);
       } else {
         setCanResume(false);
@@ -195,7 +242,7 @@ export function useWorkspacePage(providerId: string) {
     };
     checkResume();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, activeRun?.status, checkCanResume]);
+  }, [composeTargetRunId, composeTargetRun?.status, checkCanResume]);
 
   const clearInputState = useCallback(() => {
     setGoal("");
@@ -205,6 +252,7 @@ export function useWorkspacePage(providerId: string) {
     dispatch(clearContextSignals());
     dispatch(clearContextSkills());
     dispatch(clearContextBrowserSelections());
+    dispatch(clearContextCodeSelections());
   }, [dispatch]);
 
   const handleExecute = useCallback(async () => {
@@ -217,8 +265,19 @@ export function useWorkspacePage(providerId: string) {
       ? await serializeAttachments(uploadedFiles)
       : undefined;
 
-    if (activeRunId && canResume && activeRun && activeRun.status !== "running") {
-      const success = (await continueRun(activeRunId, goal, attachments, contextIssues, contextFiles, contextSignals, selectedModel, contextBrowserSelections, contextSkills)) ?? false;
+    if (
+      composeTargetRunId &&
+      canResume &&
+      composeTargetRun &&
+      composeTargetRun.status !== "running"
+    ) {
+      // Jump to the target chat right away so the message lands in view
+      // (sending from the editor tab targets the run you came from).
+      if (activeTab !== composeTargetRunId) {
+        dispatch(setActiveTab(composeTargetRunId));
+        selectTab(composeTargetRunId);
+      }
+      const success = (await continueRun(composeTargetRunId, goal, attachments, contextIssues, contextFiles, contextSignals, selectedModel, contextBrowserSelections, contextSkills, contextCodeSelections)) ?? false;
       if (success) clearInputState();
     } else {
       const newRunId = await executeRun(
@@ -232,6 +291,7 @@ export function useWorkspacePage(providerId: string) {
         contextSignals,
         contextBrowserSelections,
         contextSkills,
+        contextCodeSelections,
       );
       if (newRunId) {
         clearInputState();
@@ -246,13 +306,16 @@ export function useWorkspacePage(providerId: string) {
     contextSignals,
     contextSkills,
     contextBrowserSelections,
+    contextCodeSelections,
     workspaceId,
     selectedWorkspace,
     selectedModel,
     executeRun,
     continueRun,
-    activeRunId,
-    activeRun,
+    composeTargetRunId,
+    composeTargetRun,
+    activeTab,
+    selectTab,
     canResume,
     clearInputState,
     dispatch,
@@ -326,6 +389,47 @@ export function useWorkspacePage(providerId: string) {
     [dispatch, contextBrowserSelections],
   );
 
+  const handleRemoveContextCodeSelection = useCallback(
+    (id: string) => {
+      dispatch(removeContextCodeSelection(id));
+    },
+    [dispatch],
+  );
+
+  const runLabel = (r: { title?: string; goal: string }) =>
+    r.title?.trim() ? r.title : r.goal;
+
+  // Pill data for the composer: only when retargeting is possible (editor tab
+  // with existing runs). Null hides the pill entirely.
+  const sendTarget = isRetargetable
+    ? {
+        runId: composeTargetRunId,
+        label: composeTargetRun ? runLabel(composeTargetRun) : "New chat",
+        options: [
+          { runId: null as string | null, label: "New chat" },
+          ...runs
+            .slice(0, 10)
+            .map((r) => ({ runId: r.id as string | null, label: runLabel(r) })),
+        ],
+      }
+    : null;
+
+  const handleSendTargetChange = useCallback(
+    (runId: string | null) => {
+      setComposeTargetOverride({
+        tab: activeTab,
+        workspace: workspaceId,
+        value: runId ?? "new",
+      });
+    },
+    [activeTab, workspaceId],
+  );
+
+  // The run the composer acts on — the retarget target on the editor tab,
+  // otherwise the active tab's run. Drives the input's running/stop state and
+  // context-usage ring.
+  const composerRun = isRetargetable ? composeTargetRun : activeRun;
+
   const showNewRunTab = isNewRunTab(activeTab);
 
   const showEmptyState =
@@ -354,12 +458,15 @@ export function useWorkspacePage(providerId: string) {
     contextSignals,
     contextSkills,
     contextBrowserSelections,
+    contextCodeSelections,
     openIssueTabs,
     openSignalTabs,
     openNoteTabs,
     runs,
     activeRun,
     activeRunId,
+    composerRun,
+    sendTarget,
     currentEvents,
     currentTurns,
     isLoading,
@@ -376,6 +483,8 @@ export function useWorkspacePage(providerId: string) {
     handleRemoveContextSignal,
     handleRemoveContextSkill,
     handleRemoveContextBrowserSelection,
+    handleRemoveContextCodeSelection,
+    handleSendTargetChange,
     setAutoExecute,
     ...tabHandlers,
   };

@@ -1,14 +1,41 @@
-import { useReducer, useRef, useEffect, useCallback, useState, useMemo } from "react";
+import {
+  useReducer,
+  useRef,
+  useEffect,
+  useCallback,
+  useState,
+  useMemo,
+} from "react";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import type { CommandInfo, SkillInfo } from "@/lib/redux/api/providersApi";
 import type { Run } from "../types";
 import type { FileNode } from "@/features/workspace/types/file-explorer";
-import type { ContextIssue, ContextSignal, ContextSkill, ContextBrowserSelection } from "@/lib/redux/slices/workspaceSlice";
-import { addContextFile, addContextIssue, addContextSkill, removeContextSkill } from "@/lib/redux/slices/workspaceSlice";
-import type { UploadedFile, RichInputFormHandle, RichSkillChipData, RichFileChipData } from "@/components/ui";
+import type {
+  ContextIssue,
+  ContextSignal,
+  ContextSkill,
+  ContextBrowserSelection,
+  ContextCodeSelection,
+} from "@/lib/redux/slices/workspaceSlice";
+import {
+  addContextFile,
+  addContextIssue,
+  addContextSkill,
+  removeContextSkill,
+} from "@/lib/redux/slices/workspaceSlice";
+import type {
+  UploadedFile,
+  RichInputFormHandle,
+  RichSkillChipData,
+  RichFileChipData,
+  RichCodeChipData,
+} from "@/components/ui";
 import { useSpaceProviderVariant } from "@/hooks/use-space-provider-variant";
 import { useIsMobile } from "@/lib/platform";
-import { RichInputForm } from "@/components/ui";
+import { RichInputForm, Button } from "@/components/ui";
+import DropdownWrapper from "@/components/ui/dropdown-wrapper";
+import { useClickOutside } from "@/hooks/use-click-outside";
+import { Chat, Check, Plus } from "@/components/ui/icons";
 import {
   UnifiedContextDropdown,
   type UnifiedContextTrigger,
@@ -28,6 +55,7 @@ const EMPTY_CONTEXT_ISSUES: ContextIssue[] = [];
 const EMPTY_CONTEXT_SIGNALS: ContextSignal[] = [];
 const EMPTY_CONTEXT_SKILLS: ContextSkill[] = [];
 const EMPTY_CONTEXT_BROWSER: ContextBrowserSelection[] = [];
+const EMPTY_CONTEXT_CODE: ContextCodeSelection[] = [];
 const EMPTY_UPLOADED_FILES: UploadedFile[] = [];
 
 function looksLikeImageFile(file: File): boolean {
@@ -41,7 +69,8 @@ function looksLikeDocumentFile(file: File): boolean {
   if (
     mime === "application/pdf" ||
     mime === "application/msword" ||
-    mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    mime ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
     mime === "text/plain"
   ) {
     return true;
@@ -75,6 +104,19 @@ function replaceMentionInGoal(
   return null;
 }
 
+/** Serialized token identity for a code selection: `<path>#L<start>[-<end>]`. */
+function codeSelectionChipKey(sel: ContextCodeSelection): string {
+  return sel.startLine === sel.endLine
+    ? `${sel.filePath}#L${sel.startLine}`
+    : `${sel.filePath}#L${sel.startLine}-${sel.endLine}`;
+}
+
+function codeSelectionChipLabel(sel: ContextCodeSelection): string {
+  return sel.startLine === sel.endLine
+    ? `${sel.fileName}:${sel.startLine}`
+    : `${sel.fileName}:${sel.startLine}-${sel.endLine}`;
+}
+
 function fileToUploadedFile(file: File): UploadedFile {
   const isImage = looksLikeImageFile(file);
   return {
@@ -82,6 +124,13 @@ function fileToUploadedFile(file: File): UploadedFile {
     type: isImage ? "image" : "document",
     preview: isImage ? URL.createObjectURL(file) : undefined,
   };
+}
+
+export interface ComposerSendTarget {
+  /** Run the next send continues, or null for a new chat. */
+  runId: string | null;
+  label: string;
+  options: Array<{ runId: string | null; label: string }>;
 }
 
 interface WorkspaceInputProps {
@@ -103,6 +152,11 @@ interface WorkspaceInputProps {
   contextSkills?: ContextSkill[];
   contextBrowserSelections?: ContextBrowserSelection[];
   onRemoveContextBrowserSelection?: (id: string) => void;
+  contextCodeSelections?: ContextCodeSelection[];
+  onRemoveContextCodeSelection?: (id: string) => void;
+  /** When set, shows the send-target pill (editor tab): which chat the next send continues. */
+  sendTarget?: ComposerSendTarget | null;
+  onSendTargetChange?: (runId: string | null) => void;
   workspacePath?: string;
   projectId?: string;
   uploadedFiles?: UploadedFile[];
@@ -133,6 +187,10 @@ export function WorkspaceInput({
   contextSkills = EMPTY_CONTEXT_SKILLS,
   contextBrowserSelections = EMPTY_CONTEXT_BROWSER,
   onRemoveContextBrowserSelection,
+  contextCodeSelections = EMPTY_CONTEXT_CODE,
+  onRemoveContextCodeSelection,
+  sendTarget = null,
+  onSendTargetChange,
   workspacePath,
   projectId,
   uploadedFiles = EMPTY_UPLOADED_FILES,
@@ -199,7 +257,8 @@ export function WorkspaceInput({
   const providerSignedOut = !!accountInfo && accountInfo.account === null;
   // The providerId prop can override the space's provider — resolve the
   // descriptor from the id actually in use.
-  const activeDescriptor = getProviderVariantById(activeProviderId) ?? spaceProvider;
+  const activeDescriptor =
+    getProviderVariantById(activeProviderId) ?? spaceProvider;
 
   // Cmd+P to focus input
   useEffect(() => {
@@ -223,8 +282,16 @@ export function WorkspaceInput({
 
   const [unifiedMenu, updateUnifiedMenu] = useReducer(
     (
-      prev: { visible: boolean; filter: string; trigger: UnifiedContextTrigger },
-      next: Partial<{ visible: boolean; filter: string; trigger: UnifiedContextTrigger }>,
+      prev: {
+        visible: boolean;
+        filter: string;
+        trigger: UnifiedContextTrigger;
+      },
+      next: Partial<{
+        visible: boolean;
+        filter: string;
+        trigger: UnifiedContextTrigger;
+      }>,
     ) => ({ ...prev, ...next }),
     { visible: false, filter: "", trigger: "@" },
   );
@@ -270,9 +337,15 @@ export function WorkspaceInput({
     (command: CommandInfo) => {
       const replacement = `/${command.name} `;
       const t = unifiedMenu.trigger;
-      const ok = inputRef.current?.replaceTokenWithText(t, replacement) ?? false;
+      const ok =
+        inputRef.current?.replaceTokenWithText(t, replacement) ?? false;
       if (!ok) {
-        const next = replaceMentionInGoal(goal, t, unifiedMenu.filter, replacement);
+        const next = replaceMentionInGoal(
+          goal,
+          t,
+          unifiedMenu.filter,
+          replacement,
+        );
         if (next !== null) onGoalChange(next);
       }
       updateUnifiedMenu({ visible: false, filter: "" });
@@ -347,6 +420,28 @@ export function WorkspaceInput({
     onGoalChange(goal + sep + additions.map((p) => `@${p}`).join(" ") + " ");
   }, [contextFiles, goal, onGoalChange]);
 
+  // Code selections always arrive from outside the input (the code viewer's
+  // "Add to chat"), so append their token here — same reveal path as context
+  // files added from the file explorer.
+  const seenCodeSelectionIdsRef = useRef<Set<string>>(
+    new Set(contextCodeSelections.map((s) => s.id)),
+  );
+  useEffect(() => {
+    const current = new Set(contextCodeSelections.map((s) => s.id));
+    const additions: string[] = [];
+    for (const s of contextCodeSelections) {
+      if (seenCodeSelectionIdsRef.current.has(s.id)) continue;
+      const key = codeSelectionChipKey(s);
+      const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      if (new RegExp(`@${escaped}(?![\\w-])`).test(goal)) continue;
+      additions.push(key);
+    }
+    seenCodeSelectionIdsRef.current = current;
+    if (additions.length === 0) return;
+    const sep = goal.length === 0 || /\s$/.test(goal) ? "" : " ";
+    onGoalChange(goal + sep + additions.map((k) => `@${k}`).join(" ") + " ");
+  }, [contextCodeSelections, goal, onGoalChange]);
+
   const skillChipMap = useMemo(() => {
     const m = new Map<string, RichSkillChipData>();
     for (const s of contextSkills) {
@@ -368,6 +463,36 @@ export function WorkspaceInput({
     }
     return m;
   }, [contextFiles]);
+
+  const codeChipMap = useMemo(() => {
+    const m = new Map<string, RichCodeChipData>();
+    for (const s of contextCodeSelections) {
+      const key = codeSelectionChipKey(s);
+      m.set(key, {
+        key,
+        fileName: s.fileName,
+        label: codeSelectionChipLabel(s),
+      });
+    }
+    return m;
+  }, [contextCodeSelections]);
+
+  const contextCodeSelectionsRef = useRef(contextCodeSelections);
+  useEffect(() => {
+    contextCodeSelectionsRef.current = contextCodeSelections;
+  }, [contextCodeSelections]);
+
+  const handleCodeChipsChange = useCallback(
+    (keys: string[]) => {
+      const present = new Set(keys);
+      for (const sel of contextCodeSelectionsRef.current) {
+        if (!present.has(codeSelectionChipKey(sel))) {
+          onRemoveContextCodeSelection?.(sel.id);
+        }
+      }
+    },
+    [onRemoveContextCodeSelection],
+  );
 
   const handleSkillChipsChange = useCallback(
     (names: string[]) => {
@@ -406,7 +531,12 @@ export function WorkspaceInput({
           basename: node.name,
         }) ?? false;
       if (!ok) {
-        const next = replaceMentionInGoal(goal, t, unifiedMenu.filter, `@${node.fullPath} `);
+        const next = replaceMentionInGoal(
+          goal,
+          t,
+          unifiedMenu.filter,
+          `@${node.fullPath} `,
+        );
         if (next !== null) onGoalChange(next);
       }
       updateUnifiedMenu({ visible: false, filter: "" });
@@ -441,9 +571,15 @@ export function WorkspaceInput({
     (dirPath: string) => {
       const t = unifiedMenu.trigger;
       const replacement = `${t}${dirPath}`;
-      const ok = inputRef.current?.replaceTokenWithText(t, replacement) ?? false;
+      const ok =
+        inputRef.current?.replaceTokenWithText(t, replacement) ?? false;
       if (!ok) {
-        const next = replaceMentionInGoal(goal, t, unifiedMenu.filter, replacement);
+        const next = replaceMentionInGoal(
+          goal,
+          t,
+          unifiedMenu.filter,
+          replacement,
+        );
         if (next !== null) onGoalChange(next);
       }
       updateUnifiedMenu({ filter: dirPath });
@@ -458,24 +594,39 @@ export function WorkspaceInput({
 
   const [isFileDragOver, setIsFileDragOver] = useState(false);
 
-  const handleWrapperDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    if (!e.dataTransfer.types.includes("Files")) return;
-    e.preventDefault();
-    setIsFileDragOver(true);
-  }, []);
+  const sendTargetDropdownRef = useRef<HTMLDivElement>(null);
+  const [targetMenuOpen, setTargetMenuOpen] = useState(false);
+  useClickOutside(sendTargetDropdownRef, () => {
+    if (targetMenuOpen) setTargetMenuOpen(false);
+  });
 
-  const handleWrapperDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    const next = e.relatedTarget as Node | null;
-    if (next && e.currentTarget.contains(next)) return;
-    setIsFileDragOver(false);
-  }, []);
+  const handleWrapperDragEnter = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      if (!e.dataTransfer.types.includes("Files")) return;
+      e.preventDefault();
+      setIsFileDragOver(true);
+    },
+    [],
+  );
 
-  const handleWrapperDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    if (!e.dataTransfer.types.includes("Files")) return;
-    e.preventDefault();
-    e.stopPropagation();
-    e.dataTransfer.dropEffect = "copy";
-  }, []);
+  const handleWrapperDragLeave = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      const next = e.relatedTarget as Node | null;
+      if (next && e.currentTarget.contains(next)) return;
+      setIsFileDragOver(false);
+    },
+    [],
+  );
+
+  const handleWrapperDragOver = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      if (!e.dataTransfer.types.includes("Files")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = "copy";
+    },
+    [],
+  );
 
   const handleWrapperDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
@@ -503,7 +654,6 @@ export function WorkspaceInput({
       : canResume
         ? "Ask a follow-up, use @ or / for commands, files, skills and issues"
         : "Ask to edit, use @ or / for commands, files, skills and issues";
-
 
     if (uploadedFiles.length === 0) {
       return baseHint;
@@ -534,20 +684,22 @@ export function WorkspaceInput({
         : typeof modelsError === "object" && "error" in modelsError
           ? String((modelsError as any).error)
           : null;
-    if (msg && /not authenticated|gh auth login|cursor login|agent login/i.test(msg)) return msg;
+    if (
+      msg &&
+      /not authenticated|gh auth login|cursor login|agent login/i.test(msg)
+    )
+      return msg;
     return null;
   })();
 
-
   return (
     <>
-          {(authErrorMessage || providerSignedOut) && (
+      {(authErrorMessage || providerSignedOut) && (
         <ProviderAuthNotice
           variant={activeDescriptor.variant}
           title="Auth required"
           message={
-            authErrorMessage ??
-            `${activeDescriptor.label} CLI is not signed in`
+            authErrorMessage ?? `${activeDescriptor.label} CLI is not signed in`
           }
           onRecheck={() => {
             void refetchModels();
@@ -558,92 +710,156 @@ export function WorkspaceInput({
         />
       )}
 
-    <div
-      className={`relative w-full max-w-200 mx-auto flex flex-col pb-2 rounded-[28px] glass-surface
+      <div
+        className={`relative w-full max-w-200 mx-auto flex flex-col pb-2 rounded-[28px] glass-surface
         cursor-pointer transition-all
         ${layout === "default" ? "mb-4" : ""}
         ${isFileDragOver ? "ring-2 ring-primary/60 ring-offset-2 ring-offset-background" : ""}`}
-      onDragEnter={handleWrapperDragEnter}
-      onDragLeave={handleWrapperDragLeave}
-      onDragOver={handleWrapperDragOver}
-      onDrop={handleWrapperDrop}
-    >
-      {contextUsage && (
-        <div className="absolute left-full bottom-2.5 ml-3 z-10">
-          <ContextUsageRing usage={contextUsage} />
-        </div>
-      )}
-      <ContextChips
-        contextIssues={contextIssues}
-        contextSignals={contextSignals}
-        contextBrowserSelections={contextBrowserSelections}
-        onRemoveContextIssue={onRemoveContextIssue}
-        onRemoveContextSignal={onRemoveContextSignal}
-        onRemoveContextBrowserSelection={onRemoveContextBrowserSelection}
-      />
-      <div className="relative">
-        <RichInputForm
-          ref={inputRef}
-          query={goal}
-          onQueryChange={handleGoalChange}
-          onSubmit={handleSubmit}
-          onSkillChipsChange={handleSkillChipsChange}
-          onFileChipsChange={handleFileChipsChange}
-          onCaretContextChange={handleCaretContext}
-          skillChipMap={skillChipMap}
-          fileChipMap={fileChipMap}
-          placeholder={inputPlaceholder}
+        onDragEnter={handleWrapperDragEnter}
+        onDragLeave={handleWrapperDragLeave}
+        onDragOver={handleWrapperDragOver}
+        onDrop={handleWrapperDrop}
+      >
+        {contextUsage && (
+          <div className="absolute left-full bottom-2.5 ml-3 z-10">
+            <ContextUsageRing usage={contextUsage} />
+          </div>
+        )}
+        {sendTarget && (
+          <div className="flex px-4 pt-3 -mb-1">
+            <div className="relative" ref={sendTargetDropdownRef}>
+              <Button
+                type="button"
+                onClick={() => setTargetMenuOpen((open) => !open)}
+                className="flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-full glass-button text-xs dark:text-primary-200 text-primary-700 cursor-pointer"
+                title="Choose which chat this message is sent to"
+                aria-haspopup="true"
+                aria-expanded={targetMenuOpen}
+              >
+                {sendTarget.runId ? (
+                  <Chat className="size-3 shrink-0" />
+                ) : (
+                  <Plus className="size-3 shrink-0" />
+                )}
+                <span className="truncate max-w-60">{sendTarget.label}</span>
+              </Button>
+              <DropdownWrapper
+                isOpen={targetMenuOpen}
+                openUpward
+                minWidth="min-w-60"
+              >
+                <div className="max-h-80 overflow-auto noscrollbar py-1">
+                  {sendTarget.options.map((option) => {
+                    const isSelected = option.runId === sendTarget.runId;
+                    return (
+                      <Button
+                        key={option.runId ?? "new"}
+                        type="button"
+                        onClick={() => {
+                          setTargetMenuOpen(false);
+                          onSendTargetChange?.(option.runId);
+                        }}
+                        className={`w-full text-left px-3 py-2 cursor-pointer text-sm transition-colors flex items-center gap-2 ${
+                          isSelected
+                            ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-950 dark:text-primary"
+                            : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
+                        }`}
+                        role="menuitemradio"
+                        aria-checked={isSelected}
+                      >
+                        {option.runId ? (
+                          <Chat className="size-3.5 shrink-0" />
+                        ) : (
+                          <Plus className="size-3.5 shrink-0" />
+                        )}
+                        <span className="min-w-0 flex-1 truncate">
+                          {option.label}
+                        </span>
+                        {isSelected && <Check className="size-3.5 shrink-0" />}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </DropdownWrapper>
+            </div>
+          </div>
+        )}
+        <ContextChips
+          contextIssues={contextIssues}
+          contextSignals={contextSignals}
+          contextBrowserSelections={contextBrowserSelections}
+          onRemoveContextIssue={onRemoveContextIssue}
+          onRemoveContextSignal={onRemoveContextSignal}
+          onRemoveContextBrowserSelection={onRemoveContextBrowserSelection}
         />
-        <UnifiedContextDropdown
-          isOpen={unifiedMenu.visible}
-          trigger={unifiedMenu.trigger}
-          filterText={unifiedMenu.filter}
-          workspacePath={workspacePath}
-          projectId={projectId}
-          commands={providerCommands}
-          skills={providerSkills}
-          isLoadingSkills={isLoadingSkills}
-          onSelectCommand={handleSlashCommandSelect}
-          onSelectSkill={handleUnifiedSkillSelect}
-          onSelectFile={handleUnifiedFileSelect}
-          onNavigateFile={handleUnifiedFileNavigate}
-          onSelectIssue={handleUnifiedIssueSelect}
-          onClose={() => updateUnifiedMenu({ visible: false, filter: "" })}
-          dropdownRef={unifiedContextDropdownRef}
+        <div className="relative">
+          <RichInputForm
+            ref={inputRef}
+            query={goal}
+            onQueryChange={handleGoalChange}
+            onSubmit={handleSubmit}
+            onSkillChipsChange={handleSkillChipsChange}
+            onFileChipsChange={handleFileChipsChange}
+            onCodeChipsChange={handleCodeChipsChange}
+            onCaretContextChange={handleCaretContext}
+            skillChipMap={skillChipMap}
+            fileChipMap={fileChipMap}
+            codeChipMap={codeChipMap}
+            placeholder={inputPlaceholder}
+          />
+          <UnifiedContextDropdown
+            isOpen={unifiedMenu.visible}
+            trigger={unifiedMenu.trigger}
+            filterText={unifiedMenu.filter}
+            workspacePath={workspacePath}
+            projectId={projectId}
+            commands={providerCommands}
+            skills={providerSkills}
+            isLoadingSkills={isLoadingSkills}
+            onSelectCommand={handleSlashCommandSelect}
+            onSelectSkill={handleUnifiedSkillSelect}
+            onSelectFile={handleUnifiedFileSelect}
+            onNavigateFile={handleUnifiedFileNavigate}
+            onSelectIssue={handleUnifiedIssueSelect}
+            onClose={() => updateUnifiedMenu({ visible: false, filter: "" })}
+            dropdownRef={unifiedContextDropdownRef}
+          />
+        </div>
+        <InputToolbar
+          variant={providerVariant}
+          isLoading={isLoading}
+          onSubmit={handleSubmit}
+          onGoalChange={onGoalChange}
+          selectedModelDisplayName={selectedModelDisplayName}
+          modelDisplayNames={modelDisplayNames}
+          modelEffortLevelsByDisplayName={modelEffortLevelsByDisplayName}
+          onModelChange={handleModelChange}
+          isLoadingModels={isLoadingModels}
+          permissionMode={permissionMode}
+          onPermissionModeChange={handlePermissionModeChange}
+          planMode={planMode}
+          onPlanModeToggle={handlePlanModeToggle}
+          goalMode={goalMode}
+          onGoalModeToggle={handleGoalModeToggle}
+          thinkingMode={thinkingMode}
+          onThinkingModeToggle={handleThinkingModeToggle}
+          fastMode={fastMode}
+          onFastModeToggle={handleFastModeToggle}
+          supportsFastMode={selectedModelInfo?.supportsFastMode ?? false}
+          effortLevel={effortLevel}
+          onEffortLevelChange={handleEffortLevelChange}
+          supportedEffortLevels={selectedModelInfo?.supportedEffortLevels}
+          supportsUltracode={supportsUltracode}
+          isRunning={activeRun?.status === "running"}
+          onStop={onStop}
+          uploadedFiles={uploadedFiles}
+          onUploadedFilesChange={onUploadedFilesChange ?? (() => {})}
+          disabled={
+            !!authErrorMessage ||
+            (!isLoadingModels && modelDisplayNames.length === 0)
+          }
         />
       </div>
-      <InputToolbar
-        variant={providerVariant}
-        isLoading={isLoading}
-        onSubmit={handleSubmit}
-        onGoalChange={onGoalChange}
-        selectedModelDisplayName={selectedModelDisplayName}
-        modelDisplayNames={modelDisplayNames}
-        modelEffortLevelsByDisplayName={modelEffortLevelsByDisplayName}
-        onModelChange={handleModelChange}
-        isLoadingModels={isLoadingModels}
-        permissionMode={permissionMode}
-        onPermissionModeChange={handlePermissionModeChange}
-        planMode={planMode}
-        onPlanModeToggle={handlePlanModeToggle}
-        goalMode={goalMode}
-        onGoalModeToggle={handleGoalModeToggle}
-        thinkingMode={thinkingMode}
-        onThinkingModeToggle={handleThinkingModeToggle}
-        fastMode={fastMode}
-        onFastModeToggle={handleFastModeToggle}
-        supportsFastMode={selectedModelInfo?.supportsFastMode ?? false}
-        effortLevel={effortLevel}
-        onEffortLevelChange={handleEffortLevelChange}
-        supportedEffortLevels={selectedModelInfo?.supportedEffortLevels}
-        supportsUltracode={supportsUltracode}
-        isRunning={activeRun?.status === "running"}
-        onStop={onStop}
-        uploadedFiles={uploadedFiles}
-        onUploadedFilesChange={onUploadedFilesChange ?? (() => {})}
-        disabled={!!authErrorMessage || (!isLoadingModels && modelDisplayNames.length === 0)}
-      />
-    </div>
-     </>
+    </>
   );
 }
