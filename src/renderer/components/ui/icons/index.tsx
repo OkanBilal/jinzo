@@ -145,3 +145,4 @@ export { default as Zai } from "./zai";
 export { default as View } from "./view";
 export { default as Undo } from "./undo";
 export { default as Menu } from "./menu";
+export { default as Minimize} from "./minimize"

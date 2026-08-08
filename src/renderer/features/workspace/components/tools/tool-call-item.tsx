@@ -14,7 +14,6 @@ import { PRDisplay, type PRParams } from "./pr-display";
 import { CheckPackageDisplay, type CheckPackageParams } from "./check-package-display";
 import { SaveFindingDisplay, type SaveFindingParams } from "./save-finding-display";
 import { AgentDisplay, type AgentParams } from "./agent-display";
-import { SpawnAgentDisplay } from "./spawn-agent-display";
 import { SendMessageDisplay, type SendMessageParams } from "./send-message-display";
 import { MonitorDisplay, type MonitorParams } from "./monitor-display";
 import { IntentDisplay, type IntentParams } from "./intent-display";
@@ -78,15 +77,6 @@ function hasMeaningfulOutput(value: unknown): boolean {
   return true;
 }
 
-/** Codex AgentControl collab tool calls — single SpawnAgentDisplay dispatches by toolName. */
-const COLLAB_TOOL_NAMES = new Set([
-  "spawnagent",
-  "sendcollabinput",
-  "waitcollabagent",
-  "closecollabagent",
-  "resumecollabagent",
-]);
-
 /**
  * Match toolNameLower ∈ names, render `<Display params output isCompact />`.
  * `buildFallback` runs only when neither metadata.input nor parsed params are present.
@@ -141,11 +131,8 @@ const DISPATCH: Renderer[] = [
       ? <PlanDisplay event={ctx.event} />
       : null,
 
-  // Codex AgentControl collab — all 5 variants share SpawnAgentDisplay.
-  (ctx) =>
-    COLLAB_TOOL_NAMES.has(ctx.toolNameLower)
-      ? <SpawnAgentDisplay output={ctx.event.metadata?.output} toolName={ctx.toolNameLower} />
-      : null,
+  // Codex collab tool calls (spawnAgent & co) have no renderer on purpose —
+  // the transcript grouping drops them; subagents live in the session panel.
 
   noOutput<TaskParams>(["task"], TaskDisplay, (ctx) => ({ description: ctx.summary })),
   noOutput<AgentParams>(["agent"], AgentDisplay, (ctx) => ({ description: ctx.summary })),

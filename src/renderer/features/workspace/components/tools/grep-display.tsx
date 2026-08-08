@@ -39,7 +39,9 @@ export function GrepDisplay({ params, output, isCompact = false }: { params: Gre
           {params.pattern || params.query || params.regex || ""}
         </code>
         {hasStats && (
-          <span className="text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
+          // shrink-0 + nowrap: the pattern beside it truncates, the stats never
+          // wrap onto a second line (matches GlobDisplay's stats span).
+          <span className="shrink-0 whitespace-nowrap text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
             ({[
               totalMatches > 0 ? `${totalMatches} matches` : null,
               showLines ? `${numLines} lines` : null,

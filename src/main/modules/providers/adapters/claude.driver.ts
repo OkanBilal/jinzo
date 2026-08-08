@@ -54,6 +54,7 @@ import {
   findPackagedClaudeSdkBinary,
   resolveCandidate,
 } from "../providers.utils";
+import { AGENT_ID_IN_RESULT } from "../../../../shared/subagent";
 import {
   cancelPendingRequest,
   requestToolApproval,
@@ -613,11 +614,59 @@ const { info: logInfo, warn: logWarn, error: logError } = createLogger("[ClaudeD
 const SUBAGENT_TOOL_NAME = "Agent";
 
 /**
+ * Flatten an Agent tool_result into display text.
+ *
+ * The SDK returns the subagent's result as an array of content blocks —
+ * `[{type:"text",text:"…report…"},{type:"text",text:"agentId: … subagent_tokens: …"}]`
+ * — where the last block is continuation bookkeeping, not report. Persisting
+ * that raw JSON made the panel/tab show `[{"type":"text"…` verbatim. Text
+ * blocks are joined for display, the bookkeeping block is dropped, and the
+ * agentId it carries is extracted on the way out.
+ */
+export function normalizeSubagentOutput(output: unknown): {
+  text?: string;
+  agentId?: string;
+} {
+  const texts: string[] = Array.isArray(output)
+    ? output.flatMap((block) => {
+        const b = block as Record<string, unknown> | null;
+        return b && b.type === "text" && typeof b.text === "string" ? [b.text] : [];
+      })
+    : typeof output === "string"
+      ? [output]
+      : output !== undefined && output !== null
+        ? [safeJson(output)]
+        : [];
+
+  let agentId: string | undefined;
+  const visible: string[] = [];
+  for (const text of texts) {
+    const agentIdMatch = text.match(AGENT_ID_IN_RESULT);
+    if (agentIdMatch) agentId = agentIdMatch[1];
+    // A block that IS the bookkeeping (starts with "agentId:") is dropped;
+    // a report that merely mentions an agentId inline stays visible.
+    if (/^\s*agentId:/i.test(text)) continue;
+    visible.push(text);
+  }
+  return { text: visible.join("\n\n").trim() || undefined, agentId };
+}
+
+/**
+ * The SDK's launch acknowledgement for a backgrounded agent, as prose —
+ * there is no structured marker on the tool_result for this (checked against
+ * the tool_result content blocks the SDK emits), so this string IS the
+ * contract. SDK-coupled: if the wording changes, background agents degrade to
+ * the old behavior (ack read as a report / early green check) rather than
+ * losing data — the pinned test on this constant is the tripwire.
+ */
+export const BACKGROUND_LAUNCH_ACK = /^Async agent launched\b/i;
+
+/**
  * Build the terminal `subagent` event for a finished subagent tool call.
  * Shared by the `user` tool_result path (what the SDK actually sends) and the
  * bare `tool_result` fallback in the default branch.
  */
-function buildSubagentCompletionEvent(args: {
+export function buildSubagentCompletionEvent(args: {
   input?: unknown;
   output?: unknown;
   error?: string;
@@ -627,11 +676,29 @@ function buildSubagentCompletionEvent(args: {
   const { input, output, error, toolUseId, ts } = args;
   const taskInput = input as Record<string, unknown> | undefined;
   const subagentType = (taskInput?.subagent_type as string) || "general-purpose";
+  const { text, agentId } = normalizeSubagentOutput(output);
 
-  let agentId: string | undefined;
-  if (typeof output === "string") {
-    const agentIdMatch = output.match(/agentId:\s*([a-f0-9-]+)/i);
-    if (agentIdMatch) agentId = agentIdMatch[1];
+  // A backgrounded agent's tool_result is only the LAUNCH ACK — the agent is
+  // still working, and its real outcome arrives later as a task_notification.
+  // Marking this "completed" showed a green check the moment the agent
+  // spawned, with the ack persisted as its "report". The structured
+  // run_in_background input wins whenever the model supplied it; the prose
+  // match is only the fallback for the (observed, common) case where the CLI
+  // backgrounds the agent without that flag ever appearing in the input.
+  const isLaunchAck =
+    !error &&
+    (taskInput?.run_in_background === true ||
+      BACKGROUND_LAUNCH_ACK.test(text ?? ""));
+  if (isLaunchAck) {
+    return {
+      type: "subagent",
+      phase: "running",
+      agentType: subagentType,
+      agentId,
+      parentToolUseId: toolUseId || undefined,
+      ts,
+      metadata: { toolCallId: toolUseId || undefined },
+    };
   }
 
   return {
@@ -640,7 +707,7 @@ function buildSubagentCompletionEvent(args: {
     agentType: subagentType,
     agentId,
     parentToolUseId: toolUseId || undefined,
-    result: typeof output === "string" ? output : safeJson(output),
+    result: text,
     error,
     ts,
     metadata: { toolCallId: toolUseId || undefined },
@@ -1049,6 +1116,450 @@ export function removeClaudeRuntimeSettings(settingsPath?: string): void {
       error instanceof Error ? error.message : String(error),
     );
   }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Event mapping: SDKMessage → WorkRunEvent[]
+//
+// Module-scope (not factory-scope) on purpose: it reads only the per-run
+// session object and module helpers, and being importable is what makes the
+// subagent event sequence testable.
+// ─────────────────────────────────────────────────────────────
+
+export function mapSDKMessage(
+  msg: SDKMessage,
+  cs: ClaudeSession,
+): WorkRunEvent[] {
+  const events: WorkRunEvent[] = [];
+  const ts = Date.now();
+
+  switch (msg.type) {
+    case "assistant": {
+      const assistantMsg = msg as SDKAssistantMessage;
+      const isFromSubagent = !!assistantMsg.parent_tool_use_id;
+
+      if (assistantMsg.message?.content) {
+        for (const block of assistantMsg.message.content) {
+          if (block.type === "text" && block.text) {
+            events.push({
+              type: "artifact",
+              kind: "report",
+              content: block.text,
+              metadata: {
+                source: "assistant.message",
+                isFromSubagent,
+                parentToolUseId: assistantMsg.parent_tool_use_id || undefined,
+              },
+            });
+          }
+
+          if (block.type === "tool_use" && block.name) {
+            const toolCallId = block.id || `${block.name}-${ts}`;
+            cs.toolCallIndex.set(toolCallId, {
+              toolName: block.name,
+              input: block.input,
+              startedAt: ts,
+            });
+            events.push({
+              type: "tool_call",
+              toolName: block.name,
+              input: block.input as Record<string, unknown> | undefined,
+              startedAt: ts,
+              metadata: {
+                phase: "start",
+                toolCallId,
+                rawType: msg.type,
+                parentToolUseId: assistantMsg.parent_tool_use_id || undefined,
+                isFromSubagent,
+              },
+            });
+
+            if (block.name === SUBAGENT_TOOL_NAME) {
+              const taskInput = block.input as Record<string, unknown> | undefined;
+              const subagentType =
+                (taskInput?.subagent_type as string) || "general-purpose";
+              const subagentPrompt = taskInput?.prompt as string | undefined;
+
+              events.push({
+                type: "subagent",
+                phase: "invoked",
+                agentType: subagentType,
+                parentToolUseId: toolCallId,
+                prompt: subagentPrompt,
+                ts,
+                metadata: {
+                  toolCallId,
+                  description: taskInput?.description as string | undefined,
+                  model: taskInput?.model as string | undefined,
+                  runInBackground: taskInput?.run_in_background as boolean | undefined,
+                },
+              });
+            }
+          }
+        }
+      }
+      break;
+    }
+
+    case "user": {
+      const userMsg = msg as SDKUserMessage;
+      const content = userMsg.message?.content;
+
+      let userContent: string | undefined;
+      if (typeof content === "string") {
+        userContent = content;
+      } else if (Array.isArray(content)) {
+        // Tool results arrive as `tool_result` content blocks inside user
+        // messages. This is the ONLY completion signal for subagent tool
+        // calls — they never trigger the PostToolUse hook — so without this
+        // they stay `running` in the DB until the run-end sweep. Emit a
+        // `complete` event per block so the status flips running → done.
+        const isFromSubagent = !!(userMsg as any).parent_tool_use_id;
+        for (const block of content) {
+          if (block?.type !== "tool_result") continue;
+          const toolUseId: string = block.tool_use_id || "";
+          const prev = toolUseId ? cs.toolCallIndex.get(toolUseId) : undefined;
+          const output = block.content;
+          const error = block.is_error ? safeJson(output) : undefined;
+          const resultMeta = userMsg.tool_result_meta?.find((meta) => meta.id === toolUseId);
+          const nonExecutionKind = resultMeta?.non_execution_kind;
+          if (nonExecutionKind) {
+            cs.state.terminalToolNonExecutionKind = nonExecutionKind;
+          } else if (!block.is_error) {
+            delete cs.state.terminalToolNonExecutionKind;
+          }
+          if (toolUseId) cs.toolCallIndex.delete(toolUseId);
+          events.push({
+            type: "tool_call",
+            toolName: prev?.toolName || "unknown",
+            input: prev?.input as Record<string, unknown> | undefined,
+            output,
+            error,
+            endedAt: ts,
+            metadata: {
+              phase: "complete",
+              toolCallId: toolUseId || undefined,
+              rawType: msg.type,
+              isFromSubagent,
+              parentToolUseId: userMsg.parent_tool_use_id || undefined,
+              nonExecutionKind,
+              userFeedback: resultMeta?.user_feedback,
+            },
+          });
+
+          // A subagent's result arrives here — as a tool_result block inside a
+          // user message — never as a bare `tool_result` message. The default
+          // branch below also builds this event, but for a message shape the
+          // SDK does not send, so this is the path that actually fires.
+          if (prev?.toolName === SUBAGENT_TOOL_NAME) {
+            events.push(
+              buildSubagentCompletionEvent({
+                input: prev.input,
+                output,
+                error,
+                toolUseId,
+                ts,
+              }),
+            );
+          }
+        }
+        userContent = content.map((c) => c.text || "").filter(Boolean).join("\n");
+      }
+
+      if (userContent && userContent.trim().length > 0) {
+        const isContinuationSummary = userContent.includes("continued from a previous conversation");
+        if (isContinuationSummary) {
+          events.push({
+            type: "artifact",
+            kind: "report",
+            content: userContent,
+            metadata: { source: "continuation-summary" },
+          });
+        } else {
+          events.push({
+            type: "log",
+            message: userContent,
+            level: "sdk-user",
+            ts,
+          });
+        }
+      }
+      break;
+    }
+
+    case "system": {
+      const systemMsg = msg as SDKSystemMessage;
+      if (systemMsg.subtype === "init") {
+        const plugins = systemMsg.plugins ?? [];
+        const pluginPart = plugins.length
+          ? ` · ${plugins.length} plugin${plugins.length === 1 ? "" : "s"}: ${plugins.map((p) => p.name).join(", ")}`
+          : "";
+        events.push({
+          type: "log",
+          message: `[system] Session initialized with model: ${systemMsg.model || "unknown"}${pluginPart}`,
+          level: "start",
+          ts,
+          ...(plugins.length ? { metadata: { source: "init", plugins } } : {}),
+        });
+      } else if (systemMsg.subtype === "compact_boundary") {
+        const meta = systemMsg.compact_metadata;
+        const trigger = meta?.trigger ?? "auto";
+        const pre = meta?.pre_tokens;
+        const post = meta?.post_tokens;
+        const tokenPart =
+          typeof pre === "number"
+            ? ` (${pre.toLocaleString()}${typeof post === "number" ? ` → ${post.toLocaleString()}` : ""} tokens)`
+            : "";
+        events.push({
+          type: "log",
+          message: `[context] Conversation compacted${tokenPart} — ${trigger} trigger`,
+          level: "info",
+          ts,
+          metadata: { source: "compact_boundary", ...meta },
+        });
+      } else if (systemMsg.subtype === "api_retry") {
+        const attempt = systemMsg.attempt;
+        const maxRetries = systemMsg.max_retries;
+        const delayMs = systemMsg.retry_delay_ms;
+        const attemptPart =
+          typeof attempt === "number" && typeof maxRetries === "number"
+            ? ` (${attempt}/${maxRetries})`
+            : "";
+        const delayPart =
+          typeof delayMs === "number" ? ` — retrying in ${Math.round(delayMs / 1000)}s` : "";
+        const statusPart =
+          systemMsg.error_status != null ? ` [HTTP ${systemMsg.error_status}]` : "";
+        events.push({
+          type: "log",
+          message: `[api] Request failed${statusPart}${attemptPart}${delayPart}`,
+          level: "warn",
+          ts,
+          metadata: {
+            source: "api_retry",
+            attempt,
+            maxRetries,
+            retryDelayMs: delayMs,
+            errorStatus: systemMsg.error_status,
+          },
+        });
+      } else if (systemMsg.subtype === "plugin_install") {
+        const status = systemMsg.status;
+        const namePart = systemMsg.name ? ` ${systemMsg.name}` : "";
+        const errorPart = systemMsg.error ? `: ${systemMsg.error}` : "";
+        // started/completed bracket the whole sync; installed/failed are per-plugin.
+        events.push({
+          type: "log",
+          message: `[plugin] ${status ?? "install"}${namePart}${errorPart}`,
+          level: status === "failed" ? "error" : "info",
+          ts,
+          metadata: {
+            source: "plugin_install",
+            status,
+            name: systemMsg.name,
+            error: systemMsg.error,
+          },
+        });
+      } else if (
+        systemMsg.subtype === "task_started" ||
+        systemMsg.subtype === "task_progress" ||
+        systemMsg.subtype === "task_updated" ||
+        systemMsg.subtype === "task_notification"
+      ) {
+        const taskEvent = mapTaskMessage(systemMsg, cs.taskIndex, ts);
+        if (taskEvent) events.push(taskEvent);
+      }
+      break;
+    }
+
+    case "rate_limit_event": {
+      const rl = (msg as SDKRateLimitEvent).rate_limit_info;
+      if (rl) {
+        const util =
+          typeof rl.utilization === "number" ? ` (${Math.round(rl.utilization * 100)}% used)` : "";
+        const resets =
+          typeof rl.resetsAt === "number"
+            ? ` — resets ${new Date(rl.resetsAt * 1000).toLocaleTimeString()}`
+            : "";
+        const scope = rl.rateLimitType ? ` [${rl.rateLimitType}]` : "";
+        // Only surface warnings/rejections; "allowed" is the silent happy path.
+        if (rl.status !== "allowed") {
+          events.push({
+            type: "log",
+            message: `[rate-limit] ${rl.status === "rejected" ? "Rate limit reached" : "Approaching rate limit"}${scope}${util}${resets}`,
+            level: rl.status === "rejected" ? "error" : "warn",
+            ts,
+            metadata: { source: "rate_limit_event", ...rl },
+          });
+        }
+      }
+      break;
+    }
+
+    case "result": {
+      const resultMsg = msg as SDKResultMessage;
+
+      if (
+        resultMsg.subtype === "success" &&
+        resultMsg.result &&
+        !cs.state.hasAssistantContent
+      ) {
+        events.push({
+          type: "artifact",
+          kind: "report",
+          content: resultMsg.result,
+          metadata: { source: "result.message" },
+        });
+      }
+
+      if (resultMsg.stop_reason && resultMsg.stop_reason !== "end_turn") {
+        events.push({
+          type: "log",
+          message: `[stop_reason] ${resultMsg.stop_reason}`,
+          level: resultMsg.stop_reason === "refusal" ? "error" : "info",
+          ts,
+        });
+      }
+
+      if (resultMsg.subtype !== "success" && resultMsg.is_error) {
+        events.push({
+          type: "log",
+          message: `[error] ${resultMsg.errors.join(", ")}`,
+          level: "error",
+          ts,
+        });
+      }
+      break;
+    }
+
+    case "prompt_suggestion": {
+      const suggestionMsg = msg as { type: "prompt_suggestion"; suggestion: string };
+      if (suggestionMsg.suggestion) {
+        events.push({
+          type: "prompt_suggestion",
+          suggestion: suggestionMsg.suggestion,
+          ts,
+        });
+      }
+      break;
+    }
+
+    case "stream_event": {
+      const partialMsg = msg as SDKPartialAssistantMessage;
+      const event = partialMsg.event;
+      if (!event) break;
+
+      // Skip subagent streams — they would pollute the parent timeline
+      if (partialMsg.parent_tool_use_id) break;
+
+      const blockIndex = typeof event.index === "number" ? event.index : -1;
+
+      if (event.type === "content_block_delta" && event.delta && blockIndex >= 0) {
+        const bufferKey = `${cs.runId}-${blockIndex}`;
+
+        if (event.delta.type === "text_delta" && event.delta.text) {
+          const next = (cs.partialTextBuffers.get(bufferKey) ?? "") + event.delta.text;
+          cs.partialTextBuffers.set(bufferKey, next);
+          events.push({
+            type: "artifact",
+            kind: "report",
+            content: next,
+            metadata: { source: "agent_message_streaming" },
+            ephemeral: true,
+            streamId: `claude-msg-${cs.runId}-${blockIndex}`,
+          });
+        } else if (event.delta.type === "thinking_delta" && event.delta.thinking) {
+          const next = (cs.partialThinkingBuffers.get(bufferKey) ?? "") + event.delta.thinking;
+          cs.partialThinkingBuffers.set(bufferKey, next);
+          events.push({
+            type: "artifact",
+            kind: "report",
+            content: next,
+            metadata: { source: "agent_thinking_streaming" },
+            ephemeral: true,
+            streamId: `claude-think-${cs.runId}-${blockIndex}`,
+          });
+        }
+      } else if (event.type === "content_block_stop" && blockIndex >= 0) {
+        const key = `${cs.runId}-${blockIndex}`;
+        // Thinking lane has no DB-persisted counterpart, so the content-match filter
+        // in the renderer won't auto-clear it. Push an empty update.
+        if (cs.partialThinkingBuffers.has(key)) {
+          events.push({
+            type: "artifact",
+            kind: "report",
+            content: "",
+            metadata: { source: "agent_thinking_streaming" },
+            ephemeral: true,
+            streamId: `claude-think-${cs.runId}-${blockIndex}`,
+          });
+        }
+        cs.partialTextBuffers.delete(key);
+        cs.partialThinkingBuffers.delete(key);
+      } else if (event.type === "message_stop") {
+        for (const key of cs.partialTextBuffers.keys()) {
+          if (key.startsWith(`${cs.runId}-`)) cs.partialTextBuffers.delete(key);
+        }
+        for (const key of cs.partialThinkingBuffers.keys()) {
+          if (key.startsWith(`${cs.runId}-`)) cs.partialThinkingBuffers.delete(key);
+        }
+      }
+      break;
+    }
+
+    default: {
+      // Tool result-style messages (tool_use_id correlation).
+      //
+      // Requiring an actual payload matters: `tool_progress` heartbeats also
+      // carry a tool_use_id, and treating one as a result would close a still-
+      // running tool call and drop it from toolCallIndex, so the real result
+      // would later resolve to toolName "unknown".
+      const anyMsg = msg as any;
+      const looksLikeToolResult =
+        anyMsg.type === "tool_result" ||
+        (anyMsg.tool_use_id !== undefined &&
+          (anyMsg.content !== undefined || anyMsg.result !== undefined));
+      if (looksLikeToolResult) {
+        const toolUseId = anyMsg.tool_use_id || "";
+        const prev = toolUseId ? cs.toolCallIndex.get(toolUseId) : undefined;
+
+        const toolName = prev?.toolName || "unknown";
+        const input = prev?.input;
+        const output = anyMsg.content || anyMsg.result;
+        const error = anyMsg.is_error ? String(output) : undefined;
+
+        if (toolUseId) cs.toolCallIndex.delete(toolUseId);
+
+        events.push({
+          type: "tool_call",
+          toolName,
+          input: input as Record<string, unknown> | undefined,
+          output,
+          error,
+          endedAt: ts,
+          metadata: {
+            phase: "complete",
+            toolCallId: toolUseId || undefined,
+            rawType: msg.type,
+          },
+        });
+
+        if (toolName === SUBAGENT_TOOL_NAME) {
+          events.push(
+            buildSubagentCompletionEvent({ input, output, error, toolUseId, ts }),
+          );
+        }
+      } else {
+        events.push({
+          type: "log",
+          message: `[event] ${msg.type}: ${safeJson(msg)}`,
+          level: "info",
+          ts,
+        });
+      }
+    }
+  }
+
+  return events;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1472,445 +1983,6 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     }
 
     return options;
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  // Event mapping: SDKMessage → WorkRunEvent[]
-  // ─────────────────────────────────────────────────────────────
-
-  function mapSDKMessage(
-    msg: SDKMessage,
-    cs: ClaudeSession,
-  ): WorkRunEvent[] {
-    const events: WorkRunEvent[] = [];
-    const ts = Date.now();
-
-    switch (msg.type) {
-      case "assistant": {
-        const assistantMsg = msg as SDKAssistantMessage;
-        const isFromSubagent = !!assistantMsg.parent_tool_use_id;
-
-        if (assistantMsg.message?.content) {
-          for (const block of assistantMsg.message.content) {
-            if (block.type === "text" && block.text) {
-              events.push({
-                type: "artifact",
-                kind: "report",
-                content: block.text,
-                metadata: {
-                  source: "assistant.message",
-                  isFromSubagent,
-                  parentToolUseId: assistantMsg.parent_tool_use_id || undefined,
-                },
-              });
-            }
-
-            if (block.type === "tool_use" && block.name) {
-              const toolCallId = block.id || `${block.name}-${ts}`;
-              cs.toolCallIndex.set(toolCallId, {
-                toolName: block.name,
-                input: block.input,
-                startedAt: ts,
-              });
-              events.push({
-                type: "tool_call",
-                toolName: block.name,
-                input: block.input as Record<string, unknown> | undefined,
-                startedAt: ts,
-                metadata: {
-                  phase: "start",
-                  toolCallId,
-                  rawType: msg.type,
-                  parentToolUseId: assistantMsg.parent_tool_use_id || undefined,
-                  isFromSubagent,
-                },
-              });
-
-              if (block.name === SUBAGENT_TOOL_NAME) {
-                const taskInput = block.input as Record<string, unknown> | undefined;
-                const subagentType =
-                  (taskInput?.subagent_type as string) || "general-purpose";
-                const subagentPrompt = taskInput?.prompt as string | undefined;
-
-                events.push({
-                  type: "subagent",
-                  phase: "invoked",
-                  agentType: subagentType,
-                  parentToolUseId: toolCallId,
-                  prompt: subagentPrompt,
-                  ts,
-                  metadata: {
-                    toolCallId,
-                    description: taskInput?.description as string | undefined,
-                    model: taskInput?.model as string | undefined,
-                    runInBackground: taskInput?.run_in_background as boolean | undefined,
-                  },
-                });
-              }
-            }
-          }
-        }
-        break;
-      }
-
-      case "user": {
-        const userMsg = msg as SDKUserMessage;
-        const content = userMsg.message?.content;
-
-        let userContent: string | undefined;
-        if (typeof content === "string") {
-          userContent = content;
-        } else if (Array.isArray(content)) {
-          // Tool results arrive as `tool_result` content blocks inside user
-          // messages. This is the ONLY completion signal for subagent tool
-          // calls — they never trigger the PostToolUse hook — so without this
-          // they stay `running` in the DB until the run-end sweep. Emit a
-          // `complete` event per block so the status flips running → done.
-          const isFromSubagent = !!(userMsg as any).parent_tool_use_id;
-          for (const block of content) {
-            if (block?.type !== "tool_result") continue;
-            const toolUseId: string = block.tool_use_id || "";
-            const prev = toolUseId ? cs.toolCallIndex.get(toolUseId) : undefined;
-            const output = block.content;
-            const error = block.is_error ? safeJson(output) : undefined;
-            const resultMeta = userMsg.tool_result_meta?.find((meta) => meta.id === toolUseId);
-            const nonExecutionKind = resultMeta?.non_execution_kind;
-            if (nonExecutionKind) {
-              cs.state.terminalToolNonExecutionKind = nonExecutionKind;
-            } else if (!block.is_error) {
-              delete cs.state.terminalToolNonExecutionKind;
-            }
-            if (toolUseId) cs.toolCallIndex.delete(toolUseId);
-            events.push({
-              type: "tool_call",
-              toolName: prev?.toolName || "unknown",
-              input: prev?.input as Record<string, unknown> | undefined,
-              output,
-              error,
-              endedAt: ts,
-              metadata: {
-                phase: "complete",
-                toolCallId: toolUseId || undefined,
-                rawType: msg.type,
-                isFromSubagent,
-                nonExecutionKind,
-                userFeedback: resultMeta?.user_feedback,
-              },
-            });
-
-            // A subagent's result arrives here — as a tool_result block inside a
-            // user message — never as a bare `tool_result` message. The default
-            // branch below also builds this event, but for a message shape the
-            // SDK does not send, so this is the path that actually fires.
-            if (prev?.toolName === SUBAGENT_TOOL_NAME) {
-              events.push(
-                buildSubagentCompletionEvent({
-                  input: prev.input,
-                  output,
-                  error,
-                  toolUseId,
-                  ts,
-                }),
-              );
-            }
-          }
-          userContent = content.map((c) => c.text || "").filter(Boolean).join("\n");
-        }
-
-        if (userContent && userContent.trim().length > 0) {
-          const isContinuationSummary = userContent.includes("continued from a previous conversation");
-          if (isContinuationSummary) {
-            events.push({
-              type: "artifact",
-              kind: "report",
-              content: userContent,
-              metadata: { source: "continuation-summary" },
-            });
-          } else {
-            events.push({
-              type: "log",
-              message: userContent,
-              level: "sdk-user",
-              ts,
-            });
-          }
-        }
-        break;
-      }
-
-      case "system": {
-        const systemMsg = msg as SDKSystemMessage;
-        if (systemMsg.subtype === "init") {
-          const plugins = systemMsg.plugins ?? [];
-          const pluginPart = plugins.length
-            ? ` · ${plugins.length} plugin${plugins.length === 1 ? "" : "s"}: ${plugins.map((p) => p.name).join(", ")}`
-            : "";
-          events.push({
-            type: "log",
-            message: `[system] Session initialized with model: ${systemMsg.model || "unknown"}${pluginPart}`,
-            level: "start",
-            ts,
-            ...(plugins.length ? { metadata: { source: "init", plugins } } : {}),
-          });
-        } else if (systemMsg.subtype === "compact_boundary") {
-          const meta = systemMsg.compact_metadata;
-          const trigger = meta?.trigger ?? "auto";
-          const pre = meta?.pre_tokens;
-          const post = meta?.post_tokens;
-          const tokenPart =
-            typeof pre === "number"
-              ? ` (${pre.toLocaleString()}${typeof post === "number" ? ` → ${post.toLocaleString()}` : ""} tokens)`
-              : "";
-          events.push({
-            type: "log",
-            message: `[context] Conversation compacted${tokenPart} — ${trigger} trigger`,
-            level: "info",
-            ts,
-            metadata: { source: "compact_boundary", ...meta },
-          });
-        } else if (systemMsg.subtype === "api_retry") {
-          const attempt = systemMsg.attempt;
-          const maxRetries = systemMsg.max_retries;
-          const delayMs = systemMsg.retry_delay_ms;
-          const attemptPart =
-            typeof attempt === "number" && typeof maxRetries === "number"
-              ? ` (${attempt}/${maxRetries})`
-              : "";
-          const delayPart =
-            typeof delayMs === "number" ? ` — retrying in ${Math.round(delayMs / 1000)}s` : "";
-          const statusPart =
-            systemMsg.error_status != null ? ` [HTTP ${systemMsg.error_status}]` : "";
-          events.push({
-            type: "log",
-            message: `[api] Request failed${statusPart}${attemptPart}${delayPart}`,
-            level: "warn",
-            ts,
-            metadata: {
-              source: "api_retry",
-              attempt,
-              maxRetries,
-              retryDelayMs: delayMs,
-              errorStatus: systemMsg.error_status,
-            },
-          });
-        } else if (systemMsg.subtype === "plugin_install") {
-          const status = systemMsg.status;
-          const namePart = systemMsg.name ? ` ${systemMsg.name}` : "";
-          const errorPart = systemMsg.error ? `: ${systemMsg.error}` : "";
-          // started/completed bracket the whole sync; installed/failed are per-plugin.
-          events.push({
-            type: "log",
-            message: `[plugin] ${status ?? "install"}${namePart}${errorPart}`,
-            level: status === "failed" ? "error" : "info",
-            ts,
-            metadata: {
-              source: "plugin_install",
-              status,
-              name: systemMsg.name,
-              error: systemMsg.error,
-            },
-          });
-        } else if (
-          systemMsg.subtype === "task_started" ||
-          systemMsg.subtype === "task_progress" ||
-          systemMsg.subtype === "task_updated" ||
-          systemMsg.subtype === "task_notification"
-        ) {
-          const taskEvent = mapTaskMessage(systemMsg, cs.taskIndex, ts);
-          if (taskEvent) events.push(taskEvent);
-        }
-        break;
-      }
-
-      case "rate_limit_event": {
-        const rl = (msg as SDKRateLimitEvent).rate_limit_info;
-        if (rl) {
-          const util =
-            typeof rl.utilization === "number" ? ` (${Math.round(rl.utilization * 100)}% used)` : "";
-          const resets =
-            typeof rl.resetsAt === "number"
-              ? ` — resets ${new Date(rl.resetsAt * 1000).toLocaleTimeString()}`
-              : "";
-          const scope = rl.rateLimitType ? ` [${rl.rateLimitType}]` : "";
-          // Only surface warnings/rejections; "allowed" is the silent happy path.
-          if (rl.status !== "allowed") {
-            events.push({
-              type: "log",
-              message: `[rate-limit] ${rl.status === "rejected" ? "Rate limit reached" : "Approaching rate limit"}${scope}${util}${resets}`,
-              level: rl.status === "rejected" ? "error" : "warn",
-              ts,
-              metadata: { source: "rate_limit_event", ...rl },
-            });
-          }
-        }
-        break;
-      }
-
-      case "result": {
-        const resultMsg = msg as SDKResultMessage;
-
-        if (
-          resultMsg.subtype === "success" &&
-          resultMsg.result &&
-          !cs.state.hasAssistantContent
-        ) {
-          events.push({
-            type: "artifact",
-            kind: "report",
-            content: resultMsg.result,
-            metadata: { source: "result.message" },
-          });
-        }
-
-        if (resultMsg.stop_reason && resultMsg.stop_reason !== "end_turn") {
-          events.push({
-            type: "log",
-            message: `[stop_reason] ${resultMsg.stop_reason}`,
-            level: resultMsg.stop_reason === "refusal" ? "error" : "info",
-            ts,
-          });
-        }
-
-        if (resultMsg.subtype !== "success" && resultMsg.is_error) {
-          events.push({
-            type: "log",
-            message: `[error] ${resultMsg.errors.join(", ")}`,
-            level: "error",
-            ts,
-          });
-        }
-        break;
-      }
-
-      case "prompt_suggestion": {
-        const suggestionMsg = msg as { type: "prompt_suggestion"; suggestion: string };
-        if (suggestionMsg.suggestion) {
-          events.push({
-            type: "prompt_suggestion",
-            suggestion: suggestionMsg.suggestion,
-            ts,
-          });
-        }
-        break;
-      }
-
-      case "stream_event": {
-        const partialMsg = msg as SDKPartialAssistantMessage;
-        const event = partialMsg.event;
-        if (!event) break;
-
-        // Skip subagent streams — they would pollute the parent timeline
-        if (partialMsg.parent_tool_use_id) break;
-
-        const blockIndex = typeof event.index === "number" ? event.index : -1;
-
-        if (event.type === "content_block_delta" && event.delta && blockIndex >= 0) {
-          const bufferKey = `${cs.runId}-${blockIndex}`;
-
-          if (event.delta.type === "text_delta" && event.delta.text) {
-            const next = (cs.partialTextBuffers.get(bufferKey) ?? "") + event.delta.text;
-            cs.partialTextBuffers.set(bufferKey, next);
-            events.push({
-              type: "artifact",
-              kind: "report",
-              content: next,
-              metadata: { source: "agent_message_streaming" },
-              ephemeral: true,
-              streamId: `claude-msg-${cs.runId}-${blockIndex}`,
-            });
-          } else if (event.delta.type === "thinking_delta" && event.delta.thinking) {
-            const next = (cs.partialThinkingBuffers.get(bufferKey) ?? "") + event.delta.thinking;
-            cs.partialThinkingBuffers.set(bufferKey, next);
-            events.push({
-              type: "artifact",
-              kind: "report",
-              content: next,
-              metadata: { source: "agent_thinking_streaming" },
-              ephemeral: true,
-              streamId: `claude-think-${cs.runId}-${blockIndex}`,
-            });
-          }
-        } else if (event.type === "content_block_stop" && blockIndex >= 0) {
-          const key = `${cs.runId}-${blockIndex}`;
-          // Thinking lane has no DB-persisted counterpart, so the content-match filter
-          // in the renderer won't auto-clear it. Push an empty update.
-          if (cs.partialThinkingBuffers.has(key)) {
-            events.push({
-              type: "artifact",
-              kind: "report",
-              content: "",
-              metadata: { source: "agent_thinking_streaming" },
-              ephemeral: true,
-              streamId: `claude-think-${cs.runId}-${blockIndex}`,
-            });
-          }
-          cs.partialTextBuffers.delete(key);
-          cs.partialThinkingBuffers.delete(key);
-        } else if (event.type === "message_stop") {
-          for (const key of cs.partialTextBuffers.keys()) {
-            if (key.startsWith(`${cs.runId}-`)) cs.partialTextBuffers.delete(key);
-          }
-          for (const key of cs.partialThinkingBuffers.keys()) {
-            if (key.startsWith(`${cs.runId}-`)) cs.partialThinkingBuffers.delete(key);
-          }
-        }
-        break;
-      }
-
-      default: {
-        // Tool result-style messages (tool_use_id correlation).
-        //
-        // Requiring an actual payload matters: `tool_progress` heartbeats also
-        // carry a tool_use_id, and treating one as a result would close a still-
-        // running tool call and drop it from toolCallIndex, so the real result
-        // would later resolve to toolName "unknown".
-        const anyMsg = msg as any;
-        const looksLikeToolResult =
-          anyMsg.type === "tool_result" ||
-          (anyMsg.tool_use_id !== undefined &&
-            (anyMsg.content !== undefined || anyMsg.result !== undefined));
-        if (looksLikeToolResult) {
-          const toolUseId = anyMsg.tool_use_id || "";
-          const prev = toolUseId ? cs.toolCallIndex.get(toolUseId) : undefined;
-
-          const toolName = prev?.toolName || "unknown";
-          const input = prev?.input;
-          const output = anyMsg.content || anyMsg.result;
-          const error = anyMsg.is_error ? String(output) : undefined;
-
-          if (toolUseId) cs.toolCallIndex.delete(toolUseId);
-
-          events.push({
-            type: "tool_call",
-            toolName,
-            input: input as Record<string, unknown> | undefined,
-            output,
-            error,
-            endedAt: ts,
-            metadata: {
-              phase: "complete",
-              toolCallId: toolUseId || undefined,
-              rawType: msg.type,
-            },
-          });
-
-          if (toolName === SUBAGENT_TOOL_NAME) {
-            events.push(
-              buildSubagentCompletionEvent({ input, output, error, toolUseId, ts }),
-            );
-          }
-        } else {
-          events.push({
-            type: "log",
-            message: `[event] ${msg.type}: ${safeJson(msg)}`,
-            level: "info",
-            ts,
-          });
-        }
-      }
-    }
-
-    return events;
   }
 
   // ─────────────────────────────────────────────────────────────

@@ -122,3 +122,57 @@ describe("reconcileEventGroups", () => {
     expect(reconcileEventGroups([], next)).toBe(next);
   });
 });
+
+describe("groupEvents — subagent machinery stays out of the chat", () => {
+  it("drops spawn tool calls — Codex collab variants and Claude's Agent/Task", () => {
+    const groups = groupEvents([
+      ev({ id: "t1", type: "tool_call", content: "Bash: git status" }),
+      ev({ id: "c1", type: "tool_call", content: "spawnAgent: security_review" }),
+      ev({ id: "c2", type: "tool_call", content: "waitCollabAgent: security_review" }),
+      ev({ id: "c3", type: "tool_call", content: "closeCollabAgent: security_review" }),
+      ev({ id: "a1", type: "tool_call", content: "Agent: security review" }),
+      ev({ id: "a2", type: "tool_call", content: "Task: audit deps" }),
+      ev({ id: "t2", type: "tool_call", content: "Read: a.ts" }),
+    ]);
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].events.map((e) => e.id)).toEqual(["t1", "t2"]);
+  });
+
+  it("drops subagent message artifacts from the chat", () => {
+    const groups = groupEvents([
+      ev({ id: "r1", content: "parent says hi", metadata: { kind: "report" } }),
+      ev({
+        id: "m1",
+        content: "subagent inner monologue",
+        metadata: { kind: "report", isFromSubagent: true, parentToolUseId: "item-spawn" },
+      }),
+    ]);
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].events[0].id).toBe("r1");
+  });
+
+  it("drops a subagent's own tool calls without splitting the accordion", () => {
+    const groups = groupEvents([
+      ev({ id: "t1", type: "tool_call", content: "Bash: git status" }),
+      ev({
+        id: "child1",
+        type: "tool_call",
+        content: "Bash: npm audit",
+        metadata: { parentToolCallId: "item-spawn" },
+      }),
+      ev({
+        id: "child2",
+        type: "tool_call",
+        content: "Read: b.ts",
+        metadata: { isFromSubagent: true },
+      }),
+      ev({ id: "t2", type: "tool_call", content: "Read: a.ts" }),
+    ]);
+
+    // One unbroken accordion — dropping children must not flush the group.
+    expect(groups).toHaveLength(1);
+    expect(groups[0].events.map((e) => e.id)).toEqual(["t1", "t2"]);
+  });
+});

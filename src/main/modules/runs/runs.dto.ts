@@ -134,6 +134,8 @@ export interface CreateToolCallPayload {
   runId: string;
   providerId?: string;
   toolId?: string;
+  /** Provider tool-use id of the call that spawned this one (subagent children). */
+  parentToolCallId?: string;
   toolName: string;
   status?: ToolCallStatus;
   input?: Record<string, unknown>;
@@ -158,6 +160,8 @@ export interface ToolCallResponse {
   runId: string | null;
   providerId: string | null;
   toolId: string | null;
+  /** Provider tool-use id of the spawning call — see CreateToolCallPayload. */
+  parentToolCallId: string | null;
   toolName: string;
   status: ToolCallStatus;
   input: Record<string, unknown> | null;

@@ -450,6 +450,39 @@ describe("RunSession", () => {
   // ─────────────────────────────────────────────────────────────
   // project — artifact events
   // ─────────────────────────────────────────────────────────────
+  // The subagent panel's whole data model hangs on these two columns
+  // round-tripping: the spawning call's provider id and the child's link to
+  // it. Projected through the real repo into the real (in-memory) DB.
+  describe("project — subagent parent linkage", () => {
+    it("persists provider call ids and parent linkage end-to-end", async () => {
+      const session = makeSession();
+      await flushBackground();
+
+      await session.project({
+        type: "tool_call",
+        toolName: "Agent",
+        metadata: { phase: "start", toolCallId: "toolu_parent" },
+      } as any);
+      await session.project({
+        type: "tool_call",
+        toolName: "Read",
+        metadata: {
+          phase: "start",
+          toolCallId: "toolu_child",
+          parentToolUseId: "toolu_parent",
+          isFromSubagent: true,
+        },
+      } as any);
+
+      const calls = await runsRepo.findToolCallsByRun("r1");
+      const parent = calls.find((c) => c.toolId === "toolu_parent");
+      const child = calls.find((c) => c.toolId === "toolu_child");
+      expect(parent).toBeDefined();
+      expect(parent?.parentToolCallId).toBeNull();
+      expect(child?.parentToolCallId).toBe("toolu_parent");
+    });
+  });
+
   describe("project — artifact events", () => {
     it("inserts an artifact for non-ephemeral events", async () => {
       const session = makeSession();
@@ -820,6 +853,74 @@ describe("RunSession", () => {
 
       const calls = await runsRepo.findToolCallsByRun("r1");
       expect(calls[0].status).toBe("error");
+    });
+
+    // A spawn-style call (Codex) is "done" the moment the agent starts, so an
+    // aborted run would otherwise leave its subagent metadata at "invoked" —
+    // showing a running agent forever in the session panel.
+    it.each([
+      ["succeeded", "completed"],
+      ["canceled", "stopped"],
+      ["failed", "stopped"],
+    ] as const)(
+      "settles unfinished subagents on %s finalize as %s",
+      async (runStatus, expectedPhase) => {
+        const session = makeSession();
+        await flushBackground();
+
+        await session.project({
+          type: "tool_call",
+          toolName: "spawnAgent",
+          metadata: { phase: "start", toolCallId: "spawn-1" },
+        } as any);
+        await session.project({
+          type: "tool_call",
+          toolName: "spawnAgent",
+          output: {},
+          metadata: { phase: "complete", toolCallId: "spawn-1" },
+        } as any);
+        await session.project({
+          type: "subagent",
+          phase: "invoked",
+          agentType: "security_review",
+          parentToolUseId: "spawn-1",
+        } as any);
+
+        await session.finalize(
+          runStatus === "failed"
+            ? { status: runStatus, summary: "boom" }
+            : { status: runStatus },
+        );
+
+        const calls = await runsRepo.findToolCallsByRun("r1");
+        const subagent = (calls[0].metadata as Record<string, any>)?.subagent;
+        expect(subagent?.phase).toBe(expectedPhase);
+      },
+    );
+
+    it("leaves already-settled subagents alone on finalize", async () => {
+      const session = makeSession();
+      await flushBackground();
+
+      await session.project({
+        type: "tool_call",
+        toolName: "spawnAgent",
+        metadata: { phase: "start", toolCallId: "spawn-1" },
+      } as any);
+      await session.project({
+        type: "subagent",
+        phase: "failed",
+        agentType: "security_review",
+        parentToolUseId: "spawn-1",
+        error: "agent exploded",
+      } as any);
+
+      await session.finalize({ status: "succeeded" });
+
+      const calls = await runsRepo.findToolCallsByRun("r1");
+      const subagent = (calls[0].metadata as Record<string, any>)?.subagent;
+      expect(subagent?.phase).toBe("failed");
+      expect(subagent?.error).toBe("agent exploded");
     });
   });
 

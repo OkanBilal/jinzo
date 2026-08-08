@@ -144,8 +144,12 @@ export interface WorkRunStatusEvent {
  */
 export interface WorkRunSubagentEvent {
   type: "subagent";
-  /** The lifecycle phase of the subagent */
-  phase: "invoked" | "running" | "completed" | "failed";
+  /**
+   * The lifecycle phase of the subagent. `stopped` is a non-success terminal
+   * state that is not the agent's own failure — e.g. a Codex collab agent
+   * interrupted by the user or the parent.
+   */
+  phase: "invoked" | "running" | "completed" | "failed" | "stopped";
   /** The name/type of the subagent (e.g., "code-reviewer", "general-purpose") */
   agentType: string;
   /** Unique identifier for this subagent invocation */

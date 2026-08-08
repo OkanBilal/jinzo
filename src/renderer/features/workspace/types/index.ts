@@ -28,6 +28,8 @@ export interface ToolCall {
   toolId?: string;
   toolName: string;
   toolCallId?: string;
+  /** Provider tool-use id of the call that spawned this one (subagent children). */
+  parentToolCallId?: string | null;
   input?: string;
   output?: string;
   metadata?: Record<string, unknown> | string | null;

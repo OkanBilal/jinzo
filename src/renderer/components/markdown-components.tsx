@@ -1,6 +1,60 @@
+import { useState } from "react";
 import { Components } from "react-markdown";
 
 import { proxiedImageSrc } from "@/lib/proxied-image-src";
+
+/** Network URLs — the only sources whose mere loading has a side effect. */
+export function isRemoteImageSrc(src: string | undefined | null): src is string {
+  return !!src && (src.startsWith("https://") || src.startsWith("http://"));
+}
+
+/**
+ * Markdown `img` with consent-gated remote loading.
+ *
+ * Markdown reaching this renderer is largely untrusted — agent/subagent
+ * reports and external service bodies (issues, signals) alike — and an
+ * auto-fetched remote image is a data-exfiltration beacon: a prompt-injected
+ * agent can embed secrets in the URL's query string, and the request fires
+ * the moment the view renders (through the proxy or not — the request itself
+ * is the leak). Remote images therefore render as a click-to-load
+ * placeholder; local sources (data:, app capture schemes, workspace paths)
+ * have no network side effect and load directly. There is deliberately no
+ * fallback to the raw URL on proxy error — that would reopen the channel.
+ */
+function MarkdownImage({ src, alt }: { src?: string; alt?: string }) {
+  const [loadApproved, setLoadApproved] = useState(false);
+  const remote = isRemoteImageSrc(src);
+
+  if (remote && !loadApproved) {
+    let host = src;
+    try {
+      host = new URL(src).host;
+    } catch {
+      // Unparseable URL — show it verbatim so the user can judge it.
+    }
+    return (
+      <button
+        type="button"
+        onClick={() => setLoadApproved(true)}
+        title={src}
+        className="my-2 flex w-fit max-w-full items-center gap-2 rounded-lg border border-dashed border-primary-300 px-3 py-2 text-xs text-primary-500 transition-colors hover:border-primary-400 hover:text-primary-700 dark:border-primary-700 dark:hover:border-primary-500 dark:hover:text-primary-300"
+      >
+        <span className="truncate">
+          {alt?.trim() ? `${alt.trim()} — ` : ""}remote image from {host}
+        </span>
+        <span className="shrink-0 font-medium">Load</span>
+      </button>
+    );
+  }
+
+  return (
+    <img
+      src={proxiedImageSrc(src) ?? src}
+      alt={alt || ""}
+      className="max-w-full h-auto rounded-lg my-2 border border-primary-200 dark:border-primary-700"
+    />
+  );
+}
 
 /**
  * Custom ReactMarkdown component overrides for consistent styling.
@@ -119,18 +173,7 @@ export const  markdownComponents: Components = {
     </em>
   ),
   hr: () => <hr className="my-4 border-primary-300 dark:border-primary-700" />,
-  img: ({ src, alt }) => {
-    const proxiedSrc = proxiedImageSrc(src) ?? src;
-    return (
-      <img
-        src={proxiedSrc}
-        alt={alt || ""}
-        className="max-w-full h-auto rounded-lg my-2 border border-primary-200 dark:border-primary-700"
-        onError={(e) => {
-          const target = e.currentTarget;
-          if (src && target.src !== src) target.src = src;
-        }}
-      />
-    );
-  },
+  img: ({ src, alt }) => (
+    <MarkdownImage src={typeof src === "string" ? src : undefined} alt={alt} />
+  ),
 };

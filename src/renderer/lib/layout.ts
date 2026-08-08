@@ -45,6 +45,13 @@ export const BROWSER_PANEL_WIDTH_MAX = 960;
 export const SESSION_PANEL_GUTTER = "0.4375rem";
 
 /**
+ * Fixed height of the bottom terminal drawer. Shared between the drawer itself
+ * and the corner-anchored subagent box, which lifts above the terminal when it
+ * opens — one constant so the two can't drift apart.
+ */
+export const BOTTOM_TERMINAL_HEIGHT = "15.5rem";
+
+/**
  * The content column's live left/right edges, published on `:root` by
  * `AppContent` (sidebar, right-lane panel, and docked session box all fold in).
  * Viewport-fixed overlays that should center over the *content* rather than

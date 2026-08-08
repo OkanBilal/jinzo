@@ -281,6 +281,39 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
     pendingToolCalls.clear();
   }
 
+  /**
+   * Settle subagent rows whose terminal lifecycle event never arrived.
+   *
+   * An aborted run tears the provider sink down before the settle
+   * notifications are processed, and a spawn-style call (Codex) is already
+   * "done" the moment the agent starts — so without this sweep the session
+   * panel shows those agents running forever. The run's outcome stands in for
+   * theirs: succeeded → completed, anything else → stopped.
+   */
+  async function settleUnfinishedSubagents(
+    runStatus: "succeeded" | "failed" | "canceled",
+  ): Promise<void> {
+    try {
+      const calls = await runsRepo.findToolCallsByRun(runId);
+      for (const call of calls) {
+        const subagent = (call.metadata as Record<string, unknown> | null)
+          ?.subagent as { phase?: string } | undefined;
+        if (!subagent?.phase) continue;
+        if (subagent.phase !== "invoked" && subagent.phase !== "running") continue;
+        await runsRepo.updateToolCall(call.id, {
+          metadata: {
+            subagent: {
+              phase: runStatus === "succeeded" ? "completed" : "stopped",
+              updatedAt: Date.now(),
+            },
+          },
+        });
+      }
+    } catch (err) {
+      console.error(`[RunSession ${runId}] Failed to settle subagents:`, err);
+    }
+  }
+
   /** Belt-and-suspenders: mark any DB-side tool calls still in "running" as ended. */
   async function closeRunningToolCallsInDb(status: "done" | "error"): Promise<void> {
     try {
@@ -459,18 +492,24 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   async function projectToolCall(
     event: Extract<WorkRunEvent, { type: "tool_call" }>,
   ): Promise<void> {
-    const phase = (event.metadata as Record<string, unknown> | undefined)?.phase;
+    const metadata = event.metadata as Record<string, unknown> | undefined;
+    const phase = metadata?.phase;
     if (phase === "start") {
+      const metadataToolCallId = metadata?.toolCallId;
+      const parentToolUseId = metadata?.parentToolUseId;
       const toolCallId = await runsRepo.insertToolCall({
         accountId,
         runId,
         providerId,
+        toolId: metadataToolCallId ? String(metadataToolCallId) : undefined,
+        // Links a subagent's own tool calls back to the call that spawned the
+        // subagent — the session panel's flow view filters on this column.
+        parentToolCallId: parentToolUseId ? String(parentToolUseId) : undefined,
         toolName: event.toolName,
         status: "running",
         input: event.input,
         startedAt: event.startedAt ? new Date(event.startedAt) : new Date(),
       });
-      const metadataToolCallId = (event.metadata as Record<string, unknown> | undefined)?.toolCallId;
       const callKey = metadataToolCallId
         ? String(metadataToolCallId)
         : `${event.toolName}-${event.startedAt || Date.now()}`;
@@ -590,6 +629,9 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
       prompt: event.prompt,
       result: event.result,
       error: event.error,
+      // Terminal patches overwrite updatedAt, so the spawn moment gets its own
+      // key — the panel derives "worked for Xs" from invokedAt → updatedAt.
+      ...(event.phase === "invoked" ? { invokedAt: event.ts ?? Date.now() } : {}),
       updatedAt: event.ts ?? Date.now(),
     });
   }
@@ -748,6 +790,7 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
       await closeActiveTurn(result.usage);
       await closePendingToolCalls(toolCallStatus);
       await closeRunningToolCallsInDb(toolCallStatus);
+      await settleUnfinishedSubagents(result.status);
     } catch (cleanupErr) {
       console.error(`[RunSession ${runId}] Cleanup failed:`, cleanupErr);
     } finally {
