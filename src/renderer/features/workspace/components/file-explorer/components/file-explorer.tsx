@@ -322,7 +322,7 @@ export const FileExplorer = memo(function FileExplorer({
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
-      <div className="relative shrink-0 mb-1 glass-outline rounded-xl">
+      <div className="relative shrink-0 mb-1 glass-outline rounded-xl bg-primary dark:bg-primary/10">
         <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-primary-500 dark:text-primary-200 pointer-events-none" />
         <input
           type="text"
@@ -331,7 +331,7 @@ export const FileExplorer = memo(function FileExplorer({
           onKeyDown={handleSearchKeyDown}
           placeholder="Search files"
           spellCheck={false}
-          className="w-full h-7 pl-7 pr-7  text-s  glass-outline text-primary-900 dark:text-primary-100 placeholder:text-primary-500 dark:placeholder:text-primary-200 outline-none transition-colors"
+          className="w-full h-8 pl-7 pr-7  text-s text-primary-900 dark:text-primary-100 placeholder:text-primary-500 dark:placeholder:text-primary-200 outline-none transition-colors"
         />
         {isSearching && (
           <Button

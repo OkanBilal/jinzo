@@ -351,11 +351,11 @@ function SubagentList({
             label={
               <span className="flex min-w-0 items-center gap-1.5">
                 <span className="truncate">{display.name}</span>
-                {secondary && (
+                {/* {secondary && (
                   <span className="truncate font-normal text-primary-500 dark:text-primary-400">
                     {secondary}
                   </span>
-                )}
+                )} */}
               </span>
             }
             trailing={
