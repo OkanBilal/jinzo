@@ -113,6 +113,9 @@ export function SubagentPanel({
 
   const isVisibleTarget = shown && !!runId && subagents.length > 0;
   const { isVisible, isAnimatedIn } = usePanelAnimation(isVisibleTarget);
+  // Single gate for both the null return below and the measurement effect —
+  // they must agree, or the observer outlives the DOM it measures.
+  const mounted = isVisible && !!runId;
 
   const selected = selectedId
     ? subagents.find((agent) => agent.providerCallId === selectedId)
@@ -131,11 +134,21 @@ export function SubagentPanel({
   } | null>(null);
   useLayoutEffect(() => {
     const el = innerRef.current;
-    if (!el) return;
+    if (!el) {
+      // The body just left the DOM. A stale measurement would deadlock the
+      // next appearance: the outer box renders at the old size, the inner
+      // wrapper (absolute, shrink-to-fit) measures against that box, and a
+      // 0×0 box can never measure its way back out. Reopen from natural size.
+      setBoxSize(null);
+      return;
+    }
     const measure = () =>
       setBoxSize((prev) => {
         const width = el.offsetWidth;
         const height = el.offsetHeight;
+        // ResizeObserver reports 0×0 when the node detaches — that's the
+        // element leaving, not a size to animate to.
+        if (width === 0 && height === 0) return prev;
         return prev && prev.width === width && prev.height === height
           ? prev
           : { width, height };
@@ -144,9 +157,9 @@ export function SubagentPanel({
     const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [isVisible]);
+  }, [mounted]);
 
-  if (!isVisible || !runId) return null;
+  if (!mounted) return null;
 
   // Keyed content: a state change remounts the body with a quick fade so the
   // swap reads as one motion with the resize instead of an instant cut.

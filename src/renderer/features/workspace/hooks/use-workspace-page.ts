@@ -20,6 +20,7 @@ import {
   clearNoteTabs,
   setActiveWorkspaceId,
   setActiveWorkspaceForProvider,
+  setWorkspaceProvider,
   clearPendingGoal,
   clearPendingReviewTarget,
 } from "@/lib/redux/slices/workspaceSlice";
@@ -91,6 +92,13 @@ export function useWorkspacePage(providerId: string) {
 
   const { workspaceId, selectedWorkspace, currentWorkspace } =
     useWorkspaceData(providerId);
+
+  // A space switch can land on the same workspace, so the workspaceId-keyed
+  // resets below never fire — sync the provider so the slice drops tab state
+  // naming a run from the space being left.
+  useEffect(() => {
+    dispatch(setWorkspaceProvider(providerId));
+  }, [providerId, dispatch]);
 
   useEffect(() => {
     dispatch(setActiveWorkspaceId(workspaceId ?? null));

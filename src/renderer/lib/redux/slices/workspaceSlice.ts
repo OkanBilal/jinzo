@@ -175,6 +175,13 @@ const workspaceSlice = createSlice({
       state.selectedModelByProvider[action.payload.providerId] = action.payload.model;
     },
     setWorkspaceProvider: (state, action: PayloadAction<string>) => {
+      // A space switch can land on the SAME workspace, so the workspace-switch
+      // resets above never fire — the tab (or its editor fallback) would keep
+      // naming a run from the provider being left.
+      if (state.selectedProviderId !== action.payload) {
+        state.previousNonEditorTab = null;
+        state.activeTab = "editor";
+      }
       state.selectedProviderId = action.payload;
     },
     setWorkspaceThinkingEnabled: (state, action: PayloadAction<boolean>) => {
