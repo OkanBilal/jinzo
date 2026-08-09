@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Button } from "@/components/ui";
 import {
   getProviderVariant,
   type ProviderVariant,
 } from "@/lib/provider-variants";
 import { useBottomTerminal } from "@/hooks/use-bottom-terminal";
+import { useUpdateProviderCliMutation } from "@/lib/redux/api";
 
 interface ProviderAuthNoticeProps {
   variant: ProviderVariant;
@@ -64,6 +66,61 @@ export function ProviderAuthNotice({
           Sign in
         </Button>
       </span>
+    </div>
+  );
+}
+
+/**
+ * Same warning shell for an unsupported (too-old) provider CLI. Signing in
+ * can't fix a version gate, so callers render this *instead of* the auth
+ * notice; recovery is `providers:updateCli` rather than a login shell.
+ */
+export function ProviderCliUpdateNotice({
+  providerId,
+  message,
+  onUpdated,
+  className = "",
+}: {
+  providerId: string;
+  message: string;
+  /** Called after a successful update so the caller can re-probe models/auth. */
+  onUpdated?: () => void;
+  className?: string;
+}) {
+  const [updateCli, { isLoading: isUpdating }] = useUpdateProviderCliMutation();
+  const [failure, setFailure] = useState<string | null>(null);
+
+  const handleUpdate = async () => {
+    setFailure(null);
+    try {
+      const res = await updateCli(providerId).unwrap();
+      if (res.success) {
+        onUpdated?.();
+      } else {
+        setFailure(res.output || "Update failed.");
+      }
+    } catch {
+      setFailure("Update failed.");
+    }
+  };
+
+  return (
+    <div
+      className={`px-3 py-2.5 mb-2 rounded-2xl text-warning bg-warning/10 dark:bg-warning/10 text-xs flex items-center justify-between gap-3 ${className}`}
+    >
+      <span className="min-w-0">
+        <span className="font-medium">Update required</span>
+        <span className="opacity-80"> — {failure ?? message}</span>
+      </span>
+      <Button
+        type="button"
+        variant="subtle"
+        onClick={handleUpdate}
+        isLoading={isUpdating}
+        className=" glass-outline bg-warning/10 text-warning hover:text-warning/80 hover:bg-warning/20! transition-colors cursor-pointer shrink-0"
+      >
+        Update CLI
+      </Button>
     </div>
   );
 }

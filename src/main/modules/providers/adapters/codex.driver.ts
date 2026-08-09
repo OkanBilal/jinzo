@@ -71,6 +71,7 @@ export {
 } from "./codex-session-acquisition";
 
 /** App-server schema version this driver is developed and tested against. */
+/** TODO: Move from here */
 export const CODEX_APP_SERVER_PROTOCOL_VERSION = "0.146.0";
 /** Oldest CLI whose app-server contract Mains accepts. */
 export const CODEX_MIN_CLI_VERSION = "0.146.0";
@@ -759,6 +760,10 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
 
     async updateCli(): Promise<CliUpdateResult> {
       const { stdout, stderr, code } = await runCodexCli(["update"], 120000);
+      // The binary may have changed — drop the cached version/compatibility
+      // probes so the next health check (and version gate) re-reads it.
+      codexVersionPromise = null;
+      codexCompatibilityPromise = null;
       return { success: code === 0, output: `${stdout}${stderr}`.trim() };
     },
 

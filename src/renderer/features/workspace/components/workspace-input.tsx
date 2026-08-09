@@ -44,7 +44,10 @@ import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
 import { ContextChips } from "./context-chips";
 import { InputToolbar } from "./input-toolbar";
 import { ContextUsageRing } from "./context-usage-meter";
-import { ProviderAuthNotice } from "./provider-auth-notice";
+import {
+  ProviderAuthNotice,
+  ProviderCliUpdateNotice,
+} from "./provider-auth-notice";
 import { useContextUsage } from "../hooks/use-context-usage";
 import { useProviderModels } from "../hooks/use-provider-models";
 import { getProviderVariantById } from "@/lib/provider-variants";
@@ -255,6 +258,10 @@ export function WorkspaceInput({
     refetchOnFocus: false,
   });
   const providerSignedOut = !!accountInfo && accountInfo.account === null;
+  // An unsupported (too-old) CLI also fails the account probe, so it would
+  // masquerade as "signed out" — detect it first and offer an update instead.
+  const cliHealth = accountInfo?.cli;
+  const cliUnsupported = cliHealth?.compatibility === "unsupported";
   // The providerId prop can override the space's provider — resolve the
   // descriptor from the id actually in use.
   const activeDescriptor =
@@ -694,20 +701,33 @@ export function WorkspaceInput({
 
   return (
     <>
-      {(authErrorMessage || providerSignedOut) && (
-        <ProviderAuthNotice
-          variant={activeDescriptor.variant}
-          title="Auth required"
-          message={
-            authErrorMessage ?? `${activeDescriptor.label} CLI is not signed in`
-          }
-          onRecheck={() => {
+      {cliUnsupported ? (
+        <ProviderCliUpdateNotice
+          providerId={activeProviderId}
+          message={`${activeDescriptor.label} CLI ${cliHealth?.version ?? ""} is not supported — Mains requires ${cliHealth?.minimumVersion ?? "a newer version"} or newer`}
+          onUpdated={() => {
             void refetchModels();
             void refetchAccountInfo();
           }}
-          isRechecking={isFetchingModels || isFetchingAccountInfo}
           className="w-full max-w-200 mx-auto"
         />
+      ) : (
+        (authErrorMessage || providerSignedOut) && (
+          <ProviderAuthNotice
+            variant={activeDescriptor.variant}
+            title="Auth required"
+            message={
+              authErrorMessage ??
+              `${activeDescriptor.label} CLI is not signed in`
+            }
+            onRecheck={() => {
+              void refetchModels();
+              void refetchAccountInfo();
+            }}
+            isRechecking={isFetchingModels || isFetchingAccountInfo}
+            className="w-full max-w-200 mx-auto"
+          />
+        )
       )}
 
       <div
