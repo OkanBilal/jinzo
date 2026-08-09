@@ -125,7 +125,7 @@ export function WorkspaceTabs({
         onClose: (e) => onCloseNoteTab?.(n.id, e),
       });
     });
-    runs.slice(0, 8).forEach((r) => {
+    runs.forEach((r) => {
       mobileTabs.push({
         id: r.id,
         label: getTabTitle(r),
@@ -223,7 +223,7 @@ export function WorkspaceTabs({
           );
         })}
 
-        {runs.slice(0, 8).map((run, i) => (
+        {runs.map((run, i) => (
           <RunTab
             variant={variant}
             key={run.id}
