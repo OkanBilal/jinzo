@@ -42,6 +42,18 @@ export interface ContextSkill {
   scope?: string;
 }
 
+export interface ContextCodeSelection {
+  id: string;
+  /** Absolute path of the file the selection was made in. */
+  filePath: string;
+  /** Basename shown on the chip. */
+  fileName: string;
+  /** 1-based inclusive line range. */
+  startLine: number;
+  endLine: number;
+  text: string;
+}
+
 export interface ContextBrowserSelection {
   id: string;
   url: string;
@@ -91,6 +103,7 @@ export interface WorkspaceState {
   contextSignals: ContextSignal[];
   contextSkills: ContextSkill[];
   contextBrowserSelections: ContextBrowserSelection[];
+  contextCodeSelections: ContextCodeSelection[];
   openIssueTabs: IssueWithEntity[];
   openSignalTabs: SignalWithEntity[];
   openNoteTabs: ReviewTab[];
@@ -128,6 +141,7 @@ const initialState: WorkspaceState = {
   contextSignals: [],
   contextSkills: [],
   contextBrowserSelections: [],
+  contextCodeSelections: [],
   openIssueTabs: [],
   openSignalTabs: [],
   openNoteTabs: [],
@@ -224,6 +238,9 @@ const workspaceSlice = createSlice({
         }
       }
     },
+    collapseAllExplorerPaths: (state) => {
+      state.explorerExpandedPaths = [];
+    },
     setActiveTab: (state, action: PayloadAction<"editor" | string>) => {
       // Remember which tab the user was on before opening the editor so we can
       // return there when the editor tab is closed (rather than jumping to runs[0]).
@@ -289,6 +306,24 @@ const workspaceSlice = createSlice({
     },
     clearContextBrowserSelections: (state) => {
       state.contextBrowserSelections = [];
+    },
+    addContextCodeSelection: (state, action: PayloadAction<ContextCodeSelection>) => {
+      const p = action.payload;
+      if (
+        !state.contextCodeSelections.some(
+          s => s.filePath === p.filePath && s.startLine === p.startLine && s.endLine === p.endLine && s.text === p.text,
+        )
+      ) {
+        state.contextCodeSelections.push(p);
+      }
+    },
+    removeContextCodeSelection: (state, action: PayloadAction<string>) => {
+      state.contextCodeSelections = state.contextCodeSelections.filter(
+        s => s.id !== action.payload,
+      );
+    },
+    clearContextCodeSelections: (state) => {
+      state.contextCodeSelections = [];
     },
     openIssueTab: (state, action: PayloadAction<IssueWithEntity>) => {
       const entityId = action.payload.issue.entityId;
@@ -390,6 +425,7 @@ export const {
   clearSelectedFile,
   toggleExplorerPath,
   expandExplorerPaths,
+  collapseAllExplorerPaths,
   setActiveTab,
   addContextFile,
   removeContextFile,
@@ -406,6 +442,9 @@ export const {
   addContextBrowserSelection,
   removeContextBrowserSelection,
   clearContextBrowserSelections,
+  addContextCodeSelection,
+  removeContextCodeSelection,
+  clearContextCodeSelections,
   openIssueTab,
   closeIssueTab,
   clearIssueTabs,

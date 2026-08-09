@@ -17,6 +17,7 @@ import {
   openSignalTab,
   toggleExplorerPath,
   expandExplorerPaths,
+  collapseAllExplorerPaths,
 } from "@/lib/redux/slices/workspaceSlice";
 import { setRightPanelOpen } from "@/lib/redux/slices/appSettingsSlice";
 import { useIsMobile } from "@/lib/platform";
@@ -80,6 +81,9 @@ export function WorkspaceSidebar() {
     },
     [dispatch],
   );
+  const handleCollapseAll = useCallback(() => {
+    dispatch(collapseAllExplorerPaths());
+  }, [dispatch]);
 
   // Reveal the selected file: expand its ancestor folders no matter how it
   // was opened (tree click, file search, "@" menu, diff link).
@@ -211,7 +215,7 @@ export function WorkspaceSidebar() {
           />
           <Button
             onClick={() => setSidebarTab("files")}
-            className={`relative z-(--z-base) flex-1 text-xs font-medium py-1 px-2 transition-colors ${
+            className={`relative z-(--z-base) flex-1 min-w-0 whitespace-nowrap truncate text-xs font-medium py-1 px-2 transition-colors ${
               sidebarTab === "files"
                 ? "text-primary-900 dark:text-primary-100"
                 : "text-primary-800 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-200"
@@ -221,17 +225,21 @@ export function WorkspaceSidebar() {
           </Button>
           <Button
             onClick={() => setSidebarTab("changes")}
-            className={`relative z-(--z-base) flex-1 text-xs font-medium py-1 px-2  transition-colors ${
+            className={`relative z-(--z-base) flex-1 min-w-0 flex items-center justify-center gap-1 whitespace-nowrap text-xs font-medium py-1 px-2  transition-colors ${
               sidebarTab === "changes"
                 ? "text-primary-900 dark:text-primary-100"
                 : "text-primary-800 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-200"
             }`}
           >
-            Changes{changedFilesCount > 0 && ` (${changedFilesCount})`}
+            {/* The label may truncate under a narrow panel; the count never does. */}
+            <span className="truncate">Changes</span>
+            {changedFilesCount > 0 && (
+              <span className="shrink-0">({changedFilesCount})</span>
+            )}
           </Button>
           <Button
             onClick={() => setSidebarTab("reviews")}
-            className={`relative z-(--z-base) flex-1 text-xs font-medium py-1 px-2 rounded-lg transition-colors ${
+            className={`relative z-(--z-base) flex-1 min-w-0 whitespace-nowrap truncate text-xs font-medium py-1 px-2 rounded-lg transition-colors ${
               sidebarTab === "reviews"
                 ? "text-primary-900 dark:text-primary-100"
                 : "text-primary-800 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-200"
@@ -255,6 +263,7 @@ export function WorkspaceSidebar() {
               selectedPath={selectedFile?.fullPath ?? null}
               expandedPaths={expandedPathSet}
               onToggleExpand={handleToggleExpand}
+              onCollapseAll={handleCollapseAll}
               initialDepth={2}
               className="flex-1 min-h-0"
             />

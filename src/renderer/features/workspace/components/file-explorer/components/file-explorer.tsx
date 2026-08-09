@@ -4,7 +4,7 @@ import type { FileNode, DirEntry, ServiceResponse } from "@/features/workspace/t
 import { FileTreeNode } from "./file-tree-node";
 import { FileIconComponent } from "./file-icon";
 import { Button, Caption } from "@/components/ui";
-import { Close, Plus, Search } from "@/components/ui/icons";
+import { Close, CollapseAll, Plus, Refresh, Search } from "@/components/ui/icons";
 
 interface FileExplorerProps {
   rootPath: string;
@@ -16,6 +16,8 @@ interface FileExplorerProps {
   /** Expanded directory paths — owned by the caller (Redux) for the same reason. */
   expandedPaths?: ReadonlySet<string>;
   onToggleExpand?: (path: string) => void;
+  /** Collapses every open folder (the toolbar's collapse-all button). */
+  onCollapseAll?: () => void;
   includeHidden?: boolean;
   excludePatterns?: string[];
   initialDepth?: number;
@@ -101,7 +103,10 @@ export const FileExplorer = memo(function FileExplorer({
   selectedPath = null,
   expandedPaths = EMPTY_EXPANDED,
   onToggleExpand = noopToggle,
-  includeHidden = false,
+  onCollapseAll,
+  // VS Code parity: dotfiles visible; the service's default exclude list
+  // (VCS internals, OS metadata) is the only filter.
+  includeHidden = true,
   excludePatterns,
   className = "",
 }: FileExplorerProps) {
@@ -118,6 +123,12 @@ export const FileExplorer = memo(function FileExplorer({
     useReducer(searchReducer, { entries: [], loading: false, error: null });
   const resultsRef = useRef<HTMLDivElement | null>(null);
   const isSearching = query.trim().length > 0;
+
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Bumped by the reload button: re-runs the root listing; expanded folders
+  // re-fetch themselves via FileTreeNode's lazy-load effect.
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -175,7 +186,7 @@ export const FileExplorer = memo(function FileExplorer({
     return () => {
       cancelled = true;
     };
-  }, [rootPath, includeHidden, excludePatterns]);
+  }, [rootPath, includeHidden, excludePatterns, reloadToken]);
 
   // Debounced workspace-wide filename search (same backend as the "@" menu).
   useEffect(() => {
@@ -263,6 +274,12 @@ export const FileExplorer = memo(function FileExplorer({
 
   const handleSearchKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        if (isSearching) setQuery("");
+        else searchInputRef.current?.blur();
+        return;
+      }
       if (!isSearching) return;
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -274,9 +291,6 @@ export const FileExplorer = memo(function FileExplorer({
         e.preventDefault();
         const entry = searchEntries[activeIndex] ?? searchEntries[0];
         if (entry) handleSelect(dirEntryToFileNode(entry));
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        setQuery("");
       }
     },
     [isSearching, searchEntries, activeIndex, handleSelect],
@@ -322,24 +336,46 @@ export const FileExplorer = memo(function FileExplorer({
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
-      <div className="relative shrink-0 mb-1 glass-outline rounded-xl bg-primary dark:bg-primary/10">
-        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-primary-500 dark:text-primary-200 pointer-events-none" />
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={handleSearchKeyDown}
-          placeholder="Search files"
-          spellCheck={false}
-          className="w-full h-8 pl-7 pr-7  text-s text-primary-900 dark:text-primary-100 placeholder:text-primary-500 dark:placeholder:text-primary-200 outline-none transition-colors"
-        />
-        {isSearching && (
+      <div className="flex items-center gap-1 shrink-0 mb-1">
+        <div className="relative flex-1 min-w-0 glass-outline rounded-xl bg-transparent dark:bg-primary/5">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-primary-500 dark:text-primary-200 pointer-events-none" />
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
+            placeholder="Search files"
+            spellCheck={false}
+            className="w-full h-7 pl-7 pr-7 text-s bg-transparent text-primary-900 dark:text-primary-100 placeholder:text-primary-500 dark:placeholder:text-primary-200 outline-none transition-colors"
+          />
+          {isSearching && (
+            <Button
+              onClick={() => {
+                setQuery("");
+                searchInputRef.current?.focus();
+              }}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center rounded cursor-pointer hover:bg-primary/20 dark:hover:bg-primary/10"
+              title="Clear search"
+            >
+              <Close className="w-3 h-3 text-primary-500 dark:text-primary-200" />
+            </Button>
+          )}
+        </div>
+        <Button
+          onClick={() => setReloadToken((t) => t + 1)}
+          className="w-5 h-5 shrink-0 flex items-center justify-center rounded-lg cursor-pointer hover:bg-primary/20 dark:hover:bg-primary/10"
+          title="Refresh explorer"
+        >
+          <Refresh className="w-3.5 h-3.5 text-primary-500 dark:text-primary-200" />
+        </Button>
+        {onCollapseAll && (
           <Button
-            onClick={() => setQuery("")}
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center rounded cursor-pointer hover:bg-primary/20 dark:hover:bg-primary/10"
-            title="Clear search"
+            onClick={onCollapseAll}
+            className="w-5 h-5 shrink-0 flex items-center justify-center rounded-lg cursor-pointer hover:bg-primary/20 dark:hover:bg-primary/10"
+            title="Collapse all folders"
           >
-            <Close className="w-3 h-3 text-primary-500 dark:text-primary-200" />
+            <CollapseAll className="w-3.5 h-3.5 text-primary-500 dark:text-primary-200" />
           </Button>
         )}
       </div>
@@ -419,7 +455,7 @@ export const FileExplorer = memo(function FileExplorer({
         <div
           role="tree"
           aria-label="File explorer"
-          className="flex-1 overflow-auto py-1 space-y-0.5 noscrollbar"
+          className="flex-1 overflow-auto  space-y-0.5 noscrollbar"
         >
           {tree.children?.map((child, index) => (
             <FileTreeNode

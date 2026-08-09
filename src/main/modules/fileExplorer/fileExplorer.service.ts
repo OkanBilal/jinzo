@@ -14,11 +14,13 @@ import type {
 } from "./fileExplorer.dto";
 import {
   DEFAULT_EXCLUDE_PATTERNS,
+  DEFAULT_SEARCH_EXCLUDE_PATTERNS,
   MAX_FILE_SIZE_BYTES,
   MAX_READ_DIRECTORY_NODES,
   DEFAULT_READ_DIRECTORY_DEPTH,
   DEFAULT_SEARCH_FILES_MAX,
 } from "./fileExplorer.dto";
+import { gitService } from "../git";
 
 
 // ─────────────────────────────────────────────────────────────
@@ -181,7 +183,9 @@ export const fileExplorerService = {
       rootPath,
       // Undefined in callers => apply safe default depth cap.
       depth = DEFAULT_READ_DIRECTORY_DEPTH,
-      includeHidden = false,
+      // VS Code parity: dotfiles are visible by default; only the exclude
+      // patterns (VCS internals, OS metadata) are hidden.
+      includeHidden = true,
       excludePatterns = DEFAULT_EXCLUDE_PATTERNS,
     } = options;
 
@@ -241,7 +245,7 @@ export const fileExplorerService = {
     options?: { includeHidden?: boolean; excludePatterns?: string[] }
   ): Promise<FileNode[]> {
     const {
-      includeHidden = false,
+      includeHidden = true,
       excludePatterns = DEFAULT_EXCLUDE_PATTERNS,
     } = options || {};
 
@@ -528,6 +532,10 @@ export const fileExplorerService = {
    * Recursive substring search across the workspace tree. Matches against the
    * filename and the workspace-relative path; stops as soon as `max` matches
    * are collected. No `fs.stat` per match — keeps the hot keystroke path cheap.
+   *
+   * Unlike the tree listings, search skips hidden files by default and — in a
+   * git repository — everything .gitignore ignores (VS Code parity: the
+   * explorer shows dotfiles and build output, search doesn't crawl them).
    */
   async searchFiles(options: SearchFilesOptions): Promise<DirEntry[]> {
     const {
@@ -535,7 +543,9 @@ export const fileExplorerService = {
       query,
       max = DEFAULT_SEARCH_FILES_MAX,
       includeHidden = false,
-      excludePatterns = DEFAULT_EXCLUDE_PATTERNS,
+      // Non-git fallback recurses the whole tree — the wider search exclude
+      // list keeps it out of node_modules (VS Code `search.exclude` parity).
+      excludePatterns = DEFAULT_SEARCH_EXCLUDE_PATTERNS,
     } = options;
 
     const needle = query.toLowerCase();
@@ -593,6 +603,44 @@ export const fileExplorerService = {
       }
       throwFsError(error, "Directory does not exist", "Failed to search files");
     }
+
+    // In a git repo, let git decide the candidate set: tracked +
+    // untracked-but-not-ignored files, so nested .gitignore rules apply
+    // exactly. The exclude patterns stay on as a backstop (a repo that
+    // forgot to ignore node_modules) and the hidden filter drops dotfiles.
+    try {
+      if (await gitService.isGitRepo(rootPath)) {
+        const candidates = await gitService.listNonIgnoredFiles(rootPath);
+        for (const rel of candidates) {
+          if (results.length >= max) break;
+          const segments = rel.split("/");
+          if (
+            segments.some((s) => shouldExclude(s, excludePatterns, includeHidden))
+          ) {
+            continue;
+          }
+          const name = segments[segments.length - 1];
+          if (
+            !name.toLowerCase().includes(needle) &&
+            !rel.toLowerCase().includes(needle)
+          ) {
+            continue;
+          }
+          results.push({
+            name,
+            fullPath: path.join(normalizedRoot, rel),
+            type: "file",
+            hasChildren: false,
+            extension: getFileExtension(name),
+          });
+        }
+        return results;
+      }
+    } catch {
+      // git enumeration failed (partial clone, corrupt index, …) — fall
+      // through to the filesystem walk.
+    }
+
     await walk(rootPath);
     return results;
   },
@@ -601,7 +649,7 @@ export const fileExplorerService = {
   async listDir(options: ListDirOptions): Promise<DirEntry[]> {
     const {
       dirPath,
-      includeHidden = false,
+      includeHidden = true,
       excludePatterns = DEFAULT_EXCLUDE_PATTERNS,
     } = options;
 
