@@ -709,7 +709,7 @@ export function WorkspaceInput({
             void refetchModels();
             void refetchAccountInfo();
           }}
-          className="w-full max-w-200 mx-auto"
+          className="w-full max-w-210 mx-auto"
         />
       ) : (
         (authErrorMessage || providerSignedOut) && (
@@ -725,13 +725,13 @@ export function WorkspaceInput({
               void refetchAccountInfo();
             }}
             isRechecking={isFetchingModels || isFetchingAccountInfo}
-            className="w-full max-w-200 mx-auto"
+            className="w-full max-w-210 mx-auto"
           />
         )
       )}
 
       <div
-        className={`relative w-full max-w-200 mx-auto flex flex-col pb-2 rounded-[28px] glass-surface
+        className={`relative w-full max-w-210 mx-auto flex flex-col pb-2 rounded-[28px] glass-surface
         cursor-pointer transition-all
         ${layout === "default" ? "mb-4" : ""}
         ${isFileDragOver ? "ring-2 ring-primary/60 ring-offset-2 ring-offset-background" : ""}`}

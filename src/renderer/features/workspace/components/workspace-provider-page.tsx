@@ -319,7 +319,7 @@ export function WorkspaceProviderPage({
         !currentPlanApproval &&
         !ws.showEmptyState &&
         !ws.showNewRunTab && (
-        <div className="w-full max-w-200 mx-auto max-h-[55vh] overflow-y-auto noscrollbar">
+        <div className="w-full max-w-210 mx-auto max-h-[55vh] overflow-y-auto noscrollbar">
           <ToolApprovalDialog
             request={currentApproval}
             onRespond={respondToolApproval}

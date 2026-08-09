@@ -73,7 +73,7 @@ export function WorkspaceEmptyState({
     const customizerDuration = "650ms";
 
     return (
-      <div className="flex flex-col items-center py-2 text-center shrink-0 w-full max-w-200">
+      <div className="flex flex-col items-center py-2 text-center shrink-0 w-full max-w-210">
         <Button
           tooltip="Customize space"
           variant="bare"
