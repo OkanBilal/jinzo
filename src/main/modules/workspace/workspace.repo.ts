@@ -257,6 +257,7 @@ export const workspaceRepo = {
       diffText: payload.diffText,
       filesJson: payload.filesJson ?? null,
       statsJson: payload.statsJson ?? null,
+      untrackedJson: payload.untrackedJson ?? null,
     });
     return payload.id;
   },
@@ -269,6 +270,7 @@ export const workspaceRepo = {
         diffText: payload.diffText,
         filesJson: payload.filesJson ?? null,
         statsJson: payload.statsJson ?? null,
+        untrackedJson: payload.untrackedJson ?? null,
         ...(payload.baseRef !== undefined ? { baseRef: payload.baseRef } : {}),
       })
       .where(eq(workspaceDiffs.id, id));
@@ -313,6 +315,7 @@ export const workspaceRepo = {
         baseRef: workspaceDiffs.baseRef,
         filesJson: workspaceDiffs.filesJson,
         statsJson: workspaceDiffs.statsJson,
+        untrackedJson: workspaceDiffs.untrackedJson,
         createdAt: workspaceDiffs.createdAt,
       })
       .from(workspaceDiffs)
@@ -328,6 +331,7 @@ export const workspaceRepo = {
       baseRef: row.baseRef,
       files: safeJsonParse<string[]>(row.filesJson),
       stats: safeJsonParse(row.statsJson),
+      untrackedFiles: safeJsonParse<string[]>(row.untrackedJson),
       createdAt: row.createdAt,
     };
   },
@@ -659,6 +663,7 @@ function mapDiffRow(
     diffText: row.diffText,
     files: safeJsonParse<string[]>(row.filesJson),
     stats: safeJsonParse(row.statsJson),
+    untrackedFiles: safeJsonParse<string[]>(row.untrackedJson),
     createdAt: row.createdAt,
   };
 }

@@ -141,7 +141,13 @@ export interface WorkspaceDiff {
   baseRef: string | null;
   diffText: string;
   files: string[] | null;
-  stats: { shortstat: string; files: number } | null;
+  stats: { shortstat: string; files: number; newFiles?: number } | null;
+  /**
+   * The subset of `files` git wasn't tracking at capture time — rendered as "U"
+   * instead of "A". Null on rows captured before the column existed, which the
+   * file list reads as "unknown", falling back to "A".
+   */
+  untrackedFiles: string[] | null;
   createdAt: number;
 }
 

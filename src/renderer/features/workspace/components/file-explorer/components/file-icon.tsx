@@ -21,7 +21,37 @@ import {
   ImageFileIcon,
   EjsFileIcon,
   IcoFileIcon,
-  SvgFileIcon
+  SvgFileIcon,
+  PythonFileIcon,
+  RustFileIcon,
+  RubyFileIcon,
+  JavaFileIcon,
+  CppFileIcon,
+  PhpFileIcon,
+  VueFileIcon,
+  SvelteFileIcon,
+  YamlFileIcon,
+  XmlFileIcon,
+  DatabaseFileIcon,
+  CsvFileIcon,
+  TextFileIcon,
+  PdfFileIcon,
+  ArchiveFileIcon,
+  FontFileIcon,
+  VideoFileIcon,
+  AudioFileIcon,
+  ShellFileIcon,
+  EnvFileIcon,
+  LockFileIcon,
+  DockerFileIcon,
+  TailwindFileIcon,
+  ViteFileIcon,
+  VitestFileIcon,
+  DrizzleFileIcon,
+  LicenseFileIcon,
+  GraphqlFileIcon,
+  NextFileIcon,
+  PnpmFileIcon
 } from "@/components/ui/icons/file-icons";
 
 type FileIconType = ComponentType<SVGProps<SVGSVGElement>>;
@@ -31,8 +61,11 @@ const EXTENSION_ICONS: Record<string, FileIconType> = {
   mjs: JsFileIcon,
   cjs: JsFileIcon,
   html: HtmlFileIcon,
+  htm: HtmlFileIcon,
   css: CssFileIcon,
   ts: TsFileIcon,
+  mts: TsFileIcon,
+  cts: TsFileIcon,
   jsx: ReactFileIcon,
   tsx: ReactFileIcon,
   md: MarkdownFileIcon,
@@ -41,48 +74,144 @@ const EXTENSION_ICONS: Record<string, FileIconType> = {
   go: GoFileIcon,
   sum: SumFileIcon,
   mod: SumFileIcon,
+  json: JsonFileIcon,
+  jsonc: JsonFileIcon,
+  json5: JsonFileIcon,
   png: ImageFileIcon,
   jpg: ImageFileIcon,
   jpeg: ImageFileIcon,
   gif: ImageFileIcon,
+  webp: ImageFileIcon,
+  avif: ImageFileIcon,
+  bmp: ImageFileIcon,
   svg: SvgFileIcon,
   icns: ImageFileIcon,
   ejs: EjsFileIcon,
   ico: IcoFileIcon,
+  py: PythonFileIcon,
+  pyi: PythonFileIcon,
+  pyw: PythonFileIcon,
+  rs: RustFileIcon,
+  rb: RubyFileIcon,
+  erb: RubyFileIcon,
+  java: JavaFileIcon,
+  c: CppFileIcon,
+  h: CppFileIcon,
+  cc: CppFileIcon,
+  cpp: CppFileIcon,
+  cxx: CppFileIcon,
+  hpp: CppFileIcon,
+  hh: CppFileIcon,
+  php: PhpFileIcon,
+  vue: VueFileIcon,
+  svelte: SvelteFileIcon,
+  yml: YamlFileIcon,
+  yaml: YamlFileIcon,
+  xml: XmlFileIcon,
+  plist: XmlFileIcon,
+  xsd: XmlFileIcon,
+  xsl: XmlFileIcon,
+  sql: DatabaseFileIcon,
+  db: DatabaseFileIcon,
+  sqlite: DatabaseFileIcon,
+  sqlite3: DatabaseFileIcon,
+  csv: CsvFileIcon,
+  tsv: CsvFileIcon,
+  txt: TextFileIcon,
+  text: TextFileIcon,
+  log: TextFileIcon,
+  rtf: TextFileIcon,
+  pdf: PdfFileIcon,
+  zip: ArchiveFileIcon,
+  tar: ArchiveFileIcon,
+  gz: ArchiveFileIcon,
+  tgz: ArchiveFileIcon,
+  bz2: ArchiveFileIcon,
+  xz: ArchiveFileIcon,
+  rar: ArchiveFileIcon,
+  "7z": ArchiveFileIcon,
+  woff: FontFileIcon,
+  woff2: FontFileIcon,
+  ttf: FontFileIcon,
+  otf: FontFileIcon,
+  eot: FontFileIcon,
+  mp4: VideoFileIcon,
+  mov: VideoFileIcon,
+  webm: VideoFileIcon,
+  mkv: VideoFileIcon,
+  avi: VideoFileIcon,
+  m4v: VideoFileIcon,
+  mp3: AudioFileIcon,
+  wav: AudioFileIcon,
+  flac: AudioFileIcon,
+  m4a: AudioFileIcon,
+  ogg: AudioFileIcon,
+  aac: AudioFileIcon,
+  sh: ShellFileIcon,
+  bash: ShellFileIcon,
+  zsh: ShellFileIcon,
+  fish: ShellFileIcon,
+  env: EnvFileIcon,
+  lock: LockFileIcon,
+  lockb: LockFileIcon,
+  graphql: GraphqlFileIcon,
+  gql: GraphqlFileIcon,
 };
 
 const FILENAME_ICONS: Record<string, FileIconType> = {
-  ".eslintrc": EslintFileIcon,
-  ".eslintrc.js": EslintFileIcon,
-  ".eslintrc.cjs": EslintFileIcon,
-  ".eslintrc.json": EslintFileIcon,
-  "eslint.config.js": EslintFileIcon,
-  "eslint.config.mjs": EslintFileIcon,
-  "eslint.config.cjs": EslintFileIcon,
   ".gitignore": GitFileIcon,
   ".gitattributes": GitFileIcon,
   ".gitmodules": GitFileIcon,
   "CLAUDE.md": ClaudeFileIcon,
   ".claude": ClaudeFileIcon,
-  "forge.config.js": ElectronFileIcon,
-  "forge.config.ts": ElectronFileIcon,
-  "electron.vite.config.js": ElectronFileIcon,
-  "electron.vite.config.ts": ElectronFileIcon,
   "package.json": NodeFileIcon,
   "package-lock.json": NodeFileIcon,
   ".nvmrc": NodeFileIcon,
   ".node-version": NodeFileIcon,
-  "postcss.config.js": PostcssFileIcon,
-  "postcss.config.cjs": PostcssFileIcon,
-  "postcss.config.mjs": PostcssFileIcon,
-  "tsconfig.json": TsconfigFileIcon,
-  "tsconfig.node.json": TsconfigFileIcon,
-  "tsconfig.app.json": TsconfigFileIcon,
-  "tsconfig.main.json": TsconfigFileIcon,
-  "tsconfig.preload.json": TsconfigFileIcon,
-  "tsconfig.renderer.json": TsconfigFileIcon,
+  ".npmrc": NodeFileIcon,
   "manifest.json": JsonFileIcon,
+  "Dockerfile": DockerFileIcon,
+  ".dockerignore": DockerFileIcon,
+  // pnpm's files say `.yaml`, and its lockfile isn't a plain `.lock` — without
+  // these they fall through to the YAML icon (and the lock/node ones are wrong
+  // when the tool has a mark of its own).
+  "pnpm-lock.yaml": PnpmFileIcon,
+  "pnpm-workspace.yaml": PnpmFileIcon,
+  ".pnpmfile.cjs": PnpmFileIcon,
+  "Cargo.toml": RustFileIcon,
+  "Gemfile": RubyFileIcon,
+  "pyproject.toml": PythonFileIcon,
+  "requirements.txt": PythonFileIcon,
 };
+
+/**
+ * Config files that come in families (`tsconfig.main.json`, `vite.renderer
+ * .config.mjs`, `drizzle.config.runtime.ts`, `.env.local`, `Dockerfile.dev`).
+ * Matched only after an exact FILENAME_ICONS hit, so a specific name always
+ * wins over its family.
+ *
+ * The variant segment appears on either side of `.config` depending on the
+ * tool, hence the optional group before and after. Order matters where two
+ * families share a prefix: vitest is tested before vite.
+ */
+const CONFIG = String.raw`(\..+)?\.config(\..+)?\.[cm]?[jt]s$`;
+
+const FILENAME_PATTERNS: Array<[RegExp, FileIconType]> = [
+  [/^\.eslintrc(\..+)?$/, EslintFileIcon],
+  [new RegExp(`^eslint${CONFIG}`), EslintFileIcon],
+  [/^tsconfig(\..+)?\.json$/, TsconfigFileIcon],
+  [new RegExp(`^postcss${CONFIG}`), PostcssFileIcon],
+  [new RegExp(`^tailwind${CONFIG}`), TailwindFileIcon],
+  [new RegExp(`^(forge|electron\\.vite)${CONFIG}`), ElectronFileIcon],
+  [new RegExp(`^vitest${CONFIG}`), VitestFileIcon],
+  [new RegExp(`^vite${CONFIG}`), ViteFileIcon],
+  [new RegExp(`^drizzle${CONFIG}`), DrizzleFileIcon],
+  [new RegExp(`^next${CONFIG}`), NextFileIcon],
+  [/^\.env(\..+)?$/, EnvFileIcon],
+  [/^(docker-)?compose(\..+)?\.ya?ml$/, DockerFileIcon],
+  [/^Dockerfile\..+$/, DockerFileIcon],
+  [/^(LICENSE|LICENCE|COPYING)(\..+)?$/i, LicenseFileIcon],
+];
 
 const EXTENSION_COLORS: Record<string, string> = {
   js: "text-yellow-400",
@@ -139,6 +268,28 @@ const EXTENSION_COLORS: Record<string, string> = {
   gitignore: "text-gray-500",
 };
 
+/**
+ * Pick the dedicated icon for a file, or null when only the generic page glyph
+ * (tinted by EXTENSION_COLORS) applies. Resolution order is exact filename →
+ * filename family → extension: `tsconfig.json` must not lose to `.json`.
+ */
+export function resolveFileIcon(
+  fileName?: string,
+  extension?: string,
+): FileIconType | null {
+  if (fileName) {
+    const exact = FILENAME_ICONS[fileName];
+    if (exact) return exact;
+    const patterned = FILENAME_PATTERNS.find(([re]) => re.test(fileName));
+    if (patterned) return patterned[1];
+  }
+  if (extension) {
+    const byExtension = EXTENSION_ICONS[extension.toLowerCase()];
+    if (byExtension) return byExtension;
+  }
+  return null;
+}
+
 interface IconProps {
   className?: string;
 }
@@ -184,18 +335,9 @@ export const FileIconComponent = memo(function FileIconComponent({
     return <FolderIcon className={`${colorClass} ${className}`} />;
   }
 
-  if (fileName) {
-    const FileNameIcon = FILENAME_ICONS[fileName];
-    if (FileNameIcon) {
-      return <FileNameIcon className={className} />;
-    }
-  }
-
-  if (extension) {
-    const ExtensionIcon = EXTENSION_ICONS[extension.toLowerCase()];
-    if (ExtensionIcon) {
-      return <ExtensionIcon className={className} />;
-    }
+  const Resolved = resolveFileIcon(fileName, extension);
+  if (Resolved) {
+    return <Resolved className={className} />;
   }
 
     const colorClass = extension

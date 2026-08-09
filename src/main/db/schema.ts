@@ -501,7 +501,11 @@ export const workspaceDiffs = sqliteTable(
     baseRef: text("base_ref"), // HEAD sha captured at run start
     diffText: text("diff_text").notNull(), // unified diff patch
     filesJson: text("files_json"), // JSON array of changed file paths
-    statsJson: text("stats_json"), // JSON object { shortstat, files }
+    statsJson: text("stats_json"), // JSON object { shortstat, files, newFiles }
+    // JSON array — the subset of files_json that wasn't tracked at capture
+    // time. The diff text can't carry this: a staged-new file and an untracked
+    // one both render as `new file mode …`.
+    untrackedJson: text("untracked_json"),
 
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
@@ -517,6 +521,10 @@ export const workspaceDiffs = sqliteTable(
     check(
       "check_workspace_diffs_stats_json",
       sql`json_valid(${t.statsJson}) OR ${t.statsJson} IS NULL`,
+    ),
+    check(
+      "check_workspace_diffs_untracked_json",
+      sql`json_valid(${t.untrackedJson}) OR ${t.untrackedJson} IS NULL`,
     ),
   ],
 );

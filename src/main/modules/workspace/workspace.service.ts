@@ -156,6 +156,9 @@ export async function recordWorkspaceDiff(
     files: snapshot.files.length,
     newFiles: snapshot.untrackedFiles.length,
   });
+  // Kept as paths, not just the count in statsJson: the file list marks these
+  // rows "U" (untracked) rather than "A", which the diff text can't tell apart.
+  const untrackedJson = JSON.stringify(snapshot.untrackedFiles);
   const existing = runId
     ? await workspaceRepo.findDiffByRun(runId)
     : await workspaceRepo.findLatestDiffByWorkspace(workspaceId);
@@ -164,6 +167,7 @@ export async function recordWorkspaceDiff(
       diffText: snapshot.diffText,
       filesJson,
       statsJson,
+      untrackedJson,
       baseRef: snapshot.baseRef,
     });
   } else {
@@ -176,6 +180,7 @@ export async function recordWorkspaceDiff(
       diffText: snapshot.diffText,
       filesJson,
       statsJson,
+      untrackedJson,
     });
   }
 }
