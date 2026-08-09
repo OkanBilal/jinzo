@@ -8,7 +8,10 @@ export type AsciiSpinnerVariant =
   | "copilot"
   | "codex"
   | "cursor"
-  | "null";
+  | "null"
+  /** No tint of its own — takes the surrounding text color via `currentColor`
+   *  (e.g. a spinner inside a warning-tinted button). */
+  | "inherit";
 
 /** Spinner shape. `square` is the diagonal grid; `download` is the falling-bar
  *  stream for "downloading…" affordances (e.g. CLI self-update buttons);
@@ -23,6 +26,7 @@ const VARIANT_COLOR: Record<AsciiSpinnerVariant, string> = {
   codex: "text-codex",
   cursor: "text-cursor",
   null: "text-primary-900 dark:text-primary-200",
+  inherit: "",
 };
 
 /**
