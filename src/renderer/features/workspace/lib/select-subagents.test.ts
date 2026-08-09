@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { ToolCall } from "@/lib/redux/api";
-import { selectSessionSubagents } from "./select-subagents";
+import { selectSessionSubagents, selectSubagentEntry } from "./select-subagents";
+import { subagentStateOf } from "../utils/subagent-identity";
 
 function call(partial: Partial<ToolCall> & { id: number }): ToolCall {
   return {
@@ -299,5 +300,58 @@ describe("selectSessionSubagents", () => {
       call({ id: 1, toolCallId: "item_5", input: { subagent_type: "a" } }),
     ]);
     expect(agent.providerCallId).toBe("item_5");
+  });
+});
+
+describe("selectSubagentEntry", () => {
+  // The stop-then-continue shape: the spawn was settled `stopped` when the run
+  // was aborted, then a SendMessage revived the agent in the continued run.
+  // The detail header reads through this lookup precisely so it cannot answer
+  // differently from the list row the user clicked to open it.
+  const revivedAgent: ToolCall[] = [
+    call({
+      id: 1,
+      toolCallId: "toolu_spawn",
+      status: "error",
+      input: { subagent_type: "general-purpose", description: "Security review" },
+      metadata: {
+        subagent: { phase: "stopped", agentId: "a2e1ea68", agentType: "general-purpose" },
+      },
+    }),
+    call({
+      id: 2,
+      toolName: "SendMessage",
+      toolCallId: "toolu_send",
+      status: "done",
+      input: { to: "a2e1ea68", message: "Resume, finish the review" },
+      metadata: { task: { subagentType: "general-purpose", status: "running" } },
+    }),
+  ];
+
+  it("answers with the folded state, not the spawn row's own", () => {
+    // What the spawn row alone says — the answer the detail used to render.
+    expect(
+      subagentStateOf({
+        toolName: "Agent",
+        callStatus: "error",
+        subagent: { phase: "stopped" },
+      }),
+    ).toBe("stopped");
+
+    expect(selectSubagentEntry(revivedAgent, "toolu_spawn")).toMatchObject({
+      providerCallId: "toolu_spawn",
+      state: "running",
+    });
+  });
+
+  it("is the same entry the list renders for that row", () => {
+    const fromList = selectSessionSubagents(revivedAgent).find(
+      (agent) => agent.providerCallId === "toolu_spawn",
+    );
+    expect(selectSubagentEntry(revivedAgent, "toolu_spawn")).toEqual(fromList);
+  });
+
+  it("returns undefined for a call id with no agent", () => {
+    expect(selectSubagentEntry(revivedAgent, "toolu_missing")).toBeUndefined();
   });
 });

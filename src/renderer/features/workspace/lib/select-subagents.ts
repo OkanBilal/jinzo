@@ -141,3 +141,23 @@ export function selectSessionSubagents(calls: ToolCall[]): SessionSubagent[] {
 
   return out.sort((a, b) => b.id - a.id);
 }
+
+/**
+ * The single agent a detail surface is showing, found by the provider call id
+ * its row carries.
+ *
+ * Deliberately a lookup into the SAME selection the list renders rather than a
+ * second synthesis from the spawn row: an agent's state is a fold over every
+ * row that belongs to it (its spawn plus each continuation turn), so deriving
+ * it from the spawn alone made the detail header contradict the row that was
+ * clicked — a resumed agent read `running` in the list and `stopped` in its
+ * own header.
+ */
+export function selectSubagentEntry(
+  calls: ToolCall[],
+  providerCallId: string,
+): SessionSubagent | undefined {
+  return selectSessionSubagents(calls).find(
+    (agent) => agent.providerCallId === providerCallId,
+  );
+}

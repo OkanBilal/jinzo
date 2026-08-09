@@ -898,6 +898,98 @@ describe("RunSession", () => {
       },
     );
 
+    // The resumed-agent case: after a continue, an agent's live state lives on
+    // its SendMessage continuation row, which carries `metadata.task` and no
+    // `metadata.subagent` at all. Settling only the latter left those rows
+    // reading "running" forever — and the panel folds a continuation's state
+    // onto the agent it continues, so the whole agent looked alive after the
+    // run that resumed it was stopped.
+    it.each([
+      ["succeeded", "completed"],
+      ["canceled", "stopped"],
+    ] as const)(
+      "settles an unfinished task lifecycle on %s finalize as %s",
+      async (runStatus, expectedStatus) => {
+        const session = makeSession();
+        await flushBackground();
+
+        await session.project({
+          type: "tool_call",
+          toolName: "SendMessage",
+          input: { to: "agent-1", message: "Resume, finish the review" },
+          metadata: { phase: "start", toolCallId: "send-1" },
+        } as any);
+        await session.project({
+          type: "task",
+          phase: "started",
+          toolCallId: "send-1",
+          taskId: "task-1",
+          status: "running",
+          taskType: "local_agent",
+          subagentType: "security_review",
+        } as any);
+
+        await session.finalize({ status: runStatus });
+
+        const calls = await runsRepo.findToolCallsByRun("r1");
+        const task = (calls[0].metadata as Record<string, any>)?.task;
+        expect(task?.status).toBe(expectedStatus);
+        // The sweep patches, never replaces — identity fields survive.
+        expect(task?.subagentType).toBe("security_review");
+      },
+    );
+
+    it.each(["completed", "failed", "killed", "stopped"] as const)(
+      "leaves a task the provider already resolved as %s alone",
+      async (status) => {
+        const session = makeSession();
+        await flushBackground();
+
+        await session.project({
+          type: "tool_call",
+          toolName: "Bash",
+          metadata: { phase: "start", toolCallId: "bash-1" },
+        } as any);
+        await session.project({
+          type: "task",
+          phase: "completed",
+          toolCallId: "bash-1",
+          taskId: "task-1",
+          status,
+        } as any);
+
+        await session.finalize({ status: "canceled" });
+
+        const calls = await runsRepo.findToolCallsByRun("r1");
+        expect((calls[0].metadata as Record<string, any>)?.task?.status).toBe(status);
+      },
+    );
+
+    it("leaves a failed task's own error intact on finalize", async () => {
+      const session = makeSession();
+      await flushBackground();
+
+      await session.project({
+        type: "tool_call",
+        toolName: "Agent",
+        metadata: { phase: "start", toolCallId: "agent-1" },
+      } as any);
+      await session.project({
+        type: "task",
+        phase: "progress",
+        toolCallId: "agent-1",
+        taskId: "task-1",
+        error: "agent exploded",
+      } as any);
+
+      await session.finalize({ status: "canceled" });
+
+      const calls = await runsRepo.findToolCallsByRun("r1");
+      const task = (calls[0].metadata as Record<string, any>)?.task;
+      expect(task?.error).toBe("agent exploded");
+      expect(task?.status).toBeUndefined();
+    });
+
     it("leaves already-settled subagents alone on finalize", async () => {
       const session = makeSession();
       await flushBackground();

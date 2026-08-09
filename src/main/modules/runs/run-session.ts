@@ -31,6 +31,19 @@ import { emit } from "../../ipc-kit";
 const LIVE_DIFF_DEBOUNCE_MS = 300;
 const FORCE_FINALIZE_TIMEOUT_MS = 30_000;
 
+/**
+ * `metadata.task` statuses the provider has already resolved — the run-end
+ * sweep leaves these alone. Mirrors `SubagentTaskMeta["status"]` in the
+ * renderer's subagent-identity, minus the live ones (`pending`, `running`,
+ * `paused` — a paused task cannot resume once the run's process is gone).
+ */
+const TERMINAL_TASK_STATUSES = new Set([
+  "completed",
+  "failed",
+  "killed",
+  "stopped",
+]);
+
 // ─────────────────────────────────────────────────────────────
 // File-level utilities (pure)
 // ─────────────────────────────────────────────────────────────
@@ -282,32 +295,52 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   }
 
   /**
-   * Settle subagent rows whose terminal lifecycle event never arrived.
+   * Settle rows whose terminal lifecycle event never arrived.
    *
    * An aborted run tears the provider sink down before the settle
    * notifications are processed, and a spawn-style call (Codex) is already
    * "done" the moment the agent starts — so without this sweep the session
    * panel shows those agents running forever. The run's outcome stands in for
    * theirs: succeeded → completed, anything else → stopped.
+   *
+   * BOTH lifecycle keys are swept, because they are separate sources of
+   * "still working" and a row can carry either one. `metadata.subagent` is a
+   * spawn's own lifecycle; `metadata.task` is the CLI's task lifecycle, and it
+   * is the ONLY liveness a SendMessage continuation or a backgrounded command
+   * has — settling just the first left a resumed agent (whose live state moved
+   * onto its continuation row) spinning forever after the run that resumed it
+   * was stopped.
    */
   async function settleUnfinishedSubagents(
     runStatus: "succeeded" | "failed" | "canceled",
   ): Promise<void> {
+    const settledState = runStatus === "succeeded" ? "completed" : "stopped";
     try {
       const calls = await runsRepo.findToolCallsByRun(runId);
       for (const call of calls) {
-        const subagent = (call.metadata as Record<string, unknown> | null)
-          ?.subagent as { phase?: string } | undefined;
-        if (!subagent?.phase) continue;
-        if (subagent.phase !== "invoked" && subagent.phase !== "running") continue;
-        await runsRepo.updateToolCall(call.id, {
-          metadata: {
-            subagent: {
-              phase: runStatus === "succeeded" ? "completed" : "stopped",
-              updatedAt: Date.now(),
-            },
-          },
-        });
+        const metadata = call.metadata as Record<string, unknown> | null;
+        const subagent = metadata?.subagent as { phase?: string } | undefined;
+        const task = metadata?.task as
+          | { phase?: string; status?: string; error?: string }
+          | undefined;
+        const patch: Record<string, unknown> = {};
+
+        if (subagent?.phase === "invoked" || subagent?.phase === "running") {
+          patch.subagent = { phase: settledState, updatedAt: Date.now() };
+        }
+        // A task the provider already resolved — by status, by a completed
+        // phase, or by failing — keeps its own outcome.
+        if (
+          task &&
+          !task.error &&
+          task.phase !== "completed" &&
+          !TERMINAL_TASK_STATUSES.has(task.status ?? "")
+        ) {
+          patch.task = { status: settledState, updatedAt: Date.now() };
+        }
+
+        if (Object.keys(patch).length === 0) continue;
+        await runsRepo.updateToolCall(call.id, { metadata: patch });
       }
     } catch (err) {
       console.error(`[RunSession ${runId}] Failed to settle subagents:`, err);

@@ -14,6 +14,7 @@ import {
 } from "@/lib/redux/api";
 import { useRunEventRefetch } from "../hooks/use-run-event-refetch";
 import { mapToolCallToEvent } from "../utils/run-event-mappers";
+import { selectSubagentEntry } from "../lib/select-subagents";
 import {
   buildSubagentFlow,
   selectSubagentReport,
@@ -22,7 +23,6 @@ import {
   AGENT_ID_IN_RESULT,
   subagentColorClass,
   subagentDisplay,
-  subagentStateOf,
   type SubagentLifecycleMeta,
   type SubagentLifecycleState,
   type SubagentTaskMeta,
@@ -90,29 +90,17 @@ export function SubagentDetail({
   );
   const meta = (spawn?.metadata?.subagent ?? {}) as SubagentLifecycleMeta;
   const task = spawn?.metadata?.task as SubagentTaskMeta | undefined;
-  const display = spawn
-    ? subagentDisplay({
-        toolName: spawn.toolName,
-        agentType: meta.agentType || title,
-        // Spawn input first — metadata.task.description is rewritten with the
-        // live step while the agent runs (see select-subagents).
-        description:
-          (typeof spawn.input?.description === "string"
-            ? spawn.input.description
-            : undefined) ?? task?.description,
-      })
+
+  // Identity and state come from the same selection the panel list renders —
+  // see selectSubagentEntry for why this must not be re-derived here.
+  const entry = useMemo(
+    () => selectSubagentEntry(toolCalls ?? [], subagentId),
+    [toolCalls, subagentId],
+  );
+  const display = entry
+    ? subagentDisplay(entry)
     : { name: title, detail: undefined };
-  // Same synthesis the panel list uses — an agent may have left its lifecycle
-  // on metadata.subagent, metadata.task (background tasks, SendMessage
-  // continuations), or only the call's own status.
-  const state: SubagentLifecycleState = spawn
-    ? subagentStateOf({
-        toolName: spawn.toolName,
-        callStatus: spawn.status,
-        task,
-        subagent: meta,
-      })
-    : "running";
+  const state: SubagentLifecycleState = entry?.state ?? "running";
 
   // The agent's continuation handle — SendMessage turns addressed to it are
   // part of THIS agent's session, not new agents.

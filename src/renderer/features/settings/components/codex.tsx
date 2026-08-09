@@ -225,7 +225,7 @@ export default function CodexSettings() {
             title="Update required"
             description={`Mains requires Codex CLI ${cli.minimumVersion ?? "0.146.0"} or newer.`}
           >
-            <span className="text-xs text-destructive">Unsupported</span>
+            <span className="text-xs font-medium text-danger">Unsupported</span>
           </SettingsRow>
         )}
         {cli?.compatibility === "newer" && (
@@ -233,7 +233,7 @@ export default function CodexSettings() {
             title="Newer CLI detected"
             description={`This CLI is newer than the tested app-server contract (${cli.testedProtocolVersion ?? "unknown"}). Forward-compatible mode is active.`}
           >
-            <span className="text-xs text-warning">Untested</span>
+            <span className="text-xs font-medium text-warning">Untested</span>
           </SettingsRow>
         )}
       </ProviderCliSection>
