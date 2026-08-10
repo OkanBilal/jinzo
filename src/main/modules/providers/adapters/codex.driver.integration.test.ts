@@ -103,6 +103,7 @@ afterEach(async () => {
   delete process.env.MAINS_CODEX_FIXTURE_LEGACY_INITIALIZE;
   delete process.env.MAINS_CODEX_FIXTURE_PLUGINS_ENABLED;
   delete process.env.MAINS_CODEX_FIXTURE_ACCOUNT;
+  delete process.env.MAINS_CODEX_DEBUG_INTERRUPT;
   await Promise.all(drivers.splice(0).map((driver) => driver.shutdown?.()));
   for (const dir of tempDirs.splice(0)) {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -1018,6 +1019,9 @@ describe("codex.driver / app-server protocol", () => {
     tempDirs.push(tempDir);
     const logPath = path.join(tempDir, "protocol.jsonl");
     process.env.MAINS_CODEX_FIXTURE_LOG = logPath;
+    // TEMPORARY (remove with the flake investigation) — see the
+    // [codex-interrupt-diag] block in codex-run-coordinator.
+    process.env.MAINS_CODEX_DEBUG_INTERRUPT = "1";
 
     const driver = createCodexDriver({
       binary: fixtureBinary,
@@ -1064,18 +1068,34 @@ describe("codex.driver / app-server protocol", () => {
     const interruptedTurns = readProtocolLog(logPath)
       .filter((message) => message.method === "turn/interrupt")
       .map((message) => message.params);
-    expect(interruptedTurns).toEqual(
-      expect.arrayContaining([
-        {
-          threadId: "thread-1",
-          turnId: "turn-thread-1",
-        },
-        {
-          threadId: "thread-1-child",
-          turnId: "turn-thread-1-child",
-        },
-      ]),
-    );
+    try {
+      expect(interruptedTurns).toEqual(
+        expect.arrayContaining([
+          {
+            threadId: "thread-1",
+            turnId: "turn-thread-1",
+          },
+          {
+            threadId: "thread-1-child",
+            turnId: "turn-thread-1-child",
+          },
+        ]),
+      );
+    } catch (error) {
+      // TEMPORARY (remove with the flake investigation): this assertion fails
+      // on ubuntu CI and not on macOS, and the array diff alone says nothing
+      // about why. Pair these with the [codex-interrupt-diag] lines from the
+      // coordinator to see the state interruptRunTurns actually snapshotted.
+      console.error(
+        "[subagent-abort-diag] events:",
+        JSON.stringify(firstEvents, null, 2),
+      );
+      console.error(
+        "[subagent-abort-diag] protocol:",
+        JSON.stringify(readProtocolLog(logPath), null, 2),
+      );
+      throw error;
+    }
 
     await driver.cleanup?.(acquired.session);
     const continued = await driver.resumeSession?.({

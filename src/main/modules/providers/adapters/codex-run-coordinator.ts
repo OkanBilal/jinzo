@@ -444,13 +444,31 @@ export function createCodexRunCoordinator(
     });
   }
 
+  // TEMPORARY (remove with the codex.driver.integration flake investigation):
+  // `interrupts active subagents…` fails on ubuntu CI but not on macOS, and the
+  // emitted events say the child's activeTurnId was set before the abort. This
+  // prints what interruptRunTurns actually saw, so the next CI failure shows
+  // whether the sub-agent was missing, already settled, or simply not targeted.
+  // Opt-in via MAINS_CODEX_DEBUG_INTERRUPT so normal runs stay quiet.
+  function debugInterrupt(payload: Record<string, unknown>): void {
+    if (!process.env.MAINS_CODEX_DEBUG_INTERRUPT) return;
+    console.error("[codex-interrupt-diag]", JSON.stringify(payload));
+  }
+
   async function interruptRunTurns(
     server: CodexAppServer,
     runId: string,
     logMessage: string,
   ): Promise<void> {
     const state = activeRuns.get(runId);
-    if (!server.isRunning || !state) return;
+    if (!server.isRunning || !state) {
+      debugInterrupt({
+        runId,
+        reason: logMessage,
+        skipped: !server.isRunning ? "server-not-running" : "no-run-state",
+      });
+      return;
+    }
 
     const targets: Array<{ threadId: string; turnId: string }> = [];
     if (state.threadId && state.turnId) {
@@ -464,6 +482,21 @@ export function createCodexRunCoordinator(
         });
       }
     }
+
+    debugInterrupt({
+      runId,
+      reason: logMessage,
+      threadId: state.threadId,
+      turnId: state.turnId,
+      subAgents: [...state.subAgents.values()].map((meta) => ({
+        threadId: meta.threadId,
+        activeTurnId: meta.activeTurnId,
+        spawnItemId: meta.spawnItemId,
+        terminalEmitted: meta.terminalEmitted,
+        settleOnTurnEnd: meta.settleOnTurnEnd,
+      })),
+      targets,
+    });
 
     await Promise.all(
       targets.map((target) =>
