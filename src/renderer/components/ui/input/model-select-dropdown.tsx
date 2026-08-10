@@ -127,6 +127,8 @@ export function ModelSelectDropdown({
     variant === "claude" && selectedModelEffortLevels.length === 0;
   const mainMenuRef = useRef<HTMLDivElement>(null);
   const effortMenuRef = useRef<HTMLDivElement>(null);
+  /** The submenu's "<model> · Effort" caption — measured to offset the panel. */
+  const effortMenuHeaderRef = useRef<HTMLDivElement>(null);
   const effortCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Latest pointer position over the model list, for the safe-triangle test. */
   const pointerRef = useRef<Point | null>(null);
@@ -139,9 +141,12 @@ export function ModelSelectDropdown({
   } | null>(null);
   const [hoveredModel, setHoveredModel] = useState<string | null>(null);
   const [effortMenuPosition, setEffortMenuPosition] = useState<{
-    /** Where the anchor row sits — the position we clamp back toward. */
+    /** Top of the anchor row — the line the first selectable entry lines up with. */
     anchorTop: number;
-    /** Applied top, clamped into the viewport once the submenu has rendered. */
+    /**
+     * Applied top: `anchorTop` lifted by the caption's height and clamped into
+     * the viewport, both resolved from measurements once the submenu renders.
+     */
     top: number;
     left: number;
   } | null>(null);
@@ -253,17 +258,23 @@ export function ModelSelectDropdown({
     });
   };
 
-  // The submenu's height depends on how many effort levels the model has, so
-  // it can only be clamped into the viewport once it has rendered. Layout
-  // effect: runs before paint, so the corrected position is never visible.
+  // Both offsets depend on rendered geometry — the panel's height varies with
+  // the model's effort levels, and the caption's height with the type scale —
+  // so they can only be applied once the submenu exists. Layout effect: runs
+  // before paint, so the correction is never visible.
   useLayoutEffect(() => {
     const element = effortMenuRef.current;
     if (!element || !effortMenuPosition) return;
+    // Lift the panel by its caption so the row lines up with the first
+    // *selectable* entry; landing on the caption means moving right from the
+    // model row hits dead space.
+    const captionHeight = effortMenuHeaderRef.current?.offsetHeight ?? 0;
     // offsetHeight, not getBoundingClientRect: the open animation scales the
     // panel from 0.85, and a transformed rect would measure ~15% short on the
     // first frame and clamp the panel off the bottom of the screen.
     const maxTop = Math.max(8, window.innerHeight - 8 - element.offsetHeight);
-    const clamped = Math.min(Math.max(8, effortMenuPosition.anchorTop), maxTop);
+    const desired = effortMenuPosition.anchorTop - captionHeight;
+    const clamped = Math.min(Math.max(8, desired), maxTop);
     if (Math.abs(clamped - effortMenuPosition.top) > 0.5) {
       setEffortMenuPosition({ ...effortMenuPosition, top: clamped });
     }
@@ -490,7 +501,10 @@ export function ModelSelectDropdown({
                 : "thinking mode"
             }`}
           >
-            <div className="flex items-center gap-1.5 px-3 pb-1.5 pt-2 text-xxs font-medium tracking-wide">
+            <div
+              ref={effortMenuHeaderRef}
+              className="flex items-center gap-1.5 px-3 pb-1.5 pt-2 text-xxs font-medium tracking-wide"
+            >
               <span className="shrink-0 text-primary-500 dark:text-primary-300">
                 {getModelIcon(hoveredModelDisplayName, variant)}
               </span>
