@@ -12,9 +12,9 @@ import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { dedupeModelsByPrettyName, getModelPrettyName } from "@/lib/model-icons";
 import {
   getProviderVariant,
-  pickDefaultEffort,
   type ProviderVariant,
 } from "@/lib/provider-variants";
+import { resolveEffortSelection } from "@/features/workspace/lib/resolve-effort";
 
 export function useProviderModels(
   activeProviderId: string,
@@ -169,7 +169,10 @@ export function useProviderModels(
     let patch: Record<string, unknown>;
     if (caps.thinkingCoupledToEffort) {
       // Codex/Copilot store the effort directly; thinking is inferred from it.
-      patch = { [caps.effortKey]: level || undefined };
+      // `thinkingMode` still rides along as the record of intent — without it,
+      // clearing the level is indistinguishable from never having chosen one
+      // and the clamp effect seeds the default straight back.
+      patch = { [caps.effortKey]: level || undefined, thinkingMode: !!level };
     } else if (caps.supportsUltracode && level === "ultracode") {
       // ultracode is stored as a boolean. It implies xhigh + workflow
       // orchestration, so clear effortLevel and let the driver send it via
@@ -263,40 +266,32 @@ export function useProviderModels(
     };
   }, [activeProviderId, refetchModels]);
 
-  // Clamp effort level when switching to a model that doesn't support the current level
+  // Clamp effort level when switching to a model that doesn't support the
+  // current level. The rules live in resolveEffortSelection; this effect only
+  // applies the verdict.
+  //
+  // `thinkingDisabled` reads the *raw* stored flag rather than the derived
+  // `thinkingMode` above: for the coupled variants that value is inferred from
+  // the effort level itself, so it reads false whenever nothing is stored and
+  // would block the very seeding this effect exists to do.
   useEffect(() => {
     if (!selectedModelInfo) return;
-    const supported = selectedModelInfo.supportedEffortLevels;
-    const supportsXhigh = !!supported?.includes("xhigh" as any);
-
-    // ultracode is on but the newly-selected model can't do xhigh — disable it
-    // and fall back to the highest supported level (or Off if none). This is
-    // what enforces "ultracode must not work on unsupported models".
-    if (ultracode && !supportsXhigh) {
-      handleEffortLevelChange(
-        supported && supported.length > 0 ? supported[supported.length - 1] : "",
-      );
-      return;
-    }
-    // ultracode is on and the model still supports xhigh — leave it alone.
-    // (Must return before the clamp branches below, otherwise the folded
-    // "ultracode" string gets clamped away on every render.)
-    if (ultracode) return;
-
-    if (!supported || supported.length === 0) {
-      // Model has no effort levels — clear it
-      if (effortLevel) handleEffortLevelChange("");
-    } else if (!effortLevel) {
-      // Model supports effort but nothing is stored (fresh install, or a model
-      // that just gained levels). Seed the variant's default so a run never
-      // goes out with the dropdown blank. This can't fight a deliberate "Off":
-      // the effort submenu only offers On/Off for models with *no* levels.
-      handleEffortLevelChange(pickDefaultEffort(supported, caps.effortDefault));
-    } else if (!supported.includes(effortLevel as any)) {
-      // Pick the highest supported level as fallback
-      handleEffortLevelChange(supported[supported.length - 1]);
-    }
-  }, [selectedModelInfo, effortLevel, ultracode, handleEffortLevelChange, caps]);
+    const resolution = resolveEffortSelection({
+      supportedEffortLevels: selectedModelInfo.supportedEffortLevels,
+      effortLevel,
+      ultracode,
+      thinkingDisabled: config.thinkingMode === false,
+      effortDefault: caps.effortDefault,
+    });
+    if (resolution) handleEffortLevelChange(resolution.effortLevel);
+  }, [
+    selectedModelInfo,
+    effortLevel,
+    ultracode,
+    config.thinkingMode,
+    handleEffortLevelChange,
+    caps,
+  ]);
 
   const handleModelChange = useCallback(
     (prettyName: string) => {

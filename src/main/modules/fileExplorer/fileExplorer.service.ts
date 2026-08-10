@@ -21,6 +21,7 @@ import {
   DEFAULT_SEARCH_FILES_MAX,
 } from "./fileExplorer.dto";
 import { gitService } from "../git";
+import { assertWithinContentRoots } from "./fileExplorer.roots";
 
 
 // ─────────────────────────────────────────────────────────────
@@ -331,8 +332,23 @@ export const fileExplorerService = {
   async getPathInfo(
     targetPath: string
   ): Promise<{ exists: boolean; isDirectory: boolean; isFile: boolean }> {
+    // Resolved before the containment check so a symlink is judged by its
+    // target, and before the stat so an out-of-root path can't be probed for
+    // existence — this call is what decides whether the editor opens a path.
+    let realPath: string;
     try {
-      const stat = await fs.stat(targetPath);
+      realPath = await fs.realpath(path.resolve(targetPath));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        return { exists: false, isDirectory: false, isFile: false };
+      }
+      throw new Error("Failed to get path info");
+    }
+
+    await assertWithinContentRoots(realPath);
+
+    try {
+      const stat = await fs.stat(realPath);
       return {
         exists: true,
         isDirectory: stat.isDirectory(),
@@ -358,9 +374,10 @@ export const fileExplorerService = {
   },
 
   /**
-   * Read file text. Single-user desktop app — the agent already has the
-   * user's full filesystem access, so the renderer can preview anywhere
-   * too. Keeps regular-file / size / binary safeguards.
+   * Read file text, confined to the content roots (see fileExplorer.roots).
+   * The renderer opens paths that untrusted markdown can name, so reachability
+   * is decided here rather than by the caller. Keeps the regular-file / size /
+   * binary safeguards.
    */
   async readFileText(
     options: ReadFileTextOptions
@@ -378,6 +395,10 @@ export const fileExplorerService = {
     } catch (error) {
       throwFsError(error, "File does not exist", "Failed to read file");
     }
+
+    // Checked on the resolved path: a link inside a workspace that points out
+    // of it escapes the boundary otherwise.
+    await assertWithinContentRoots(realPath);
 
     try {
       // Get file stats and validate it's a regular file
@@ -469,9 +490,9 @@ export const fileExplorerService = {
   /**
    * Overwrite an existing regular file with UTF-8 text. The target must
    * already exist — this backs in-place editing of previewed files, not
-   * file creation. Symlinks are resolved first so the regular-file check
-   * applies to the real target, and the same 2MB cap as readFileText keeps
-   * the renderer round-trip bounded.
+   * file creation. Symlinks are resolved first so the regular-file check and
+   * the content-root boundary both apply to the real target, and the same 2MB
+   * cap as readFileText keeps the renderer round-trip bounded.
    */
   async writeFileText(
     options: WriteFileTextOptions
@@ -495,6 +516,8 @@ export const fileExplorerService = {
     } catch (error) {
       throwFsError(error, "File does not exist", "Failed to write file");
     }
+
+    await assertWithinContentRoots(realPath);
 
     try {
       const stats = await fs.lstat(realPath);

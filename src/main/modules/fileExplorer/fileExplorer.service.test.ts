@@ -1,8 +1,24 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { promises as fs } from "fs";
 import { execFileSync } from "node:child_process";
 import * as path from "path";
 import * as os from "os";
+
+// The real roots come from the database; here the boundary is driven directly
+// so the service's behaviour on either side of it can be exercised. The
+// containment rule itself is tested in fileExplorer.roots.test.ts.
+const { allowedRoots } = vi.hoisted(() => ({ allowedRoots: [] as string[] }));
+vi.mock("./fileExplorer.roots", () => ({
+  assertWithinContentRoots: async (realPath: string) => {
+    const nodePath = await import("path");
+    const within = allowedRoots.some((root) => {
+      const rel = nodePath.relative(root, realPath);
+      return rel === "" || (!rel.startsWith("..") && !nodePath.isAbsolute(rel));
+    });
+    if (!within) throw new Error("Path is outside your workspaces");
+  },
+}));
+
 import { fileExplorerService } from "./fileExplorer.service";
 
 let tmpDir: string;
@@ -14,6 +30,9 @@ async function makeTmpDir(): Promise<string> {
 describe("fileExplorerService", () => {
   beforeEach(async () => {
     tmpDir = await makeTmpDir();
+    // realpath: on macOS the temp dir sits behind /var → /private/var, and the
+    // service checks the resolved path.
+    allowedRoots.splice(0, allowedRoots.length, await fs.realpath(tmpDir));
   });
 
   afterEach(async () => {
@@ -199,6 +218,18 @@ describe("fileExplorerService", () => {
       );
       expect(result.exists).toBe(false);
     });
+
+    it("rejects a path outside the content roots", async () => {
+      const outsideDir = await makeTmpDir();
+      const outsidePath = path.join(outsideDir, "external.txt");
+      await fs.writeFile(outsidePath, "external content");
+
+      await expect(
+        fileExplorerService.getPathInfo(outsidePath),
+      ).rejects.toThrow("Path is outside your workspaces");
+
+      await fs.rm(outsideDir, { recursive: true, force: true });
+    });
   });
 
   // ─────────────────────────────────────────────────────────────
@@ -234,20 +265,32 @@ describe("fileExplorerService", () => {
       expect(result.mtimeMs).toBe((await fs.stat(filePath)).mtimeMs);
     });
 
-    it("reads a file outside the workspace dir", async () => {
+    it("rejects a file outside the content roots", async () => {
       const outsideDir = await makeTmpDir();
       const outsidePath = path.join(outsideDir, "external.txt");
       await fs.writeFile(outsidePath, "external content");
 
-      const result = await fileExplorerService.readFileText({
-        filePath: outsidePath,
-      });
-      expect(result.content).toBe("external content");
+      await expect(
+        fileExplorerService.readFileText({ filePath: outsidePath }),
+      ).rejects.toThrow("Path is outside your workspaces");
 
       await fs.rm(outsideDir, { recursive: true, force: true });
     });
 
-    it("follows symlinks (including those pointing outside)", async () => {
+    it("follows symlinks within the content roots", async () => {
+      const targetFile = path.join(tmpDir, "target.txt");
+      await fs.writeFile(targetFile, "linked content");
+
+      const symlinkPath = path.join(tmpDir, "link");
+      await fs.symlink(targetFile, symlinkPath);
+
+      const result = await fileExplorerService.readFileText({
+        filePath: symlinkPath,
+      });
+      expect(result.content).toBe("linked content");
+    });
+
+    it("rejects a symlink that escapes the content roots", async () => {
       const outsideDir = await makeTmpDir();
       const outsideFile = path.join(outsideDir, "target.txt");
       await fs.writeFile(outsideFile, "linked content");
@@ -255,10 +298,9 @@ describe("fileExplorerService", () => {
       const symlinkPath = path.join(tmpDir, "link");
       await fs.symlink(outsideFile, symlinkPath);
 
-      const result = await fileExplorerService.readFileText({
-        filePath: symlinkPath,
-      });
-      expect(result.content).toBe("linked content");
+      await expect(
+        fileExplorerService.readFileText({ filePath: symlinkPath }),
+      ).rejects.toThrow("Path is outside your workspaces");
 
       await fs.rm(outsideDir, { recursive: true, force: true });
     });
@@ -381,6 +423,20 @@ describe("fileExplorerService", () => {
     });
 
     it("writes through symlinks to the real target", async () => {
+      const targetFile = path.join(tmpDir, "target.txt");
+      await fs.writeFile(targetFile, "original");
+
+      const symlinkPath = path.join(tmpDir, "link");
+      await fs.symlink(targetFile, symlinkPath);
+
+      await fileExplorerService.writeFileText({
+        filePath: symlinkPath,
+        content: "updated",
+      });
+      expect(await fs.readFile(targetFile, "utf-8")).toBe("updated");
+    });
+
+    it("rejects a write whose real target escapes the content roots", async () => {
       const outsideDir = await makeTmpDir();
       const outsideFile = path.join(outsideDir, "target.txt");
       await fs.writeFile(outsideFile, "original");
@@ -388,11 +444,13 @@ describe("fileExplorerService", () => {
       const symlinkPath = path.join(tmpDir, "link");
       await fs.symlink(outsideFile, symlinkPath);
 
-      await fileExplorerService.writeFileText({
-        filePath: symlinkPath,
-        content: "updated",
-      });
-      expect(await fs.readFile(outsideFile, "utf-8")).toBe("updated");
+      await expect(
+        fileExplorerService.writeFileText({
+          filePath: symlinkPath,
+          content: "updated",
+        }),
+      ).rejects.toThrow("Path is outside your workspaces");
+      expect(await fs.readFile(outsideFile, "utf-8")).toBe("original");
 
       await fs.rm(outsideDir, { recursive: true, force: true });
     });

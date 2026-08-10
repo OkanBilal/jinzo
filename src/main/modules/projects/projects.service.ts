@@ -26,8 +26,8 @@ export const projectsService = {
   // ─────────────────────────────────────────────────────────────
   // Project lifecycle
   // ─────────────────────────────────────────────────────────────
-  async list(): Promise<ProjectResponse[]> {
-    return projectsRepo.findAll();
+  async list(includeArchived = false): Promise<ProjectResponse[]> {
+    return projectsRepo.findAll(includeArchived);
   },
 
   async get(id: string): Promise<ProjectResponse | null> {

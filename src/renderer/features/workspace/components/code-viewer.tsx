@@ -187,8 +187,15 @@ export function CodeViewer({
   // ⌘L shortcut reuse the same action as clicking the button.
   const selectionActionRef = useRef<SelectionActionCtx | null>(null);
 
+  // Without a path the selection has no resolvable reference — the agent would
+  // receive `@file#L3` and a "Code selection from file" header naming nothing.
+  // So the action is gated on `filePath`, same as editing.
   const addSelectionToChat = useCallback(
     (ctx: SelectionActionCtx) => {
+      if (!filePath) {
+        ctx.close();
+        return;
+      }
       const text = ctx.getSelectionText();
       if (text.trim().length > 0) {
         const { start, end } = ctx.selection;
@@ -199,8 +206,8 @@ export function CodeViewer({
         dispatch(
           addContextCodeSelection({
             id: crypto.randomUUID(),
-            filePath: filePath ?? filename ?? "file",
-            fileName: filename ?? "file",
+            filePath,
+            fileName: filename ?? filePath.split("/").pop() ?? filePath,
             startLine: start.line + 1,
             endLine: endLine + 1,
             text,
@@ -221,7 +228,7 @@ export function CodeViewer({
         setSaveState("dirty");
         schedule();
       },
-      enabledSelectionAction: true,
+      enabledSelectionAction: !!filePath,
       // The widget mounts inside the editor's shadow DOM, so Tailwind classes
       // don't reach it — styles must be inline. The library's popover wrapper
       // already draws the chrome (border, bg, shadow), so the button itself is
@@ -263,7 +270,7 @@ export function CodeViewer({
         return button;
       },
     }),
-    [schedule, addSelectionToChat],
+    [schedule, addSelectionToChat, filePath],
   );
 
   const handleReload = useCallback(async () => {

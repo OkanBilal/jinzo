@@ -409,8 +409,8 @@ export const workspaceService = {
   // ── Workspace lifecycle ──
   // ─────────────────────────────────────────────────────────────
 
-  async list(): Promise<WorkspaceResponse[]> {
-    return workspaceRepo.findAll();
+  async list(includeArchived = false): Promise<WorkspaceResponse[]> {
+    return workspaceRepo.findAll(includeArchived);
   },
 
   /**
