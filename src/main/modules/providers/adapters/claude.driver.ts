@@ -69,6 +69,7 @@ import {
   extractArtifactsFromToolOutput,
   formatContextSection,
   appendPromptSections,
+  resolveCatalogDefaultId,
 } from "./adapter.shared";
 import type { MainsToolContext } from "./mains-tools.core";
 import { toClaudeTools } from "./mains-tools.registry";
@@ -1919,7 +1920,12 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       }
     }
 
-    if (config.thinkingMode) {
+    // ultracode implies xhigh effort, and the API rejects xhigh outright when
+    // thinking is disabled ("effort 'xhigh' is not supported when thinking is
+    // disabled on this model"). A stale `thinkingMode: false` alongside
+    // `ultracode: true` must therefore not reach the CLI — ultracode wins.
+    const thinkingEnabled = !!config.thinkingMode || !!config.ultracode;
+    if (thinkingEnabled) {
       // A fixed token budget takes precedence over adaptive thinking. Useful on
       // models without adaptive support, or to cap cost/latency.
       options.thinking =
@@ -1938,7 +1944,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
         ...((options.settings as Record<string, unknown>) || {}),
         ultracode: true,
       };
-    } else if (config.thinkingMode && config.effortLevel) {
+    } else if (thinkingEnabled && config.effortLevel) {
       options.effort = config.effortLevel;
     }
 
@@ -2717,7 +2723,12 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
             ? sdkModels.filter((m) => m.value !== "default")
             : sdkModels;
 
-        const models: ModelInfo[] = selectableSdkModels.map((sdkModel, index) => {
+        const defaultModelId = resolveClaudeDefaultModelId(
+          sdkModels,
+          config.defaultModel,
+        );
+
+        const models: ModelInfo[] = selectableSdkModels.map((sdkModel) => {
           // SDK's .d.ts declares supportsFastMode but the runtime payload doesn't include it.
           // Fast mode is currently meaningful only on opus; this fallback lights it up
           // automatically when the SDK starts surfacing the field.
@@ -2727,9 +2738,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
             id,
             displayName: sdkModel.displayName,
             description: sdkModel.description,
-            isDefault:
-              sdkModel.value === config.defaultModel ||
-              (!config.defaultModel && index === 0),
+            isDefault: sdkModel.value === defaultModelId,
             capabilities: {
               streaming: true,
               vision: true,
@@ -3402,12 +3411,20 @@ function isValidMcpServerConfig(cfg: unknown): boolean {
   return false;
 }
 
+/**
+ * Offline fallback picker, used only when the SDK or the CLI binary is missing
+ * — the live `supportedModels()` list is the real catalogue.
+ *
+ * Display names are deliberately version-free: the CLI aliases below always
+ * resolve to the current generation, so spelling a version here only rots (this
+ * list read "Claude Opus 4.8" long after Opus 5 shipped). Effort levels are the
+ * conservative common set for the same reason.
+ */
 function getDefaultModels(defaultModel?: string): ModelInfo[] {
-  return [
+  const models: Array<Omit<ModelInfo, "isDefault">> = [
     {
       id: "fable",
-      displayName: "Claude Fable 5",
-      isDefault: defaultModel === "fable",
+      displayName: "Claude Fable",
       capabilities: { streaming: true, vision: true, functionCalling: true, reasoning: true },
       contextWindow: 200000,
       supportsFastMode: false,
@@ -3416,8 +3433,7 @@ function getDefaultModels(defaultModel?: string): ModelInfo[] {
     },
     {
       id: "sonnet",
-      displayName: "Claude Sonnet 4.6",
-      isDefault: defaultModel === "sonnet" || !defaultModel,
+      displayName: "Claude Sonnet",
       capabilities: { streaming: true, vision: true, functionCalling: true },
       contextWindow: 200000,
       supportsFastMode: true,
@@ -3426,30 +3442,78 @@ function getDefaultModels(defaultModel?: string): ModelInfo[] {
     },
     {
       id: "opus[1m]",
-      displayName: "Claude Opus 4.8",
-      isDefault: defaultModel === "opus[1m]",
+      displayName: "Claude Opus [1M]",
       capabilities: { streaming: true, vision: true, functionCalling: true, reasoning: true },
-      contextWindow: 200000,
+      contextWindow: 1000000,
       supportsFastMode: true,
       supportsEffort: true,
-      supportedEffortLevels: ["low", "medium", "high", "max"],
+      supportedEffortLevels: ["low", "medium", "high", "xhigh", "max"],
     },
     {
       id: "haiku",
-      displayName: "Claude Haiku 4.5",
-      isDefault: defaultModel === "haiku" || !defaultModel,
+      displayName: "Claude Haiku",
       capabilities: { streaming: true, vision: true, functionCalling: true },
-      contextWindow: 128000,
+      contextWindow: 200000,
       supportsFastMode: false,
       supportsEffort: true,
       supportedEffortLevels: ["low", "medium", "high"],
     },
   ];
+  const defaultId = resolveCatalogDefaultId(
+    models.map((m) => m.id),
+    defaultModel,
+    ["sonnet"],
+  );
+  return models.map((m) => ({ ...m, isDefault: m.id === defaultId }));
 }
 
 // ─────────────────────────────────────────────────────────────
 // Pure helpers exported for testing
 // ─────────────────────────────────────────────────────────────
+
+/**
+ * Decide which SDK model the picker should mark as default.
+ *
+ * A configured `providers.defaultModel` wins only while the SDK still offers
+ * it — a pinned id that has aged out (the seed shipped `claude-opus-4-8`, which
+ * is an API id and never matched an SDK alias at all) must not leave the
+ * catalogue with no default. Otherwise fall back to the SDK's synthetic
+ * "default" entry, which names the concrete model the CLI resolves to
+ * ("Use the default model (currently …)"); we drop that entry from the picker,
+ * but its text is the only signal for the CLI's own choice. Longest display
+ * name wins so "Claude Opus [1M]" beats "Claude Opus" on the same hint.
+ * Failing both, the SDK lists models in preference order — take the first.
+ */
+export function resolveClaudeDefaultModelId(
+  sdkModels: Array<{ value: string; displayName?: string; description?: string }>,
+  configuredDefault?: string,
+): string | undefined {
+  const selectable = sdkModels.filter((m) => m.value !== "default");
+  const pool = selectable.length > 0 ? selectable : sdkModels;
+  if (configuredDefault && pool.some((m) => m.value === configuredDefault)) {
+    return configuredDefault;
+  }
+
+  const synthetic = sdkModels.find((m) => m.value === "default");
+  const hint = `${synthetic?.displayName ?? ""} ${synthetic?.description ?? ""}`
+    .trim()
+    .toLowerCase();
+  if (hint) {
+    let namedId: string | undefined;
+    let namedLength = 0;
+    for (const model of pool) {
+      const name = model.displayName?.trim().toLowerCase();
+      if (!name || !hint.includes(name)) continue;
+      if (name.length > namedLength) {
+        namedId = model.value;
+        namedLength = name.length;
+      }
+    }
+    if (namedId) return namedId;
+  }
+
+  return pool[0]?.value;
+}
 
 /**
  * Map the `claude plugin list --json --available` payload plus

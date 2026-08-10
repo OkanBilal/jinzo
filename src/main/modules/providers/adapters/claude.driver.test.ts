@@ -24,6 +24,7 @@ import {
   normalizeSubagentOutput,
   buildSubagentCompletionEvent,
   mapSDKMessage,
+  resolveClaudeDefaultModelId,
 } from "./claude.driver";
 import type { ClaudeTaskIndex, SDKSystemMessage } from "./claude.driver";
 import fs from "node:fs";
@@ -38,6 +39,53 @@ const INHERITED_PERMISSION_SETTINGS = {
     allow: DEFAULT_ALLOWED_TOOLS,
   },
 };
+
+describe("claude.driver / resolveClaudeDefaultModelId", () => {
+  const sdkModels = [
+    { value: "default", description: "Use the default model (currently Claude Opus [1M])" },
+    { value: "sonnet", displayName: "Claude Sonnet" },
+    { value: "opus", displayName: "Claude Opus" },
+    { value: "opus[1m]", displayName: "Claude Opus [1M]" },
+  ];
+
+  it("honors a configured default the SDK still offers", () => {
+    expect(resolveClaudeDefaultModelId(sdkModels, "sonnet")).toBe("sonnet");
+  });
+
+  it("ignores a configured default that never matched an SDK alias", () => {
+    // What the v1 seed shipped: an API model id, not a CLI alias. Without the
+    // fallback no model got isDefault and the picker silently took list order.
+    expect(resolveClaudeDefaultModelId(sdkModels, "claude-opus-4-8")).toBe("opus[1m]");
+  });
+
+  it("reads the CLI's own default off the synthetic entry, longest name winning", () => {
+    // "Claude Opus" is also a substring of the hint — the [1M] variant must win.
+    expect(resolveClaudeDefaultModelId(sdkModels)).toBe("opus[1m]");
+  });
+
+  it("falls back to SDK order when there is no synthetic entry", () => {
+    expect(
+      resolveClaudeDefaultModelId([
+        { value: "sonnet", displayName: "Claude Sonnet" },
+        { value: "opus", displayName: "Claude Opus" },
+      ]),
+    ).toBe("sonnet");
+  });
+
+  it("falls back to SDK order when the hint names no known model", () => {
+    expect(
+      resolveClaudeDefaultModelId([
+        { value: "default", description: "Use the default model" },
+        { value: "sonnet", displayName: "Claude Sonnet" },
+      ]),
+    ).toBe("sonnet");
+  });
+
+  it("still resolves when the synthetic entry is the only model offered", () => {
+    expect(resolveClaudeDefaultModelId([{ value: "default" }])).toBe("default");
+    expect(resolveClaudeDefaultModelId([])).toBeUndefined();
+  });
+});
 
 describe("claude.driver / skill frontmatter", () => {
   it("folds multiline YAML descriptions into readable text", () => {

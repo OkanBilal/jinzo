@@ -61,6 +61,12 @@ export interface ProviderVariantDescriptor {
   /** Config key holding the effort level. */
   effortKey: "modelReasoningEffort" | "effortLevel";
   /**
+   * Preferred effort level when the selected model supports effort but the
+   * config holds none. `pickDefaultEffort` clamps this to what the model
+   * actually offers, so a variant never has to enumerate per-model levels.
+   */
+  effortDefault: string;
+  /**
    * When true, "thinking on" is inferred from the presence of an effort value
    * (no separate `thinkingMode` boolean), and an effort change writes only
    * `effortKey`. When false, thinking is its own `thinkingMode` boolean.
@@ -99,6 +105,7 @@ export const PROVIDER_VARIANTS: Record<ProviderVariant, ProviderVariantDescripto
     permissionKey: "permissionMode",
     permissionDefault: "default",
     effortKey: "effortLevel",
+    effortDefault: "medium",
     thinkingCoupledToEffort: false,
     fastMode: { kind: "boolean", key: "fastMode" },
     authLoginCommand: "claude auth login",
@@ -119,6 +126,7 @@ export const PROVIDER_VARIANTS: Record<ProviderVariant, ProviderVariantDescripto
     permissionKey: "permissionMode",
     permissionDefault: "default",
     effortKey: "modelReasoningEffort",
+    effortDefault: "medium",
     thinkingCoupledToEffort: true,
     fastMode: { kind: "boolean", key: "fastMode" },
     authLoginCommand: "gh auth login",
@@ -139,6 +147,7 @@ export const PROVIDER_VARIANTS: Record<ProviderVariant, ProviderVariantDescripto
     permissionKey: "sandboxMode",
     permissionDefault: "workspace-write",
     effortKey: "modelReasoningEffort",
+    effortDefault: "medium",
     thinkingCoupledToEffort: true,
     fastMode: { kind: "serviceTier", key: "serviceTier", on: "fast", match: ["fast", "priority"] },
     authLoginCommand: "codex login",
@@ -159,6 +168,7 @@ export const PROVIDER_VARIANTS: Record<ProviderVariant, ProviderVariantDescripto
     permissionKey: "mode",
     permissionDefault: "agent",
     effortKey: "effortLevel",
+    effortDefault: "medium",
     thinkingCoupledToEffort: false,
     fastMode: { kind: "boolean", key: "fastMode" },
     authLoginCommand: "agent login",
@@ -175,6 +185,44 @@ export const PROVIDER_VARIANTS: Record<ProviderVariant, ProviderVariantDescripto
 
 export function getProviderVariant(variant: ProviderVariant): ProviderVariantDescriptor {
   return PROVIDER_VARIANTS[variant];
+}
+
+/**
+ * Canonical low→high ordering of effort levels, used to clamp a preferred level
+ * onto whatever the selected model actually advertises.
+ */
+const EFFORT_RANK = ["minimal", "low", "medium", "high", "xhigh", "max"];
+
+/**
+ * Resolve the effort level to select when a model supports effort but none is
+ * stored. Prefers `preferred`; otherwise the supported level closest to it in
+ * `EFFORT_RANK`, so a model missing "medium" lands on "low"/"high" rather than
+ * jumping to the most expensive tier. Returns "" when the model has no levels.
+ */
+export function pickDefaultEffort(
+  supported: readonly string[] | undefined,
+  preferred: string,
+): string {
+  if (!supported || supported.length === 0) return "";
+  if (supported.includes(preferred)) return preferred;
+
+  const target = EFFORT_RANK.indexOf(preferred);
+  if (target < 0) return supported[supported.length - 1];
+
+  let best: string | undefined;
+  let bestDistance = Infinity;
+  for (const level of supported) {
+    const rank = EFFORT_RANK.indexOf(level);
+    if (rank < 0) continue;
+    // Ties (equidistant above/below) resolve downward: `<` keeps the first
+    // match, and the loop walks `supported` in the driver's low→high order.
+    const distance = Math.abs(rank - target);
+    if (distance < bestDistance) {
+      best = level;
+      bestDistance = distance;
+    }
+  }
+  return best ?? supported[supported.length - 1];
 }
 
 /**

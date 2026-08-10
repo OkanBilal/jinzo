@@ -10,7 +10,11 @@ import {
 import { setWorkspaceModel } from "@/lib/redux/slices/workspaceSlice";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { dedupeModelsByPrettyName, getModelPrettyName } from "@/lib/model-icons";
-import { getProviderVariant, type ProviderVariant } from "@/lib/provider-variants";
+import {
+  getProviderVariant,
+  pickDefaultEffort,
+  type ProviderVariant,
+} from "@/lib/provider-variants";
 
 export function useProviderModels(
   activeProviderId: string,
@@ -123,16 +127,22 @@ export function useProviderModels(
   const handleThinkingModeToggle = useCallback(async () => {
     if (!providerData) return;
     const currentConfig = providerData.config ?? {};
+    const enabling = !thinkingMode;
     await updateProvider({
       id: activeProviderId,
       payload: {
         config: {
           ...currentConfig,
-          thinkingMode: !thinkingMode,
+          thinkingMode: enabling,
+          // ultracode means xhigh, which the API rejects outright when thinking
+          // is disabled. Leaving it set here is what produced "effort 'xhigh'
+          // is not supported when thinking is disabled on this model" — turning
+          // thinking off has to clear the effort selection with it.
+          ...(enabling ? {} : { ultracode: false, [caps.effortKey]: undefined }),
         },
       },
     });
-  }, [providerData, thinkingMode, activeProviderId, updateProvider]);
+  }, [providerData, thinkingMode, activeProviderId, updateProvider, caps]);
 
   const handleFastModeToggle = useCallback(async () => {
     if (!providerData) return;
@@ -222,12 +232,24 @@ export function useProviderModels(
   }, [providerModels, selectedModel]);
 
   useEffect(() => {
-    if (providerModels && providerModels.length > 0 && !selectedModel) {
+    if (!providerModels || providerModels.length === 0) return;
+    const selectCatalogDefault = () => {
       const defaultModel =
         providerModels.find((m) => m.isDefault) ?? providerModels[0];
       setSelectedModel(defaultModel.id);
+    };
+    if (!selectedModel) {
+      selectCatalogDefault();
+      return;
     }
-  }, [providerModels, selectedModel, setSelectedModel]);
+    // The pick is persisted (localStorage) indefinitely, but providers rotate
+    // their catalogs every few months and retired ids drop off `listModels`.
+    // Re-anchor on the live default instead of sending a dead id to the CLI.
+    // Guarded on a settled fetch so an auth failure or an in-flight refetch
+    // can't clobber a still-valid selection.
+    if (isFetchingModels || modelsError) return;
+    if (!providerModels.some((m) => m.id === selectedModel)) selectCatalogDefault();
+  }, [providerModels, selectedModel, setSelectedModel, isFetchingModels, modelsError]);
 
   // Background model-capability discovery (e.g. Cursor per-model effort levels)
   // runs after the initial fast model list returns; refetch to pick up the
@@ -264,14 +286,17 @@ export function useProviderModels(
     if (!supported || supported.length === 0) {
       // Model has no effort levels — clear it
       if (effortLevel) handleEffortLevelChange("");
-    } else if (thinkingMode && !effortLevel) {
-      // Thinking is on but no effort level set — pick the highest supported
-      handleEffortLevelChange(supported[supported.length - 1]);
-    } else if (effortLevel && !supported.includes(effortLevel as any)) {
+    } else if (!effortLevel) {
+      // Model supports effort but nothing is stored (fresh install, or a model
+      // that just gained levels). Seed the variant's default so a run never
+      // goes out with the dropdown blank. This can't fight a deliberate "Off":
+      // the effort submenu only offers On/Off for models with *no* levels.
+      handleEffortLevelChange(pickDefaultEffort(supported, caps.effortDefault));
+    } else if (!supported.includes(effortLevel as any)) {
       // Pick the highest supported level as fallback
       handleEffortLevelChange(supported[supported.length - 1]);
     }
-  }, [selectedModelInfo, effortLevel, thinkingMode, ultracode, handleEffortLevelChange]);
+  }, [selectedModelInfo, effortLevel, ultracode, handleEffortLevelChange, caps]);
 
   const handleModelChange = useCallback(
     (prettyName: string) => {

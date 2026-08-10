@@ -50,6 +50,7 @@ import {
   appendPromptSections,
   saveAttachments,
   formatContextSection,
+  resolveCatalogDefaultId,
 } from "./adapter.shared";
 import { MainsMcpStdioServer } from "./mains-mcp-server";
 import type { MainsToolContext } from "./mains-tools.core";
@@ -2256,12 +2257,6 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
           modelCapsCache.set(currentModelId, extractCursorModelCaps(configOptions));
         }
 
-        // Match the catalog default against the *base* id (defaults may carry a
-        // `[fast=true]` suffix the advertised model values don't have).
-        const defaultBase = config.defaultModel
-          ? splitCursorModelSpec(config.defaultModel).baseId
-          : currentModelId;
-
         const seen = new Set<string>();
         const deduped: Array<{ id: string; name: string }> = [];
         for (const c of choices) {
@@ -2270,6 +2265,27 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
           seen.add(id);
           deduped.push({ id, name: c.name });
         }
+
+        // Match the catalog default against the *base* id (defaults may carry a
+        // `[fast=true]` suffix the advertised model values don't have).
+        //
+        // Cursor advertises its plan-agnostic auto-routing model under the id
+        // `default` (display name "Auto") — not `auto`, which is only the CLI
+        // *flag* spelling.
+        //
+        // `currentModelId` is deliberately NOT a fallback here. The CLI persists
+        // it globally, and `enrichModelCaps` rewrites it once per model as it
+        // probes capabilities, so it settles on whichever id happened to be
+        // probed last — it surfaced in the picker as a random model. The
+        // catalog's first entry is a real preference-order signal; that value
+        // is not.
+        const defaultBase = resolveCatalogDefaultId(
+          deduped.map((c) => c.id),
+          config.defaultModel
+            ? splitCursorModelSpec(config.defaultModel).baseId
+            : undefined,
+          ["default", "auto"],
+        );
 
         const models = deduped.map((c) =>
           buildCursorModelInfo(c.id, c.name, c.id === defaultBase, modelCapsCache.get(c.id)),

@@ -8,9 +8,40 @@ import {
   formatFilesSection,
   appendPromptSections,
   emitUserPromptArtifact,
+  resolveCatalogDefaultId,
   DEFAULT_ALLOWED_TOOLS,
   ALLOWED_TOOLS_SET,
 } from "./adapter.shared";
+
+describe("resolveCatalogDefaultId", () => {
+  const catalog = ["auto", "gpt-6", "claude-sonnet-9"];
+
+  it("honors a configured default that the catalog still offers", () => {
+    expect(resolveCatalogDefaultId(catalog, "gpt-6", ["auto"])).toBe("gpt-6");
+  });
+
+  it("falls through to the driver's preference when the pin aged out", () => {
+    // The rotation case: the id the user pinned months ago is gone.
+    expect(resolveCatalogDefaultId(catalog, "gpt-5.4", ["auto"])).toBe("auto");
+  });
+
+  it("falls through to the first catalog entry when nothing preferred is offered", () => {
+    expect(resolveCatalogDefaultId(["gpt-6", "gpt-6-mini"], "gpt-5.4", ["auto"])).toBe(
+      "gpt-6",
+    );
+    expect(resolveCatalogDefaultId(catalog, undefined)).toBe("auto");
+  });
+
+  it("walks preferences in order and skips empty entries", () => {
+    expect(resolveCatalogDefaultId(catalog, null, ["", "nope", "gpt-6", "auto"])).toBe(
+      "gpt-6",
+    );
+  });
+
+  it("returns undefined for an empty catalog", () => {
+    expect(resolveCatalogDefaultId([], "gpt-6", ["auto"])).toBeUndefined();
+  });
+});
 
 describe("createLogger", () => {
   it("creates logger with info, warn, error methods", () => {
