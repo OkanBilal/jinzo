@@ -103,7 +103,6 @@ afterEach(async () => {
   delete process.env.MAINS_CODEX_FIXTURE_LEGACY_INITIALIZE;
   delete process.env.MAINS_CODEX_FIXTURE_PLUGINS_ENABLED;
   delete process.env.MAINS_CODEX_FIXTURE_ACCOUNT;
-  delete process.env.MAINS_CODEX_DEBUG_INTERRUPT;
   await Promise.all(drivers.splice(0).map((driver) => driver.shutdown?.()));
   for (const dir of tempDirs.splice(0)) {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -1019,9 +1018,6 @@ describe("codex.driver / app-server protocol", () => {
     tempDirs.push(tempDir);
     const logPath = path.join(tempDir, "protocol.jsonl");
     process.env.MAINS_CODEX_FIXTURE_LOG = logPath;
-    // TEMPORARY (remove with the flake investigation) — see the
-    // [codex-interrupt-diag] block in codex-run-coordinator.
-    process.env.MAINS_CODEX_DEBUG_INTERRUPT = "1";
 
     const driver = createCodexDriver({
       binary: fixtureBinary,
@@ -1065,37 +1061,36 @@ describe("codex.driver / app-server protocol", () => {
     abortController.abort();
     await expect(outcomePromise).resolves.toMatchObject({ status: "canceled" });
 
+    // The outcome resolving does NOT mean both interrupts are on disk. The
+    // fixture answers the parent's turn/interrupt by emitting the parent's
+    // turn/completed, which finalizes the run — it can do that before it has
+    // even read the child's interrupt off stdin, and the log is written by
+    // that separate process. Reading once here saw only the parent on ubuntu
+    // CI while the child's line landed microseconds later. Wait for it.
+    await waitForProtocolMessage(
+      logPath,
+      (message) =>
+        message.method === "turn/interrupt" &&
+        (message.params as { threadId?: string } | undefined)?.threadId ===
+          "thread-1-child",
+      2000,
+    );
+
     const interruptedTurns = readProtocolLog(logPath)
       .filter((message) => message.method === "turn/interrupt")
       .map((message) => message.params);
-    try {
-      expect(interruptedTurns).toEqual(
-        expect.arrayContaining([
-          {
-            threadId: "thread-1",
-            turnId: "turn-thread-1",
-          },
-          {
-            threadId: "thread-1-child",
-            turnId: "turn-thread-1-child",
-          },
-        ]),
-      );
-    } catch (error) {
-      // TEMPORARY (remove with the flake investigation): this assertion fails
-      // on ubuntu CI and not on macOS, and the array diff alone says nothing
-      // about why. Pair these with the [codex-interrupt-diag] lines from the
-      // coordinator to see the state interruptRunTurns actually snapshotted.
-      console.error(
-        "[subagent-abort-diag] events:",
-        JSON.stringify(firstEvents, null, 2),
-      );
-      console.error(
-        "[subagent-abort-diag] protocol:",
-        JSON.stringify(readProtocolLog(logPath), null, 2),
-      );
-      throw error;
-    }
+    expect(interruptedTurns).toEqual(
+      expect.arrayContaining([
+        {
+          threadId: "thread-1",
+          turnId: "turn-thread-1",
+        },
+        {
+          threadId: "thread-1-child",
+          turnId: "turn-thread-1-child",
+        },
+      ]),
+    );
 
     await driver.cleanup?.(acquired.session);
     const continued = await driver.resumeSession?.({
