@@ -142,28 +142,45 @@ async function handlePreSessionFailure(runId: string, error: unknown): Promise<v
 
 type RunSessionLifecycleAction = "archive" | "unarchive" | "delete";
 
-/** Keep Mains' archived-run state aligned with Codex's persisted thread store. */
+/**
+ * Keep Mains' archived-run state aligned with Codex's persisted thread store.
+ *
+ * **Best effort by design.** Mains owns its own archive/unarchive/delete state;
+ * the Codex thread store is a second copy the user can mutate independently
+ * (from the Codex CLI, or by deleting the rollout). Archiving a run in Mains
+ * that was already archived on the Codex side answers
+ * `no rollout found for thread id … (-32600)` — the two stores agreeing, not a
+ * reason to refuse the local mutation. Every failure here is therefore logged
+ * and swallowed, so the Codex layer can never block the operation the user
+ * actually asked for.
+ */
 async function syncCodexRunSession(
   run: RunResponse,
   action: RunSessionLifecycleAction,
 ): Promise<void> {
   if (run.providerId !== PROVIDER_IDS.codex || !run.sessionId) return;
 
-  const provider = await providersService.getById(run.providerId);
-  if (!provider) throw new Error("Codex provider not found");
+  try {
+    const provider = await providersService.getById(run.providerId);
+    if (!provider) return;
 
-  const adapter = createWorkAdapter(provider);
-  const lifecycleMethod =
-    action === "archive"
-      ? adapter.archiveSession
-      : action === "unarchive"
-        ? adapter.unarchiveSession
-        : adapter.deleteSession;
+    const adapter = createWorkAdapter(provider);
+    const lifecycleMethod =
+      action === "archive"
+        ? adapter.archiveSession
+        : action === "unarchive"
+          ? adapter.unarchiveSession
+          : adapter.deleteSession;
 
-  if (!lifecycleMethod) {
-    throw new Error(`Codex thread ${action} is not available`);
+    if (!lifecycleMethod) return;
+    await lifecycleMethod.call(adapter, run.id);
+  } catch (err) {
+    console.warn(
+      `[RunsService] Codex thread ${action} failed for run ${run.id}; ` +
+        `continuing with the local ${action}:`,
+      err instanceof Error ? err.message : err,
+    );
   }
-  await lifecycleMethod.call(adapter, run.id);
 }
 
 // ─────────────────────────────────────────────────────────────
