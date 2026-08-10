@@ -67,6 +67,34 @@ async function waitForProtocolMessage(
   return readProtocolLog(logPath).find(predicate);
 }
 
+/**
+ * Wait for a driver event, failing loudly on timeout.
+ *
+ * Notifications only reach the protocol log when the *client* sends them, so
+ * server-driven state (a subagent's turn starting, say) can only be observed
+ * through the emitted events. Polling with a silent deadline turns a missed
+ * signal into a confusing assertion diff further down, so this throws instead.
+ */
+async function waitForDriverEvent(
+  events: Array<Record<string, unknown>>,
+  predicate: (event: Record<string, unknown>) => boolean,
+  label: string,
+  timeoutMs = 2000,
+): Promise<Record<string, unknown>> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const match = events.find(predicate);
+    if (match) return match;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error(
+    `Timed out after ${timeoutMs}ms waiting for ${label}. Saw: ${
+      events.map((event) => `${event.type}/${event.phase ?? ""}`).join(", ") ||
+      "(no events)"
+    }`,
+  );
+}
+
 afterEach(async () => {
   vi.restoreAllMocks();
   approvalHarness.requests.length = 0;
@@ -1015,15 +1043,20 @@ describe("codex.driver / app-server protocol", () => {
       logPath,
       (message) => message.method === "turn/start",
     );
-    const childStartedDeadline = Date.now() + 500;
-    while (
-      Date.now() < childStartedDeadline &&
-      !firstEvents.some(
-        (event) => event.type === "subagent" && event.phase === "invoked",
-      )
-    ) {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    }
+    // Wait for "running", not "invoked". The spawn item that produces
+    // "invoked" arrives one notification *before* the child's turn/started,
+    // and it is that turn/started which records the child's activeTurnId —
+    // the field interruptRunTurns needs to target it. Aborting on "invoked"
+    // races the two, and loses whenever the notifications land in separate
+    // stdin chunks.
+    await waitForDriverEvent(
+      firstEvents,
+      (event) =>
+        event.type === "subagent" &&
+        event.phase === "running" &&
+        event.agentId === "thread-1-child",
+      "the child subagent's turn to start",
+    );
 
     abortController.abort();
     await expect(outcomePromise).resolves.toMatchObject({ status: "canceled" });
