@@ -21,46 +21,11 @@ export function humanizeAgentName(name: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-/**
- * The glyph's own accent palette — deliberately wider than the icon picker's
- * `ICON_COLORS` (that palette is a curated choice UI; this one exists to keep
- * sibling agents visually apart, so more hues = fewer collisions). Every
- * Tailwind hue family, tuned per hue so each reads at small sizes on both
- * themes. Class strings must stay literal for the Tailwind scanner.
- */
-const AGENT_ACCENTS = [
-  "text-red-500 dark:text-red-400",
-  "text-orange-500 dark:text-orange-400",
-  "text-amber-500 dark:text-amber-400",
-  "text-yellow-500 dark:text-yellow-400",
-  "text-lime-600 dark:text-lime-400",
-  "text-green-600 dark:text-green-500",
-  "text-emerald-600 dark:text-emerald-400",
-  "text-teal-600 dark:text-teal-400",
-  "text-cyan-600 dark:text-cyan-400",
-  "text-sky-500 dark:text-sky-400",
-  "text-blue-500 dark:text-blue-400",
-  "text-indigo-500 dark:text-indigo-400",
-  "text-violet-500 dark:text-violet-400",
-  "text-purple-500 dark:text-purple-400",
-  "text-fuchsia-500 dark:text-fuchsia-400",
-  "text-pink-500 dark:text-pink-400",
-  "text-rose-500 dark:text-rose-400",
-];
-
-/**
- * Deterministic accent color for an agent, hashed from its display name.
- * Codex's own UI gives each agent a generated glyph; we get the same "each
- * agent has a face" effect from a stable tint on the shared Bot icon,
- * without inventing artwork outside the app's icon language.
- */
-export function subagentColorClass(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = (hash * 31 + name.charCodeAt(i)) | 0;
-  }
-  return AGENT_ACCENTS[Math.abs(hash) % AGENT_ACCENTS.length];
-}
+// The agent's accent color used to live here as a table of Tailwind classes
+// that every call site had to remember to pair with the glyph. It is now
+// hashed from the same seed inside `AgentGlyph` (see `glyphHue`), so the mark
+// and its color cannot drift apart and the palette is no longer capped by
+// Tailwind's hue families.
 
 // ─────────────────────────────────────────────────────────────
 // Tool vocabulary — the ONE place the subagent-related tool names live.

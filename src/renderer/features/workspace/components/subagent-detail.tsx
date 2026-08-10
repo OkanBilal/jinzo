@@ -21,7 +21,6 @@ import {
 } from "../lib/subagent-flow";
 import {
   AGENT_ID_IN_RESULT,
-  subagentColorClass,
   subagentDisplay,
   type SubagentLifecycleMeta,
   type SubagentLifecycleState,
@@ -136,7 +135,7 @@ export function SubagentDetail({
         <AgentGlyph
           seed={display.name}
           active={state === "running"}
-          className={`size-4 ${subagentColorClass(display.name)}`}
+          className="size-4"
         />
         <span className="min-w-0 flex-1 truncate text-sm font-medium text-primary-700 dark:text-primary-200">
           {display.name}

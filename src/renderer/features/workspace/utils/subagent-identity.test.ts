@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { humanizeAgentName, subagentColorClass, subagentDisplay, subagentStateOf } from "./subagent-identity";
+import { humanizeAgentName, subagentDisplay, subagentStateOf } from "./subagent-identity";
 
 describe("humanizeAgentName", () => {
   it.each([
@@ -12,20 +12,6 @@ describe("humanizeAgentName", () => {
     ["Security review", "Security review"],
   ])("%s → %s", (input, expected) => {
     expect(humanizeAgentName(input)).toBe(expected);
-  });
-});
-
-describe("subagentColorClass", () => {
-  it("is deterministic for the same name", () => {
-    expect(subagentColorClass("Security review")).toBe(
-      subagentColorClass("Security review"),
-    );
-  });
-
-  it("always yields a non-empty tint class", () => {
-    for (const name of ["Security review", "Test gaps", "Maintainability", "a", ""]) {
-      expect(subagentColorClass(name)).toMatch(/^text-/);
-    }
   });
 });
 

@@ -86,6 +86,8 @@ function settleSubAgent(
 ): WorkRunEvent | null {
   if (!meta.spawnItemId || meta.terminalEmitted) return null;
   meta.terminalEmitted = true;
+  meta.terminalPhase = phase;
+  meta.activeTurnId = undefined;
   return {
     type: "subagent",
     phase,
@@ -130,38 +132,45 @@ export interface CodexEventRunState {
   runStartedAt: number;
   planBuffers: Map<string, string>;
   lastPlanSnapshot: string | null;
-  subAgents: Map<
-    string,
-    {
-      threadId: string;
-      nickname?: string;
-      role?: string;
-      /**
-       * Id of the collabAgentToolCall item (spawnAgent, or resumeAgent for
-       * threads spawned outside this run) this sub-agent is anchored to.
-       * Child tool calls and lifecycle events attach to it via
-       * `parentToolUseId`, which is what the session panel's flow view keys on.
-       */
-      spawnItemId?: string;
-      /** Guards against re-emitting the terminal subagent event on every
-       * wait/close agentsStates snapshot. */
-      terminalEmitted?: boolean;
-      /**
-       * multi_agent v1 (`subAgentActivity` items) has no terminal activity
-       * kind — a v1 agent is done when its own turn completes, so its
-       * registration opts into settling there. v2 collab agents are
-       * multi-turn (wait/sendInput) and settle from agentsStates instead.
-       */
-      settleOnTurnEnd?: boolean;
-      /**
-       * The sub-thread's latest completed agentMessage — its report. The
-       * message items themselves are filtered from the parent timeline, so
-       * this is the only place the text survives to become the terminal
-       * subagent event's `result`.
-       */
-      lastMessage?: string;
-    }
-  >;
+  subAgents: Map<string, CodexSubAgentRunMeta>;
+}
+
+export interface CodexSubAgentRunMeta {
+  threadId: string;
+  nickname?: string;
+  role?: string;
+  prompt?: string;
+  /**
+   * Id of the collabAgentToolCall item (spawnAgent, or resumeAgent for
+   * threads spawned outside this run) this sub-agent is anchored to.
+   * Child tool calls and lifecycle events attach to it via
+   * `parentToolUseId`, which is what the session panel's flow view keys on.
+   */
+  spawnItemId?: string;
+  /** Guards against re-emitting the terminal subagent event on every
+   * wait/close agentsStates snapshot. */
+  terminalEmitted?: boolean;
+  /** Last terminal outcome, retained across parent-turn cleanup so a
+   * continuation knows which children require an explicit resume. */
+  terminalPhase?: "completed" | "failed" | "stopped";
+  /** The child turn currently eligible for run-level interruption. */
+  activeTurnId?: string;
+  /** Prevents duplicate `running` lifecycle events for one child turn. */
+  lastRunningTurnId?: string;
+  /**
+   * multi_agent v1 (`subAgentActivity` items) has no terminal activity
+   * kind — a v1 agent is done when its own turn completes, so its
+   * registration opts into settling there. v2 collab agents are
+   * multi-turn (wait/sendInput) and settle from agentsStates instead.
+   */
+  settleOnTurnEnd?: boolean;
+  /**
+   * The sub-thread's latest completed agentMessage — its report. The
+   * message items themselves are filtered from the parent timeline, so
+   * this is the only place the text survives to become the terminal
+   * subagent event's `result`.
+   */
+  lastMessage?: string;
 }
 
 export function createCodexEventRunState(
@@ -766,11 +775,22 @@ export function createCodexEventMapper(
 
     const receiverThreadIds =
       ((item?.receiverThreadIds ?? item?.receiver_thread_ids) as string[] | undefined) ?? [];
-    const unknownIds = receiverThreadIds.filter((id) => !runState.subAgents.has(id));
-    if (unknownIds.length === 0) return;
+    // Receiver ids are synchronously pre-registered by the coordinator for
+    // routing. Presence in this map therefore does not mean the child identity
+    // has already been resolved.
+    const unresolvedIds = receiverThreadIds.filter((id) => {
+      const meta = runState.subAgents.get(id);
+      const nickname = meta?.nickname?.trim().toLowerCase();
+      const role = meta?.role?.trim().toLowerCase();
+      return (
+        (!nickname || nickname === "agent" || nickname === "subagent") &&
+        (!role || role === "agent" || role === "subagent")
+      );
+    });
+    if (unresolvedIds.length === 0) return;
 
     await Promise.all(
-      unknownIds.map(async (threadId) => {
+      unresolvedIds.map(async (threadId) => {
         try {
           const response = await server.sendRequest("thread/read", {
             threadId,
@@ -778,11 +798,19 @@ export function createCodexEventMapper(
           });
           const nickname = response.thread.agentNickname ?? undefined;
           const role = response.thread.agentRole ?? undefined;
-          runState.subAgents.set(threadId, { threadId, nickname: nickname ?? undefined, role: role ?? undefined });
+          const existing = runState.subAgents.get(threadId);
+          runState.subAgents.set(threadId, {
+            ...existing,
+            threadId,
+            ...(nickname ? { nickname } : {}),
+            ...(role ? { role } : {}),
+          });
         } catch {
           // App-server doesn't know the thread yet, or read failed — keep
           // placeholder; the artifact will fall back to a short threadId.
-          runState.subAgents.set(threadId, { threadId });
+          if (!runState.subAgents.has(threadId)) {
+            runState.subAgents.set(threadId, { threadId });
+          }
         }
       }),
     );
@@ -846,6 +874,31 @@ export function createCodexEventMapper(
           ) {
             runState.turnId = turnId;
             runState.lastPlanSnapshot = null;
+          } else if (runState && threadId) {
+            const meta = runState.subAgents.get(threadId);
+            if (
+              meta?.spawnItemId &&
+              meta.lastRunningTurnId !== turnId &&
+              meta.terminalEmitted !== false
+            ) {
+              meta.activeTurnId = turnId;
+              meta.lastRunningTurnId = turnId;
+              meta.terminalEmitted = false;
+              meta.terminalPhase = undefined;
+              events.push({
+                type: "subagent",
+                phase: "running",
+                agentType: meta.nickname ?? meta.role ?? "agent",
+                agentId: threadId,
+                parentToolUseId: meta.spawnItemId,
+                ts,
+                metadata: {
+                  toolCallId: meta.spawnItemId,
+                  threadId,
+                  turnId,
+                },
+              });
+            }
           }
         }
         break;
@@ -2343,6 +2396,7 @@ export function createCodexEventMapper(
                   // to running and may settle again exactly once.
                   if (tool === "resumeAgent" && existing.terminalEmitted) {
                     existing.terminalEmitted = false;
+                    existing.terminalPhase = undefined;
                     events.push({
                       type: "subagent",
                       phase: "running",
@@ -2355,7 +2409,12 @@ export function createCodexEventMapper(
                   }
                   continue;
                 }
-                const meta = { ...existing, threadId, spawnItemId: item.id };
+                const meta = {
+                  ...existing,
+                  threadId,
+                  spawnItemId: item.id,
+                  prompt,
+                };
                 runStateCollab.subAgents.set(threadId, meta);
                 events.push({
                   type: "subagent",

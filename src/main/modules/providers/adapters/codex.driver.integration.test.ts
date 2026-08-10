@@ -983,6 +983,143 @@ describe("codex.driver / app-server protocol", () => {
     ).toBe(true);
   });
 
+  it("interrupts active subagents and gives Luna an explicit resume path on continue", async () => {
+    const tempDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "mains-codex-driver-"),
+    );
+    tempDirs.push(tempDir);
+    const logPath = path.join(tempDir, "protocol.jsonl");
+    process.env.MAINS_CODEX_FIXTURE_LOG = logPath;
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 500,
+    });
+    drivers.push(driver);
+    const runId = "run-subagent-abort-continue";
+    const abortRequest = request(runId);
+    abortRequest.goal = "active subagent timeout turn";
+    const acquired = await driver.createSession(abortRequest);
+    const firstEvents: Array<Record<string, unknown>> = [];
+    const abortController = new AbortController();
+    const outcomePromise = driver.executePrompt(
+      acquired.session,
+      acquired.prompt,
+      async (event) => {
+        firstEvents.push(event as unknown as Record<string, unknown>);
+      },
+      abortController.signal,
+    );
+
+    await waitForProtocolMessage(
+      logPath,
+      (message) => message.method === "turn/start",
+    );
+    const childStartedDeadline = Date.now() + 500;
+    while (
+      Date.now() < childStartedDeadline &&
+      !firstEvents.some(
+        (event) => event.type === "subagent" && event.phase === "invoked",
+      )
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
+    abortController.abort();
+    await expect(outcomePromise).resolves.toMatchObject({ status: "canceled" });
+
+    const interruptedTurns = readProtocolLog(logPath)
+      .filter((message) => message.method === "turn/interrupt")
+      .map((message) => message.params);
+    expect(interruptedTurns).toEqual(
+      expect.arrayContaining([
+        {
+          threadId: "thread-1",
+          turnId: "turn-thread-1",
+        },
+        {
+          threadId: "thread-1-child",
+          turnId: "turn-thread-1-child",
+        },
+      ]),
+    );
+
+    await driver.cleanup?.(acquired.session);
+    const continued = await driver.resumeSession?.({
+      runId,
+      accountId: "account-1",
+      workspace: {
+        id: "workspace-1",
+        rootPath: process.cwd(),
+      },
+      message: "continue interrupted subagent",
+    });
+    expect(continued).toBeDefined();
+
+    const continuedEvents: Array<Record<string, unknown>> = [];
+    const continuedOutcome = await driver.executePrompt(
+      continued!.session,
+      continued!.prompt,
+      async (event) => {
+        continuedEvents.push(event as unknown as Record<string, unknown>);
+      },
+      new AbortController().signal,
+    );
+
+    const continuedTurnStart = readProtocolLog(logPath)
+      .filter((message) => message.method === "turn/start")
+      .at(-1);
+    const continuedInput = (
+      continuedTurnStart?.params as
+        | { input?: Array<{ type?: string; text?: string }> }
+        | undefined
+    )?.input;
+    const continuedPrompt = continuedInput?.find(
+      (item) => item.type === "text",
+    )?.text;
+    expect(continuedPrompt).toContain("<mains_interrupted_subagents>");
+    expect(continuedPrompt).toContain("thread-1-child");
+    expect(continuedPrompt).toContain("resume_agent");
+    expect(continuedPrompt).toContain("send_input");
+
+    expect(continuedOutcome.status).toBe("succeeded");
+    expect(continuedEvents).toContainEqual(
+      expect.objectContaining({
+        type: "tool_call",
+        toolName: "resumeCollabAgent",
+      }),
+    );
+    expect(continuedEvents).toContainEqual(
+      expect.objectContaining({
+        type: "subagent",
+        phase: "running",
+        agentId: "thread-1-child",
+        parentToolUseId: "spawn-thread-1-child",
+      }),
+    );
+    expect(continuedEvents).toContainEqual(
+      expect.objectContaining({
+        type: "subagent",
+        phase: "completed",
+        agentId: "thread-1-child",
+        parentToolUseId: "spawn-thread-1-child",
+        result: "Continued child result",
+      }),
+    );
+    expect(
+      readProtocolLog(logPath).filter(
+        (message) => message.method === "thread/resume",
+      ).at(-1)?.params,
+    ).toMatchObject({ threadId: "thread-1" });
+    expect(
+      readProtocolLog(logPath).some(
+        (message) =>
+          message.method === "thread/delete" ||
+          message.method === "thread/archive",
+      ),
+    ).toBe(false);
+  });
+
   it(
     "fails pending RPCs immediately when app-server exits",
     async () => {

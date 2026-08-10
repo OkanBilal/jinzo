@@ -590,6 +590,26 @@ body[data-resizing] iframe {
 }
 
 /*
+ * Agent glyph accent. --agent-hue is hashed from the agent's seed in
+ * agent-glyph.tsx; lightness and chroma are fixed here so the hue is the only
+ * axis that varies and every agent reads at the same weight — which is what
+ * lets neighbouring hues stay tellable apart at size-3.5.
+ *
+ * Not Tailwind classes: those cap the palette at the 17 hue families, and a
+ * runtime hue can't be a scanned class name anyway. Chroma is deliberately
+ * past what yellows and greens can hold at these lightnesses — the browser
+ * gamut-maps chroma down while holding the hue we asked for, which is exactly
+ * the fallback we want (a duller yellow, never a shifted one).
+ */
+.agent-glyph {
+  color: oklch(0.57 0.18 var(--agent-hue, 0));
+}
+
+.dark .agent-glyph {
+  color: oklch(0.78 0.16 var(--agent-hue, 0));
+}
+
+/*
  * Circle spinner: the classic rotating ring in the square-spinner family's
  * language — tiny squares on a circle, each pulsing in turn (per-dot phase set
  * in circle-spinner.tsx) so the bright spot chases clockwise with a comet

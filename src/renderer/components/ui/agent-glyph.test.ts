@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { glyphCells } from "./agent-glyph";
+import { glyphCells, glyphHue } from "./agent-glyph";
 
 describe("glyphCells", () => {
   it("is deterministic for the same seed", () => {
@@ -28,5 +28,34 @@ describe("glyphCells", () => {
     for (const seed of ["", "a", "  "]) {
       expect(glyphCells(seed).some(Boolean)).toBe(true);
     }
+  });
+});
+
+describe("glyphHue", () => {
+  it("is deterministic and stays a legal hue angle", () => {
+    for (const seed of ["Security review", "a", ""]) {
+      const hue = glyphHue(seed);
+      expect(hue).toBe(glyphHue(seed));
+      expect(hue).toBeGreaterThanOrEqual(0);
+      expect(hue).toBeLessThan(360);
+    }
+  });
+
+  it("uses the whole wheel in even steps — every bucket is reachable", () => {
+    const seen = new Set<number>();
+    for (let i = 0; i < 500; i++) seen.add(glyphHue(`Agent ${i}`));
+    expect(seen.size).toBe(24);
+    // Even spacing is what keeps neighbouring hues equally far apart.
+    expect([...seen].sort((a, b) => a - b)).toEqual(
+      Array.from({ length: 24 }, (_, i) => i * 15),
+    );
+  });
+
+  it("draws independently of the pattern, so a hue clash is not a full clash", () => {
+    // Same hue bucket, different marks — the pair a single-axis identity
+    // would collapse into one.
+    const clash = ["Security review", "General purpose"];
+    expect(glyphHue(clash[0])).toBe(glyphHue(clash[1]));
+    expect(glyphCells(clash[0])).not.toEqual(glyphCells(clash[1]));
   });
 });

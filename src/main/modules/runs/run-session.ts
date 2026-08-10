@@ -134,6 +134,7 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   let sleepBlockerId: number | null = null;
   let activeTurnId: number | null = null;
   let initialTurnReady: Promise<void> | null = null;
+  let resolvedToolCallsReady: Promise<void> | null = null;
   let turnCounter: number = ctx.seedTurnIndex ?? -1;
   let liveDiffTimer: NodeJS.Timeout | null = null;
   let liveDiffInFlight = false;
@@ -145,6 +146,22 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   // once the foreground call already returned "running in background"), so they
   // need an anchor that outlives it.
   const resolvedToolCalls = new Map<string, number>();
+
+  async function hydrateResolvedToolCalls(): Promise<void> {
+    try {
+      const calls = await runsRepo.findToolCallsByRun(runId);
+      for (const call of calls) {
+        if (call.toolId) {
+          resolvedToolCalls.set(call.toolId, call.id);
+        }
+      }
+    } catch (err) {
+      console.error(
+        `[RunSession ${runId}] Failed to hydrate tool-call anchors:`,
+        err,
+      );
+    }
+  }
 
   // ─── Broadcast helpers (channel names + payload shapes preserved exactly) ───
   function broadcastEventPersisted(): void {
@@ -642,7 +659,11 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
     detail: Record<string, unknown>,
   ): Promise<boolean> {
     if (!toolUseId) return false;
-    const toolCallId = resolvedToolCalls.get(toolUseId);
+    let toolCallId = resolvedToolCalls.get(toolUseId);
+    if (toolCallId === undefined && resolvedToolCallsReady) {
+      await resolvedToolCallsReady;
+      toolCallId = resolvedToolCalls.get(toolUseId);
+    }
     if (toolCallId === undefined) return false;
     // Drop undefined fields so a later partial patch cannot blank an earlier one.
     const clean = Object.fromEntries(
@@ -843,7 +864,10 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   // Keep the baseRef-capture promise so finalize can await it (see persistFinalDiff).
   baseRefCaptured = captureBaseRef();
   void acquireSleepBlocker();
-  initialTurnReady = startNextTurn(ctx.initialPromptContent);
+  resolvedToolCallsReady = hydrateResolvedToolCalls();
+  initialTurnReady = resolvedToolCallsReady.then(() =>
+    startNextTurn(ctx.initialPromptContent),
+  );
   void initialTurnReady;
 
   return session;

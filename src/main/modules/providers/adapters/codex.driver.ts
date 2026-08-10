@@ -59,6 +59,7 @@ import {
   createCodexSessionAcquisition,
   isCodexUnavailableThreadError,
 } from "./codex-session-acquisition";
+import type { CodexSubAgentRunMeta } from "./codex-event-mapper";
 
 export {
   CODEX_ARCHIVED_CHAT_MESSAGE,
@@ -341,6 +342,59 @@ async function maybeSetThreadGoal(
 // Adapter factory
 // ─────────────────────────────────────────────────────────────
 
+/** Reconstruct resumable child-thread state from the persisted spawn rows. */
+export function mapPersistedCodexSubAgents(
+  calls: Array<{
+    toolId: string | null;
+    metadata: unknown;
+  }>,
+): CodexSubAgentRunMeta[] {
+  const byThreadId = new Map<string, CodexSubAgentRunMeta>();
+  for (const call of calls) {
+    const lifecycle = (
+      call.metadata as Record<string, unknown> | null
+    )?.subagent as
+      | {
+          phase?: string;
+          agentId?: string;
+          agentType?: string;
+          prompt?: string;
+          result?: string;
+        }
+      | undefined;
+    if (
+      !lifecycle?.agentId ||
+      !call.toolId ||
+      byThreadId.has(lifecycle.agentId)
+    ) {
+      continue;
+    }
+    const terminalPhase =
+      lifecycle.phase === "completed" ||
+      lifecycle.phase === "failed" ||
+      lifecycle.phase === "stopped"
+        ? lifecycle.phase
+        : undefined;
+    const normalizedAgentType = lifecycle.agentType?.trim();
+    const nickname =
+      normalizedAgentType &&
+      normalizedAgentType.toLowerCase() !== "agent" &&
+      normalizedAgentType.toLowerCase() !== "subagent"
+        ? normalizedAgentType
+        : undefined;
+    byThreadId.set(lifecycle.agentId, {
+      threadId: lifecycle.agentId,
+      nickname,
+      prompt: lifecycle.prompt,
+      spawnItemId: call.toolId,
+      terminalEmitted: terminalPhase !== undefined,
+      terminalPhase,
+      lastMessage: lifecycle.result,
+    });
+  }
+  return [...byThreadId.values()];
+}
+
 /**
  * Creates a Codex driver using `codex app-server` JSON-RPC protocol.
  * Spawns `codex app-server` as a subprocess and communicates via
@@ -369,6 +423,10 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     findPersistedSession: async (runId) =>
       (await runsRepo.findRunById(runId))?.sessionId ??
       undefined,
+    findPersistedSubAgents: async (runId) => {
+      const calls = await runsRepo.findToolCallsByRun(runId);
+      return mapPersistedCodexSubAgents(calls);
+    },
     persistSession: async (runId, threadId) => {
       await runsRepo.updateRun(runId, { sessionId: threadId });
     },

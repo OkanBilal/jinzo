@@ -24,6 +24,7 @@ import type {
   CodexRunCoordinator,
   CodexRunSession,
 } from "./codex-run-coordinator";
+import type { CodexSubAgentRunMeta } from "./codex-event-mapper";
 
 export const CODEX_ARCHIVED_CHAT_MESSAGE =
   "This chat is archived in Codex. Unarchive it in Codex to continue, or archive it in Mains to hide it from this workspace.";
@@ -69,6 +70,9 @@ interface CodexSessionAcquisitionOptions {
   findPersistedSession: (
     runId: string,
   ) => Promise<string | undefined>;
+  findPersistedSubAgents?: (
+    runId: string,
+  ) => Promise<CodexSubAgentRunMeta[]>;
   persistSession: (
     runId: string,
     threadId: string,
@@ -216,6 +220,7 @@ export function buildCodexReviewTarget(
 function buildTurnInput(
   message: string,
   request: TurnInputRequest,
+  interruptedSubAgents: CodexSubAgentRunMeta[] = [],
 ): TurnInput {
   let prompt =
     request.context && request.context.length > 0
@@ -228,6 +233,23 @@ function buildTurnInput(
     contextFiles: request.contextFiles,
     runId: request.runId,
   });
+
+  if (interruptedSubAgents.length > 0) {
+    const agents = interruptedSubAgents.map((agent) => ({
+      id: agent.threadId,
+      ...(agent.nickname ? { name: agent.nickname } : {}),
+      ...(agent.role ? { role: agent.role } : {}),
+    }));
+    prompt +=
+      "\n\n<mains_interrupted_subagents>\n" +
+      "The previous turn was stopped, so these subagents are interrupted and are not making progress:\n" +
+      `${JSON.stringify(agents)}\n` +
+      "If the user's current request still depends on their work, do not call wait_agent on them yet. " +
+      "First call resume_agent for each interrupted id, then call send_input asking it to continue its previously assigned task. " +
+      "If an agent cannot be resumed, spawn a replacement for that task. " +
+      "If the current request no longer depends on them, continue without waiting for them.\n" +
+      "</mains_interrupted_subagents>";
+  }
 
   const input: TurnInput = [{
     type: "text",
@@ -324,6 +346,7 @@ export function createCodexSessionAcquisition(
     ensureServer,
     runCoordinator,
     findPersistedSession,
+    findPersistedSubAgents,
     persistSession,
     establishGoal,
   } = options;
@@ -512,11 +535,18 @@ export function createCodexSessionAcquisition(
       runCoordinator.attachThread(runId, threadId);
     }
 
+    const persistedSubAgents =
+      !runCoordinator.hasSessionSubAgentState(runId) && findPersistedSubAgents
+        ? await findPersistedSubAgents(runId)
+        : [];
     runCoordinator.registerRun({
       runId,
       threadId,
       mainsCtx: mainsContext(runId, request.workspace),
+      subAgents: persistedSubAgents,
     });
+    const interruptedSubAgents =
+      runCoordinator.getInterruptedSubAgents(runId);
     const currentThreadId =
       runCoordinator.getSessionThread(runId) ?? threadId;
     await establishGoal(
@@ -537,7 +567,11 @@ export function createCodexSessionAcquisition(
     const outputSchema = resolveOutputSchema(config);
     const turnStartParams: CodexTurnStartParams = {
       threadId: currentThreadId,
-      input: buildTurnInput(message, request),
+      input: buildTurnInput(
+        message,
+        request,
+        interruptedSubAgents,
+      ),
       ...(model ? { model } : {}),
       ...(config.modelReasoningEffort
         ? { effort: config.modelReasoningEffort }

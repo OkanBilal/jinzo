@@ -857,6 +857,54 @@ describe("Codex collab status normalization and sub-thread projection", () => {
     );
   }
 
+  it.each([undefined, "agent"])(
+    "resolves a Luna nickname over the pre-registered %s placeholder",
+    async (placeholderNickname) => {
+      const { mapper, state } = createHarness();
+      state.subAgents.set("thread-sub", {
+        threadId: "thread-sub",
+        nickname: placeholderNickname,
+        spawnItemId: "item-spawn",
+        activeTurnId: "turn-sub",
+        terminalEmitted: false,
+      });
+      const sendRequest = vi.fn().mockResolvedValue({
+        thread: {
+          id: "thread-sub",
+          agentNickname: "Hegel",
+          agentRole: null,
+        },
+      });
+
+      await mapper.maybeResolveCollabSubAgents(
+        { sendRequest } as any,
+        {
+          threadId: "thread-parent",
+          item: {
+            id: "item-spawn",
+            type: "collabAgentToolCall",
+            tool: "spawnAgent",
+            status: "completed",
+            receiverThreadIds: ["thread-sub"],
+          },
+        },
+        "run-1",
+      );
+
+      expect(sendRequest).toHaveBeenCalledWith("thread/read", {
+        threadId: "thread-sub",
+        includeTurns: false,
+      });
+      expect(state.subAgents.get("thread-sub")).toMatchObject({
+        threadId: "thread-sub",
+        nickname: "Hegel",
+        spawnItemId: "item-spawn",
+        activeTurnId: "turn-sub",
+        terminalEmitted: false,
+      });
+    },
+  );
+
   it("settles a v2 interrupted agent as stopped, not completed", () => {
     const { mapper, state } = createHarness();
     state.subAgents.set("thread-sub", { threadId: "thread-sub", nickname: "Ada" });
@@ -1104,6 +1152,7 @@ describe("Codex resumeAgent re-arm", () => {
 
     collab("item-spawn", "spawnAgent");
     collab("item-close", "closeAgent", "shutdown"); // settled as completed
+    expect(state.subAgents.get("thread-sub")?.terminalPhase).toBe("completed");
 
     const resumed = collab("item-resume", "resumeAgent");
     expect(resumed).toContainEqual(
@@ -1115,6 +1164,7 @@ describe("Codex resumeAgent re-arm", () => {
       }),
     );
     expect(state.subAgents.get("thread-sub")?.terminalEmitted).toBe(false);
+    expect(state.subAgents.get("thread-sub")?.terminalPhase).toBeUndefined();
 
     const settledAgain = collab("item-close-2", "closeAgent", "completed");
     expect(settledAgain).toContainEqual(

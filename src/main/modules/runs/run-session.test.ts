@@ -939,6 +939,60 @@ describe("RunSession", () => {
       },
     );
 
+    it("re-arms an existing Codex spawn row from a continued session", async () => {
+      const initial = makeSession();
+      await flushBackground();
+
+      await initial.project({
+        type: "tool_call",
+        toolName: "spawnAgent",
+        metadata: { phase: "start", toolCallId: "spawn-1" },
+      } as any);
+      await initial.project({
+        type: "tool_call",
+        toolName: "spawnAgent",
+        output: {},
+        metadata: { phase: "complete", toolCallId: "spawn-1" },
+      } as any);
+      await initial.project({
+        type: "subagent",
+        phase: "invoked",
+        agentType: "scout",
+        agentId: "thread-child",
+        parentToolUseId: "spawn-1",
+      } as any);
+      await initial.finalize({ status: "canceled" });
+
+      const continued = makeSession();
+      await flushBackground();
+      await continued.project({
+        type: "subagent",
+        phase: "running",
+        agentType: "scout",
+        agentId: "thread-child",
+        parentToolUseId: "spawn-1",
+      } as any);
+
+      let calls = await runsRepo.findToolCallsByRun("r1");
+      expect((calls[0].metadata as Record<string, any>)?.subagent?.phase).toBe(
+        "running",
+      );
+
+      await continued.project({
+        type: "subagent",
+        phase: "completed",
+        agentType: "scout",
+        agentId: "thread-child",
+        parentToolUseId: "spawn-1",
+        result: "Continued child result",
+      } as any);
+      calls = await runsRepo.findToolCallsByRun("r1");
+      expect((calls[0].metadata as Record<string, any>)?.subagent).toMatchObject({
+        phase: "completed",
+        result: "Continued child result",
+      });
+    });
+
     it.each(["completed", "failed", "killed", "stopped"] as const)(
       "leaves a task the provider already resolved as %s alone",
       async (status) => {

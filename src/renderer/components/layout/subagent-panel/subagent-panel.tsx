@@ -14,7 +14,6 @@ import { Button, Caption } from "@/components/ui";
 import { SubagentDetail } from "@/features/workspace/components/subagent-detail";
 import { useSessionSubagents } from "@/features/workspace/hooks/use-session-subagents";
 import {
-  subagentColorClass,
   subagentDisplay,
   type SubagentLifecycleState,
 } from "@/features/workspace/utils/subagent-identity";
@@ -278,7 +277,7 @@ function CollapsedPill({
             key={agent.id}
             seed={name}
             active={agent.state === "running"}
-            className={`size-3.5 ${subagentColorClass(name)}`}
+            className="size-3.5"
           />
         );
       })}
@@ -341,7 +340,7 @@ function SubagentList({
               <AgentGlyph
                 seed={display.name}
                 active={agent.state === "running"}
-                className={`size-3.5 ${subagentColorClass(display.name)}`}
+                className="size-3.5"
               />
             }
             title={secondary ?? display.name}
