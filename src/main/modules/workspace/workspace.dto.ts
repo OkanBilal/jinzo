@@ -195,7 +195,14 @@ export interface WorkspaceDiffResponse {
   baseRef: string | null;
   diffText: string;
   files: string[] | null;
-  stats: { shortstat: string; files: number } | null;
+  stats: { shortstat: string; files: number; newFiles?: number } | null;
+  /**
+   * The subset of `files` that git wasn't tracking when the snapshot was taken.
+   * Null on rows written before the column existed — treat as "unknown", not
+   * "none". Carried separately because the diff text can't express it: a
+   * staged-new file and an untracked one both render as `new file mode …`.
+   */
+  untrackedFiles: string[] | null;
   createdAt: Date;
 }
 
@@ -209,12 +216,14 @@ export interface CreateDiffPayload {
   diffText: string;
   filesJson?: string;
   statsJson?: string;
+  untrackedJson?: string;
 }
 
 export interface UpdateDiffPayload {
   diffText: string;
   filesJson?: string | null;
   statsJson?: string | null;
+  untrackedJson?: string | null;
   baseRef?: string | null;
 }
 

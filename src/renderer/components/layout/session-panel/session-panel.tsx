@@ -5,8 +5,6 @@ import { usePanelAnimation } from "@/hooks/use-panel-animation";
 import { useIsMobile } from "@/lib/platform";
 import { LAYOUT_PANEL_ANIM_MS, SESSION_PANEL_GUTTER } from "@/lib/layout";
 import { GitActionsSection } from "./git-actions-section";
-import { SessionSubagents } from "./session-subagents";
-import { selectSessionRunId } from "./select-session-run";
 
 /** Overshoots slightly past full size — the "pop" as the box inflates. */
 const POP_EASE = "cubic-bezier(0.34, 1.56, 0.64, 1)";
@@ -53,9 +51,6 @@ export function SessionPanel({
   const activeWorkspaceId = useAppSelector(
     (state) => state.workspace.activeWorkspaceId,
   );
-  const activeRunId = useAppSelector((state) =>
-    selectSessionRunId(state.workspace),
-  );
   const isOpen = useAppSelector((state) => state.appSettings.sessionPanelOpen);
 
   const { isVisible, isAnimatedIn } = usePanelAnimation(
@@ -71,7 +66,7 @@ export function SessionPanel({
 
   return (
     <div
-      className={`fixed z-(--z-panel-toggle) w-(--session-panel-width) max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl glass-surface will-change-transform ${
+      className={`fixed z-(--z-panel-toggle) w-(--session-panel-width) max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl glass-outline dark:bg-primary-950 bg-primary will-change-transform ${
         // Lying on top of the transcript, it needs the lift to read as a
         // separate surface; sharing the layout, it doesn't overlap anything.
         floating ? "shadow-2xl" : ""
@@ -101,11 +96,7 @@ export function SessionPanel({
       {/* Rows open their forms in place, so the box grows with its content —
           capped short of the viewport so it never runs off the bottom. */}
       <div className="max-h-[calc(100vh-5rem)] overflow-y-auto noscrollbar">
-        <GitActionsSection
-          providerId={providerId}
-          onClose={close}
-          footer={<SessionSubagents runId={activeRunId} />}
-        />
+        <GitActionsSection providerId={providerId} onClose={close} />
       </div>
     </div>
   );

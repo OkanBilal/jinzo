@@ -17,6 +17,7 @@ import {
   CODEX_ARCHIVED_CHAT_MESSAGE,
   isCodexArchivedThreadError,
   isCodexUnavailableThreadError,
+  mapPersistedCodexSubAgents,
   mapSandboxMode,
   normalizeCodexResumeError,
   parseCodexReviewFindings,
@@ -73,6 +74,36 @@ describe("codex.driver / thread availability errors", () => {
     expect(isCodexArchivedThreadError(error)).toBe(false);
     expect(isCodexUnavailableThreadError(error)).toBe(false);
     expect(normalizeCodexResumeError(error)).toBe(error);
+  });
+});
+
+describe("codex.driver / persisted subagent recovery", () => {
+  it("recovers a stopped Luna child without treating the generic fallback as its nickname", () => {
+    expect(
+      mapPersistedCodexSubAgents([
+        {
+          toolId: "spawn-1",
+          metadata: {
+            subagent: {
+              phase: "stopped",
+              agentId: "thread-child",
+              agentType: "agent",
+              prompt: "Review security risks",
+            },
+          },
+        },
+      ]),
+    ).toEqual([
+      {
+        threadId: "thread-child",
+        nickname: undefined,
+        prompt: "Review security risks",
+        spawnItemId: "spawn-1",
+        terminalEmitted: true,
+        terminalPhase: "stopped",
+        lastMessage: undefined,
+      },
+    ]);
   });
 });
 

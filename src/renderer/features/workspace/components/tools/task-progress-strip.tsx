@@ -1,4 +1,10 @@
 import { useState } from "react";
+import {
+  subagentStateOf,
+  type SubagentLifecycleMeta,
+  type SubagentLifecycleState,
+  type SubagentTaskMeta,
+} from "../../utils/subagent-identity";
 import { Bot, Clock, Document, Stop } from "@/components/ui/icons";
 import { SquareSpinner } from "@/components/ui/square-spinner";
 import { ToolCollapse, ToolOutputBody } from "./_shared";
@@ -8,36 +14,12 @@ import { ToolCollapse, ToolOutputBody } from "./_shared";
  * lifecycle events. Every field is optional: the strip renders from whatever
  * phase has landed so far, and later phases patch in more.
  */
-export interface TaskMetadata {
-  phase?: "started" | "progress" | "updated" | "completed";
-  taskId?: string;
-  status?:
-    | "completed"
-    | "failed"
-    | "stopped"
-    | "pending"
-    | "running"
-    | "killed"
-    | "paused";
-  description?: string;
-  subagentType?: string;
-  taskType?: string;
-  summary?: string;
-  outputFile?: string;
-  lastToolName?: string;
-  usage?: { totalTokens?: number; toolUses?: number; durationMs?: number };
-  error?: string;
-  skipTranscript?: boolean;
-}
+// The persisted shapes live in ONE place (subagent-identity); the strip's
+// historical names are kept as aliases so its consumers read naturally.
+export type TaskMetadata = SubagentTaskMeta;
 
 /** `metadata.subagent` — the subagent's own lifecycle, keyed to the same tool call. */
-export interface SubagentMetadata {
-  phase?: "invoked" | "running" | "completed" | "failed";
-  agentType?: string;
-  agentId?: string;
-  result?: string;
-  error?: string;
-}
+export type SubagentMetadata = SubagentLifecycleMeta;
 
 /**
  * One decimal on the k/M scale throughout. The strip re-renders as a task
@@ -69,11 +51,16 @@ function formatUsage(usage: TaskMetadata["usage"]): string {
 
 export type Tone = "running" | "ok" | "warn" | "error";
 
+/** Derived from THE state synthesis, not re-encoded — one lifecycle truth. */
+const STATE_TONE: Record<SubagentLifecycleState, Tone> = {
+  failed: "error",
+  stopped: "warn",
+  done: "ok",
+  running: "running",
+};
+
 function toneOf(task: TaskMetadata): Tone {
-  if (task.error || task.status === "failed") return "error";
-  if (task.status === "stopped" || task.status === "killed") return "warn";
-  if (task.phase === "completed" || task.status === "completed") return "ok";
-  return "running";
+  return STATE_TONE[subagentStateOf({ toolName: "", callStatus: "", task })];
 }
 
 const TONE_TEXT: Record<Tone, string> = {

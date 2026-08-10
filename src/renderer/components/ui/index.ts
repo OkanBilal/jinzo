@@ -31,7 +31,7 @@ export { SendButton } from "./input/send-button";
 export { DictationButton } from "./input/dictation-button";
 export { InputForm } from "./input/input-form";
 export { RichInputForm } from "./input/rich-input-form";
-export type { RichInputFormHandle, RichSkillChipData, RichFileChipData } from "./input/rich-input-form";
+export type { RichInputFormHandle, RichSkillChipData, RichFileChipData, RichCodeChipData } from "./input/rich-input-form";
 export { FileUploadDropdown, FILE_TYPES } from "./input/file-upload-dropdown";
 export type { UploadedFile } from "./input/file-upload-dropdown";
 export { ModelSelectDropdown } from "./input/model-select-dropdown";

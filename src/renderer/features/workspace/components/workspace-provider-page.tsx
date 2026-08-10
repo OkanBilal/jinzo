@@ -84,10 +84,13 @@ export function WorkspaceProviderPage({
   }, [ws.currentTurns]);
 
   const handleStop = useCallback(() => {
-    if (ws.activeRunId) {
-      abortRun(ws.activeRunId);
+    // On the editor tab there's no active run tab — stop the composer's
+    // target run instead (the one whose running state the input reflects).
+    const stopId = ws.activeRunId ?? ws.composerRun?.id;
+    if (stopId) {
+      abortRun(stopId);
     }
-  }, [ws.activeRunId, abortRun]);
+  }, [ws.activeRunId, ws.composerRun?.id, abortRun]);
 
   const handleSuggestionSelect = useCallback(
     (suggestion: string) => {
@@ -261,9 +264,14 @@ export function WorkspaceProviderPage({
                   onRemoveContextIssue={ws.handleRemoveContextIssue}
                   contextSignals={ws.contextSignals}
                   onRemoveContextSignal={ws.handleRemoveContextSignal}
+                  contextSkills={ws.contextSkills}
                   contextBrowserSelections={ws.contextBrowserSelections}
                   onRemoveContextBrowserSelection={
                     ws.handleRemoveContextBrowserSelection
+                  }
+                  contextCodeSelections={ws.contextCodeSelections}
+                  onRemoveContextCodeSelection={
+                    ws.handleRemoveContextCodeSelection
                   }
                   workspacePath={ws.currentWorkspace?.rootPath}
                   projectId={ws.currentWorkspace?.projectId ?? undefined}
@@ -311,7 +319,7 @@ export function WorkspaceProviderPage({
         !currentPlanApproval &&
         !ws.showEmptyState &&
         !ws.showNewRunTab && (
-        <div className="w-full max-w-200 mx-auto max-h-[55vh] overflow-y-auto noscrollbar">
+        <div className="w-full max-w-210 mx-auto max-h-[55vh] overflow-y-auto noscrollbar">
           <ToolApprovalDialog
             request={currentApproval}
             onRespond={respondToolApproval}
@@ -349,7 +357,7 @@ export function WorkspaceProviderPage({
           onGoalChange={ws.setGoal}
           onSubmit={ws.handleExecute}
           isLoading={ws.isLoading}
-          activeRun={ws.activeRun}
+          activeRun={ws.composerRun}
           canResume={ws.canResume ?? false}
           providerId={providerId}
           selectedModel={ws.selectedModel}
@@ -360,10 +368,17 @@ export function WorkspaceProviderPage({
           onRemoveContextIssue={ws.handleRemoveContextIssue}
           contextSignals={ws.contextSignals}
           onRemoveContextSignal={ws.handleRemoveContextSignal}
+          contextSkills={ws.contextSkills}
           contextBrowserSelections={ws.contextBrowserSelections}
           onRemoveContextBrowserSelection={
             ws.handleRemoveContextBrowserSelection
           }
+          contextCodeSelections={ws.contextCodeSelections}
+          onRemoveContextCodeSelection={
+            ws.handleRemoveContextCodeSelection
+          }
+          sendTarget={ws.sendTarget}
+          onSendTargetChange={ws.handleSendTargetChange}
           workspacePath={ws.currentWorkspace?.rootPath}
           projectId={ws.currentWorkspace?.projectId ?? undefined}
           uploadedFiles={ws.uploadedFiles}

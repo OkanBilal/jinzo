@@ -447,6 +447,19 @@ describe("runsService", () => {
       expect(await runsService.getRunById("r1")).toBeNull();
     });
 
+    it("still deletes locally when the Codex thread is already gone", async () => {
+      createRun(db, { id: "r1", providerId: "codex", sessionId: "thread-1" });
+      vi.mocked(createWorkAdapter).mockReturnValue({
+        deleteSession: vi
+          .fn()
+          .mockRejectedValue(new Error("no rollout found for thread id thread-1")),
+      } as any);
+
+      await runsService.deleteRun("r1");
+
+      expect(await runsService.getRunById("r1")).toBeNull();
+    });
+
     it("returns error when repo throws", async () => {
       createRun(db, { id: "r1" });
       vi.spyOn(runsRepo, "deleteRun").mockRejectedValueOnce(new Error("db error"));
@@ -477,20 +490,32 @@ describe("runsService", () => {
       expect(result.isArchived).toBe(true);
     });
 
-    it("keeps the run active when Codex archiving fails", async () => {
+    it("still archives locally when the Codex thread is already gone", async () => {
+      // The Codex thread store is a second copy the user can mutate on their
+      // own; archiving there first makes the app server answer "no rollout
+      // found for thread id …". Mains' own archive must not depend on it.
       createRun(db, {
         id: "r1",
         providerId: "codex",
         sessionId: "thread-1",
       });
       vi.mocked(createWorkAdapter).mockReturnValue({
-        archiveSession: vi.fn().mockRejectedValue(new Error("archive failed")),
+        archiveSession: vi
+          .fn()
+          .mockRejectedValue(new Error("no rollout found for thread id thread-1")),
       } as any);
 
-      await expect(runsService.archiveRun("r1")).rejects.toThrow(
-        "archive failed",
-      );
-      expect((await runsService.getRunById("r1"))!.isArchived).toBe(false);
+      const result = await runsService.archiveRun("r1");
+
+      expect(result.isArchived).toBe(true);
+      expect((await runsService.getRunById("r1"))!.isArchived).toBe(true);
+    });
+
+    it("still archives locally when the adapter exposes no archiveSession", async () => {
+      createRun(db, { id: "r1", providerId: "codex", sessionId: "thread-1" });
+      vi.mocked(createWorkAdapter).mockReturnValue({} as any);
+
+      expect((await runsService.archiveRun("r1")).isArchived).toBe(true);
     });
 
     it("returns error for nonexistent run", async () => {
@@ -563,6 +588,24 @@ describe("runsService", () => {
       );
       expect(unarchiveSession).not.toHaveBeenCalled();
       expect((await runsService.getRunById("r1"))!.isArchived).toBe(true);
+    });
+
+    it("still restores locally when the Codex thread is already gone", async () => {
+      createWorkspace(db, { id: "w1" });
+      createRun(db, {
+        id: "r1",
+        workspaceId: "w1",
+        providerId: "codex",
+        sessionId: "thread-1",
+        isArchived: true,
+      });
+      vi.mocked(createWorkAdapter).mockReturnValue({
+        unarchiveSession: vi
+          .fn()
+          .mockRejectedValue(new Error("no rollout found for thread id thread-1")),
+      } as any);
+
+      expect((await runsService.unarchiveRun("r1")).isArchived).toBe(false);
     });
   });
 

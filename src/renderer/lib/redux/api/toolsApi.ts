@@ -8,6 +8,10 @@ export interface ToolCall {
   accountId: string;
   runId: string | null;
   providerId: string | null;
+  /** Provider-side tool-use id (stable across the run, unlike the row id). */
+  toolCallId: string | null;
+  /** Provider tool-use id of the call that spawned this one (subagent children). */
+  parentToolCallId: string | null;
   toolName: string;
   status: ToolCallStatus;
   input: Record<string, unknown> | null;

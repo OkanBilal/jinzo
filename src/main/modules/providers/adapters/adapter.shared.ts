@@ -96,6 +96,37 @@ export const DEFAULT_ALLOWED_TOOLS = [
 export const ALLOWED_TOOLS_SET = new Set(DEFAULT_ALLOWED_TOOLS);
 
 // ─────────────────────────────────────────────────────────────
+// Default-model resolution
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Decide which entry of a live model catalog to mark `isDefault`.
+ *
+ * `providers.defaultModel` is a *user preference*, not a catalog fact: agent
+ * CLIs rotate their models every few months and a configured id silently stops
+ * matching. So a configured id only wins while it is still offered; otherwise
+ * the driver's own preference (e.g. Copilot/Cursor's plan-agnostic "auto")
+ * applies, and failing that the catalog's first entry — the CLIs list models in
+ * preference order.
+ *
+ * @param ids catalog ids, in the order the CLI advertises them
+ * @param configured `providers.defaultModel`, if the user pinned one
+ * @param preferred driver-preferred fallbacks, most-preferred first
+ */
+export function resolveCatalogDefaultId(
+  ids: readonly string[],
+  configured: string | null | undefined,
+  preferred: readonly string[] = [],
+): string | undefined {
+  const offered = new Set(ids);
+  if (configured && offered.has(configured)) return configured;
+  for (const id of preferred) {
+    if (id && offered.has(id)) return id;
+  }
+  return ids[0];
+}
+
+// ─────────────────────────────────────────────────────────────
 // JSON helper
 // ─────────────────────────────────────────────────────────────
 

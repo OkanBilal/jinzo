@@ -21,6 +21,10 @@ import {
   cleanGeneratedTitle,
   parseSimpleYaml,
   mapTaskMessage,
+  normalizeSubagentOutput,
+  buildSubagentCompletionEvent,
+  mapSDKMessage,
+  resolveClaudeDefaultModelId,
 } from "./claude.driver";
 import type { ClaudeTaskIndex, SDKSystemMessage } from "./claude.driver";
 import fs from "node:fs";
@@ -35,6 +39,53 @@ const INHERITED_PERMISSION_SETTINGS = {
     allow: DEFAULT_ALLOWED_TOOLS,
   },
 };
+
+describe("claude.driver / resolveClaudeDefaultModelId", () => {
+  const sdkModels = [
+    { value: "default", description: "Use the default model (currently Claude Opus [1M])" },
+    { value: "sonnet", displayName: "Claude Sonnet" },
+    { value: "opus", displayName: "Claude Opus" },
+    { value: "opus[1m]", displayName: "Claude Opus [1M]" },
+  ];
+
+  it("honors a configured default the SDK still offers", () => {
+    expect(resolveClaudeDefaultModelId(sdkModels, "sonnet")).toBe("sonnet");
+  });
+
+  it("ignores a configured default that never matched an SDK alias", () => {
+    // What the v1 seed shipped: an API model id, not a CLI alias. Without the
+    // fallback no model got isDefault and the picker silently took list order.
+    expect(resolveClaudeDefaultModelId(sdkModels, "claude-opus-4-8")).toBe("opus[1m]");
+  });
+
+  it("reads the CLI's own default off the synthetic entry, longest name winning", () => {
+    // "Claude Opus" is also a substring of the hint — the [1M] variant must win.
+    expect(resolveClaudeDefaultModelId(sdkModels)).toBe("opus[1m]");
+  });
+
+  it("falls back to SDK order when there is no synthetic entry", () => {
+    expect(
+      resolveClaudeDefaultModelId([
+        { value: "sonnet", displayName: "Claude Sonnet" },
+        { value: "opus", displayName: "Claude Opus" },
+      ]),
+    ).toBe("sonnet");
+  });
+
+  it("falls back to SDK order when the hint names no known model", () => {
+    expect(
+      resolveClaudeDefaultModelId([
+        { value: "default", description: "Use the default model" },
+        { value: "sonnet", displayName: "Claude Sonnet" },
+      ]),
+    ).toBe("sonnet");
+  });
+
+  it("still resolves when the synthetic entry is the only model offered", () => {
+    expect(resolveClaudeDefaultModelId([{ value: "default" }])).toBe("default");
+    expect(resolveClaudeDefaultModelId([])).toBeUndefined();
+  });
+});
 
 describe("claude.driver / skill frontmatter", () => {
   it("folds multiline YAML descriptions into readable text", () => {
@@ -1162,5 +1213,203 @@ describe("claude.driver / elicitation handler", () => {
     controller.abort();
     await expect(pending).resolves.toEqual({ action: "cancel" });
     expect(cancelApproval).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("normalizeSubagentOutput", () => {
+  it("joins text blocks and strips the SDK's bookkeeping block", () => {
+    const { text, agentId } = normalizeSubagentOutput([
+      { type: "text", text: "## Security Review\n\nNo genuine findings." },
+      {
+        type: "text",
+        text: "agentId: a5568de99bd93dcf5 (use SendMessage to continue)\nsubagent_tokens: 90281",
+      },
+    ]);
+
+    expect(text).toBe("## Security Review\n\nNo genuine findings.");
+    expect(agentId).toBe("a5568de99bd93dcf5");
+  });
+
+  it("passes plain string output through, still extracting the agentId", () => {
+    const { text, agentId } = normalizeSubagentOutput(
+      "All done.\nagentId: abcdef123456 inline mention",
+    );
+    expect(text).toContain("All done.");
+    expect(agentId).toBe("abcdef123456");
+  });
+
+  it("stringifies non-block objects instead of dropping them", () => {
+    const { text } = normalizeSubagentOutput({ some: "object" });
+    expect(text).toContain("some");
+  });
+
+  it("returns undefined text for empty output", () => {
+    expect(normalizeSubagentOutput(undefined).text).toBeUndefined();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// Subagent event sequence (spawn → children → ack/result)
+// ─────────────────────────────────────────────────────────────
+
+function makeClaudeSession() {
+  return {
+    runId: "run-1",
+    options: {},
+    abortController: new AbortController(),
+    state: { hasAssistantContent: false },
+    toolCallIndex: new Map(),
+    taskIndex: new Map(),
+    partialTextBuffers: new Map(),
+    partialThinkingBuffers: new Map(),
+    isInitial: true,
+  } as any;
+}
+
+describe("buildSubagentCompletionEvent", () => {
+  it("treats a launch ack as still-running, not completion", () => {
+    const event = buildSubagentCompletionEvent({
+      input: { subagent_type: "general-purpose" },
+      output: [
+        { type: "text", text: "Async agent launched successfully. (This tool result is internal.)" },
+        { type: "text", text: "agentId: abc123def456 (use SendMessage to continue)" },
+      ],
+      toolUseId: "toolu_1",
+      ts: 1000,
+    }) as any;
+
+    expect(event.phase).toBe("running");
+    expect(event.result).toBeUndefined();
+    expect(event.agentId).toBe("abc123def456");
+  });
+
+  it("trusts the structured run_in_background flag over the ack prose", () => {
+    const event = buildSubagentCompletionEvent({
+      input: { subagent_type: "general-purpose", run_in_background: true },
+      // Hypothetical future SDK wording that no longer matches the regex.
+      output: [{ type: "text", text: "Agent dispatched to background." }],
+      toolUseId: "toolu_1",
+      ts: 1000,
+    }) as any;
+
+    expect(event.phase).toBe("running");
+  });
+
+  it("flattens a real completion into result text", () => {
+    const event = buildSubagentCompletionEvent({
+      input: { subagent_type: "general-purpose" },
+      output: [
+        { type: "text", text: "## Review\n\nNo findings." },
+        { type: "text", text: "agentId: abc123 (use SendMessage)" },
+      ],
+      toolUseId: "toolu_1",
+      ts: 1000,
+    }) as any;
+
+    expect(event.phase).toBe("completed");
+    expect(event.result).toBe("## Review\n\nNo findings.");
+  });
+
+  it("maps an errored tool_result to failed", () => {
+    const event = buildSubagentCompletionEvent({
+      input: { subagent_type: "general-purpose" },
+      output: "boom",
+      error: "boom",
+      toolUseId: "toolu_1",
+      ts: 1000,
+    }) as any;
+
+    expect(event.phase).toBe("failed");
+    expect(event.error).toBe("boom");
+  });
+});
+
+describe("mapSDKMessage subagent sequence", () => {
+  it("tags a subagent's child tool call with its parent and spawn origin", () => {
+    const cs = makeClaudeSession();
+    const events = mapSDKMessage(
+      {
+        type: "assistant",
+        uuid: "u1",
+        session_id: "s1",
+        parent_tool_use_id: "toolu_parent",
+        message: {
+          role: "assistant",
+          content: [
+            { type: "tool_use", id: "toolu_child", name: "Read", input: { file_path: "a.ts" } },
+          ],
+        },
+      } as any,
+      cs,
+    );
+
+    const child = events.find((e) => e.type === "tool_call") as any;
+    expect(child?.metadata).toMatchObject({
+      phase: "start",
+      toolCallId: "toolu_child",
+      parentToolUseId: "toolu_parent",
+      isFromSubagent: true,
+    });
+  });
+
+  it("emits invoked on the Agent tool_use and running on its launch ack", () => {
+    const cs = makeClaudeSession();
+    const spawnEvents = mapSDKMessage(
+      {
+        type: "assistant",
+        uuid: "u1",
+        session_id: "s1",
+        parent_tool_use_id: null,
+        message: {
+          role: "assistant",
+          content: [
+            {
+              type: "tool_use",
+              id: "toolu_agent",
+              name: "Agent",
+              input: { subagent_type: "general-purpose", description: "Security review" },
+            },
+          ],
+        },
+      } as any,
+      cs,
+    );
+    expect(spawnEvents).toContainEqual(
+      expect.objectContaining({ type: "subagent", phase: "invoked", parentToolUseId: "toolu_agent" }),
+    );
+
+    const ackEvents = mapSDKMessage(
+      {
+        type: "user",
+        session_id: "s1",
+        parent_tool_use_id: null,
+        message: {
+          role: "user",
+          content: [
+            {
+              type: "tool_result",
+              tool_use_id: "toolu_agent",
+              content: [
+                { type: "text", text: "Async agent launched successfully." },
+                { type: "text", text: "agentId: abc123 (use SendMessage)" },
+              ],
+            },
+          ],
+        },
+      } as any,
+      cs,
+    );
+
+    expect(ackEvents).toContainEqual(
+      expect.objectContaining({
+        type: "subagent",
+        phase: "running",
+        parentToolUseId: "toolu_agent",
+        agentId: "abc123",
+      }),
+    );
+    expect(
+      ackEvents.filter((e) => e.type === "subagent" && (e as any).phase === "completed"),
+    ).toHaveLength(0);
   });
 });

@@ -20,7 +20,11 @@ import {
 import { Button, Caption } from "@/components/ui";
 import { DIFF_ADDED_TEXT, DIFF_REMOVED_TEXT, SEVERITY_TEXT } from "../lib/severity";
 import { buildSyntheticDiff } from "../utils/expand-diff";
-import { parseFileDiffSegment, parsePerFileStats } from "../utils/parse-diff";
+import {
+  parseFileDiffSegment,
+  parsePerFileStats,
+  type FileChangeStatus,
+} from "../utils/parse-diff";
 import { normalizePath, pathsMatch } from "../utils/path-utils";
 
 interface DiffSectionProps {
@@ -46,6 +50,61 @@ function DiffStats({ stats }: { stats: WorkspaceDiff["stats"] }) {
         <span className={DIFF_REMOVED_TEXT}>-{deletions}</span>
       )}
     </div>
+  );
+}
+
+/**
+ * Single-letter git status per file row, in the slot the per-file +/- counts
+ * used to occupy. Every row carries one, so it reads as a column rather than
+ * an exception marker — the totals in the header cover the line arithmetic.
+ */
+const STATUS_LETTER: Record<
+  FileChangeStatus,
+  { label: string; title: string; className: string }
+> = {
+  added: {
+    label: "A",
+    title: "Added",
+    className: "text-green-600 dark:text-green-400",
+  },
+  untracked: {
+    label: "U",
+    title: "Untracked",
+    className: "text-green-600 dark:text-green-400",
+  },
+  modified: {
+    label: "M",
+    title: "Modified",
+    className: "text-amber-600 dark:text-amber-400",
+  },
+  deleted: {
+    label: "D",
+    title: "Deleted",
+    className: "text-red-500 dark:text-red-400",
+  },
+  renamed: {
+    label: "R",
+    title: "Renamed",
+    className: "text-blue-500 dark:text-blue-400",
+  },
+};
+
+function FileStatusLetter({
+  status,
+  title,
+}: {
+  status: FileChangeStatus;
+  title?: string;
+}) {
+  const letter = STATUS_LETTER[status];
+  return (
+    <span
+      title={title ?? letter.title}
+      // Fixed width so the letters line up into a column regardless of name length.
+      className={`shrink-0 w-3 text-center text-xxs font-semibold tabular-nums ${letter.className}`}
+    >
+      {letter.label}
+    </span>
   );
 }
 
@@ -89,9 +148,10 @@ export function DiffSection({
   );
 
   const diffText = diff?.diffText;
+  const untrackedFiles = diff?.untrackedFiles;
   const fileStats = useMemo(
-    () => (diffText ? parsePerFileStats(diffText) : {}),
-    [diffText],
+    () => (diffText ? parsePerFileStats(diffText, untrackedFiles) : {}),
+    [diffText, untrackedFiles],
   );
 
   const { data: allFindings } = useListReviewFindingsByWorkspaceQuery(
@@ -227,10 +287,15 @@ export function DiffSection({
             ? filePath.substring(0, filePath.lastIndexOf("/"))
             : "";
           const isSelected = selectedDiffFile === filePath;
+          const stat = fileStats[filePath];
+          const status = stat?.status ?? "modified";
+          const isDeleted = status === "deleted";
 
           return (
             <Button
               key={filePath}
+              // The path truncates in place, so the full one lives on hover.
+              title={filePath}
               onClick={() => {
                 const segment = diff ? parseFileDiffSegment(filePath, diff.diffText) : "";
                 setSelectedDiffFile(filePath);
@@ -246,35 +311,33 @@ export function DiffSection({
               <FileIconComponent
                 fileName={fileName}
                 extension={fileName.split(".").pop()}
-                className="w-4 h-4 shrink-0"
+                className={`w-4 h-4 shrink-0 ${isDeleted ? "opacity-50" : ""}`}
               />
-              <div className="flex flex-col min-w-0 flex-1">
-                <span className="text-xs font-medium text-primary-900 dark:text-primary-200 truncate">
+              <div className="flex items-baseline gap-1.5 min-w-0 flex-1">
+                <span
+                  // shrink-[0.25]: both children may truncate, but the path —
+                  // longer and less identifying — gives up room first.
+                  className={`min-w-0 shrink-[0.25] truncate text-xs font-medium ${
+                    isDeleted
+                      ? "line-through decoration-primary-800/50 dark:decoration-primary/50 text-primary-700 dark:text-primary-400"
+                      : "text-primary-900 dark:text-primary-200"
+                  }`}
+                >
                   {fileName}
                 </span>
                 {dirPath && (
-                  <span className="text-xxs text-primary-700 dark:text-primary-300 truncate">
+                  <span className="min-w-0 truncate text-xxs text-primary-600/80 dark:text-primary-400/70">
                     {dirPath}
                   </span>
                 )}
               </div>
-              <div className="flex flex-col items-end justify-center">
-                {fileStats[filePath] && (
-                  <div className="flex items-center gap-1 text-xxs tabular-nums shrink-0">
-                    {fileStats[filePath].ins > 0 && (
-                      <span className={DIFF_ADDED_TEXT}>
-                        +{fileStats[filePath].ins}
-                      </span>
-                    )}
-                    {fileStats[filePath].del > 0 && (
-                      <span className={DIFF_REMOVED_TEXT}>
-                        -{fileStats[filePath].del}
-                      </span>
-                    )}
-                  </div>
-                )}
-                {findingsByFile[filePath] && <FindingBadges counts={findingsByFile[filePath]} />}
-              </div>
+              {findingsByFile[filePath] && (
+                <FindingBadges counts={findingsByFile[filePath]} />
+              )}
+              <FileStatusLetter
+                status={status}
+                title={stat?.oldPath ? `Renamed from ${stat.oldPath}` : undefined}
+              />
             </Button>
           );
         })}
@@ -290,6 +353,7 @@ export function DiffSection({
           return (
             <Button
               key={`finding-${filePath}`}
+              title={filePath}
               onClick={() => handleSelectFindingOnlyFile(filePath)}
               className={`w-full flex items-center gap-2 px-2 py-1 rounded-xl duration-200 text-left transition-all animate-slide-in ${
                 isSelected
@@ -303,19 +367,22 @@ export function DiffSection({
                 extension={fileName.split(".").pop()}
                 className="w-4 h-4 shrink-0"
               />
-              <div className="flex flex-col min-w-0 flex-1">
-                <span className="text-xs font-medium text-primary-900 dark:text-primary-200 truncate">
+              <div className="flex items-baseline gap-1.5 min-w-0 flex-1">
+                <span className="min-w-0 shrink-[0.25] truncate text-xs font-medium text-primary-900 dark:text-primary-200">
                   {fileName}
                 </span>
                 {dirPath && (
-                  <span className="text-xxs text-primary-700 dark:text-primary-300 truncate">
+                  <span className="min-w-0 truncate text-xxs text-primary-600/80 dark:text-primary-400/70">
                     {dirPath}
                   </span>
                 )}
               </div>
-              <div className="flex flex-col items-end justify-center">
-                {findingsByFile[filePath] && <FindingBadges counts={findingsByFile[filePath]} />}
-              </div>
+              {findingsByFile[filePath] && (
+                <FindingBadges counts={findingsByFile[filePath]} />
+              )}
+              {/* These files aren't in the diff, so they have no status letter —
+                  hold the column open so both lists share a right edge. */}
+              <span className="w-3 shrink-0" />
             </Button>
           );
         })}

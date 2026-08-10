@@ -25,15 +25,17 @@ export function PromptSuggestionChips({
           transition={{ duration: 0.25, ease: "easeOut" }}
           onClick={() => !disabled && onSelect(suggestion)}
           disabled={disabled}
-          className="shooting-star-border group rounded-2xl max-w-[80%]
+          className="shooting-star-border group rounded-2xl max-w-[80%] text-left
             cursor-pointer
             disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <span className="spark" />
           <span className="spark-backdrop rounded-2xl" />
-          <span className="relative z-10 flex items-center gap-2 px-4 py-2.5 text-sm
+          <span className="relative z-10 flex items-start gap-2 px-4 py-2.5 text-sm
             text-primary-950 dark:text-primary-50">
-            <span className="truncate max-w-100">{suggestion}</span>
+            {/* Wraps rather than truncates: a suggestion you can't read is one
+                you can't judge before sending it. */}
+            <span className="wrap-break-word">{suggestion}</span>
           </span>
         </m.button>
         <m.span

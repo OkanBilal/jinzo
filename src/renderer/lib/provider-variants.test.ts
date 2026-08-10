@@ -3,6 +3,7 @@ import { PROVIDER_IDS } from "../../shared/provider-ids";
 import {
   PROVIDER_VARIANTS,
   getProviderVariant,
+  pickDefaultEffort,
   type ProviderVariant,
 } from "./provider-variants";
 
@@ -33,6 +34,12 @@ describe("provider variant descriptor", () => {
     expect(getProviderVariant("copilot").effortKey).toBe("modelReasoningEffort");
     expect(getProviderVariant("claude").effortKey).toBe("effortLevel");
     expect(getProviderVariant("cursor").effortKey).toBe("effortLevel");
+  });
+
+  it("gives every variant an effort default the composer can seed", () => {
+    for (const v of VARIANTS) {
+      expect(getProviderVariant(v).effortDefault).toBe("medium");
+    }
   });
 
   it("pins fast-mode style: codex uses the service tier, others a boolean", () => {
@@ -73,5 +80,28 @@ describe("provider variant descriptor", () => {
       expect(d.variant).toBe(v);
       expect(typeof d.icon).toBe("function");
     }
+  });
+});
+
+describe("pickDefaultEffort", () => {
+  it("takes the preferred level when the model advertises it", () => {
+    expect(pickDefaultEffort(["low", "medium", "high"], "medium")).toBe("medium");
+  });
+
+  it("clamps to the nearest advertised level instead of the priciest one", () => {
+    expect(pickDefaultEffort(["low", "high", "xhigh", "max"], "medium")).toBe("low");
+    expect(pickDefaultEffort(["high", "xhigh", "max"], "medium")).toBe("high");
+    expect(pickDefaultEffort(["minimal", "low"], "medium")).toBe("low");
+  });
+
+  it("returns nothing for a model with no effort levels", () => {
+    // Cursor/Copilot "auto" — the composer must leave effort unset here.
+    expect(pickDefaultEffort([], "medium")).toBe("");
+    expect(pickDefaultEffort(undefined, "medium")).toBe("");
+  });
+
+  it("falls back to the highest level when nothing is rankable", () => {
+    expect(pickDefaultEffort(["fast", "slow"], "medium")).toBe("slow");
+    expect(pickDefaultEffort(["low", "high"], "turbo")).toBe("high");
   });
 });

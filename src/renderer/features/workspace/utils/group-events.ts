@@ -1,4 +1,8 @@
 import type { RunEvent } from "../types";
+import {
+  CLAUDE_SPAWN_TOOLS,
+  CODEX_COLLAB_TOOLS,
+} from "./subagent-identity";
 import { eventsValueEqual } from "./run-event-mappers";
 
 export interface EventGroup {
@@ -23,21 +27,26 @@ function isPlanToolEvent(event: { type: string; content: string }): boolean {
 }
 
 /**
- * Codex AgentControl collab tool calls (spawn/sendInput/wait/close/resume) —
- * render standalone outside the tool_calls accordion so each transition shows
- * up clearly in the timeline ("Spawned X", "Finished waiting for X", etc.).
+ * Spawn tool calls (Codex collab variants, Claude's Agent/Task) are persisted
+ * — the subagent panel anchors on the spawn rows — but not rendered in the
+ * transcript: the panel is the canonical subagent surface, and showing every
+ * spawn in both places duplicated it. The names come from the shared tool
+ * vocabulary in subagent-identity.
  */
-const COLLAB_TOOL_NAMES = new Set([
-  "spawnagent",
-  "sendcollabinput",
-  "waitcollabagent",
-  "closecollabagent",
-  "resumecollabagent",
-]);
-
-function isStandaloneToolEvent(event: { type: string; content: string }): boolean {
+function isSubagentSpawnEvent(event: { type: string; content: string }): boolean {
   const n = toolEventPlanName(event);
-  return n !== null && COLLAB_TOOL_NAMES.has(n);
+  return n !== null && (CODEX_COLLAB_TOOLS.has(n) || CLAUDE_SPAWN_TOOLS.has(n));
+}
+
+/**
+ * A subagent's own tool call — it belongs to the session panel's flow view,
+ * not the chat. `parentToolCallId` identifies one from row insert;
+ * `isFromSubagent` covers rows whose linkage only landed with the completion
+ * metadata.
+ */
+function isSubagentChildEvent(event: RunEvent): boolean {
+  const m = event.metadata as Record<string, unknown> | undefined;
+  return !!(m?.parentToolCallId || m?.isFromSubagent);
 }
 
 export function isPlanToolCallGroup(group: EventGroup): boolean {
@@ -64,6 +73,13 @@ export function groupEvents(events: RunEvent[]): EventGroup[] {
 
   for (const event of events) {
     if (event.type === "tool_call") {
+      // Subagent machinery lives in the session panel, not the chat: spawn
+      // calls (Codex collab variants and Claude's Agent/Task) and the
+      // sub-agents' own tool calls are dropped here without flushing, so the
+      // surrounding accordion doesn't split around them.
+      if (isSubagentSpawnEvent(event) || isSubagentChildEvent(event)) {
+        continue;
+      }
       // Plan/ExitPlanMode tool calls render standalone, never inside a group
       if (isPlanToolEvent(event)) {
         flushToolGroup();
@@ -74,21 +90,15 @@ export function groupEvents(events: RunEvent[]): EventGroup[] {
           startTime: event.timestamp,
           endTime: event.timestamp,
         });
-      } else if (isStandaloneToolEvent(event)) {
-        // Codex spawnAgent calls — keep each one as its own group so subagent
-        // info is visible and not collapsed inside the tool_calls accordion.
-        flushToolGroup();
-        groups.push({
-          id: `standalone-${event.id}`,
-          type: "tool_calls",
-          events: [event],
-          startTime: event.timestamp,
-          endTime: event.timestamp,
-        });
       } else {
         currentToolGroup.push(event);
       }
     } else if (event.type === "artifact") {
+      // A subagent's messages belong to its detail tab, not the parent chat.
+      // Skipped before the flush so they don't split a tool accordion either.
+      if (event.metadata?.isFromSubagent) {
+        continue;
+      }
       flushToolGroup();
       // Cursor agent thought stream — UI-only (e.g. loader), not a chat bubble
       if (event.metadata?.kind === "thinking") {

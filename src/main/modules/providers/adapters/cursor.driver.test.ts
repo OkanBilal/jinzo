@@ -24,6 +24,7 @@ import {
   parseCursorCommands,
   type CursorConfigOption,
 } from "./cursor.driver";
+import { resolveCatalogDefaultId } from "./adapter.shared";
 
 describe("cursor.driver / session mode", () => {
   it("explicitly resets a resumed plan session back to agent mode", async () => {
@@ -178,6 +179,58 @@ describe("cursor.driver / config-option discovery", () => {
     };
     expect(resolveCursorBooleanValue(boolOpt, true)).toBe(true);
     expect(resolveCursorBooleanValue(boolOpt, false)).toBe(false);
+  });
+});
+
+describe("cursor.driver / catalog default", () => {
+  // Ids as `cursor-agent acp` actually advertises them (session/new →
+  // configOptions[category=model]), in advertised order. The auto-routing model
+  // is `default` / "Auto" — there is no `auto` id; that spelling only exists as
+  // the CLI's `--model` flag value.
+  const CATALOG = [
+    "default",
+    "grok-4.5",
+    "composer-2.5",
+    "claude-opus-5",
+    "gpt-5.4-nano",
+    "glm-5.2",
+  ];
+
+  it("defaults to Cursor's Auto entry, not the CLI's last-used model", () => {
+    // `currentModelId` is intentionally absent from the preference list: the
+    // caps probe rewrites it per model, so it settles on the last id probed.
+    expect(resolveCatalogDefaultId(CATALOG, undefined, ["default", "auto"])).toBe(
+      "default",
+    );
+  });
+
+  it("still honors a model the user pinned", () => {
+    expect(resolveCatalogDefaultId(CATALOG, "composer-2.5", ["default", "auto"])).toBe(
+      "composer-2.5",
+    );
+  });
+
+  it("falls back to Auto when the pinned model left the account's catalog", () => {
+    expect(resolveCatalogDefaultId(CATALOG, "composer-1.0", ["default", "auto"])).toBe(
+      "default",
+    );
+  });
+
+  it("falls back to the first advertised model if Auto itself is ever dropped", () => {
+    // Cursor could retire or rename the auto-routing entry. The catalog's own
+    // ordering is the last resort — never `currentModelId`, and never a second
+    // hardcoded id (that is the rot this table exists to avoid).
+    const withoutAuto = CATALOG.filter((id) => id !== "default");
+    expect(resolveCatalogDefaultId(withoutAuto, undefined, ["default", "auto"])).toBe(
+      "grok-4.5",
+    );
+  });
+
+  it("keeps honoring a pinned model even with Auto gone", () => {
+    const withoutAuto = CATALOG.filter((id) => id !== "default");
+    expect(
+      resolveCatalogDefaultId(withoutAuto, "claude-opus-5", ["default", "auto"]),
+    ).toBe("claude-opus-5");
   });
 });
 

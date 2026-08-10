@@ -31,6 +31,19 @@ import { emit } from "../../ipc-kit";
 const LIVE_DIFF_DEBOUNCE_MS = 300;
 const FORCE_FINALIZE_TIMEOUT_MS = 30_000;
 
+/**
+ * `metadata.task` statuses the provider has already resolved — the run-end
+ * sweep leaves these alone. Mirrors `SubagentTaskMeta["status"]` in the
+ * renderer's subagent-identity, minus the live ones (`pending`, `running`,
+ * `paused` — a paused task cannot resume once the run's process is gone).
+ */
+const TERMINAL_TASK_STATUSES = new Set([
+  "completed",
+  "failed",
+  "killed",
+  "stopped",
+]);
+
 // ─────────────────────────────────────────────────────────────
 // File-level utilities (pure)
 // ─────────────────────────────────────────────────────────────
@@ -121,6 +134,7 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   let sleepBlockerId: number | null = null;
   let activeTurnId: number | null = null;
   let initialTurnReady: Promise<void> | null = null;
+  let resolvedToolCallsReady: Promise<void> | null = null;
   let turnCounter: number = ctx.seedTurnIndex ?? -1;
   let liveDiffTimer: NodeJS.Timeout | null = null;
   let liveDiffInFlight = false;
@@ -132,6 +146,22 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   // once the foreground call already returned "running in background"), so they
   // need an anchor that outlives it.
   const resolvedToolCalls = new Map<string, number>();
+
+  async function hydrateResolvedToolCalls(): Promise<void> {
+    try {
+      const calls = await runsRepo.findToolCallsByRun(runId);
+      for (const call of calls) {
+        if (call.toolId) {
+          resolvedToolCalls.set(call.toolId, call.id);
+        }
+      }
+    } catch (err) {
+      console.error(
+        `[RunSession ${runId}] Failed to hydrate tool-call anchors:`,
+        err,
+      );
+    }
+  }
 
   // ─── Broadcast helpers (channel names + payload shapes preserved exactly) ───
   function broadcastEventPersisted(): void {
@@ -279,6 +309,59 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
       }
     }
     pendingToolCalls.clear();
+  }
+
+  /**
+   * Settle rows whose terminal lifecycle event never arrived.
+   *
+   * An aborted run tears the provider sink down before the settle
+   * notifications are processed, and a spawn-style call (Codex) is already
+   * "done" the moment the agent starts — so without this sweep the session
+   * panel shows those agents running forever. The run's outcome stands in for
+   * theirs: succeeded → completed, anything else → stopped.
+   *
+   * BOTH lifecycle keys are swept, because they are separate sources of
+   * "still working" and a row can carry either one. `metadata.subagent` is a
+   * spawn's own lifecycle; `metadata.task` is the CLI's task lifecycle, and it
+   * is the ONLY liveness a SendMessage continuation or a backgrounded command
+   * has — settling just the first left a resumed agent (whose live state moved
+   * onto its continuation row) spinning forever after the run that resumed it
+   * was stopped.
+   */
+  async function settleUnfinishedSubagents(
+    runStatus: "succeeded" | "failed" | "canceled",
+  ): Promise<void> {
+    const settledState = runStatus === "succeeded" ? "completed" : "stopped";
+    try {
+      const calls = await runsRepo.findToolCallsByRun(runId);
+      for (const call of calls) {
+        const metadata = call.metadata as Record<string, unknown> | null;
+        const subagent = metadata?.subagent as { phase?: string } | undefined;
+        const task = metadata?.task as
+          | { phase?: string; status?: string; error?: string }
+          | undefined;
+        const patch: Record<string, unknown> = {};
+
+        if (subagent?.phase === "invoked" || subagent?.phase === "running") {
+          patch.subagent = { phase: settledState, updatedAt: Date.now() };
+        }
+        // A task the provider already resolved — by status, by a completed
+        // phase, or by failing — keeps its own outcome.
+        if (
+          task &&
+          !task.error &&
+          task.phase !== "completed" &&
+          !TERMINAL_TASK_STATUSES.has(task.status ?? "")
+        ) {
+          patch.task = { status: settledState, updatedAt: Date.now() };
+        }
+
+        if (Object.keys(patch).length === 0) continue;
+        await runsRepo.updateToolCall(call.id, { metadata: patch });
+      }
+    } catch (err) {
+      console.error(`[RunSession ${runId}] Failed to settle subagents:`, err);
+    }
   }
 
   /** Belt-and-suspenders: mark any DB-side tool calls still in "running" as ended. */
@@ -459,18 +542,24 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   async function projectToolCall(
     event: Extract<WorkRunEvent, { type: "tool_call" }>,
   ): Promise<void> {
-    const phase = (event.metadata as Record<string, unknown> | undefined)?.phase;
+    const metadata = event.metadata as Record<string, unknown> | undefined;
+    const phase = metadata?.phase;
     if (phase === "start") {
+      const metadataToolCallId = metadata?.toolCallId;
+      const parentToolUseId = metadata?.parentToolUseId;
       const toolCallId = await runsRepo.insertToolCall({
         accountId,
         runId,
         providerId,
+        toolId: metadataToolCallId ? String(metadataToolCallId) : undefined,
+        // Links a subagent's own tool calls back to the call that spawned the
+        // subagent — the session panel's flow view filters on this column.
+        parentToolCallId: parentToolUseId ? String(parentToolUseId) : undefined,
         toolName: event.toolName,
         status: "running",
         input: event.input,
         startedAt: event.startedAt ? new Date(event.startedAt) : new Date(),
       });
-      const metadataToolCallId = (event.metadata as Record<string, unknown> | undefined)?.toolCallId;
       const callKey = metadataToolCallId
         ? String(metadataToolCallId)
         : `${event.toolName}-${event.startedAt || Date.now()}`;
@@ -570,7 +659,11 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
     detail: Record<string, unknown>,
   ): Promise<boolean> {
     if (!toolUseId) return false;
-    const toolCallId = resolvedToolCalls.get(toolUseId);
+    let toolCallId = resolvedToolCalls.get(toolUseId);
+    if (toolCallId === undefined && resolvedToolCallsReady) {
+      await resolvedToolCallsReady;
+      toolCallId = resolvedToolCalls.get(toolUseId);
+    }
     if (toolCallId === undefined) return false;
     // Drop undefined fields so a later partial patch cannot blank an earlier one.
     const clean = Object.fromEntries(
@@ -590,6 +683,9 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
       prompt: event.prompt,
       result: event.result,
       error: event.error,
+      // Terminal patches overwrite updatedAt, so the spawn moment gets its own
+      // key — the panel derives "worked for Xs" from invokedAt → updatedAt.
+      ...(event.phase === "invoked" ? { invokedAt: event.ts ?? Date.now() } : {}),
       updatedAt: event.ts ?? Date.now(),
     });
   }
@@ -748,6 +844,7 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
       await closeActiveTurn(result.usage);
       await closePendingToolCalls(toolCallStatus);
       await closeRunningToolCallsInDb(toolCallStatus);
+      await settleUnfinishedSubagents(result.status);
     } catch (cleanupErr) {
       console.error(`[RunSession ${runId}] Cleanup failed:`, cleanupErr);
     } finally {
@@ -767,7 +864,10 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   // Keep the baseRef-capture promise so finalize can await it (see persistFinalDiff).
   baseRefCaptured = captureBaseRef();
   void acquireSleepBlocker();
-  initialTurnReady = startNextTurn(ctx.initialPromptContent);
+  resolvedToolCallsReady = hydrateResolvedToolCalls();
+  initialTurnReady = resolvedToolCallsReady.then(() =>
+    startNextTurn(ctx.initialPromptContent),
+  );
   void initialTurnReady;
 
   return session;

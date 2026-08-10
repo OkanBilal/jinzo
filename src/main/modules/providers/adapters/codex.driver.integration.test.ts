@@ -67,6 +67,34 @@ async function waitForProtocolMessage(
   return readProtocolLog(logPath).find(predicate);
 }
 
+/**
+ * Wait for a driver event, failing loudly on timeout.
+ *
+ * Notifications only reach the protocol log when the *client* sends them, so
+ * server-driven state (a subagent's turn starting, say) can only be observed
+ * through the emitted events. Polling with a silent deadline turns a missed
+ * signal into a confusing assertion diff further down, so this throws instead.
+ */
+async function waitForDriverEvent(
+  events: Array<Record<string, unknown>>,
+  predicate: (event: Record<string, unknown>) => boolean,
+  label: string,
+  timeoutMs = 2000,
+): Promise<Record<string, unknown>> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const match = events.find(predicate);
+    if (match) return match;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error(
+    `Timed out after ${timeoutMs}ms waiting for ${label}. Saw: ${
+      events.map((event) => `${event.type}/${event.phase ?? ""}`).join(", ") ||
+      "(no events)"
+    }`,
+  );
+}
+
 afterEach(async () => {
   vi.restoreAllMocks();
   approvalHarness.requests.length = 0;
@@ -981,6 +1009,163 @@ describe("codex.driver / app-server protocol", () => {
         (message) => message.method === "turn/interrupt",
       ),
     ).toBe(true);
+  });
+
+  it("interrupts active subagents and gives Luna an explicit resume path on continue", async () => {
+    const tempDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "mains-codex-driver-"),
+    );
+    tempDirs.push(tempDir);
+    const logPath = path.join(tempDir, "protocol.jsonl");
+    process.env.MAINS_CODEX_FIXTURE_LOG = logPath;
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 500,
+    });
+    drivers.push(driver);
+    const runId = "run-subagent-abort-continue";
+    const abortRequest = request(runId);
+    abortRequest.goal = "active subagent timeout turn";
+    const acquired = await driver.createSession(abortRequest);
+    const firstEvents: Array<Record<string, unknown>> = [];
+    const abortController = new AbortController();
+    const outcomePromise = driver.executePrompt(
+      acquired.session,
+      acquired.prompt,
+      async (event) => {
+        firstEvents.push(event as unknown as Record<string, unknown>);
+      },
+      abortController.signal,
+    );
+
+    await waitForProtocolMessage(
+      logPath,
+      (message) => message.method === "turn/start",
+    );
+    // Wait for "running", not "invoked". The spawn item that produces
+    // "invoked" arrives one notification *before* the child's turn/started,
+    // and it is that turn/started which records the child's activeTurnId —
+    // the field interruptRunTurns needs to target it. Aborting on "invoked"
+    // races the two, and loses whenever the notifications land in separate
+    // stdin chunks.
+    await waitForDriverEvent(
+      firstEvents,
+      (event) =>
+        event.type === "subagent" &&
+        event.phase === "running" &&
+        event.agentId === "thread-1-child",
+      "the child subagent's turn to start",
+    );
+
+    abortController.abort();
+    await expect(outcomePromise).resolves.toMatchObject({ status: "canceled" });
+
+    // The outcome resolving does NOT mean both interrupts are on disk. The
+    // fixture answers the parent's turn/interrupt by emitting the parent's
+    // turn/completed, which finalizes the run — it can do that before it has
+    // even read the child's interrupt off stdin, and the log is written by
+    // that separate process. Reading once here saw only the parent on ubuntu
+    // CI while the child's line landed microseconds later. Wait for it.
+    await waitForProtocolMessage(
+      logPath,
+      (message) =>
+        message.method === "turn/interrupt" &&
+        (message.params as { threadId?: string } | undefined)?.threadId ===
+          "thread-1-child",
+      2000,
+    );
+
+    const interruptedTurns = readProtocolLog(logPath)
+      .filter((message) => message.method === "turn/interrupt")
+      .map((message) => message.params);
+    expect(interruptedTurns).toEqual(
+      expect.arrayContaining([
+        {
+          threadId: "thread-1",
+          turnId: "turn-thread-1",
+        },
+        {
+          threadId: "thread-1-child",
+          turnId: "turn-thread-1-child",
+        },
+      ]),
+    );
+
+    await driver.cleanup?.(acquired.session);
+    const continued = await driver.resumeSession?.({
+      runId,
+      accountId: "account-1",
+      workspace: {
+        id: "workspace-1",
+        rootPath: process.cwd(),
+      },
+      message: "continue interrupted subagent",
+    });
+    expect(continued).toBeDefined();
+
+    const continuedEvents: Array<Record<string, unknown>> = [];
+    const continuedOutcome = await driver.executePrompt(
+      continued!.session,
+      continued!.prompt,
+      async (event) => {
+        continuedEvents.push(event as unknown as Record<string, unknown>);
+      },
+      new AbortController().signal,
+    );
+
+    const continuedTurnStart = readProtocolLog(logPath)
+      .filter((message) => message.method === "turn/start")
+      .at(-1);
+    const continuedInput = (
+      continuedTurnStart?.params as
+        | { input?: Array<{ type?: string; text?: string }> }
+        | undefined
+    )?.input;
+    const continuedPrompt = continuedInput?.find(
+      (item) => item.type === "text",
+    )?.text;
+    expect(continuedPrompt).toContain("<mains_interrupted_subagents>");
+    expect(continuedPrompt).toContain("thread-1-child");
+    expect(continuedPrompt).toContain("resume_agent");
+    expect(continuedPrompt).toContain("send_input");
+
+    expect(continuedOutcome.status).toBe("succeeded");
+    expect(continuedEvents).toContainEqual(
+      expect.objectContaining({
+        type: "tool_call",
+        toolName: "resumeCollabAgent",
+      }),
+    );
+    expect(continuedEvents).toContainEqual(
+      expect.objectContaining({
+        type: "subagent",
+        phase: "running",
+        agentId: "thread-1-child",
+        parentToolUseId: "spawn-thread-1-child",
+      }),
+    );
+    expect(continuedEvents).toContainEqual(
+      expect.objectContaining({
+        type: "subagent",
+        phase: "completed",
+        agentId: "thread-1-child",
+        parentToolUseId: "spawn-thread-1-child",
+        result: "Continued child result",
+      }),
+    );
+    expect(
+      readProtocolLog(logPath).filter(
+        (message) => message.method === "thread/resume",
+      ).at(-1)?.params,
+    ).toMatchObject({ threadId: "thread-1" });
+    expect(
+      readProtocolLog(logPath).some(
+        (message) =>
+          message.method === "thread/delete" ||
+          message.method === "thread/archive",
+      ),
+    ).toBe(false);
   });
 
   it(

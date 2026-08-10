@@ -41,6 +41,13 @@ export interface AppSettingsState {
    * that isn't restored on boot — reopening onto an empty panel would confuse.
    */
   sessionPanelOpen: boolean;
+  /**
+   * Pill-vs-list preference of the bottom-right subagent panel. Persisted:
+   * whether the panel shows at all tracks the run's agents automatically, but
+   * its shape is the user's lasting choice — a new spawn must not force the
+   * list open on someone who parked it as a pill.
+   */
+  subagentPanelCollapsed: boolean;
   onboardingCompleted: boolean;
   sidebarWidth: number;
   /** Right panel width in pixels. Mirrored onto `--panel-width`. */
@@ -72,6 +79,7 @@ const initialState: AppSettingsState = {
   rightPanelOpen: false,
   browserPanelOpen: false,
   sessionPanelOpen: false,
+  subagentPanelCollapsed: false,
   onboardingCompleted: false,
   sidebarWidth: SIDEBAR_WIDTH_DEFAULT,
   rightPanelWidth: PANEL_WIDTH_DEFAULT,
@@ -102,6 +110,9 @@ const appSettingsSlice = createSlice({
     },
     setSessionPanelOpen: (state, action: PayloadAction<boolean>) => {
       state.sessionPanelOpen = action.payload;
+    },
+    setSubagentPanelCollapsed: (state, action: PayloadAction<boolean>) => {
+      state.subagentPanelCollapsed = action.payload;
     },
     setOnboardingCompleted: (state, action: PayloadAction<boolean>) => {
       state.onboardingCompleted = action.payload;
@@ -190,6 +201,7 @@ export const {
   setBrowserPanelOpen,
   setRightPanelOpen,
   setSessionPanelOpen,
+  setSubagentPanelCollapsed,
   setOnboardingCompleted,
   setSidebarWidth,
   setRightPanelWidth,

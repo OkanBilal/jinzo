@@ -14,11 +14,14 @@ import type {
 } from "./fileExplorer.dto";
 import {
   DEFAULT_EXCLUDE_PATTERNS,
+  DEFAULT_SEARCH_EXCLUDE_PATTERNS,
   MAX_FILE_SIZE_BYTES,
   MAX_READ_DIRECTORY_NODES,
   DEFAULT_READ_DIRECTORY_DEPTH,
   DEFAULT_SEARCH_FILES_MAX,
 } from "./fileExplorer.dto";
+import { gitService } from "../git";
+import { assertWithinContentRoots } from "./fileExplorer.roots";
 
 
 // ─────────────────────────────────────────────────────────────
@@ -181,7 +184,9 @@ export const fileExplorerService = {
       rootPath,
       // Undefined in callers => apply safe default depth cap.
       depth = DEFAULT_READ_DIRECTORY_DEPTH,
-      includeHidden = false,
+      // VS Code parity: dotfiles are visible by default; only the exclude
+      // patterns (VCS internals, OS metadata) are hidden.
+      includeHidden = true,
       excludePatterns = DEFAULT_EXCLUDE_PATTERNS,
     } = options;
 
@@ -241,7 +246,7 @@ export const fileExplorerService = {
     options?: { includeHidden?: boolean; excludePatterns?: string[] }
   ): Promise<FileNode[]> {
     const {
-      includeHidden = false,
+      includeHidden = true,
       excludePatterns = DEFAULT_EXCLUDE_PATTERNS,
     } = options || {};
 
@@ -327,8 +332,23 @@ export const fileExplorerService = {
   async getPathInfo(
     targetPath: string
   ): Promise<{ exists: boolean; isDirectory: boolean; isFile: boolean }> {
+    // Resolved before the containment check so a symlink is judged by its
+    // target, and before the stat so an out-of-root path can't be probed for
+    // existence — this call is what decides whether the editor opens a path.
+    let realPath: string;
     try {
-      const stat = await fs.stat(targetPath);
+      realPath = await fs.realpath(path.resolve(targetPath));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        return { exists: false, isDirectory: false, isFile: false };
+      }
+      throw new Error("Failed to get path info");
+    }
+
+    await assertWithinContentRoots(realPath);
+
+    try {
+      const stat = await fs.stat(realPath);
       return {
         exists: true,
         isDirectory: stat.isDirectory(),
@@ -354,9 +374,10 @@ export const fileExplorerService = {
   },
 
   /**
-   * Read file text. Single-user desktop app — the agent already has the
-   * user's full filesystem access, so the renderer can preview anywhere
-   * too. Keeps regular-file / size / binary safeguards.
+   * Read file text, confined to the content roots (see fileExplorer.roots).
+   * The renderer opens paths that untrusted markdown can name, so reachability
+   * is decided here rather than by the caller. Keeps the regular-file / size /
+   * binary safeguards.
    */
   async readFileText(
     options: ReadFileTextOptions
@@ -374,6 +395,10 @@ export const fileExplorerService = {
     } catch (error) {
       throwFsError(error, "File does not exist", "Failed to read file");
     }
+
+    // Checked on the resolved path: a link inside a workspace that points out
+    // of it escapes the boundary otherwise.
+    await assertWithinContentRoots(realPath);
 
     try {
       // Get file stats and validate it's a regular file
@@ -465,9 +490,9 @@ export const fileExplorerService = {
   /**
    * Overwrite an existing regular file with UTF-8 text. The target must
    * already exist — this backs in-place editing of previewed files, not
-   * file creation. Symlinks are resolved first so the regular-file check
-   * applies to the real target, and the same 2MB cap as readFileText keeps
-   * the renderer round-trip bounded.
+   * file creation. Symlinks are resolved first so the regular-file check and
+   * the content-root boundary both apply to the real target, and the same 2MB
+   * cap as readFileText keeps the renderer round-trip bounded.
    */
   async writeFileText(
     options: WriteFileTextOptions
@@ -491,6 +516,8 @@ export const fileExplorerService = {
     } catch (error) {
       throwFsError(error, "File does not exist", "Failed to write file");
     }
+
+    await assertWithinContentRoots(realPath);
 
     try {
       const stats = await fs.lstat(realPath);
@@ -528,6 +555,10 @@ export const fileExplorerService = {
    * Recursive substring search across the workspace tree. Matches against the
    * filename and the workspace-relative path; stops as soon as `max` matches
    * are collected. No `fs.stat` per match — keeps the hot keystroke path cheap.
+   *
+   * Unlike the tree listings, search skips hidden files by default and — in a
+   * git repository — everything .gitignore ignores (VS Code parity: the
+   * explorer shows dotfiles and build output, search doesn't crawl them).
    */
   async searchFiles(options: SearchFilesOptions): Promise<DirEntry[]> {
     const {
@@ -535,7 +566,9 @@ export const fileExplorerService = {
       query,
       max = DEFAULT_SEARCH_FILES_MAX,
       includeHidden = false,
-      excludePatterns = DEFAULT_EXCLUDE_PATTERNS,
+      // Non-git fallback recurses the whole tree — the wider search exclude
+      // list keeps it out of node_modules (VS Code `search.exclude` parity).
+      excludePatterns = DEFAULT_SEARCH_EXCLUDE_PATTERNS,
     } = options;
 
     const needle = query.toLowerCase();
@@ -593,6 +626,44 @@ export const fileExplorerService = {
       }
       throwFsError(error, "Directory does not exist", "Failed to search files");
     }
+
+    // In a git repo, let git decide the candidate set: tracked +
+    // untracked-but-not-ignored files, so nested .gitignore rules apply
+    // exactly. The exclude patterns stay on as a backstop (a repo that
+    // forgot to ignore node_modules) and the hidden filter drops dotfiles.
+    try {
+      if (await gitService.isGitRepo(rootPath)) {
+        const candidates = await gitService.listNonIgnoredFiles(rootPath);
+        for (const rel of candidates) {
+          if (results.length >= max) break;
+          const segments = rel.split("/");
+          if (
+            segments.some((s) => shouldExclude(s, excludePatterns, includeHidden))
+          ) {
+            continue;
+          }
+          const name = segments[segments.length - 1];
+          if (
+            !name.toLowerCase().includes(needle) &&
+            !rel.toLowerCase().includes(needle)
+          ) {
+            continue;
+          }
+          results.push({
+            name,
+            fullPath: path.join(normalizedRoot, rel),
+            type: "file",
+            hasChildren: false,
+            extension: getFileExtension(name),
+          });
+        }
+        return results;
+      }
+    } catch {
+      // git enumeration failed (partial clone, corrupt index, …) — fall
+      // through to the filesystem walk.
+    }
+
     await walk(rootPath);
     return results;
   },
@@ -601,7 +672,7 @@ export const fileExplorerService = {
   async listDir(options: ListDirOptions): Promise<DirEntry[]> {
     const {
       dirPath,
-      includeHidden = false,
+      includeHidden = true,
       excludePatterns = DEFAULT_EXCLUDE_PATTERNS,
     } = options;
 

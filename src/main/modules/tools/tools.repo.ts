@@ -1,4 +1,4 @@
-import { eq, desc, and, isNull, sql } from "drizzle-orm";
+import { eq, asc, desc, and, isNull, sql } from "drizzle-orm";
 import { getDb } from "../../db/client";
 import { safeJsonParse } from "../../db/utils";
 import { toolCalls } from "../../db/schema";
@@ -21,7 +21,10 @@ export const toolsRepo = {
       .select()
       .from(toolCalls)
       .where(eq(toolCalls.runId, runId))
-      .orderBy(desc(toolCalls.createdAt));
+      // Monotonic row ids, not second-grained createdAt: consumers (subagent
+      // fold, flow ordering) treat this as execution order, and timestamp
+      // ties would make it unstable across refetches.
+      .orderBy(asc(toolCalls.id));
     return rows.map(mapToolCallRowToResponse);
   },
 

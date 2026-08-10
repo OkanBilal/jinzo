@@ -48,6 +48,7 @@ import {
   extractArtifactsFromToolOutput,
   formatContextSection,
   appendPromptSections,
+  resolveCatalogDefaultId,
 } from "./adapter.shared";
 import type { MainsToolContext } from "./mains-tools.core";
 import { toCopilotTools } from "./mains-tools.registry";
@@ -1820,11 +1821,20 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
           return modelsCache?.models ?? [];
         }
 
+        // "auto" is the CLI's own synthetic entry: available on every plan and
+        // never retired, so it is the stable fallback when the configured
+        // default has aged out of the catalogue.
+        const defaultId = resolveCatalogDefaultId(
+          raw.map((model) => model.id),
+          config.defaultModel,
+          ["auto"],
+        );
+
         const models = raw.map(
           (model): ModelInfo => ({
             id: model.id,
             displayName: model.name || model.id,
-            isDefault: model.id === config.defaultModel,
+            isDefault: model.id === defaultId,
             capabilities: { vision: model.capabilities?.supports?.vision },
             contextWindow: model.capabilities?.limits?.max_context_window_tokens,
             supportsEffort: model.capabilities?.supports?.reasoningEffort ?? false,

@@ -99,7 +99,7 @@ export function GoalSummaryBar({ providerId, runId, isRunning, enabled, rootPath
   };
 
   return (
-    <div className="w-full max-w-200 mx-auto mb-1">
+    <div className="w-full max-w-210 mx-auto mb-1">
       <div className="rounded-3xl glass-outline overflow-hidden px-4 py-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-1.5">

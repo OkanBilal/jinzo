@@ -4,7 +4,10 @@ import { useIsDarkMode } from "@/hooks/use-is-dark-mode";
 import { File, EditProvider } from "@pierre/diffs/react";
 import type { CreateEditor, FileContents } from "@pierre/diffs/react";
 import { Editor, type EditorOptions } from "@pierre/diffs/edit";
-import { setSelectedFileContent } from "@/lib/redux/slices/workspaceSlice";
+import {
+  setSelectedFileContent,
+  addContextCodeSelection,
+} from "@/lib/redux/slices/workspaceSlice";
 import { useResyncWorkspaceDiffMutation } from "@/lib/redux/api";
 import { Button } from "@/components/ui";
 import type {
@@ -18,6 +21,11 @@ const AUTOSAVE_DELAY_MS = 750;
 const CONFLICT_ERROR = "File changed on disk";
 
 type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
+
+// Not exported by @pierre/diffs — extracted from the option's signature.
+type SelectionActionCtx = Parameters<
+  NonNullable<EditorOptions<undefined>["renderSelectionAction"]>
+>[0];
 
 interface CodeViewerProps {
   content: string;
@@ -175,6 +183,43 @@ export function CodeViewer({
     [],
   );
 
+  // The live selection-action context while the widget is visible — lets the
+  // ⌘L shortcut reuse the same action as clicking the button.
+  const selectionActionRef = useRef<SelectionActionCtx | null>(null);
+
+  // Without a path the selection has no resolvable reference — the agent would
+  // receive `@file#L3` and a "Code selection from file" header naming nothing.
+  // So the action is gated on `filePath`, same as editing.
+  const addSelectionToChat = useCallback(
+    (ctx: SelectionActionCtx) => {
+      if (!filePath) {
+        ctx.close();
+        return;
+      }
+      const text = ctx.getSelectionText();
+      if (text.trim().length > 0) {
+        const { start, end } = ctx.selection;
+        // A drag past a line's end lands on character 0 of the next line —
+        // that trailing line holds none of the selection, so drop it.
+        const endLine =
+          end.character === 0 && end.line > start.line ? end.line - 1 : end.line;
+        dispatch(
+          addContextCodeSelection({
+            id: crypto.randomUUID(),
+            filePath,
+            fileName: filename ?? filePath.split("/").pop() ?? filePath,
+            startLine: start.line + 1,
+            endLine: endLine + 1,
+            text,
+          }),
+        );
+      }
+      selectionActionRef.current = null;
+      ctx.close();
+    },
+    [dispatch, filePath, filename],
+  );
+
   const editorOptions = useMemo<EditorOptions<undefined>>(
     () => ({
       onChange: (edited) => {
@@ -183,8 +228,49 @@ export function CodeViewer({
         setSaveState("dirty");
         schedule();
       },
+      enabledSelectionAction: !!filePath,
+      // The widget mounts inside the editor's shadow DOM, so Tailwind classes
+      // don't reach it — styles must be inline. The library's popover wrapper
+      // already draws the chrome (border, bg, shadow), so the button itself is
+      // chromeless content and inherits the widget's themed foreground.
+      renderSelectionAction: (ctx) => {
+        selectionActionRef.current = ctx;
+        const button = document.createElement("button");
+        button.type = "button";
+        Object.assign(button.style, {
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "8px",
+          padding: "2px 4px",
+          border: "0",
+          background: "transparent",
+          color: "var(--diffs-widget-fg, inherit)",
+          font: "500 11px ui-sans-serif, system-ui, sans-serif",
+          cursor: "pointer",
+          whiteSpace: "nowrap",
+        } satisfies Partial<CSSStyleDeclaration>);
+
+        const label = document.createElement("span");
+        label.textContent = "Add to Chat";
+        button.appendChild(label);
+
+        const kbd = document.createElement("span");
+        kbd.textContent = "⌘L";
+        Object.assign(kbd.style, {
+          padding: "3px 5px",
+          borderRadius: "6px",
+          background: "color-mix(in lab, currentColor 12%, transparent)",
+          color: "color-mix(in lab, currentColor 65%, transparent)",
+          font: "500 11px ui-sans-serif, system-ui, sans-serif",
+          lineHeight: "1",
+        } satisfies Partial<CSSStyleDeclaration>);
+        button.appendChild(kbd);
+
+        button.onclick = () => addSelectionToChat(ctx);
+        return button;
+      },
     }),
-    [schedule],
+    [schedule, addSelectionToChat, filePath],
   );
 
   const handleReload = useCallback(async () => {
@@ -226,8 +312,15 @@ export function CodeViewer({
         event.preventDefault();
         void flush();
       }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "l") {
+        const ctx = selectionActionRef.current;
+        if (ctx) {
+          event.preventDefault();
+          addSelectionToChat(ctx);
+        }
+      }
     },
-    [flush],
+    [flush, addSelectionToChat],
   );
 
   return (

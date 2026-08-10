@@ -210,6 +210,83 @@ input.on("line", (line) => {
           threadId: params.threadId,
           turn: { id: turnId, items: [], status: "inProgress", error: null },
         });
+        if (prompt.includes("active subagent")) {
+          const childThreadId = `${params.threadId}-child`;
+          notify("thread/started", {
+            thread: {
+              id: childThreadId,
+              parentThreadId: params.threadId,
+              agentNickname: "Scout",
+              agentRole: "worker",
+            },
+          });
+          notify("item/completed", {
+            threadId: params.threadId,
+            turnId,
+            item: {
+              id: `spawn-${childThreadId}`,
+              type: "subAgentActivity",
+              kind: "started",
+              agentThreadId: childThreadId,
+              agentPath: "/root/scout",
+            },
+          });
+          notify("turn/started", {
+            threadId: childThreadId,
+            turn: {
+              id: `turn-${childThreadId}`,
+              items: [],
+              status: "inProgress",
+              error: null,
+            },
+          });
+        }
+        if (prompt.includes("<mains_interrupted_subagents>")) {
+          const childThreadId = `${params.threadId}-child`;
+          const childTurnId = `turn-${childThreadId}-continued`;
+          notify("item/completed", {
+            threadId: params.threadId,
+            turnId,
+            item: {
+              id: `resume-${childThreadId}`,
+              type: "collabAgentToolCall",
+              tool: "resumeAgent",
+              status: "completed",
+              senderThreadId: params.threadId,
+              receiverThreadIds: [childThreadId],
+              agentsStates: {
+                [childThreadId]: { status: "running", message: null },
+              },
+            },
+          });
+          notify("turn/started", {
+            threadId: childThreadId,
+            turn: {
+              id: childTurnId,
+              items: [],
+              status: "inProgress",
+              error: null,
+            },
+          });
+          notify("item/completed", {
+            threadId: childThreadId,
+            turnId: childTurnId,
+            item: {
+              id: `message-${childThreadId}-continued`,
+              type: "agentMessage",
+              text: "Continued child result",
+            },
+          });
+          notify("turn/completed", {
+            threadId: childThreadId,
+            turn: {
+              id: childTurnId,
+              items: [],
+              status: "completed",
+              error: null,
+            },
+          });
+        }
         if (prompt.includes("subagent completion")) {
           const childThreadId = `${params.threadId}-child`;
           notify("thread/started", {
@@ -367,6 +444,7 @@ input.on("line", (line) => {
           !prompt.includes("ask user") &&
           !prompt.includes("parallel") &&
           !prompt.includes("timeout turn") &&
+          !prompt.includes("active subagent") &&
           !prompt.includes("subagent completion")
         ) {
           notify("turn/completed", {
@@ -436,6 +514,15 @@ input.on("line", (line) => {
     }
 
     case "turn/interrupt":
+      notify("turn/completed", {
+        threadId: params.threadId,
+        turn: {
+          id: params.turnId,
+          items: [],
+          status: "interrupted",
+          error: null,
+        },
+      });
       respond(id, {});
       break;
 

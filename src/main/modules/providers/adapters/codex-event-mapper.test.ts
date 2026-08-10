@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WorkRunEvent } from "../../../../shared/adapter.types";
 import {
   createCodexEventMapper,
+  SUB_THREAD_TOOL_ITEM_TYPES,
   type CodexEventRunState,
 } from "./codex-event-mapper";
 
@@ -440,4 +441,797 @@ describe("Codex event mapper", () => {
       ),
     ).toHaveLength(0);
   });
+});
+
+describe("Codex subagent lifecycle projection", () => {
+  function spawnComplete(
+    mapper: ReturnType<typeof createHarness>["mapper"],
+    overrides: Record<string, unknown> = {},
+  ): WorkRunEvent[] {
+    return mapper.mapNotification(
+      "item/completed",
+      {
+        threadId: "thread-parent",
+        item: {
+          id: "item-spawn",
+          type: "collabAgentToolCall",
+          tool: "spawnAgent",
+          status: "completed",
+          receiverThreadIds: ["thread-sub"],
+          prompt: "Audit the dependencies",
+          ...overrides,
+        },
+      },
+      "run-1",
+    );
+  }
+
+  it("anchors a spawned agent and emits the invoked lifecycle event", () => {
+    const { mapper, state } = createHarness();
+    state.subAgents.set("thread-sub", {
+      threadId: "thread-sub",
+      nickname: "Ada",
+      role: "worker",
+    });
+
+    const events = spawnComplete(mapper);
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "subagent",
+        phase: "invoked",
+        agentType: "Ada",
+        agentId: "thread-sub",
+        parentToolUseId: "item-spawn",
+        prompt: "Audit the dependencies",
+      }),
+    );
+    expect(state.subAgents.get("thread-sub")?.spawnItemId).toBe("item-spawn");
+  });
+
+  it("maps a sub-thread tool item to a child tool call of the spawn", () => {
+    const { mapper } = createHarness();
+    spawnComplete(mapper);
+
+    const events = mapper.mapNotification(
+      "item/completed",
+      {
+        threadId: "thread-sub",
+        item: {
+          id: "item-cmd",
+          type: "commandExecution",
+          command: "ls -la",
+          status: "completed",
+          exitCode: 0,
+        },
+      },
+      "run-1",
+    );
+
+    const child = events.find((event) => event.type === "tool_call");
+    expect(child).toBeDefined();
+    expect(child?.metadata).toMatchObject({
+      parentToolUseId: "item-spawn",
+      toolCallId: "thread-sub:item-cmd",
+      isFromSubagent: true,
+      subThreadId: "thread-sub",
+    });
+    // The heartbeat still shows background activity in the loader.
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "artifact",
+        ephemeral: true,
+        metadata: expect.objectContaining({ source: "codex_subagent_heartbeat" }),
+      }),
+    );
+  });
+
+  it("keeps non-tool sub-thread items out of the parent timeline", () => {
+    const { mapper, state } = createHarness();
+    spawnComplete(mapper);
+
+    const events = mapper.mapNotification(
+      "item/completed",
+      {
+        threadId: "thread-sub",
+        item: { id: "item-msg", type: "agentMessage", text: "internal chatter" },
+      },
+      "run-1",
+    );
+
+    expect(events.filter((event) => event.type === "tool_call")).toHaveLength(0);
+    expect(state.agentMessageBuffer).toBe("");
+  });
+
+  it("settles the agent once from terminal agentsStates snapshots", () => {
+    const { mapper } = createHarness();
+    spawnComplete(mapper);
+
+    const waitComplete = () =>
+      mapper.mapNotification(
+        "item/completed",
+        {
+          threadId: "thread-parent",
+          item: {
+            id: "item-wait",
+            type: "collabAgentToolCall",
+            tool: "wait",
+            status: "completed",
+            receiverThreadIds: ["thread-sub"],
+            agentsStates: {
+              "thread-sub": { status: "completed", message: "All checks passed" },
+            },
+          },
+        },
+        "run-1",
+      );
+
+    const first = waitComplete();
+    const second = waitComplete();
+
+    expect(first).toContainEqual(
+      expect.objectContaining({
+        type: "subagent",
+        phase: "completed",
+        parentToolUseId: "item-spawn",
+        result: "All checks passed",
+      }),
+    );
+    expect(second.filter((event) => event.type === "subagent")).toHaveLength(0);
+  });
+
+  it("marks an errored agent failed with the state message", () => {
+    const { mapper } = createHarness();
+    spawnComplete(mapper);
+
+    const events = mapper.mapNotification(
+      "item/completed",
+      {
+        threadId: "thread-parent",
+        item: {
+          id: "item-close",
+          type: "collabAgentToolCall",
+          tool: "closeAgent",
+          status: "completed",
+          receiverThreadIds: ["thread-sub"],
+          agentsStates: {
+            "thread-sub": { status: "errored", message: "ran out of budget" },
+          },
+        },
+      },
+      "run-1",
+    );
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "subagent",
+        phase: "failed",
+        parentToolUseId: "item-spawn",
+        error: "ran out of budget",
+      }),
+    );
+  });
+});
+
+describe("Codex multi_agent v1 (subAgentActivity) projection", () => {
+  function startedActivity(
+    mapper: ReturnType<typeof createHarness>["mapper"],
+    id = "call_1",
+    agentThreadId = "thread-sub",
+  ): WorkRunEvent[] {
+    return mapper.mapNotification(
+      "item/completed",
+      {
+        threadId: "thread-parent",
+        item: {
+          id,
+          type: "subAgentActivity",
+          kind: "started",
+          agentThreadId,
+          agentPath: "/root/security_review",
+        },
+      },
+      "run-1",
+    );
+  }
+
+  it("synthesizes the spawn call and invoked lifecycle from a started marker", () => {
+    const { mapper, state } = createHarness();
+
+    const events = startedActivity(mapper);
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "tool_call",
+        toolName: "spawnAgent",
+        metadata: expect.objectContaining({ phase: "start", toolCallId: "call_1" }),
+      }),
+    );
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "tool_call",
+        toolName: "spawnAgent",
+        metadata: expect.objectContaining({ phase: "complete", toolCallId: "call_1" }),
+      }),
+    );
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "subagent",
+        phase: "invoked",
+        agentType: "security_review",
+        agentId: "thread-sub",
+        parentToolUseId: "call_1",
+      }),
+    );
+    expect(state.subAgents.get("thread-sub")).toMatchObject({
+      nickname: "security_review",
+      spawnItemId: "call_1",
+      settleOnTurnEnd: true,
+    });
+  });
+
+  it("ignores a duplicate started marker for the same agent", () => {
+    const { mapper } = createHarness();
+    startedActivity(mapper);
+    expect(startedActivity(mapper, "call_2")).toEqual([]);
+  });
+
+  it("persists sub-thread messages as artifacts anchored to the spawn", () => {
+    const { mapper } = createHarness();
+    startedActivity(mapper);
+
+    const events = mapper.mapNotification(
+      "item/completed",
+      {
+        threadId: "thread-sub",
+        item: { id: "item-msg", type: "agentMessage", text: "Interim finding." },
+      },
+      "run-1",
+    );
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "artifact",
+        kind: "report",
+        content: "Interim finding.",
+        metadata: expect.objectContaining({
+          source: "codex_subagent_message",
+          isFromSubagent: true,
+          parentToolUseId: "call_1",
+          subThreadId: "thread-sub",
+        }),
+      }),
+    );
+  });
+
+  it("carries the sub-thread's final message as the settle result", () => {
+    const { mapper } = createHarness();
+    startedActivity(mapper);
+
+    mapper.mapNotification(
+      "item/completed",
+      {
+        threadId: "thread-sub",
+        item: {
+          id: "item-msg",
+          type: "agentMessage",
+          text: "No security findings. Nothing actionable in the diff.",
+        },
+      },
+      "run-1",
+    );
+    const events = mapper.mapNotification(
+      "turn/completed",
+      { threadId: "thread-sub", turn: { id: "turn-sub", status: "completed" } },
+      "run-1",
+    );
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "subagent",
+        phase: "completed",
+        result: "No security findings. Nothing actionable in the diff.",
+      }),
+    );
+  });
+
+  it("settles a v1 agent when its own turn completes", () => {
+    const { mapper } = createHarness();
+    startedActivity(mapper);
+
+    const events = mapper.mapNotification(
+      "turn/completed",
+      { threadId: "thread-sub", turn: { id: "turn-sub", status: "completed" } },
+      "run-1",
+    );
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "subagent",
+        phase: "completed",
+        agentId: "thread-sub",
+        parentToolUseId: "call_1",
+      }),
+    );
+  });
+
+  it("settles any still-open agents when the parent turn completes", () => {
+    const { mapper } = createHarness();
+    startedActivity(mapper);
+
+    const events = mapper.mapNotification(
+      "turn/completed",
+      { threadId: "thread-parent", turn: { id: "turn-1", status: "completed" } },
+      "run-1",
+    );
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "subagent",
+        phase: "completed",
+        agentId: "thread-sub",
+        parentToolUseId: "call_1",
+      }),
+    );
+
+    // Already settled — the next parent turn must not settle it again.
+    const again = mapper.mapNotification(
+      "turn/completed",
+      { threadId: "thread-parent", turn: { id: "turn-2", status: "completed" } },
+      "run-1",
+    );
+    expect(again.filter((event) => event.type === "subagent")).toHaveLength(0);
+  });
+
+  it("marks an interrupted agent stopped, not failed", () => {
+    const { mapper } = createHarness();
+    startedActivity(mapper);
+
+    const events = mapper.mapNotification(
+      "item/completed",
+      {
+        threadId: "thread-parent",
+        item: {
+          id: "call_9",
+          type: "subAgentActivity",
+          kind: "interrupted",
+          agentThreadId: "thread-sub",
+          agentPath: "/root/security_review",
+        },
+      },
+      "run-1",
+    );
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "subagent",
+        phase: "stopped",
+        parentToolUseId: "call_1",
+      }),
+    );
+  });
+
+  it("routes a registered v1 sub-thread's tool items into the flow", () => {
+    const { mapper } = createHarness();
+    startedActivity(mapper);
+
+    const events = mapper.mapNotification(
+      "item/completed",
+      {
+        threadId: "thread-sub",
+        item: {
+          id: "item-cmd",
+          type: "commandExecution",
+          command: "npm audit",
+          status: "completed",
+          exitCode: 0,
+        },
+      },
+      "run-1",
+    );
+
+    const child = events.find((event) => event.type === "tool_call");
+    expect(child?.metadata).toMatchObject({
+      parentToolUseId: "call_1",
+      toolCallId: "thread-sub:item-cmd",
+      isFromSubagent: true,
+    });
+  });
+});
+
+describe("Codex collab status normalization and sub-thread projection", () => {
+  function spawnV1(mapper: ReturnType<typeof createHarness>["mapper"]) {
+    mapper.mapNotification(
+      "item/completed",
+      {
+        threadId: "thread-parent",
+        item: {
+          id: "call_1",
+          type: "subAgentActivity",
+          kind: "started",
+          agentThreadId: "thread-sub",
+          agentPath: "/root/security_review",
+        },
+      },
+      "run-1",
+    );
+  }
+
+  it.each([undefined, "agent"])(
+    "resolves a Luna nickname over the pre-registered %s placeholder",
+    async (placeholderNickname) => {
+      const { mapper, state } = createHarness();
+      state.subAgents.set("thread-sub", {
+        threadId: "thread-sub",
+        nickname: placeholderNickname,
+        spawnItemId: "item-spawn",
+        activeTurnId: "turn-sub",
+        terminalEmitted: false,
+      });
+      const sendRequest = vi.fn().mockResolvedValue({
+        thread: {
+          id: "thread-sub",
+          agentNickname: "Hegel",
+          agentRole: null,
+        },
+      });
+
+      await mapper.maybeResolveCollabSubAgents(
+        { sendRequest } as any,
+        {
+          threadId: "thread-parent",
+          item: {
+            id: "item-spawn",
+            type: "collabAgentToolCall",
+            tool: "spawnAgent",
+            status: "completed",
+            receiverThreadIds: ["thread-sub"],
+          },
+        },
+        "run-1",
+      );
+
+      expect(sendRequest).toHaveBeenCalledWith("thread/read", {
+        threadId: "thread-sub",
+        includeTurns: false,
+      });
+      expect(state.subAgents.get("thread-sub")).toMatchObject({
+        threadId: "thread-sub",
+        nickname: "Hegel",
+        spawnItemId: "item-spawn",
+        activeTurnId: "turn-sub",
+        terminalEmitted: false,
+      });
+    },
+  );
+
+  it("settles a v2 interrupted agent as stopped, not completed", () => {
+    const { mapper, state } = createHarness();
+    state.subAgents.set("thread-sub", { threadId: "thread-sub", nickname: "Ada" });
+    mapper.mapNotification(
+      "item/completed",
+      {
+        threadId: "thread-parent",
+        item: {
+          id: "item-spawn",
+          type: "collabAgentToolCall",
+          tool: "spawnAgent",
+          status: "completed",
+          receiverThreadIds: ["thread-sub"],
+        },
+      },
+      "run-1",
+    );
+
+    const events = mapper.mapNotification(
+      "item/completed",
+      {
+        threadId: "thread-parent",
+        item: {
+          id: "item-wait",
+          type: "collabAgentToolCall",
+          tool: "wait",
+          status: "completed",
+          receiverThreadIds: ["thread-sub"],
+          agentsStates: {
+            "thread-sub": { status: "interrupted", message: null },
+          },
+        },
+      },
+      "run-1",
+    );
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "subagent",
+        phase: "stopped",
+        parentToolUseId: "item-spawn",
+        metadata: expect.objectContaining({ collabStatus: "interrupted" }),
+      }),
+    );
+    expect(
+      events.filter((e) => e.type === "subagent" && e.phase === "completed"),
+    ).toHaveLength(0);
+  });
+
+  it("keys sub-thread items by thread so parent buffers cannot collide", () => {
+    const { mapper, state } = createHarness();
+    spawnV1(mapper);
+
+    // Parent buffers output for its own item "item-cmd".
+    mapper.mapNotification(
+      "item/updated",
+      {
+        threadId: "thread-parent",
+        item: { id: "item-cmd", type: "commandExecution", command: "ls", aggregatedOutput: "PARENT-OUT" },
+      },
+      "run-1",
+    );
+    // Sub-thread reuses the same bare item id — must not touch parent's buffer.
+    mapper.mapNotification(
+      "item/updated",
+      {
+        threadId: "thread-sub",
+        item: { id: "item-cmd", type: "commandExecution", command: "npm audit", aggregatedOutput: "CHILD-OUT" },
+      },
+      "run-1",
+    );
+
+    expect(state.commandOutputBuffers.get("item-cmd")).toBe("PARENT-OUT");
+    expect(state.commandOutputBuffers.get("thread-sub:item-cmd")).toBe("CHILD-OUT");
+
+    // Child completion with a sparse payload recovers output from its own buffer.
+    const events = mapper.mapNotification(
+      "item/completed",
+      {
+        threadId: "thread-sub",
+        item: { id: "item-cmd", type: "commandExecution", command: "npm audit", status: "completed", exitCode: 0 },
+      },
+      "run-1",
+    );
+    const child = events.flatMap((e) => (e.type === "tool_call" ? [e] : []))[0];
+    expect(child?.metadata).toMatchObject({
+      toolCallId: "thread-sub:item-cmd",
+      parentToolUseId: "call_1",
+    });
+    expect(JSON.stringify(child?.output)).toContain("CHILD-OUT");
+    // Parent's buffer survived untouched.
+    expect(state.commandOutputBuffers.get("item-cmd")).toBe("PARENT-OUT");
+  });
+
+  it("gives each file of a multi-file sub-thread fileChange its own id", () => {
+    const { mapper } = createHarness();
+    spawnV1(mapper);
+
+    const events = mapper.mapNotification(
+      "item/completed",
+      {
+        threadId: "thread-sub",
+        item: {
+          id: "item-fc",
+          type: "fileChange",
+          status: "completed",
+          changes: [
+            { path: "a.ts", kind: "update", patch: "--- a" },
+            { path: "b.ts", kind: "add", patch: "--- b" },
+          ],
+        },
+      },
+      "run-1",
+    );
+
+    const completions = events.flatMap((e) =>
+      e.type === "tool_call" && e.metadata?.phase === "complete" ? [e] : [],
+    );
+    expect(completions.map((e) => e.metadata?.toolCallId)).toEqual([
+      "thread-sub:item-fc-a.ts",
+      "thread-sub:item-fc-b.ts",
+    ]);
+    for (const completion of completions) {
+      expect(completion.metadata).toMatchObject({
+        parentToolUseId: "call_1",
+        isFromSubagent: true,
+      });
+    }
+  });
+});
+
+describe("Codex turn-status settlement", () => {
+  function spawnV1(mapper: ReturnType<typeof createHarness>["mapper"]) {
+    mapper.mapNotification(
+      "item/completed",
+      {
+        threadId: "thread-parent",
+        item: {
+          id: "call_1",
+          type: "subAgentActivity",
+          kind: "started",
+          agentThreadId: "thread-sub",
+          agentPath: "/root/security_review",
+        },
+      },
+      "run-1",
+    );
+  }
+
+  it("settles a failed sub-thread turn as failed with the turn's error", () => {
+    const { mapper } = createHarness();
+    spawnV1(mapper);
+
+    const events = mapper.mapNotification(
+      "turn/completed",
+      {
+        threadId: "thread-sub",
+        turn: { id: "turn-sub", status: "failed", error: { message: "model overloaded" } },
+      },
+      "run-1",
+    );
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "subagent",
+        phase: "failed",
+        parentToolUseId: "call_1",
+        error: "model overloaded",
+      }),
+    );
+  });
+
+  it("settles an interrupted sub-thread turn as stopped, not completed", () => {
+    const { mapper } = createHarness();
+    spawnV1(mapper);
+
+    const events = mapper.mapNotification(
+      "turn/completed",
+      { threadId: "thread-sub", turn: { id: "turn-sub", status: "interrupted" } },
+      "run-1",
+    );
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "subagent",
+        phase: "stopped",
+        parentToolUseId: "call_1",
+      }),
+    );
+    expect(
+      events.filter((e) => e.type === "subagent" && e.phase === "completed"),
+    ).toHaveLength(0);
+  });
+
+  it("settles agents cut short by a failed parent turn as stopped", () => {
+    const { mapper } = createHarness();
+    spawnV1(mapper);
+
+    const events = mapper.mapNotification(
+      "turn/completed",
+      {
+        threadId: "thread-parent",
+        turn: { id: "turn-1", status: "failed", error: { message: "boom" } },
+      },
+      "run-1",
+    );
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "subagent",
+        phase: "stopped",
+        agentId: "thread-sub",
+        parentToolUseId: "call_1",
+      }),
+    );
+    expect(
+      events.filter((e) => e.type === "subagent" && e.phase === "completed"),
+    ).toHaveLength(0);
+  });
+});
+
+describe("Codex resumeAgent re-arm", () => {
+  it("flips a settled agent back to running and lets it settle again once", () => {
+    const { mapper, state } = createHarness();
+    state.subAgents.set("thread-sub", { threadId: "thread-sub", nickname: "Ada" });
+
+    const collab = (id: string, tool: string, agentStatus?: string) =>
+      mapper.mapNotification(
+        "item/completed",
+        {
+          threadId: "thread-parent",
+          item: {
+            id,
+            type: "collabAgentToolCall",
+            tool,
+            status: "completed",
+            receiverThreadIds: ["thread-sub"],
+            ...(agentStatus
+              ? { agentsStates: { "thread-sub": { status: agentStatus, message: null } } }
+              : {}),
+          },
+        },
+        "run-1",
+      );
+
+    collab("item-spawn", "spawnAgent");
+    collab("item-close", "closeAgent", "shutdown"); // settled as completed
+    expect(state.subAgents.get("thread-sub")?.terminalPhase).toBe("completed");
+
+    const resumed = collab("item-resume", "resumeAgent");
+    expect(resumed).toContainEqual(
+      expect.objectContaining({
+        type: "subagent",
+        phase: "running",
+        // Re-armed on the ORIGINAL anchor, not the resume call.
+        parentToolUseId: "item-spawn",
+      }),
+    );
+    expect(state.subAgents.get("thread-sub")?.terminalEmitted).toBe(false);
+    expect(state.subAgents.get("thread-sub")?.terminalPhase).toBeUndefined();
+
+    const settledAgain = collab("item-close-2", "closeAgent", "completed");
+    expect(settledAgain).toContainEqual(
+      expect.objectContaining({
+        type: "subagent",
+        phase: "completed",
+        parentToolUseId: "item-spawn",
+      }),
+    );
+  });
+});
+
+// Drift guard: every type in the sub-thread allowlist must have a
+// mapThreadItem case that actually yields a child tool_call — adding a type
+// to the set without a mapper case (or removing a case the set relies on)
+// breaks here instead of silently dropping subagent activity.
+describe("SUB_THREAD_TOOL_ITEM_TYPES ↔ mapThreadItem drift", () => {
+  const PAYLOADS: Record<string, Record<string, unknown>> = {
+    commandexecution: { command: "ls -la", status: "completed", exitCode: 0 },
+    fileread: { path: "a.ts", status: "completed" },
+    filechange: {
+      status: "completed",
+      changes: [{ path: "a.ts", kind: "update", patch: "--- d" }],
+    },
+    mcptoolcall: { server: "srv", tool: "doThing", arguments: {}, status: "completed" },
+    websearch: { query: "docs" },
+    dynamictoolcall: { tool: "MyTool", arguments: {}, status: "completed" },
+  };
+
+  it.each([...SUB_THREAD_TOOL_ITEM_TYPES])(
+    "%s routes to a child tool_call",
+    (itemType) => {
+      const payload = PAYLOADS[itemType.toLowerCase().replace(/_/g, "")];
+      expect(payload, `add a payload for ${itemType}`).toBeDefined();
+
+      const { mapper } = createHarness();
+      mapper.mapNotification(
+        "item/completed",
+        {
+          threadId: "thread-parent",
+          item: {
+            id: "call_1",
+            type: "subAgentActivity",
+            kind: "started",
+            agentThreadId: "thread-sub",
+            agentPath: "/root/reviewer",
+          },
+        },
+        "run-1",
+      );
+
+      const events = mapper.mapNotification(
+        "item/completed",
+        {
+          threadId: "thread-sub",
+          item: { id: "item-x", type: itemType, ...payload },
+        },
+        "run-1",
+      );
+
+      const children = events.filter(
+        (e) =>
+          e.type === "tool_call" &&
+          e.metadata?.parentToolUseId === "call_1" &&
+          e.metadata?.isFromSubagent === true,
+      );
+      expect(children.length).toBeGreaterThan(0);
+    },
+  );
 });

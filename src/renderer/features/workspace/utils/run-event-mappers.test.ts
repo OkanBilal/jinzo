@@ -138,3 +138,22 @@ describe("mapToolCallToEvent", () => {
     expect(ev!.metadata?.status).toBe("done");
   });
 });
+
+describe("mapToolCallToEvent parent linkage", () => {
+  it("exposes the row's parentToolCallId on event metadata", () => {
+    const call = {
+      ...toolCall(7, "done", 10, 10),
+      toolCallId: "toolu_child",
+      parentToolCallId: "toolu_parent",
+    } as ToolCall;
+
+    const event = mapToolCallToEvent(call);
+    expect(event?.metadata?.parentToolCallId).toBe("toolu_parent");
+  });
+
+  it("leaves parentToolCallId undefined for top-level calls", () => {
+    const event = mapToolCallToEvent(toolCall(8, "done", 10, 10));
+    expect(event?.metadata?.parentToolCallId).toBeUndefined();
+  });
+});
+

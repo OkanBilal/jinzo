@@ -1,6 +1,7 @@
 import {
   RefObject,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -18,6 +19,69 @@ import { ArrowUp, Brain, Check } from "../icons";
 import { ULTRACODE_GRADIENT_TEXT } from "./ultracode-styles";
 
 type EffortLevel = "minimal" | "low" | "medium" | "high" | "max" | "xhigh";
+
+// ─────────────────────────────────────────────────────────────
+// Submenu travel ("safe triangle")
+//
+// The effort submenu is bottom-aligned to the model menu and taller than it,
+// so reaching an entry near its top means moving diagonally up-and-right —
+// straight across the model rows above the anchor. Plain `mouseenter` rebinds
+// the submenu to every row crossed, and the effort click then lands on the
+// wrong model (pick Sonnet's effort, end up on Fable).
+//
+// Fix: while the pointer is inside the corridor between where the submenu
+// opened and the submenu's near edge, treat a row it crosses as travel rather
+// than intent — the row only takes over if the pointer settles on it.
+// ─────────────────────────────────────────────────────────────
+
+interface Point {
+  x: number;
+  y: number;
+}
+
+interface Edges {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
+/** How long the pointer must rest on a crossed row before it takes over. */
+const SUBMENU_TRAVEL_DWELL_MS = 90;
+
+/** Vertical slack on the corridor's base, in px. */
+const SAFE_TRIANGLE_PADDING = 12;
+
+function triangleSide(p: Point, a: Point, b: Point): number {
+  return (p.x - b.x) * (a.y - b.y) - (a.x - b.x) * (p.y - b.y);
+}
+
+/**
+ * Is `pointer` inside the triangle spanned by `anchor` (where the pointer was
+ * when the submenu opened) and the submenu's near edge?
+ *
+ * Inside means "on its way to the submenu"; outside means the pointer is
+ * genuinely browsing the model list. Exported for tests — no DOM access.
+ */
+export function isPointerHeadingToSubmenu(
+  pointer: Point,
+  anchor: Point,
+  submenu: Edges,
+  padding: number = SAFE_TRIANGLE_PADDING,
+): boolean {
+  // The submenu flips to the left of the model menu when it doesn't fit on the
+  // right; the near edge is whichever side faces the anchor.
+  const edgeX = submenu.left >= anchor.x ? submenu.left : submenu.right;
+  const top: Point = { x: edgeX, y: submenu.top - padding };
+  const bottom: Point = { x: edgeX, y: submenu.bottom + padding };
+
+  const d1 = triangleSide(pointer, anchor, top);
+  const d2 = triangleSide(pointer, top, bottom);
+  const d3 = triangleSide(pointer, bottom, anchor);
+  const hasNegative = d1 < 0 || d2 < 0 || d3 < 0;
+  const hasPositive = d1 > 0 || d2 > 0 || d3 > 0;
+  return !(hasNegative && hasPositive);
+}
 
 interface ModelSelectDropdownProps {
   model: string;
@@ -63,10 +127,27 @@ export function ModelSelectDropdown({
     variant === "claude" && selectedModelEffortLevels.length === 0;
   const mainMenuRef = useRef<HTMLDivElement>(null);
   const effortMenuRef = useRef<HTMLDivElement>(null);
+  /** The submenu's "<model> · Effort" caption — measured to offset the panel. */
+  const effortMenuHeaderRef = useRef<HTMLDivElement>(null);
   const effortCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Latest pointer position over the model list, for the safe-triangle test. */
+  const pointerRef = useRef<Point | null>(null);
+  /** Where the pointer was when the open submenu was bound — the corridor apex. */
+  const travelAnchorRef = useRef<Point | null>(null);
+  /** A row crossed mid-travel, waiting to see whether the pointer settles. */
+  const pendingRowRef = useRef<{
+    model: string;
+    timer: ReturnType<typeof setTimeout>;
+  } | null>(null);
   const [hoveredModel, setHoveredModel] = useState<string | null>(null);
   const [effortMenuPosition, setEffortMenuPosition] = useState<{
-    bottom: number;
+    /** Top of the anchor row — the line the first selectable entry lines up with. */
+    anchorTop: number;
+    /**
+     * Applied top: `anchorTop` lifted by the caption's height and clamped into
+     * the viewport, both resolved from measurements once the submenu renders.
+     */
+    top: number;
     left: number;
   } | null>(null);
   /**
@@ -122,21 +203,33 @@ export function ModelSelectDropdown({
     effortCloseTimerRef.current = null;
   };
 
+  const clearPendingRow = () => {
+    if (!pendingRowRef.current) return;
+    clearTimeout(pendingRowRef.current.timer);
+    pendingRowRef.current = null;
+  };
+
   const closeEffortMenu = () => {
     clearEffortCloseTimer();
+    clearPendingRow();
+    travelAnchorRef.current = null;
     setHoveredModel(null);
   };
 
   const scheduleEffortMenuClose = () => {
     clearEffortCloseTimer();
     effortCloseTimerRef.current = setTimeout(() => {
+      clearPendingRow();
+      travelAnchorRef.current = null;
       setHoveredModel(null);
       effortCloseTimerRef.current = null;
     }, 140);
   };
 
-  const openEffortMenu = (hovered: string) => {
+  const openEffortMenu = (hovered: string, rowTop?: number) => {
     clearEffortCloseTimer();
+    clearPendingRow();
+    travelAnchorRef.current = pointerRef.current;
     if (!modelHasEffortMenu(hovered)) {
       setHoveredModel(null);
       return;
@@ -152,11 +245,84 @@ export function ModelSelectDropdown({
 
     setHoveredModel(hovered);
     setEffortMenuPosition({
-      bottom: Math.max(8, window.innerHeight - menuRect.bottom),
+      // Anchored to the row, not the menu. Bottom-aligning the submenu to the
+      // whole menu put a short submenu (Cursor's low/medium/high) at the very
+      // bottom while its row sat at the top, so reaching it meant a long
+      // diagonal down across every row in between. Row-aligned travel is short
+      // and roughly horizontal.
+      anchorTop: rowTop ?? menuRect.top,
+      top: Math.max(8, rowTop ?? menuRect.top),
       left: fitsOnRight
         ? menuRect.right + gap
         : Math.max(8, menuRect.left - panelWidth - gap),
     });
+  };
+
+  // Both offsets depend on rendered geometry — the panel's height varies with
+  // the model's effort levels, and the caption's height with the type scale —
+  // so they can only be applied once the submenu exists. Layout effect: runs
+  // before paint, so the correction is never visible.
+  useLayoutEffect(() => {
+    const element = effortMenuRef.current;
+    if (!element || !effortMenuPosition) return;
+    // Lift the panel by its caption so the row lines up with the first
+    // *selectable* entry; landing on the caption means moving right from the
+    // model row hits dead space.
+    const captionHeight = effortMenuHeaderRef.current?.offsetHeight ?? 0;
+    // offsetHeight, not getBoundingClientRect: the open animation scales the
+    // panel from 0.85, and a transformed rect would measure ~15% short on the
+    // first frame and clamp the panel off the bottom of the screen.
+    const maxTop = Math.max(8, window.innerHeight - 8 - element.offsetHeight);
+    const desired = effortMenuPosition.anchorTop - captionHeight;
+    const clamped = Math.min(Math.max(8, desired), maxTop);
+    if (Math.abs(clamped - effortMenuPosition.top) > 0.5) {
+      setEffortMenuPosition({ ...effortMenuPosition, top: clamped });
+    }
+  }, [effortMenuPosition, hoveredModel]);
+
+  /** True while the pointer is travelling from the anchor row to the submenu. */
+  const isTravellingToSubmenu = () => {
+    const pointer = pointerRef.current;
+    const anchor = travelAnchorRef.current;
+    const submenu = effortMenuRef.current?.getBoundingClientRect();
+    if (!pointer || !anchor || !submenu) return false;
+    return isPointerHeadingToSubmenu(pointer, anchor, submenu);
+  };
+
+  /**
+   * Hover entry point for a model row. While a submenu is open, a row only
+   * takes it over once the pointer settles there — either because the pointer
+   * is travelling to the submenu, or because the row would tear the submenu
+   * down (a model with no effort levels, like Cursor's Auto or Composer). Both
+   * cases used to fire on the way past and hijack the gesture.
+   */
+  const requestEffortMenu = (candidate: string, rowTop: number, pointer?: Point) => {
+    if (pointer) pointerRef.current = pointer;
+    // Crossed rows leave their own close timers behind; keep the submenu alive
+    // for the whole trip.
+    clearEffortCloseTimer();
+
+    if (candidate === hoveredModel) {
+      clearPendingRow();
+      return;
+    }
+
+    const wouldCloseSubmenu = !modelHasEffortMenu(candidate);
+    const isTravel = isTravellingToSubmenu() || wouldCloseSubmenu;
+    if (!hoveredModel || !isTravel) {
+      openEffortMenu(candidate, rowTop);
+      return;
+    }
+    if (pendingRowRef.current?.model === candidate) return;
+
+    clearPendingRow();
+    pendingRowRef.current = {
+      model: candidate,
+      timer: setTimeout(() => {
+        pendingRowRef.current = null;
+        openEffortMenu(candidate, rowTop);
+      }, SUBMENU_TRAVEL_DWELL_MS),
+    };
   };
 
   const selectModel = (candidate: string) => {
@@ -192,6 +358,9 @@ export function ModelSelectDropdown({
     () => () => {
       if (effortCloseTimerRef.current) {
         clearTimeout(effortCloseTimerRef.current);
+      }
+      if (pendingRowRef.current) {
+        clearTimeout(pendingRowRef.current.timer);
       }
     },
     [],
@@ -254,7 +423,12 @@ export function ModelSelectDropdown({
         minWidth="min-w-48"
         dropdownRef={mainMenuRef}
       >
-        <div className="max-h-80 overflow-auto noscrollbar ">
+        <div
+          className="max-h-80 overflow-auto noscrollbar "
+          onMouseMove={(e) => {
+            pointerRef.current = { x: e.clientX, y: e.clientY };
+          }}
+        >
           {modelList.map((m) => {
             const displayName = formatModelDisplayName(m, variant);
             const isSelected = model === m;
@@ -265,9 +439,21 @@ export function ModelSelectDropdown({
                 key={m}
                 type="button"
                 onClick={() => selectModel(m)}
-                onMouseEnter={() => openEffortMenu(m)}
-                onMouseLeave={scheduleEffortMenuClose}
-                onFocus={() => openEffortMenu(m)}
+                onMouseEnter={(e) =>
+                  requestEffortMenu(
+                    m,
+                    e.currentTarget.getBoundingClientRect().top,
+                    { x: e.clientX, y: e.clientY },
+                  )
+                }
+                onMouseLeave={() => {
+                  clearPendingRow();
+                  scheduleEffortMenuClose();
+                }}
+                // Keyboard navigation has no travel path — bind immediately.
+                onFocus={(e) =>
+                  openEffortMenu(m, e.currentTarget.getBoundingClientRect().top)
+                }
                 onBlur={scheduleEffortMenuClose}
                 className={`w-full text-left px-3 py-2 cursor-pointer text-sm transition-colors flex items-center gap-2 ${
                   isEffortMenuAnchor
@@ -297,11 +483,15 @@ export function ModelSelectDropdown({
         createPortal(
           <div
             ref={effortMenuRef}
-            onMouseEnter={clearEffortCloseTimer}
+            onMouseEnter={() => {
+              // Arrived — any row crossed on the way was travel, not intent.
+              clearPendingRow();
+              clearEffortCloseTimer();
+            }}
             onMouseLeave={scheduleEffortMenuClose}
             className="fixed z-(--z-dropdown-sub) min-w-36 overflow-hidden rounded-2xl glass-card animate-dropdown-in"
             style={{
-              bottom: effortMenuPosition.bottom,
+              top: effortMenuPosition.top,
               left: effortMenuPosition.left,
             }}
             role="menu"
@@ -311,7 +501,10 @@ export function ModelSelectDropdown({
                 : "thinking mode"
             }`}
           >
-            <div className="flex items-center gap-1.5 px-3 pb-1.5 pt-2 text-xxs font-medium tracking-wide">
+            <div
+              ref={effortMenuHeaderRef}
+              className="flex items-center gap-1.5 px-3 pb-1.5 pt-2 text-xxs font-medium tracking-wide"
+            >
               <span className="shrink-0 text-primary-500 dark:text-primary-300">
                 {getModelIcon(hoveredModelDisplayName, variant)}
               </span>

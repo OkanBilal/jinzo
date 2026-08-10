@@ -1,6 +1,12 @@
 import type { CreateProviderPayload } from "../../modules/providers/providers.dto";
 import { PROVIDER_IDS } from "../../../shared/provider-ids";
 
+// `defaultModel` is deliberately unset on every provider below. It is a *user*
+// preference (an id the user pinned), not a catalog fact: each agent CLI rotates
+// its models every few months, so a hardcoded id here silently stops matching
+// the live `listModels()` output and leaves the picker with no default at all.
+// Each driver resolves its own default from the live catalog instead — see
+// `resolveCatalogDefaultId` in adapter.shared.ts.
 export const seedProviders: CreateProviderPayload[] = [
 
   {
@@ -8,7 +14,6 @@ export const seedProviders: CreateProviderPayload[] = [
     kind: "agent_runtime",
     displayName: "GitHub Copilot (CLI/SDK)",
     isEnabled: true,
-    defaultModel: "claude-sonnet-4-6",
     config: {
       transport: "stdio" as const,
       timeout: 3_600_000,
@@ -29,11 +34,15 @@ export const seedProviders: CreateProviderPayload[] = [
     kind: "agent_runtime",
     displayName: "Claude Code (Local Agent)",
     isEnabled: true,
-    defaultModel: "claude-opus-4-8",
     config: {
       timeout: 3_600_000,
       apiKey: process.env.ANTHROPIC_API_KEY,
       permissionMode: "default",
+      // Claude couples thinking to the effort level, so both are seeded
+      // together — the renderer clamps the level to whatever the selected
+      // model advertises.
+      thinkingMode: true,
+      effortLevel: "medium",
     },
     capabilities: {
       mode: ["run"],
@@ -50,7 +59,6 @@ export const seedProviders: CreateProviderPayload[] = [
     kind: "agent_runtime",
     displayName: "OpenAI Codex (CLI/SDK)",
     isEnabled: true,
-    defaultModel: "gpt-5.4",
     config: {
       timeout: 3_600_000,
       approvalMode: "on-request",
@@ -58,6 +66,7 @@ export const seedProviders: CreateProviderPayload[] = [
       networkAccessEnabled: true,
       webSearchMode: "live",
       personality: "none",
+      modelReasoningEffort: "medium",
     },
     capabilities: {
       mode: ["run"],
@@ -74,7 +83,8 @@ export const seedProviders: CreateProviderPayload[] = [
     kind: "agent_runtime",
     displayName: "Cursor (ACP/CLI)",
     isEnabled: true,
-    defaultModel: "composer-2.5[fast=true]",
+    // No effort seeded: Cursor and Copilot both default to their "auto" model,
+    // which advertises no reasoning-effort levels at all.
     config: {
       timeout: 600000,
       mode: "agent",

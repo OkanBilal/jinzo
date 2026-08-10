@@ -1,5 +1,6 @@
 import { Close, Bash } from "@/components/ui/icons";
 import { Body, Button } from "@/components/ui";
+import { BOTTOM_TERMINAL_HEIGHT } from "@/lib/layout";
 import { XtermTerminal } from "./xterm-terminal";
 
 interface TerminalSectionProps {
@@ -20,7 +21,7 @@ export function TerminalSection({
   return (
     <div
       className={`shrink-0 overflow-hidden transition-[height] duration-300 ease-out ${isOpen ? "border-t border-primary-200/50 dark:border-primary-800/50" : ""} `}
-      style={{ height: isOpen ? "15.5rem" : "0px" }}
+      style={{ height: isOpen ? BOTTOM_TERMINAL_HEIGHT : "0px" }}
     >
       <div className="flex items-center justify-between px-3 py-1.5">
         <div className="flex items-center gap-1">

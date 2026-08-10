@@ -3,6 +3,8 @@ import { HashRouter as Router, useLocation } from "react-router-dom";
 import Sidebar from "./components/layout/sidebar";
 import RightPanel from "./components/layout/right-panel";
 import { SessionPanel } from "./components/layout/session-panel";
+import { SubagentPanel } from "./components/layout/subagent-panel/subagent-panel";
+import { useHasSessionSubagents } from "./features/workspace/hooks/use-session-subagents";
 import { selectSessionRunId } from "./components/layout/session-panel/select-session-run";
 import {
   MainRoutes,
@@ -128,12 +130,35 @@ function AppContent() {
   // or opening a run drops the box back into the layout on its own.
   const sessionPanelFloating =
     rightLaneWidth !== EDGE_GUTTER || sessionRunId === null;
+  // The subagent box shares the session box's layout contract: it appears when
+  // the open run has agents, hides while the right panel owns the edge, floats
+  // over the content when the browser/doc panels do, and — in its normal list
+  // state — insets the content like the session box. Collapsed to its pill it
+  // stops asking for room, and its expanded state grows OVER the chat from the
+  // docked slot rather than widening the inset.
+  const hasSubagents = useHasSessionSubagents(sessionRunId);
+  const subagentPanelCollapsed = useAppSelector(
+    (state) => state.appSettings.subagentPanelCollapsed,
+  );
+  // Hidden whenever ANY panel owns the right edge (right panel, browser, doc
+  // viewer) — the corner it lives in belongs to that panel then.
+  const subagentPanelShown =
+    hasSubagents &&
+    !!sessionRunId &&
+    !hideRightPanel &&
+    rightLaneWidth === EDGE_GUTTER;
+  const subagentPanelDocked =
+    subagentPanelShown && !isMobile && !subagentPanelCollapsed;
+
   // Sharing the layout means insetting the content, not shrinking it: a smaller
   // content box would cut a hole in its opaque surface and expose the
   // translucent window behind it. The inset keeps the surface whole and still
   // slides the centered chat column left, exactly as far as the box is wide.
+  // Both corner boxes live in the same right lane at the same width, so either
+  // one docking asks for the same inset.
   const contentInsetRight =
-    sessionPanelShown && !isMobile && !sessionPanelFloating
+    (sessionPanelShown && !isMobile && !sessionPanelFloating) ||
+    subagentPanelDocked
       ? `calc(${SESSION_PANEL_WIDTH} + ${SESSION_PANEL_GUTTER})`
       : undefined;
 
@@ -266,6 +291,9 @@ function AppContent() {
             laneOffset={rightLaneWidth}
             floating={sessionPanelFloating}
           />
+        )}
+        {!hideRightPanel && (
+          <SubagentPanel shown={subagentPanelShown} laneOffset={rightLaneWidth} />
         )}
         <BrowserPanel />
         <DocumentViewerPanel />

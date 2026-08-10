@@ -10,7 +10,11 @@ import {
 import { setWorkspaceModel } from "@/lib/redux/slices/workspaceSlice";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { dedupeModelsByPrettyName, getModelPrettyName } from "@/lib/model-icons";
-import { getProviderVariant, type ProviderVariant } from "@/lib/provider-variants";
+import {
+  getProviderVariant,
+  type ProviderVariant,
+} from "@/lib/provider-variants";
+import { resolveEffortSelection } from "@/features/workspace/lib/resolve-effort";
 
 export function useProviderModels(
   activeProviderId: string,
@@ -123,16 +127,22 @@ export function useProviderModels(
   const handleThinkingModeToggle = useCallback(async () => {
     if (!providerData) return;
     const currentConfig = providerData.config ?? {};
+    const enabling = !thinkingMode;
     await updateProvider({
       id: activeProviderId,
       payload: {
         config: {
           ...currentConfig,
-          thinkingMode: !thinkingMode,
+          thinkingMode: enabling,
+          // ultracode means xhigh, which the API rejects outright when thinking
+          // is disabled. Leaving it set here is what produced "effort 'xhigh'
+          // is not supported when thinking is disabled on this model" — turning
+          // thinking off has to clear the effort selection with it.
+          ...(enabling ? {} : { ultracode: false, [caps.effortKey]: undefined }),
         },
       },
     });
-  }, [providerData, thinkingMode, activeProviderId, updateProvider]);
+  }, [providerData, thinkingMode, activeProviderId, updateProvider, caps]);
 
   const handleFastModeToggle = useCallback(async () => {
     if (!providerData) return;
@@ -159,7 +169,10 @@ export function useProviderModels(
     let patch: Record<string, unknown>;
     if (caps.thinkingCoupledToEffort) {
       // Codex/Copilot store the effort directly; thinking is inferred from it.
-      patch = { [caps.effortKey]: level || undefined };
+      // `thinkingMode` still rides along as the record of intent — without it,
+      // clearing the level is indistinguishable from never having chosen one
+      // and the clamp effect seeds the default straight back.
+      patch = { [caps.effortKey]: level || undefined, thinkingMode: !!level };
     } else if (caps.supportsUltracode && level === "ultracode") {
       // ultracode is stored as a boolean. It implies xhigh + workflow
       // orchestration, so clear effortLevel and let the driver send it via
@@ -222,12 +235,24 @@ export function useProviderModels(
   }, [providerModels, selectedModel]);
 
   useEffect(() => {
-    if (providerModels && providerModels.length > 0 && !selectedModel) {
+    if (!providerModels || providerModels.length === 0) return;
+    const selectCatalogDefault = () => {
       const defaultModel =
         providerModels.find((m) => m.isDefault) ?? providerModels[0];
       setSelectedModel(defaultModel.id);
+    };
+    if (!selectedModel) {
+      selectCatalogDefault();
+      return;
     }
-  }, [providerModels, selectedModel, setSelectedModel]);
+    // The pick is persisted (localStorage) indefinitely, but providers rotate
+    // their catalogs every few months and retired ids drop off `listModels`.
+    // Re-anchor on the live default instead of sending a dead id to the CLI.
+    // Guarded on a settled fetch so an auth failure or an in-flight refetch
+    // can't clobber a still-valid selection.
+    if (isFetchingModels || modelsError) return;
+    if (!providerModels.some((m) => m.id === selectedModel)) selectCatalogDefault();
+  }, [providerModels, selectedModel, setSelectedModel, isFetchingModels, modelsError]);
 
   // Background model-capability discovery (e.g. Cursor per-model effort levels)
   // runs after the initial fast model list returns; refetch to pick up the
@@ -241,37 +266,32 @@ export function useProviderModels(
     };
   }, [activeProviderId, refetchModels]);
 
-  // Clamp effort level when switching to a model that doesn't support the current level
+  // Clamp effort level when switching to a model that doesn't support the
+  // current level. The rules live in resolveEffortSelection; this effect only
+  // applies the verdict.
+  //
+  // `thinkingDisabled` reads the *raw* stored flag rather than the derived
+  // `thinkingMode` above: for the coupled variants that value is inferred from
+  // the effort level itself, so it reads false whenever nothing is stored and
+  // would block the very seeding this effect exists to do.
   useEffect(() => {
     if (!selectedModelInfo) return;
-    const supported = selectedModelInfo.supportedEffortLevels;
-    const supportsXhigh = !!supported?.includes("xhigh" as any);
-
-    // ultracode is on but the newly-selected model can't do xhigh — disable it
-    // and fall back to the highest supported level (or Off if none). This is
-    // what enforces "ultracode must not work on unsupported models".
-    if (ultracode && !supportsXhigh) {
-      handleEffortLevelChange(
-        supported && supported.length > 0 ? supported[supported.length - 1] : "",
-      );
-      return;
-    }
-    // ultracode is on and the model still supports xhigh — leave it alone.
-    // (Must return before the clamp branches below, otherwise the folded
-    // "ultracode" string gets clamped away on every render.)
-    if (ultracode) return;
-
-    if (!supported || supported.length === 0) {
-      // Model has no effort levels — clear it
-      if (effortLevel) handleEffortLevelChange("");
-    } else if (thinkingMode && !effortLevel) {
-      // Thinking is on but no effort level set — pick the highest supported
-      handleEffortLevelChange(supported[supported.length - 1]);
-    } else if (effortLevel && !supported.includes(effortLevel as any)) {
-      // Pick the highest supported level as fallback
-      handleEffortLevelChange(supported[supported.length - 1]);
-    }
-  }, [selectedModelInfo, effortLevel, thinkingMode, ultracode, handleEffortLevelChange]);
+    const resolution = resolveEffortSelection({
+      supportedEffortLevels: selectedModelInfo.supportedEffortLevels,
+      effortLevel,
+      ultracode,
+      thinkingDisabled: config.thinkingMode === false,
+      effortDefault: caps.effortDefault,
+    });
+    if (resolution) handleEffortLevelChange(resolution.effortLevel);
+  }, [
+    selectedModelInfo,
+    effortLevel,
+    ultracode,
+    config.thinkingMode,
+    handleEffortLevelChange,
+    caps,
+  ]);
 
   const handleModelChange = useCallback(
     (prettyName: string) => {

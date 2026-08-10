@@ -450,6 +450,39 @@ describe("RunSession", () => {
   // ─────────────────────────────────────────────────────────────
   // project — artifact events
   // ─────────────────────────────────────────────────────────────
+  // The subagent panel's whole data model hangs on these two columns
+  // round-tripping: the spawning call's provider id and the child's link to
+  // it. Projected through the real repo into the real (in-memory) DB.
+  describe("project — subagent parent linkage", () => {
+    it("persists provider call ids and parent linkage end-to-end", async () => {
+      const session = makeSession();
+      await flushBackground();
+
+      await session.project({
+        type: "tool_call",
+        toolName: "Agent",
+        metadata: { phase: "start", toolCallId: "toolu_parent" },
+      } as any);
+      await session.project({
+        type: "tool_call",
+        toolName: "Read",
+        metadata: {
+          phase: "start",
+          toolCallId: "toolu_child",
+          parentToolUseId: "toolu_parent",
+          isFromSubagent: true,
+        },
+      } as any);
+
+      const calls = await runsRepo.findToolCallsByRun("r1");
+      const parent = calls.find((c) => c.toolId === "toolu_parent");
+      const child = calls.find((c) => c.toolId === "toolu_child");
+      expect(parent).toBeDefined();
+      expect(parent?.parentToolCallId).toBeNull();
+      expect(child?.parentToolCallId).toBe("toolu_parent");
+    });
+  });
+
   describe("project — artifact events", () => {
     it("inserts an artifact for non-ephemeral events", async () => {
       const session = makeSession();
@@ -820,6 +853,220 @@ describe("RunSession", () => {
 
       const calls = await runsRepo.findToolCallsByRun("r1");
       expect(calls[0].status).toBe("error");
+    });
+
+    // A spawn-style call (Codex) is "done" the moment the agent starts, so an
+    // aborted run would otherwise leave its subagent metadata at "invoked" —
+    // showing a running agent forever in the session panel.
+    it.each([
+      ["succeeded", "completed"],
+      ["canceled", "stopped"],
+      ["failed", "stopped"],
+    ] as const)(
+      "settles unfinished subagents on %s finalize as %s",
+      async (runStatus, expectedPhase) => {
+        const session = makeSession();
+        await flushBackground();
+
+        await session.project({
+          type: "tool_call",
+          toolName: "spawnAgent",
+          metadata: { phase: "start", toolCallId: "spawn-1" },
+        } as any);
+        await session.project({
+          type: "tool_call",
+          toolName: "spawnAgent",
+          output: {},
+          metadata: { phase: "complete", toolCallId: "spawn-1" },
+        } as any);
+        await session.project({
+          type: "subagent",
+          phase: "invoked",
+          agentType: "security_review",
+          parentToolUseId: "spawn-1",
+        } as any);
+
+        await session.finalize(
+          runStatus === "failed"
+            ? { status: runStatus, summary: "boom" }
+            : { status: runStatus },
+        );
+
+        const calls = await runsRepo.findToolCallsByRun("r1");
+        const subagent = (calls[0].metadata as Record<string, any>)?.subagent;
+        expect(subagent?.phase).toBe(expectedPhase);
+      },
+    );
+
+    // The resumed-agent case: after a continue, an agent's live state lives on
+    // its SendMessage continuation row, which carries `metadata.task` and no
+    // `metadata.subagent` at all. Settling only the latter left those rows
+    // reading "running" forever — and the panel folds a continuation's state
+    // onto the agent it continues, so the whole agent looked alive after the
+    // run that resumed it was stopped.
+    it.each([
+      ["succeeded", "completed"],
+      ["canceled", "stopped"],
+    ] as const)(
+      "settles an unfinished task lifecycle on %s finalize as %s",
+      async (runStatus, expectedStatus) => {
+        const session = makeSession();
+        await flushBackground();
+
+        await session.project({
+          type: "tool_call",
+          toolName: "SendMessage",
+          input: { to: "agent-1", message: "Resume, finish the review" },
+          metadata: { phase: "start", toolCallId: "send-1" },
+        } as any);
+        await session.project({
+          type: "task",
+          phase: "started",
+          toolCallId: "send-1",
+          taskId: "task-1",
+          status: "running",
+          taskType: "local_agent",
+          subagentType: "security_review",
+        } as any);
+
+        await session.finalize({ status: runStatus });
+
+        const calls = await runsRepo.findToolCallsByRun("r1");
+        const task = (calls[0].metadata as Record<string, any>)?.task;
+        expect(task?.status).toBe(expectedStatus);
+        // The sweep patches, never replaces — identity fields survive.
+        expect(task?.subagentType).toBe("security_review");
+      },
+    );
+
+    it("re-arms an existing Codex spawn row from a continued session", async () => {
+      const initial = makeSession();
+      await flushBackground();
+
+      await initial.project({
+        type: "tool_call",
+        toolName: "spawnAgent",
+        metadata: { phase: "start", toolCallId: "spawn-1" },
+      } as any);
+      await initial.project({
+        type: "tool_call",
+        toolName: "spawnAgent",
+        output: {},
+        metadata: { phase: "complete", toolCallId: "spawn-1" },
+      } as any);
+      await initial.project({
+        type: "subagent",
+        phase: "invoked",
+        agentType: "scout",
+        agentId: "thread-child",
+        parentToolUseId: "spawn-1",
+      } as any);
+      await initial.finalize({ status: "canceled" });
+
+      const continued = makeSession();
+      await flushBackground();
+      await continued.project({
+        type: "subagent",
+        phase: "running",
+        agentType: "scout",
+        agentId: "thread-child",
+        parentToolUseId: "spawn-1",
+      } as any);
+
+      let calls = await runsRepo.findToolCallsByRun("r1");
+      expect((calls[0].metadata as Record<string, any>)?.subagent?.phase).toBe(
+        "running",
+      );
+
+      await continued.project({
+        type: "subagent",
+        phase: "completed",
+        agentType: "scout",
+        agentId: "thread-child",
+        parentToolUseId: "spawn-1",
+        result: "Continued child result",
+      } as any);
+      calls = await runsRepo.findToolCallsByRun("r1");
+      expect((calls[0].metadata as Record<string, any>)?.subagent).toMatchObject({
+        phase: "completed",
+        result: "Continued child result",
+      });
+    });
+
+    it.each(["completed", "failed", "killed", "stopped"] as const)(
+      "leaves a task the provider already resolved as %s alone",
+      async (status) => {
+        const session = makeSession();
+        await flushBackground();
+
+        await session.project({
+          type: "tool_call",
+          toolName: "Bash",
+          metadata: { phase: "start", toolCallId: "bash-1" },
+        } as any);
+        await session.project({
+          type: "task",
+          phase: "completed",
+          toolCallId: "bash-1",
+          taskId: "task-1",
+          status,
+        } as any);
+
+        await session.finalize({ status: "canceled" });
+
+        const calls = await runsRepo.findToolCallsByRun("r1");
+        expect((calls[0].metadata as Record<string, any>)?.task?.status).toBe(status);
+      },
+    );
+
+    it("leaves a failed task's own error intact on finalize", async () => {
+      const session = makeSession();
+      await flushBackground();
+
+      await session.project({
+        type: "tool_call",
+        toolName: "Agent",
+        metadata: { phase: "start", toolCallId: "agent-1" },
+      } as any);
+      await session.project({
+        type: "task",
+        phase: "progress",
+        toolCallId: "agent-1",
+        taskId: "task-1",
+        error: "agent exploded",
+      } as any);
+
+      await session.finalize({ status: "canceled" });
+
+      const calls = await runsRepo.findToolCallsByRun("r1");
+      const task = (calls[0].metadata as Record<string, any>)?.task;
+      expect(task?.error).toBe("agent exploded");
+      expect(task?.status).toBeUndefined();
+    });
+
+    it("leaves already-settled subagents alone on finalize", async () => {
+      const session = makeSession();
+      await flushBackground();
+
+      await session.project({
+        type: "tool_call",
+        toolName: "spawnAgent",
+        metadata: { phase: "start", toolCallId: "spawn-1" },
+      } as any);
+      await session.project({
+        type: "subagent",
+        phase: "failed",
+        agentType: "security_review",
+        parentToolUseId: "spawn-1",
+        error: "agent exploded",
+      } as any);
+
+      await session.finalize({ status: "succeeded" });
+
+      const calls = await runsRepo.findToolCallsByRun("r1");
+      const subagent = (calls[0].metadata as Record<string, any>)?.subagent;
+      expect(subagent?.phase).toBe("failed");
+      expect(subagent?.error).toBe("agent exploded");
     });
   });
 

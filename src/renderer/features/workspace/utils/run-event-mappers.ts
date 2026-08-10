@@ -152,8 +152,26 @@ export function mergeRunEvents(
   return merged;
 }
 
+/**
+ * Structural superset of the two tool-call row representations this app has —
+ * the transcript wire rows (`../types` ToolCall) and the redux tools-API rows.
+ * Accepting the union shape here is what lets every consumer pass its own
+ * rows without casting between the models.
+ */
+export interface MappableToolCall {
+  id: number;
+  toolName: string;
+  status: string;
+  toolCallId?: string | null;
+  parentToolCallId?: string | null;
+  input?: unknown;
+  output?: unknown;
+  metadata?: Record<string, unknown> | string | null;
+  createdAt?: unknown;
+}
+
 /** Convert a ToolCall to a displayable RunEvent. Returns null on parse error. */
-export function mapToolCallToEvent(tc: ToolCall): RunEvent | null {
+export function mapToolCallToEvent(tc: MappableToolCall): RunEvent | null {
   try {
     const inputDisplay = formatToolData(tc.input);
     const outputDisplay = formatToolData(tc.output);
@@ -164,11 +182,15 @@ export function mapToolCallToEvent(tc: ToolCall): RunEvent | null {
       id: `tool-${tc.id}`,
       type: "tool_call",
       content,
-      timestamp: tc.createdAt ? new Date(tc.createdAt) : new Date(),
+      timestamp: tc.createdAt ? new Date(tc.createdAt as string | number | Date) : new Date(),
       metadata: {
         ...persistedMetadata,
         status: tc.status,
         toolName: tc.toolName,
+        // Set from the row's column (present from insert), unlike the
+        // persisted metadata's parentToolUseId which only lands on completion.
+        // The transcript grouping keys on it to keep subagent children out.
+        parentToolCallId: tc.parentToolCallId ?? undefined,
         input: parseRawInput(tc.input),
         output: tc.output,
         // Pre-parsed once at event-creation time so `ToolCallItem` doesn't
@@ -187,11 +209,12 @@ export function mapToolCallToEvent(tc: ToolCall): RunEvent | null {
       id: `tool-${tc.id}`,
       type: "tool_call",
       content: `${tc.toolName ?? "tool"}`,
-      timestamp: tc.createdAt ? new Date(tc.createdAt) : new Date(),
+      timestamp: tc.createdAt ? new Date(tc.createdAt as string | number | Date) : new Date(),
       metadata: {
         ...parseMetadata(tc.metadata),
         status: tc.status,
         toolName: tc.toolName,
+        parentToolCallId: tc.parentToolCallId ?? undefined,
       },
     };
   }

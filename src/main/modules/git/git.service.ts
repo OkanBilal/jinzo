@@ -323,6 +323,27 @@ export const gitService = {
   },
 
   /**
+   * Repo-relative paths of every file git does not ignore: tracked plus
+   * untracked-but-not-ignored (`ls-files --cached --others
+   * --exclude-standard`), minus deleted-but-still-tracked paths. Honors
+   * nested .gitignore files and global excludes — the candidate set a
+   * VS Code-style file search operates on.
+   */
+  async listNonIgnoredFiles(rootPath: string): Promise<string[]> {
+    const git = getGit(rootPath);
+    const [listed, deleted] = await Promise.all([
+      git.raw(["ls-files", "--cached", "--others", "--exclude-standard", "-z"]),
+      git.raw(["ls-files", "--deleted", "-z"]),
+    ]);
+    const deletedSet = new Set(deleted.split("\0").filter(Boolean));
+    const files: string[] = [];
+    for (const rel of listed.split("\0")) {
+      if (rel && !deletedSet.has(rel)) files.push(rel);
+    }
+    return files;
+  },
+
+  /**
    * Import a local git repo by creating a branch + worktree.
    * Returns full metadata needed for workspace creation.
    */
