@@ -676,7 +676,7 @@ function ImageArtifact({
   if (variant === "tile") {
     return (
       <div
-        className="group/image-tile relative overflow-hidden rounded-3xl bg-primary-50 dark:bg-primary-900/85 shadow-sm"
+        className="group/image-tile my-4 relative overflow-hidden rounded-3xl bg-primary-50 dark:bg-primary-900/85 shadow-sm"
         title={absPath}
       >
         <Button

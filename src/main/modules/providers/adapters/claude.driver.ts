@@ -62,6 +62,7 @@ import {
 import type { ToolApprovalRequest, ToolApprovalResponse } from "../../runs/runs.dto";
 import { runsRepo } from "../../runs/runs.repo";
 import {
+  adoptConfig,
   createLogger,
   ALLOWED_TOOLS_SET,
   DEFAULT_ALLOWED_TOOLS,
@@ -2661,6 +2662,10 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       runsRepo
         .updateRun(runId, { sessionId: null })
         .catch((err) => logError("Failed to clear session ID in DB:", err));
+    },
+
+    updateConfig(next) {
+      adoptConfig(config, next as ClaudeCodeAdapterConfig);
     },
 
     async shutdown(): Promise<void> {

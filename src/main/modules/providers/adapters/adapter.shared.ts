@@ -127,6 +127,27 @@ export function resolveCatalogDefaultId(
 }
 
 // ─────────────────────────────────────────────────────────────
+// Config refresh
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Overwrite a driver's captured config *in place* — the backing implementation
+ * of `ProviderDriver.updateConfig`.
+ *
+ * Every driver closes over the config object it was constructed with, and hands
+ * that same reference to collaborators (Codex's session acquisition, Cursor's
+ * selection resolver). Reassigning the local binding would leave those holding
+ * the stale object, so we clear and refill the original: one object, every
+ * reader current. Keys absent from `next` are dropped, so unsetting a setting
+ * unsets it here too.
+ */
+export function adoptConfig<T extends object>(target: T, next: T): void {
+  const current = target as Record<string, unknown>;
+  for (const key of Object.keys(current)) delete current[key];
+  Object.assign(current, next);
+}
+
+// ─────────────────────────────────────────────────────────────
 // JSON helper
 // ─────────────────────────────────────────────────────────────
 

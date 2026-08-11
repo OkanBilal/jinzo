@@ -43,6 +43,7 @@ import {
 } from "../../runs/user-input-broker";
 import type { ToolApprovalRequest } from "../../runs/runs.dto";
 import {
+  adoptConfig,
   createLogger,
   ALLOWED_TOOLS_SET,
   extractArtifactsFromToolOutput,
@@ -1627,6 +1628,10 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
       } catch (err) {
         logError("Error deleting session:", err);
       }
+    },
+
+    updateConfig(next) {
+      adoptConfig(config, next as CopilotAdapterConfig);
     },
 
     async shutdown(): Promise<void> {

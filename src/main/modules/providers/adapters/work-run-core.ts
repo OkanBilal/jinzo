@@ -45,14 +45,14 @@ interface RunSlot {
 /**
  * Live runs, keyed by runId — module scope, NOT per adapter instance.
  *
- * The adapter cache is invalidated whenever a provider's config is written
- * (`providersService.update`), which happens mid-run: approving a plan flips
- * the permission mode, and every toolbar toggle writes config too. The next
- * `createWorkAdapter()` then builds a fresh instance, so instance-local
- * bookkeeping would leave the in-flight run unreachable — `abortRun` would
- * resolve silently while the driver kept working. Run ids are globally unique
- * and every entry is removed in `runLifecycle`'s finally, so keying them here
- * makes control reach a run regardless of which instance owns it.
+ * A settings write no longer rebuilds the adapter (the factory refreshes the
+ * cached instance's config in place), but an adapter can still be replaced
+ * mid-run — `shutdownWorkAdapter`, a provider disable/enable cycle, tests.
+ * Instance-local bookkeeping would leave the in-flight run unreachable through
+ * the new instance: `abortRun` would resolve silently while the driver kept
+ * working. Run ids are globally unique and every entry is removed in
+ * `runLifecycle`'s finally, so keying them here makes control reach a run
+ * regardless of which instance owns it.
  */
 const runState = new Map<string, RunSlot>();
 
@@ -219,6 +219,8 @@ export function createWorkRunAdapter(driver: ProviderDriver): WorkRunAdapter {
   }
 
   // 1:1 delegation for optional pass-through methods
+  if (driver.updateConfig)
+    adapter.updateConfig = driver.updateConfig.bind(driver);
   if (driver.shutdown) adapter.shutdown = driver.shutdown.bind(driver);
   if (driver.canResumeSession)
     adapter.canResumeSession = driver.canResumeSession.bind(driver);

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import {
+  adoptConfig,
   createLogger,
   safeJson,
   extractArtifactsFromToolOutput,
@@ -92,6 +93,26 @@ describe("DEFAULT_ALLOWED_TOOLS / ALLOWED_TOOLS_SET", () => {
     for (const tool of DEFAULT_ALLOWED_TOOLS) {
       expect(ALLOWED_TOOLS_SET.has(tool)).toBe(true);
     }
+  });
+});
+
+describe("adoptConfig", () => {
+  it("keeps the same object reference so existing holders see the update", () => {
+    const config = { planMode: true, defaultModel: "gpt-5.6" };
+    const holder = config;
+
+    adoptConfig(config, { planMode: false, defaultModel: "gpt-5.6" });
+
+    expect(holder).toBe(config);
+    expect(holder.planMode).toBe(false);
+  });
+
+  it("drops keys the new config no longer carries", () => {
+    const config: Record<string, unknown> = { planMode: true, effortLevel: "high" };
+
+    adoptConfig(config, { planMode: false });
+
+    expect(config).toEqual({ planMode: false });
   });
 });
 

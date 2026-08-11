@@ -44,7 +44,7 @@ import { logWorkspaceActivity } from "../../workspace";
 // "Repos are module-internal"); goes away when review persistence routes
 // through the SaveReview/SaveFinding tools.
 import { workspaceRepo } from "../../workspace/workspace.repo";
-import { createLogger } from "./adapter.shared";
+import { adoptConfig, createLogger } from "./adapter.shared";
 import type { CodexAppServerParams } from "./codex-app-server-protocol/rpc";
 import { CodexAppServer } from "./codex-app-server.client";
 import {
@@ -412,7 +412,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
   // "fast and affordable agentic coding model" tier, at medium effort.
   const titleGenerationModel = "gpt-5.6-luna";
   const runCoordinator = createCodexRunCoordinator({
-    defaultModel: config.defaultModel,
+    getDefaultModel: () => config.defaultModel,
     onReviewCompleted: persistCodexReviewFindings,
     logger: codexLogger,
   });
@@ -434,7 +434,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     logger: codexLogger,
   });
   const capabilities = createCodexCapabilities({
-    defaultModel: config.defaultModel,
+    getDefaultModel: () => config.defaultModel,
     ensureServer: (cwd) => ensureServer(cwd),
     getRunningServer: () =>
       appServer?.isRunning ? appServer : null,
@@ -798,6 +798,14 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         await server.sendRequest("thread/delete", { threadId });
       }
       runCoordinator.deleteRun(runId);
+    },
+
+    // Settings writes land here instead of rebuilding the driver: a second
+    // instance would spawn a second `codex app-server`, and the first still
+    // holds the writer lock on every thread it opened, so the next
+    // `thread/resume` fails with "already has an active writer".
+    updateConfig(next) {
+      adoptConfig(config, next as CodexAdapterConfig);
     },
 
     async shutdown(): Promise<void> {

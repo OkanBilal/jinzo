@@ -38,7 +38,8 @@ export type CodexActiveRunState = CodexEventRunState & {
 };
 
 interface CodexRunCoordinatorOptions {
-  defaultModel?: string;
+  /** Getter, not a value — the driver's config object is refreshed in place. */
+  getDefaultModel?: () => string | undefined;
   onReviewCompleted?: (
     runId: string,
     itemId: string,
@@ -104,7 +105,7 @@ export function createCodexRunCoordinator(
     onParentThreadStarted: (runId, threadId) => {
       sessionIdMap.set(runId, threadId);
     },
-    defaultModel: options.defaultModel,
+    getDefaultModel: options.getDefaultModel,
   });
   const requestBroker = createCodexRequestBroker({
     getRunState: (runId) => activeRuns.get(runId),

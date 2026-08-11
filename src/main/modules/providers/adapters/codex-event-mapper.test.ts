@@ -45,7 +45,7 @@ function createHarness(state = createRunState()) {
     getRunState: (runId) => runs.get(runId),
     onReviewCompleted,
     onParentThreadStarted,
-    defaultModel: "gpt-fixture-codex",
+    getDefaultModel: () => "gpt-fixture-codex",
   });
   return {
     mapper,

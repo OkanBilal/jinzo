@@ -210,7 +210,7 @@ interface CodexEventMapperOptions {
     runId: string,
     threadId: string,
   ) => void;
-  defaultModel?: string;
+  getDefaultModel?: () => string | undefined;
 }
 
 /**
@@ -400,7 +400,7 @@ export function createCodexEventMapper(
     acc.cacheWriteTokens += cacheWriteDelta;
     if (!previous) acc.numTurns++;
 
-    const modelName = model || options.defaultModel || "codex";
+    const modelName = model || options.getDefaultModel?.() || "codex";
     acc.model = modelName;
     if (!acc.modelUsage[modelName]) {
       acc.modelUsage[modelName] = {

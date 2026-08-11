@@ -21,6 +21,7 @@ import {
   View,
   Web,
   Workflow,
+  Write,
 } from "@/components/ui/icons";
 import { FolderIcon } from "@/components/ui/icons/file-icons";
 
@@ -304,7 +305,7 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
     displayName: "Write",
     groupKey: "write",
     category: "File",
-    icon: <Edit className="size-3.5" />,
+    icon: <Write className="size-3.5" />,
     aliases: ["write", "writeifempty", "create_file", "write_file"],
   },
   // Copilot CLI's file-creation tool. Distinct alias (`create`) so it isn't

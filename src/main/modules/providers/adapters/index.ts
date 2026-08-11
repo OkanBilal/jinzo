@@ -77,7 +77,7 @@ export {
   shutdownWorkAdapter,
   shutdownAllWorkAdapters,
   clearAdapterCache,
-  invalidateWorkAdapter,
+  refreshWorkAdapterConfig,
   isSupportedWorkProvider,
   listModelsForProvider,
   listCommandsForProvider,
