@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useIsDarkMode } from "@/hooks/use-is-dark-mode";
-import { Edit } from "@/components/ui/icons";
+import {  Write } from "@/components/ui/icons";
 import { PatchDiff } from "@pierre/diffs/react";
 import { normalizePatchForPatchDiff } from "../../utils/patch-utils";
 import { useOpenFileInEditor } from "../../hooks/use-open-file-in-editor";
@@ -207,8 +207,8 @@ export function WriteDisplay({
   return (
     <div>
       <ToolHeader
-        icon={<Edit className="size-4" />}
-        verb="Edited"
+        icon={<Write className="size-4" />}
+        verb="Wrote"
         hasDetails={hasDiff}
         isExpanded={isExpanded}
         onToggle={() => setIsExpanded((v) => !v)}

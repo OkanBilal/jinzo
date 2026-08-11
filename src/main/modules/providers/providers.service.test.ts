@@ -36,7 +36,7 @@ vi.mock("./adapters", () => ({
     remoteSyncError: null,
     featuredPluginIds: [],
   }),
-  invalidateWorkAdapter: vi.fn(),
+  refreshWorkAdapterConfig: vi.fn(),
 }));
 
 import { providersService } from "./providers.service";

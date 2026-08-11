@@ -6,9 +6,38 @@ import type {
   ProviderResponse,
   DetectedClisResponse,
 } from "./providers.dto";
-import { listModelsForProvider, listCommandsForProvider, listSkillsForProvider, getAccountInfoForProvider, updateCliForProvider, listPluginsForProvider, listInstalledPluginsForProvider, readPluginForProvider, installPluginForProvider, uninstallPluginForProvider, setPluginEnabledForProvider, updatePluginForProvider, getRateLimitsForProvider, setGoalForProvider, getGoalForProvider, clearGoalForProvider, invalidateWorkAdapter, type ModelInfo, type CommandInfo, type SkillInfo, type PluginListResponse, type PluginDetail, type AccountInfo, type CliUpdateResult } from "./adapters";
+import {
+  listModelsForProvider,
+  listCommandsForProvider,
+  listSkillsForProvider,
+  getAccountInfoForProvider,
+  updateCliForProvider,
+  listPluginsForProvider,
+  listInstalledPluginsForProvider,
+  readPluginForProvider,
+  installPluginForProvider,
+  uninstallPluginForProvider,
+  setPluginEnabledForProvider,
+  updatePluginForProvider,
+  getRateLimitsForProvider,
+  setGoalForProvider,
+  getGoalForProvider,
+  clearGoalForProvider,
+  refreshWorkAdapterConfig,
+  type ModelInfo,
+  type CommandInfo,
+  type SkillInfo,
+  type PluginListResponse,
+  type PluginDetail,
+  type AccountInfo,
+  type CliUpdateResult,
+} from "./adapters";
 import type { PluginScope } from "../../../shared/adapter.types";
-import type { RateLimitInfo, GoalInfo, GoalSetParams } from "../../../shared/adapter.types";
+import type {
+  RateLimitInfo,
+  GoalInfo,
+  GoalSetParams,
+} from "../../../shared/adapter.types";
 
 /** Resolve a provider and require it to be enabled — the shared preamble of
  * every adapter-backed operation. */
@@ -64,8 +93,11 @@ export const providersService = {
       throw new Error("Provider not found");
     }
 
-    // Invalidate cached adapter so the next run picks up new config
-    invalidateWorkAdapter(id);
+    // Push the new config into the live adapter. Dropping it from the cache
+    // instead would strand the driver's long-lived processes: the replacement
+    // Codex app-server can't resume a thread the orphan still has open
+    // ("already has an active writer").
+    refreshWorkAdapterConfig(updated);
 
     return updated;
   },

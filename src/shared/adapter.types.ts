@@ -524,6 +524,13 @@ export interface WorkRunAdapter {
   shutdown?(): Promise<void>;
 
   /**
+   * Push a newer `providers.config` into the cached adapter instance.
+   * See {@link ProviderDriver.updateConfig} — this is the factory's alternative
+   * to dropping and rebuilding the adapter on every settings write.
+   */
+  updateConfig?(config: AdapterConfig): void;
+
+  /**
    * List available models with their metadata.
    * @returns Promise resolving to array of ModelInfo
    * @throws Error if not authenticated or client not connected
@@ -707,6 +714,19 @@ export interface ProviderDriver {
 
   /** Tear down per-run state in the SDK (file handles, timers, etc.). */
   cleanup?(session: unknown): Promise<void>;
+
+  /**
+   * Adopt a newer `providers.config` in place, so the *same* driver instance
+   * keeps serving after a settings write. Drivers that own a long-lived
+   * process (Codex's app-server, Cursor's ACP server) MUST implement this:
+   * rebuilding the driver instead would spawn a second process while the first
+   * still holds its sessions — Codex answers `thread/resume` on a thread the
+   * previous process still owns with "already has an active writer".
+   * Implementations mutate their captured config object rather than swapping
+   * the reference, since collaborators (session acquisition, capabilities)
+   * hold that same object.
+   */
+  updateConfig?(config: AdapterConfig): void;
 
   // ── Pass-through methods (Core delegates 1:1 to the matching WorkRunAdapter method) ──
   shutdown?(): Promise<void>;
@@ -1035,6 +1055,16 @@ export interface CursorAdapterConfig {
   /** Enable adaptive thinking via the parameterized model picker (model must advertise it). */
   thinking?: boolean;
 }
+
+/**
+ * Any provider's adapter config, as stored in `providers.config`.
+ * The factory narrows it per provider id; drivers cast to their own shape.
+ */
+export type AdapterConfig =
+  | CodexAdapterConfig
+  | CopilotAdapterConfig
+  | ClaudeCodeAdapterConfig
+  | CursorAdapterConfig;
 
 /**
  * A persisted JSON Schema entry for structured output

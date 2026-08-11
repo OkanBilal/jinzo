@@ -4,7 +4,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import type { ProviderResponse } from "../providers.dto";
-import type { WorkRunAdapter, CopilotAdapterConfig, ClaudeCodeAdapterConfig, CodexAdapterConfig, CursorAdapterConfig, ModelInfo, CommandInfo, SkillInfo, PluginListResponse, PluginDetail, PluginScope, AccountInfo } from "../../../../shared/adapter.types";
+import type { WorkRunAdapter, AdapterConfig, CopilotAdapterConfig, ClaudeCodeAdapterConfig, CodexAdapterConfig, CursorAdapterConfig, ModelInfo, CommandInfo, SkillInfo, PluginListResponse, PluginDetail, PluginScope, AccountInfo } from "../../../../shared/adapter.types";
 import { createClaudeDriver } from "./claude.driver";
 import { createCodexDriver } from "./codex.driver";
 import { createCopilotDriver } from "./copilot.driver";
@@ -35,6 +35,68 @@ export const isSupportedWorkProvider = isProviderId as (
  * We reuse adapters to maintain connection state
  */
 const adapterCache = new Map<string, WorkRunAdapter>();
+
+/**
+ * Resolved Copilot CLI entry point, memoized: `createWorkAdapter` runs on every
+ * provider-touching IPC, and the resolution walks the filesystem.
+ */
+let copilotBinaryPath: string | null | undefined;
+
+function resolveCopilotBinary(): string | null {
+  if (copilotBinaryPath === undefined) {
+    copilotBinaryPath = findCopilotCliPath() ?? null;
+  }
+  return copilotBinaryPath;
+}
+
+/**
+ * The adapter config for a provider: its stored `config` blob plus the
+ * `defaultModel` column, which lives outside it.
+ */
+function buildAdapterConfig(provider: ProviderResponse): AdapterConfig {
+  switch (provider.id) {
+    case PROVIDER_IDS.copilot: {
+      const config: CopilotAdapterConfig = {
+        ...(provider.config as CopilotAdapterConfig | null),
+        defaultModel: provider.defaultModel ?? undefined,
+      };
+      // Resolve the Copilot CLI entry point if not explicitly configured.
+      // The SDK's internal resolution uses import.meta.resolve() which
+      // breaks in bundled CJS / packaged Electron contexts.
+      if (!config.binary) {
+        const resolvedPath = resolveCopilotBinary();
+        if (resolvedPath) {
+          config.binary = resolvedPath;
+        }
+      }
+      return config;
+    }
+
+    case PROVIDER_IDS.claude:
+      return {
+        ...(provider.config as ClaudeCodeAdapterConfig | null),
+        defaultModel: provider.defaultModel ?? undefined,
+      } satisfies ClaudeCodeAdapterConfig;
+
+    case PROVIDER_IDS.codex:
+      return {
+        ...(provider.config as CodexAdapterConfig | null),
+        defaultModel: provider.defaultModel ?? undefined,
+      } satisfies CodexAdapterConfig;
+
+    case PROVIDER_IDS.cursor:
+      return {
+        ...(provider.config as CursorAdapterConfig | null),
+        defaultModel: provider.defaultModel ?? undefined,
+      } satisfies CursorAdapterConfig;
+
+    default:
+      throw new Error(
+        `Provider "${provider.id}" is not supported for work runs. ` +
+          `Supported providers: ${SUPPORTED_WORK_PROVIDERS.join(", ")}`,
+      );
+  }
+}
 
 function pluginListToSkillInfo(pluginList: PluginListResponse): SkillInfo[] {
   const skills: SkillInfo[] = [];
@@ -101,59 +163,44 @@ export function createWorkAdapter(provider: ProviderResponse): WorkRunAdapter {
     );
   }
 
-  // Check cache first
+  const config = buildAdapterConfig(provider);
+
+  // A cached adapter is refreshed, never replaced. Drivers own long-lived
+  // resources — Codex's `codex app-server`, Cursor's ACP server — and a second
+  // instance would spawn a second process alongside the first, which still
+  // holds the writer lock on every thread it opened.
   const cached = adapterCache.get(provider.id);
   if (cached) {
+    cached.updateConfig?.(config);
     return cached;
   }
 
   let adapter: WorkRunAdapter;
 
   switch (provider.id) {
-    case PROVIDER_IDS.copilot: {
-      const config: CopilotAdapterConfig = {
-        ...(provider.config as CopilotAdapterConfig | null),
-        defaultModel: provider.defaultModel ?? undefined,
-      };
-      // Resolve the Copilot CLI entry point if not explicitly configured.
-      // The SDK's internal resolution uses import.meta.resolve() which
-      // breaks in bundled CJS / packaged Electron contexts.
-      if (!config.binary) {
-        const resolvedPath = findCopilotCliPath();
-        if (resolvedPath) {
-          config.binary = resolvedPath;
-        }
-      }
-      adapter = createWorkRunAdapter(createCopilotDriver(config));
+    case PROVIDER_IDS.copilot:
+      adapter = createWorkRunAdapter(
+        createCopilotDriver(config as CopilotAdapterConfig),
+      );
       break;
-    }
 
-    case PROVIDER_IDS.claude: {
-      const config: ClaudeCodeAdapterConfig = {
-        ...(provider.config as ClaudeCodeAdapterConfig | null),
-        defaultModel: provider.defaultModel ?? undefined,
-      };
-      adapter = createWorkRunAdapter(createClaudeDriver(config));
+    case PROVIDER_IDS.claude:
+      adapter = createWorkRunAdapter(
+        createClaudeDriver(config as ClaudeCodeAdapterConfig),
+      );
       break;
-    }
 
-    case PROVIDER_IDS.codex: {
-      const config: CodexAdapterConfig = {
-        ...(provider.config as CodexAdapterConfig | null),
-        defaultModel: provider.defaultModel ?? undefined,
-      };
-      adapter = createWorkRunAdapter(createCodexDriver(config));
+    case PROVIDER_IDS.codex:
+      adapter = createWorkRunAdapter(
+        createCodexDriver(config as CodexAdapterConfig),
+      );
       break;
-    }
 
-    case PROVIDER_IDS.cursor: {
-      const config: CursorAdapterConfig = {
-        ...(provider.config as CursorAdapterConfig | null),
-        defaultModel: provider.defaultModel ?? undefined,
-      };
-      adapter = createWorkRunAdapter(createCursorDriver(config));
+    case PROVIDER_IDS.cursor:
+      adapter = createWorkRunAdapter(
+        createCursorDriver(config as CursorAdapterConfig),
+      );
       break;
-    }
 
     default:
       throw new Error(
@@ -166,6 +213,18 @@ export function createWorkAdapter(provider: ProviderResponse): WorkRunAdapter {
   adapterCache.set(provider.id, adapter);
 
   return adapter;
+}
+
+/**
+ * Push a provider's latest config into its cached adapter, if one exists.
+ * Called on every `providers.update` so a settings change reaches a live
+ * driver immediately, without dropping the instance (and its processes).
+ */
+export function refreshWorkAdapterConfig(provider: ProviderResponse): void {
+  const cached = adapterCache.get(provider.id);
+  if (!cached?.updateConfig) return;
+  if (!isProviderId(provider.id)) return;
+  cached.updateConfig(buildAdapterConfig(provider));
 }
 
 /**
@@ -214,16 +273,6 @@ export async function shutdownAllWorkAdapters(): Promise<void> {
  */
 export function clearAdapterCache(): void {
   adapterCache.clear();
-}
-
-/**
- * Invalidate a single adapter from cache without shutting it down.
- * Active runs on the old adapter instance continue unaffected;
- * the next call to createWorkAdapter() will build a fresh adapter
- * with the latest provider config.
- */
-export function invalidateWorkAdapter(providerId: string): void {
-  adapterCache.delete(providerId);
 }
 
 /**

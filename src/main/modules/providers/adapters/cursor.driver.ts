@@ -46,6 +46,7 @@ import type {
 import { requestToolApproval } from "../../runs/user-input-broker";
 import { runsRepo } from "../../runs/runs.repo";
 import {
+  adoptConfig,
   createLogger,
   appendPromptSections,
   saveAttachments,
@@ -2199,6 +2200,12 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
 
     async deleteSession(runId: string): Promise<void> {
       sessionIdMap.delete(runId);
+    },
+
+    // Same reason as Codex: this driver owns a long-lived ACP server process,
+    // so config changes refresh the instance instead of replacing it.
+    updateConfig(next) {
+      adoptConfig(config, next as CursorAdapterConfig);
     },
 
     async shutdown(): Promise<void> {

@@ -352,7 +352,10 @@ export function createCodexSessionAcquisition(
   } = options;
   const logger =
     options.logger ?? createLogger("[CodexSessionAcquisition]");
-  const timeout = config.timeout ?? 3_600_000;
+  // Read through `config` on every use, never snapshot: the driver refreshes
+  // this same object in place when provider settings change
+  // (`ProviderDriver.updateConfig`).
+  const timeout = () => config.timeout ?? 3_600_000;
 
   function effectiveModel(
     requestedModel: string | null | undefined,
@@ -381,7 +384,7 @@ export function createCodexSessionAcquisition(
       runId,
       startTurn,
       model,
-      timeout,
+      timeout: timeout(),
       ...(preExecuteEvent ? { preExecuteEvent } : {}),
     };
   }

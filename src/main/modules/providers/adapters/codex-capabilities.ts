@@ -18,7 +18,11 @@ import {
 import type { CodexAppServer } from "./codex-app-server.client";
 
 interface CodexCapabilitiesOptions {
-  defaultModel?: string;
+  /**
+   * Getter, not a value: the driver refreshes its config object in place when
+   * provider settings change, so a snapshot taken here would go stale.
+   */
+  getDefaultModel?: () => string | undefined;
   ensureServer: (cwd?: string) => Promise<CodexAppServer>;
   getRunningServer: () => CodexAppServer | null;
   getCliHealth: () => Promise<NonNullable<AccountInfo["cli"]>>;
@@ -771,7 +775,7 @@ export function createCodexCapabilities(
             displayName,
             isDefault:
               model.isDefault ||
-              model.id === options.defaultModel,
+              model.id === options.getDefaultModel?.(),
             description: model.description,
             capabilities: {
               vision: model.inputModalities.includes("image"),
