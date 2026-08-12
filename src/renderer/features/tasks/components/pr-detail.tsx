@@ -1,0 +1,553 @@
+import { useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
+import { markdownComponents } from "@/components/markdown-components";
+import { markdownSanitizeSchema } from "@/lib/markdown-sanitize";
+import {
+  useGetPrDetailQuery,
+  useMergePrMutation,
+  useMarkPrReadyMutation,
+  useAddPrCommentMutation,
+  useResolvePrThreadMutation,
+  type PrComment,
+  type PrMergeMethod,
+  type PullRequestSummary,
+} from "@/lib/redux/api";
+import {
+  Button,
+  DropdownWrapper,
+  SegmentedTabs,
+  SendButton,
+  Textarea,
+} from "@/components/ui";
+import { Body, Heading3 } from "@/components/ui/text";
+import { toast } from "@/components/ui/toast";
+import { extractErrorMessage } from "@/lib/extract-error-message";
+import { useClickOutside } from "@/hooks/use-click-outside";
+import {
+  Branch,
+  Chat,
+  ArrowUp,
+  Check,
+  Clock,
+  External,
+  PullRequest,
+  Personalize,
+} from "@/components/ui/icons";
+import { proxiedImageSrc } from "@/lib/proxied-image-src";
+import { formatDate } from "@/lib/format-date";
+import { PrDiffView } from "./pr-diff-view";
+
+const DETAIL_TABS: { value: "summary" | "code"; label: string }[] = [
+  { value: "summary", label: "Summary" },
+  { value: "code", label: "Code" },
+];
+
+const MERGE_METHODS: { value: PrMergeMethod; label: string }[] = [
+  { value: "merge", label: "Merge" },
+  { value: "squash", label: "Squash and merge" },
+  { value: "rebase", label: "Rebase and merge" },
+];
+
+const STATE_BADGE: Record<string, string> = {
+  open: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400",
+  merged: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400",
+  closed: "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400",
+};
+
+const CHECK_DOT: Record<string, string> = {
+  passing: "bg-green-500",
+  failing: "bg-red-500",
+  pending: "bg-yellow-500",
+  none: "bg-primary-400",
+};
+
+function Avatar({ author }: { author: PrComment["author"] }) {
+  const src = proxiedImageSrc(author?.avatarUrl);
+  if (!src) {
+    return <span className="size-6 rounded-full bg-primary/30 dark:bg-primary/10 shrink-0" />;
+  }
+  return <img src={src} alt={author?.login ?? ""} className="size-6 rounded-full shrink-0" />;
+}
+
+function Markdown({ children }: { children: string }) {
+  return (
+    <div className="prose prose-sm dark:prose-invert max-w-none text-s text-primary-800 dark:text-primary-200 wrap-break-word">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw, [rehypeSanitize, markdownSanitizeSchema]]}
+        components={markdownComponents}
+      >
+        {children}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
+function MetaRow({
+  icon,
+  label,
+  children,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="shrink-0 mt-0.5 w-4 flex items-center justify-center text-primary-500 dark:text-primary-400">
+        {icon}
+      </span>
+      <span className="shrink-0 w-24 text-s text-primary-500 dark:text-primary-400">
+        {label}
+      </span>
+      <span className="min-w-0 text-s text-primary-900 dark:text-primary-100">
+        {children}
+      </span>
+    </div>
+  );
+}
+
+function CommentCard({ comment }: { comment: PrComment }) {
+  return (
+    <div className="rounded-2xl bg-primary/30 dark:bg-primary/2 glass-outline px-3 py-3">
+      <div className="flex items-center gap-2 mb-1.5">
+        <Avatar author={comment.author} />
+        <span className="text-s font-medium text-primary-900 dark:text-primary-100">
+          {comment.author?.login ?? "unknown"}
+        </span>
+        <span className="text-xs text-primary-600 dark:text-primary-400 ml-auto">
+          {formatDate(comment.createdAt)}
+        </span>
+      </div>
+      <Markdown>{comment.body}</Markdown>
+    </div>
+  );
+}
+
+interface PrDetailProps {
+  pr: PullRequestSummary;
+}
+
+export function PrDetail({ pr }: PrDetailProps) {
+  const ref = { owner: pr.repo.owner, repo: pr.repo.repo, number: pr.number };
+
+  const { data: detail, isLoading, isError, refetch } = useGetPrDetailQuery(ref);
+
+  const [tab, setTab] = useState<"summary" | "code">("summary");
+  const [mergeMethod, setMergeMethod] = useState<PrMergeMethod>("merge");
+  const [commentText, setCommentText] = useState("");
+  const [checksOpen, setChecksOpen] = useState(false);
+  const checksDropdownRef = useRef<HTMLDivElement>(null);
+  const [mergeMenuOpen, setMergeMenuOpen] = useState(false);
+  const mergeMenuRef = useRef<HTMLDivElement>(null);
+
+  useClickOutside(checksDropdownRef, () => {
+    if (checksOpen) setChecksOpen(false);
+  });
+
+  useClickOutside(mergeMenuRef, () => {
+    if (mergeMenuOpen) setMergeMenuOpen(false);
+  });
+
+  const [mergePr, { isLoading: isMerging }] = useMergePrMutation();
+  const [markReady, { isLoading: isMarkingReady }] = useMarkPrReadyMutation();
+  const [addComment, { isLoading: isCommenting }] = useAddPrCommentMutation();
+  const [resolveThread] = useResolvePrThreadMutation();
+
+  const handleMerge = async () => {
+    try {
+      await mergePr({ ...ref, method: mergeMethod }).unwrap();
+      toast.success(`Merged #${pr.number}`);
+    } catch (err) {
+      toast.error(extractErrorMessage(err, "Failed to merge pull request"));
+    }
+  };
+
+  const handleMarkReady = async () => {
+    try {
+      await markReady({ ...ref, nodeId: pr.nodeId }).unwrap();
+      toast.success("Marked as ready for review");
+    } catch (err) {
+      toast.error(extractErrorMessage(err, "Failed to mark as ready"));
+    }
+  };
+
+  const handleComment = async () => {
+    const body = commentText.trim();
+    if (!body) return;
+    try {
+      await addComment({ ...ref, body }).unwrap();
+      setCommentText("");
+      toast.success("Comment posted");
+    } catch (err) {
+      toast.error(extractErrorMessage(err, "Failed to post comment"));
+    }
+  };
+
+  const handleResolveThread = async (threadId: string, resolved: boolean) => {
+    try {
+      await resolveThread({ ...ref, threadId, resolved }).unwrap();
+    } catch (err) {
+      toast.error(extractErrorMessage(err, "Failed to update review thread"));
+    }
+  };
+
+  const current = detail ?? pr;
+  const stateBadge = STATE_BADGE[current.state] ?? STATE_BADGE.open;
+  const canMerge = current.state === "open" && !current.isDraft;
+
+  const statusText =
+    current.state === "merged"
+      ? "Merged"
+      : current.state === "closed"
+        ? "Closed"
+        : current.isDraft
+          ? "Draft"
+          : "Ready for review";
+
+  const reviewers =
+    detail?.latestReviews
+      .map((review) => review.author)
+      .filter((login): login is string => Boolean(login)) ?? [];
+
+  const commentCount = detail
+    ? detail.comments.length +
+      detail.reviewThreads.reduce((sum, t) => sum + t.comments.length, 0)
+    : 0;
+
+  const checkCounts = { passing: 0, failing: 0, pending: 0 };
+  for (const check of detail?.checks ?? []) {
+    if (check.status === "passing") checkCounts.passing++;
+    else if (check.status === "failing") checkCounts.failing++;
+    else checkCounts.pending++;
+  }
+  const checksSummary =
+    (detail?.checks.length ?? 0) === 0
+      ? "No CI checks"
+      : [
+          checkCounts.passing > 0 && `${checkCounts.passing} passing`,
+          checkCounts.failing > 0 && `${checkCounts.failing} failing`,
+          checkCounts.pending > 0 && `${checkCounts.pending} pending`,
+        ]
+          .filter(Boolean)
+          .join(" · ");
+
+  return (
+    <div className="flex flex-col h-full min-h-0">
+      {/* Header */}
+      <div className="px-8 pt-3 pb-2 border-b border-primary/20 dark:border-primary/10">
+        <div className="flex items-start gap-2">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+            <Body className=" text-primary-600 dark:text-primary-400 truncate">
+                {pr.repo.owner}/{pr.repo.repo}
+              </Body>
+
+              <span className={`inline-flex capitalize items-center px-2 py-0.5 rounded-full text-xxs font-medium ${stateBadge}`}>
+                {current.isDraft && current.state === "open" ? "Draft" : current.state}
+              </span>
+            </div>
+            <Heading3 className="text-base font-medium text-primary-950 dark:text-primary-50 mt-1 wrap-break-word">
+              {current.title}{" "}
+              <span className="text-primary-500 dark:text-primary-400 font-normal">#{pr.number}</span>
+            </Heading3>
+          </div>
+          <Button
+            onClick={() => window.api.shell.openExternal(pr.url)}
+            tooltip="Open on GitHub"
+            className="shrink-0 p-1.5 rounded-lg hover:bg-primary/20 dark:hover:bg-primary/10"
+          >
+            <External className="w-3.5 h-3.5 text-primary-700 dark:text-primary-300" />
+          </Button>
+        </div>
+
+        {/* Actions */}
+        {current.state === "open" && (
+          <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+            {current.isDraft ? (
+              <Button
+                variant="secondary"
+                disabled={isMarkingReady}
+                onClick={handleMarkReady}
+              >
+                {isMarkingReady ? "Working..." : "Ready for review"}
+              </Button>
+            ) : (
+              /* GitHub-style split button: the left half runs the selected
+                 merge method, the right chevron picks one. */
+              <div className="relative" ref={mergeMenuRef}>
+                <div className="inline-flex items-stretch">
+                  <Button
+                    variant="submit"
+                    disabled={!canMerge || isMerging}
+                    onClick={handleMerge}
+                    className="rounded-r-none "
+                  >
+                    {isMerging
+                      ? "Merging..."
+                      : MERGE_METHODS.find((m) => m.value === mergeMethod)
+                          ?.label}
+                  </Button>
+                  <Button
+                    variant="submit"
+                    disabled={!canMerge || isMerging}
+                    onClick={() => setMergeMenuOpen((open) => !open)}
+                    aria-label="Choose merge method"
+                    aria-expanded={mergeMenuOpen}
+                    className="rounded-l-none px-2 border-l border-primary-400/30 dark:border-primary/0 mt-px  "
+                  >
+                    <ArrowUp
+                      className={`size-3.5 transition-transform rotate-180`}
+                    />
+                  </Button>
+                </div>
+                <DropdownWrapper isOpen={mergeMenuOpen} minWidth="min-w-56">
+                  <div className="py-1.5">
+                    {MERGE_METHODS.map((m) => (
+                      <Button
+                        key={m.value}
+                        onClick={() => {
+                          setMergeMethod(m.value);
+                          setMergeMenuOpen(false);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-1.5 text-left cursor-pointer transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800"
+                      >
+                        <span className="flex-1 min-w-0 truncate text-s text-primary-800 dark:text-primary-100">
+                          {m.label}
+                        </span>
+                        {mergeMethod === m.value && (
+                          <Check className="w-3 h-3 shrink-0 text-primary-900 dark:text-primary-100" />
+                        )}
+                      </Button>
+                    ))}
+                  </div>
+                </DropdownWrapper>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Summary / Code tabs */}
+        <SegmentedTabs
+          value={tab}
+          onChange={setTab}
+          options={DETAIL_TABS}
+          className="w-fit mt-2.5"
+        />
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 min-h-0 overflow-y-auto noscrollbar px-8 py-3 space-y-4">
+        {tab === "code" ? (
+          <PrDiffView prRef={ref} />
+        ) : isLoading && !detail ? (
+          <div className="flex items-center justify-center py-8">
+            <span className="text-xs shine-text">Loading pull request...</span>
+          </div>
+        ) : isError && !detail ? (
+          <div className="flex flex-col items-center gap-2 py-8">
+            <Body className="text-xs text-primary-800 dark:text-primary-300">
+              Unable to load this pull request.
+            </Body>
+            <Button variant="subtle" onClick={() => refetch()}>
+              Try again
+            </Button>
+          </div>
+        ) : detail ? (
+          <>
+            {/* Metadata */}
+            <div className="space-y-2.5">
+              <MetaRow icon={<Branch className="w-4 h-4" />} label="Branch">
+                <span className="break-all">{current.headRefName}</span>
+                <span className="text-primary-500 dark:text-primary-400 mx-1.5">
+                  →
+                </span>
+                <span>{current.baseRefName}</span>{" "}
+                <span className="text-green-600 dark:text-green-400 tabular-nums">
+                  +{current.additions.toLocaleString()}
+                </span>{" "}
+                <span className="text-red-500 dark:text-red-400 tabular-nums">
+                  -{current.deletions.toLocaleString()}
+                </span>
+              </MetaRow>
+              <MetaRow icon={<Personalize className="w-4 h-4" />} label="Reviewers">
+                {reviewers.length > 0 ? reviewers.join(", ") : "No reviewers"}
+                {detail.reviewDecision && (
+                  <span className="text-primary-500 dark:text-primary-400 capitalize">
+                    {" · "}
+                    {detail.reviewDecision.replace(/_/g, " ").toLowerCase()}
+                  </span>
+                )}
+              </MetaRow>
+              <MetaRow icon={<Chat className="w-4 h-4" />} label="Comments">
+                {commentCount > 0
+                  ? `${commentCount} comment${commentCount === 1 ? "" : "s"}`
+                  : "No comments"}
+              </MetaRow>
+              <MetaRow icon={<Clock className="w-4 h-4" />} label="Checks">
+                {detail.checks.length === 0 ? (
+                  checksSummary
+                ) : (
+                  <div className="relative" ref={checksDropdownRef}>
+                    <Button
+                      onClick={() => setChecksOpen((open) => !open)}
+                      className="flex items-center gap-1 cursor-pointer text-s text-primary-900 dark:text-primary-100 hover:text-primary-700 dark:hover:text-primary-300"
+                    >
+                      {checksSummary}
+                      <ArrowUp
+                        className={`w-3 h-3 transition-transform rotate-180 `}
+                      />
+                    </Button>
+                    <DropdownWrapper isOpen={checksOpen} minWidth="min-w-56">
+                      <div className="py-2 px-3 space-y-1.5">
+                        {detail.checks.map((check, i) => (
+                          <div
+                            key={`${check.name}-${i}`}
+                            className="flex items-center gap-2"
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full shrink-0 ${CHECK_DOT[check.status]}`}
+                            />
+                            <span className="text-xs text-primary-800 dark:text-primary-200 truncate">
+                              {check.name}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </DropdownWrapper>
+                  </div>
+                )}
+              </MetaRow>
+              <MetaRow icon={<PullRequest className="w-4 h-4" />} label="Status">
+                {statusText}
+              </MetaRow>
+            </div>
+
+            {/* Description */}
+            <div>
+              <Body className="text-xs font-medium text-primary-700 dark:text-primary-300 mb-1.5">
+                Description
+              </Body>
+              {detail.body.trim() ? (
+                <Markdown>{detail.body}</Markdown>
+              ) : (
+                <span className="text-xs text-primary-600 dark:text-primary-400">
+                  No description provided
+                </span>
+              )}
+            </div>
+
+            {/* Review threads */}
+            {detail.reviewThreads.length > 0 && (
+              <div>
+                <Body className="text-xs font-medium text-primary-700 dark:text-primary-300 mb-1.5">
+                  Review threads
+                </Body>
+                <div className="space-y-2">
+                  {detail.reviewThreads.map((thread) => (
+                    <div
+                      key={thread.id}
+                      className={`rounded-xl px-3 py-2 glass-outline ${
+                        thread.isResolved
+                          ? "bg-primary/10 dark:bg-primary/3 opacity-70"
+                          : "bg-primary/30 dark:bg-primary/5"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="text-xxs font-mono text-primary-700 dark:text-primary-300 truncate">
+                          {thread.path}
+                          {thread.line != null ? `:${thread.line}` : ""}
+                        </span>
+                        {thread.isResolved && (
+                          <span className="text-xxs text-primary-500 dark:text-primary-400">
+                            Resolved
+                          </span>
+                        )}
+                        {(thread.isResolved
+                          ? thread.viewerCanUnresolve
+                          : thread.viewerCanResolve) && (
+                          <Button
+                            onClick={() =>
+                              handleResolveThread(thread.id, !thread.isResolved)
+                            }
+                            className="ml-auto text-xxs px-2 py-0.5 rounded-lg hover:bg-primary/20 dark:hover:bg-primary/10 text-primary-700 dark:text-primary-300"
+                          >
+                            {thread.isResolved ? "Unresolve" : "Resolve"}
+                          </Button>
+                        )}
+                      </div>
+                      <div className="space-y-1.5">
+                        {thread.comments.map((comment) => (
+                          <div key={comment.id} className="flex items-start gap-2">
+                            <Avatar author={comment.author} />
+                            <div className="min-w-0 flex-1">
+                              <span className="text-s font-medium text-primary-800 dark:text-primary-200 mr-1.5">
+                                {comment.author?.login ?? "unknown"}
+                              </span>
+                              <Markdown>{comment.body}</Markdown>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Comments */}
+            <div>
+              <Body className="text-xs font-medium text-primary-700 dark:text-primary-300 mb-1.5">
+                Comments
+              </Body>
+              {detail.comments.length === 0 ? (
+                <span className="text-xs text-primary-600 dark:text-primary-400">
+                  No comments yet
+                </span>
+              ) : (
+                <div className="space-y-2">
+                  {detail.comments.map((comment) => (
+                    <CommentCard key={comment.id} comment={comment} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        ) : null}
+      </div>
+
+      {/* Comment composer */}
+      <div
+        className={`px-6 py-3 border-t border-primary/20 dark:border-primary/10 ${
+          tab === "code" ? "hidden" : ""
+        }`}
+      >
+        <div className="relative">
+          <Textarea
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                handleComment();
+              }
+            }}
+            placeholder="Leave a comment"
+            rows={2}
+            className="w-full resize-none px-3 py-2 pr-12 text-s rounded-xl bg-primary/40 dark:bg-primary/5 glass-outline placeholder:text-primary-600 dark:placeholder:text-primary-500 text-primary-900 dark:text-primary-100 outline-none"
+          />
+          <div className="absolute bottom-4 right-2 z-10">
+            <SendButton
+              loading={isCommenting}
+              onSubmit={handleComment}
+              disabled={!commentText.trim()}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

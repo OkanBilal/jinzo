@@ -1,4 +1,4 @@
-const ROUTES_WITHOUT_RIGHT_PANEL = ["/settings", "/plugins", "/pulse", "/relay"];
+const ROUTES_WITHOUT_RIGHT_PANEL = ["/settings", "/plugins", "/pulse", "/relay", "/tasks"];
 
 export function shouldHideRightPanel(pathname: string): boolean {
   return ROUTES_WITHOUT_RIGHT_PANEL.some(
@@ -60,6 +60,10 @@ export const BOTTOM_TERMINAL_HEIGHT = "15.5rem";
  */
 export const CONTENT_LEFT_VAR = "--content-left";
 export const CONTENT_RIGHT_VAR = "--content-right";
+
+export const TASKS_DETAIL_WIDTH_DEFAULT = 640; // 40rem
+export const TASKS_DETAIL_WIDTH_MIN = 440;
+export const TASKS_DETAIL_WIDTH_MAX = 1100;
 
 export const DOC_VIEWER_PANEL_WIDTH_VAR = "--doc-viewer-panel-width";
 export const DOC_VIEWER_PANEL_WIDTH_DEFAULT = 720; // 45rem

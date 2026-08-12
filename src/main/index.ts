@@ -105,6 +105,10 @@ import {
   shutdownAllGuardAdapters,
 } from "./modules/guards";
 import {
+  registerPullRequestsIpc,
+  unregisterPullRequestsIpc,
+} from "./modules/pullRequests";
+import {
   registerBrowserIpc,
   unregisterBrowserIpc,
   browserService,
@@ -749,6 +753,7 @@ async function initializeApp() {
     registerAutomationsIpc();
     registerPulseIpc();
     registerGuardsIpc();
+    registerPullRequestsIpc();
     registerBrowserIpc();
     registerSshIpc();
     registerBackendAuthIpc();
@@ -1072,6 +1077,7 @@ async function cleanupApp() {
     pulseService.stop();
     unregisterPulseIpc();
     unregisterGuardsIpc();
+    unregisterPullRequestsIpc();
     await shutdownAllGuardAdapters();
     try { browserService.destroy(); } catch { /* ignore */ }
     unregisterBrowserIpc();

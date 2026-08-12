@@ -68,14 +68,14 @@ Mains is an Electron 41 desktop app (React 19 renderer, SQLite + Drizzle ORM). C
 
 **Preload** (`src/preload/index.ts`)
 - Exposes `window.api` object with typed IPC methods
-- Namespaced by domain: `api.account`, `api.app`, `api.appSettings`, `api.automations`, `api.backendAuth`, `api.browser`, `api.connections`, `api.documents`, `api.entities`, `api.fileExplorer`, `api.gitFlow`, `api.guards`, `api.imageProxy`, `api.issues`, `api.localBackend`, `api.platform`, `api.projects`, `api.providers`, `api.pulse`, `api.runs`, `api.runArtifacts`, `api.runContext`, `api.runTurns`, `api.shell`, `api.signals`, `api.space`, `api.ssh`, `api.stats`, `api.sync`, `api.tasks`, `api.terminal`, `api.toolCalls`, `api.updates`, `api.workspace`
+- Namespaced by domain: `api.account`, `api.app`, `api.appSettings`, `api.automations`, `api.backendAuth`, `api.browser`, `api.connections`, `api.documents`, `api.entities`, `api.fileExplorer`, `api.gitFlow`, `api.guards`, `api.imageProxy`, `api.issues`, `api.localBackend`, `api.platform`, `api.projects`, `api.providers`, `api.pullRequests`, `api.pulse`, `api.runs`, `api.runArtifacts`, `api.runContext`, `api.runTurns`, `api.shell`, `api.signals`, `api.space`, `api.ssh`, `api.stats`, `api.sync`, `api.tasks`, `api.terminal`, `api.toolCalls`, `api.updates`, `api.workspace`
 - The `workspace` namespace is an aggregate — it covers workspace lifecycle plus reviews, review findings, diffs, and activity. Connection credentials/states are folded into `api.connections`; project resources and linked issues into `api.projects`.
 - **There is no `api.git`.** The `git` module is main-process-internal (see **Git Module**); renderer git effects go through `api.workspace.*`, `api.gitFlow.*`, and `projects:listBranches`.
 - After modifying preload, restart dev server to pick up changes
 
 **Renderer** (`src/renderer/`)
 - React app with Redux Toolkit, React Router (HashRouter), `@/` alias → `src/renderer/`
-- Routes: `/` (default route), `/code[/:workspaceId]` (unified agent workspace — all providers), `/settings`, `/plugins`, `/pulse`, `/relay`
+- Routes: `/` (default route), `/code[/:workspaceId]` (unified agent workspace — all providers), `/settings`, `/plugins`, `/pulse`, `/relay`, `/tasks` (issue + pull-request inbox)
 - `/code` hosts every agent provider; which provider it drives comes from the active space's `providerId` column (`claude_code`, `copilot_cli`, `codex`, `cursor`) — switching space via the space picker switches the provider. There are no per-provider routes.
 - The space's `mode` column (`developer`, `work`, `chat` — see `src/shared/modes.ts`) selects the UI shape via `src/renderer/lib/mode-config.ts` (`MODE_CONFIGS`), including which route `/` redirects to
 - Route table lives in `src/renderer/components/layout/main/main-routes.tsx`; page components in `src/renderer/routes/`
@@ -113,9 +113,9 @@ Each domain module follows a layered pattern (see `src/main/modules/account/` as
 
 **Cross-module access** goes through service methods or named barrel functions (`logWorkspaceActivity`, `recordWorkspaceDiff`, `getConnectionWithSecrets`, `getIssuesByResourceIds`) — never another module's repo.
 
-All modules: `account`, `appSettings`, `automations`, `backendAuth`, `browser`, `connections`, `entities`, `fileExplorer`, `git`, `gitFlow`, `guards`, `imageProxy`, `localBackend`, `projects`, `providers`, `pulse`, `runs`, `space`, `ssh`, `stats`, `sync`, `tailscale`, `terminal`, `tools`, `updates`, `workspace`
+All modules: `account`, `appSettings`, `automations`, `backendAuth`, `browser`, `connections`, `entities`, `fileExplorer`, `git`, `gitFlow`, `guards`, `imageProxy`, `localBackend`, `projects`, `providers`, `pullRequests`, `pulse`, `runs`, `space`, `ssh`, `stats`, `sync`, `tailscale`, `terminal`, `tools`, `updates`, `workspace`
 
-Not every module has all six files. Modules that own no tables skip `repo`/`dto` (`guards`, `browser`, `terminal`, `ssh`, `backendAuth`, `localBackend`, `imageProxy`, `gitFlow`), and `git` / `tailscale` have no `ipc.ts` at all (no IPC surface). When adding a module, match a sibling with similar responsibilities rather than blindly copying `account/`.
+Not every module has all six files. Modules that own no tables skip `repo`/`dto` (`guards`, `browser`, `terminal`, `ssh`, `backendAuth`, `localBackend`, `imageProxy`, `gitFlow`, `pullRequests`), and `git` / `tailscale` have no `ipc.ts` at all (no IPC surface). When adding a module, match a sibling with similar responsibilities rather than blindly copying `account/`.
 
 **Aggregate modules** — one folder owns several tables (details in CONTEXT.md):
 - `workspace` → `workspaces`, `workspace_activity`, `workspace_diffs`, `reviews`, `review_findings`
@@ -132,7 +132,7 @@ Sites that reference the registry:
 2. `src/main/modules/{name}/{name}.ipc.ts` — `ipcMain.handle(CHANNELS.entities.getAll, ...)`
 3. `src/renderer/lib/redux/api/{name}Api.ts` — `{ handler: CHANNELS.entities.getAll }`
 
-Channel namespaces: `account`, `app`, `appSettings`, `automations`, `backendAuth`, `browser`, `connections`, `documents`, `entities`, `fileExplorer`, `gitFlow`, `guards`, `imageProxy`, `issues`, `localBackend`, `projects`, `providers`, `pulse`, `runArtifacts`, `runContext`, `runToolCalls`, `runTurns`, `runs`, `shell`, `signals`, `space`, `ssh`, `stats`, `sync`, `tasks`, `terminal`, `toolCalls`, `updates`, `workspace`.
+Channel namespaces: `account`, `app`, `appSettings`, `automations`, `backendAuth`, `browser`, `connections`, `documents`, `entities`, `fileExplorer`, `gitFlow`, `guards`, `imageProxy`, `issues`, `localBackend`, `projects`, `providers`, `pullRequests`, `pulse`, `runArtifacts`, `runContext`, `runToolCalls`, `runTurns`, `runs`, `shell`, `signals`, `space`, `ssh`, `stats`, `sync`, `tasks`, `terminal`, `toolCalls`, `updates`, `workspace`.
 
 All IPC responses use the `ServiceResponse<T>` envelope: `{ success: true, data }` or `{ success: false, error }`, built by `ok()` / `fail()` from `src/shared/ipc-kit/service-response.ts`. The renderer unwraps it exactly once, in `ipcBaseQuery` — never in `transformResponse`.
 
@@ -254,6 +254,10 @@ Core tables:
 - Pluggable package-safety adapters (`adapters/socketdev.adapter.ts` behind `adapter.factory.ts`) that score npm/PyPI/etc. packages and scan a workspace's manifests for risky dependencies. No DB tables — results stream back per call.
 - Claude/Copilot enforce package safety through a PreToolUse Bash hook; Codex/Cursor expose the `CheckPackage` tool instead. This asymmetry is deliberate.
 
+**Pull Requests Module** (`src/main/modules/pullRequests/`)
+- Live PR inbox behind the `/tasks` screen — no DB tables (PRs are view models, never entities; see CONTEXT.md). Channels: `pullRequests:getAvailability`, `pullRequests:search`, `pullRequests:getDetail`, `pullRequests:getDiff` (unified diff, truncated at a file boundary past 300k chars), plus the actions `pullRequests:merge`, `pullRequests:markReady`, `pullRequests:addComment`, `pullRequests:resolveThread`.
+- `sources/` holds the per-provider `PrSource` interface (mirrors sync's `ResourceFetcher` pattern): `github.source.ts` runs GraphQL search/detail and the write mutations with the stored connection token via `getConnectionWithSecrets` — no `gh` CLI dependency. GitLab/Bitbucket land as new source files behind `source.factory.ts`.
+
 **Browser Module** (`src/main/modules/browser/`)
 - Drives an embedded `WebContentsView` panel inside the Electron window — attach/detach, set bounds, navigate, capture screenshots
 - `inspector.script.ts` is injected into the guest page for select-mode (DOM element picking); `browser:navState` streams nav state changes to the renderer
@@ -286,11 +290,11 @@ Core tables:
 ### Frontend Conventions
 
 - **Redux**: RTK Query with custom `ipcBaseQuery`, `baseApi.injectEndpoints()` per domain
-- **Redux API files** (`src/renderer/lib/redux/api/`): `accountApi`, `appSettingsApi`, `automationsApi`, `connectionsApi`, `entitiesApi`, `gitFlowApi`, `guardsApi`, `projectsApi`, `providersApi`, `pulseApi`, `runsApi`, `shellApi`, `signalsApi`, `spaceApi`, `statsApi`, `syncApi`, `toolsApi`, `updatesApi`, `workspaceApi` — all built on `baseApi.ts`, re-exported via `index.ts`. Aggregate APIs use split RTK Query tag types (e.g. `workspaceApi`: `Workspace`, `WorkspaceActivity`, `WorkspaceDiff`, `WorkspaceReview`, `WorkspaceFinding`) so UI sections refresh independently.
+- **Redux API files** (`src/renderer/lib/redux/api/`): `accountApi`, `appSettingsApi`, `automationsApi`, `connectionsApi`, `entitiesApi`, `gitFlowApi`, `guardsApi`, `projectsApi`, `providersApi`, `pullRequestsApi`, `pulseApi`, `runsApi`, `shellApi`, `signalsApi`, `spaceApi`, `statsApi`, `syncApi`, `toolsApi`, `updatesApi`, `workspaceApi` — all built on `baseApi.ts`, re-exported via `index.ts`. Aggregate APIs use split RTK Query tag types (e.g. `workspaceApi`: `Workspace`, `WorkspaceActivity`, `WorkspaceDiff`, `WorkspaceReview`, `WorkspaceFinding`) so UI sections refresh independently.
 - **Redux slices** (`src/renderer/lib/redux/slices/`): `appSettingsSlice`, `backendsSlice`, `workspaceSlice`
 - **Hooks**: `use-kebab-case.ts` filenames, `useCamelCase` export names
 - **Components**: `kebab-case.tsx` filenames in feature dirs under `src/renderer/features/{name}/components/`
-- **Feature dirs**: `onboarding`, `pulse`, `relay`, `settings`, `stats`, `workspace`
+- **Feature dirs**: `onboarding`, `pulse`, `relay`, `settings`, `stats`, `tasks`, `workspace`
 - **Shared input UI**: `src/renderer/components/ui/input/` (`input-form`, `rich-input-form`, `permission-mode-dropdown`, `model-select-dropdown`, `fast-mode-button`, `goal-button`, `dictation-button`, `file-upload-dropdown`, `compact-composer-controls`, `send-button`)
 - **Routing**: HashRouter — page components in `src/renderer/routes/`
 - **Settings Routing**: `/settings?section={id}` — section ids live in `src/renderer/features/settings/settings-sections.tsx`: `general`, `git`, `connections`, `backends`, `dashboard`, `archive`, `claude`, `codex`, `codex-plugins`, `copilot`, `cursor`, `notifications`, `personalization`, `schedules`, `security`, `projects`

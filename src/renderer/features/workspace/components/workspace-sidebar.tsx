@@ -6,15 +6,10 @@ import {
   useGetWorkspaceQuery,
   useGetLatestWorkspaceDiffSummaryQuery,
 } from "@/lib/redux/api";
-import type { ProjectIssue, SignalWithEntity } from "@/lib/redux/api";
 import {
   setSelectedFile,
   setActiveTab,
   addContextFile,
-  addContextIssue,
-  addContextSignal,
-  openIssueTab,
-  openSignalTab,
   toggleExplorerPath,
   expandExplorerPaths,
   collapseAllExplorerPaths,
@@ -22,13 +17,8 @@ import {
 import { setRightPanelOpen } from "@/lib/redux/slices/appSettingsSlice";
 import { useIsMobile } from "@/lib/platform";
 import { FolderIcon } from "@/components/ui/icons/file-icons";
-import { TrackerSection } from "@/features/workspace/components/tracker-section";
 
 import { DiffSection } from "@/features/workspace/components/diff-section";
-import {
-  isIssueTab,
-  getIssueEntityId,
-} from "@/features/workspace/utils/repo-utils";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import { useOpenDiffInEditor } from "@/features/workspace/hooks/use-open-diff-in-editor";
 import { Button } from "@/components/ui";
@@ -122,53 +112,6 @@ export function WorkspaceSidebar() {
     [dispatch],
   );
 
-  const handleSelectIssue = useCallback(
-    (issue: ProjectIssue) => {
-      dispatch(openIssueTab(issue));
-      if (isMobile) dispatch(setRightPanelOpen(false));
-    },
-    [dispatch, isMobile],
-  );
-  const handleSelectSignal = useCallback(
-    (signal: SignalWithEntity) => {
-      dispatch(openSignalTab(signal));
-      if (isMobile) dispatch(setRightPanelOpen(false));
-    },
-    [dispatch, isMobile],
-  );
-  const handleAddIssueToContext = useCallback(
-    (issue: ProjectIssue) => {
-      dispatch(
-        addContextIssue({
-          entityId: issue.issue.entityId,
-          title: issue.entity.title || `Issue #${issue.issue.number ?? "?"}`,
-          body: issue.entity.body,
-          provider: issue.issue.provider,
-          number: issue.issue.number,
-          labels: issue.issue.labels,
-        }),
-      );
-    },
-    [dispatch],
-  );
-  const handleAddSignalToContext = useCallback(
-    (signal: SignalWithEntity) => {
-      dispatch(
-        addContextSignal({
-          entityId: signal.signal.entityId,
-          title: signal.entity.title || "Untitled signal",
-          body: signal.entity.body,
-          source: signal.signal.source,
-          level: signal.signal.level,
-          category: signal.signal.category,
-          stackTrace: signal.signal.stackTrace,
-          eventCount: signal.signal.eventCount,
-        }),
-      );
-    },
-    [dispatch],
-  );
-
   const handleSelectDiffFile = useCallback(
     (filePath: string, diffContent: string) => {
       openDiffInEditor(filePath, diffContent);
@@ -176,13 +119,6 @@ export function WorkspaceSidebar() {
     },
     [openDiffInEditor, dispatch, isMobile],
   );
-
-  const activeTab = useAppSelector(
-    (state) => state.workspace.activeTab,
-  );
-  const activeIssueEntityId = isIssueTab(activeTab)
-    ? getIssueEntityId(activeTab)
-    : null;
 
   // If no workspace ID or rootPath provided, show empty state
   if (!workspaceId || !rootPath) {
@@ -268,15 +204,6 @@ export function WorkspaceSidebar() {
               className="flex-1 min-h-0"
             />
           </div>
-
-          <TrackerSection
-            projectId={workspace?.projectId ?? undefined}
-            activeIssueEntityId={activeIssueEntityId}
-            onSelectIssue={handleSelectIssue}
-            onAddIssueToContext={handleAddIssueToContext}
-            onSelectSignal={handleSelectSignal}
-            onAddSignalToContext={handleAddSignalToContext}
-          />
         </>
       ) : sidebarTab === "changes" ? (
         /* Changes (diff) view */

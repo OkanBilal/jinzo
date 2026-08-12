@@ -215,6 +215,19 @@ export const entitiesApi = baseApi.injectEndpoints({
       providesTags: ["Issue"],
     }),
 
+    // Global issue inbox for the /tasks screen — same channel as getIssues,
+    // typed to the {issue, entity} rows the repo join actually returns.
+    getIssuesInbox: builder.query<
+      IssueWithEntity[],
+      { provider?: string; state?: string; limit?: number }
+    >({
+      query: (params) => ({
+        handler: CHANNELS.issues.getAll,
+        args: [params],
+      }),
+      providesTags: ["Issue"],
+    }),
+
   }),
   overrideExisting: false,
 });
@@ -236,4 +249,5 @@ export const {
   useGetIssueByEntityIdQuery,
   useUpdateIssueStateMutation,
   useGetIssuesByRepoQuery,
+  useGetIssuesInboxQuery,
 } = entitiesApi;

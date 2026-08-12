@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import reducer, {
   setSessionPanelOpen,
   setWorkspaceGroupExpanded,
-  setTrackerSectionState,
 } from "./appSettingsSlice";
 import { openNewRunTab, setActiveTab } from "./workspaceSlice";
 
@@ -60,49 +59,5 @@ describe("appSettingsSlice — per-entity UI records", () => {
     );
 
     expect(state.workspaceGroupExpanded).toEqual({ todo: false, done: true });
-  });
-
-  // The tracker writes expanded and filter from separate handlers, so a partial
-  // update must not reset the other field to its default.
-  it("merges a partial tracker update onto the existing project state", () => {
-    let state = reducer(
-      undefined,
-      setTrackerSectionState({ projectId: "p1", changes: { expanded: true } }),
-    );
-    state = reducer(
-      state,
-      setTrackerSectionState({ projectId: "p1", changes: { filter: "issues" } }),
-    );
-
-    expect(state.trackerByProject["p1"]).toEqual({
-      expanded: true,
-      filter: "issues",
-    });
-  });
-
-  it("seeds an untouched project from the defaults before merging", () => {
-    const state = reducer(
-      undefined,
-      setTrackerSectionState({ projectId: "p2", changes: { filter: "signals" } }),
-    );
-
-    expect(state.trackerByProject["p2"]).toEqual({
-      expanded: false,
-      filter: "signals",
-    });
-  });
-
-  it("keeps projects independent", () => {
-    let state = reducer(
-      undefined,
-      setTrackerSectionState({ projectId: "p1", changes: { expanded: true } }),
-    );
-    state = reducer(
-      state,
-      setTrackerSectionState({ projectId: "p2", changes: { expanded: false } }),
-    );
-
-    expect(state.trackerByProject["p1"].expanded).toBe(true);
-    expect(state.trackerByProject["p2"].expanded).toBe(false);
   });
 });

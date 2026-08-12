@@ -5,7 +5,7 @@ import rehypeSanitize from "rehype-sanitize";
 import { markdownComponents } from "@/components/markdown-components";
 import { markdownSanitizeSchema } from "@/lib/markdown-sanitize";
 import type { IssueWithEntity } from "@/lib/redux/api";
-import { Heading2, Button, Caption, Text } from "@/components/ui";
+import { Heading2, Caption } from "@/components/ui";
 
 interface IssueTabContentProps {
   issue: IssueWithEntity;
@@ -97,30 +97,6 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
             </Caption>
           )}
         </div>
-        {entity.url && (
-          <div>
-            <Text className="mt-0.5">
-              <Button
-                variant="primary"
-                onClick={() => window.api.shell.openExternal(entity.url!)}
-              >
-                {iss.provider === "linear"
-                  ? "View on Linear"
-                  : iss.provider === "jira"
-                    ? "View on Jira"
-                    : iss.provider === "asana"
-                      ? "View on Asana"
-                      : iss.provider === "github"
-                        ? "View on GitHub"
-                        : iss.provider === "gitlab"
-                          ? "View on GitLab"
-                          : iss.provider === "trello"
-                            ? "View on Trello"
-                        : "View on Provider"}
-              </Button>
-            </Text>
-          </div>
-        )}
       </div>
     </div>
   );

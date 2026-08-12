@@ -4,6 +4,7 @@ import {
   PANEL_WIDTH_DEFAULT,
   BROWSER_PANEL_WIDTH_DEFAULT,
   DOC_VIEWER_PANEL_WIDTH_DEFAULT,
+  TASKS_DETAIL_WIDTH_DEFAULT,
 } from "@/lib/layout";
 import type { DocType } from "@/lib/document-viewer";
 import { isNewRunTab } from "@/features/workspace/utils/repo-utils";
@@ -19,14 +20,6 @@ export interface DocumentViewerDoc {
 export type ThemePreference = "light" | "dark" | "system";
 
 export type WorkspaceGrouping = "none" | "status" | "project";
-
-export type TrackerFilter = "all" | "issues" | "signals";
-
-/** Per-project state of the tracker section (issues + signals list). */
-export interface TrackerSectionState {
-  expanded: boolean;
-  filter: TrackerFilter;
-}
 
 export const isThemePreference = (value: unknown): value is ThemePreference =>
   value === "light" || value === "dark" || value === "system";
@@ -60,6 +53,8 @@ export interface AppSettingsState {
   documentViewerWidth: number;
   /** The document currently loaded in the viewer (not persisted — avoids stale auto-reopen). */
   documentViewerDoc: DocumentViewerDoc | null;
+  /** Width of the /tasks detail drawer in pixels. */
+  tasksDetailWidth: number;
   /** Light / dark / follow-the-OS. Applied to `<html class="dark">`. */
   theme: ThemePreference;
   /** Whether the bottom terminal drawer is open. */
@@ -68,8 +63,6 @@ export interface AppSettingsState {
   workspaceListGrouping: WorkspaceGrouping;
   /** Sidebar group key → expanded. Absent means expanded (the default). */
   workspaceGroupExpanded: Record<string, boolean>;
-  /** Project id → tracker section state. Absent means collapsed, filter "all". */
-  trackerByProject: Record<string, TrackerSectionState>;
   /** Onboarding ran its one-time "disable agents whose CLI is missing" pass. */
   onboardingCliAutoSelectApplied: boolean;
 }
@@ -87,11 +80,11 @@ const initialState: AppSettingsState = {
   documentViewerOpen: false,
   documentViewerWidth: DOC_VIEWER_PANEL_WIDTH_DEFAULT,
   documentViewerDoc: null,
+  tasksDetailWidth: TASKS_DETAIL_WIDTH_DEFAULT,
   theme: "system",
   bottomTerminalOpen: false,
   workspaceListGrouping: "none",
   workspaceGroupExpanded: {},
-  trackerByProject: {},
   onboardingCliAutoSelectApplied: false,
 };
 
@@ -132,6 +125,9 @@ const appSettingsSlice = createSlice({
     setDocumentViewerPanelWidth: (state, action: PayloadAction<number>) => {
       state.documentViewerWidth = action.payload;
     },
+    setTasksDetailWidth: (state, action: PayloadAction<number>) => {
+      state.tasksDetailWidth = action.payload;
+    },
     setDocumentViewerDoc: (
       state,
       action: PayloadAction<DocumentViewerDoc | null>,
@@ -156,22 +152,6 @@ const appSettingsSlice = createSlice({
     ) => {
       state.workspaceGroupExpanded[action.payload.groupKey] =
         action.payload.expanded;
-    },
-    setTrackerSectionState: (
-      state,
-      action: PayloadAction<{
-        projectId: string;
-        changes: Partial<TrackerSectionState>;
-      }>,
-    ) => {
-      const current = state.trackerByProject[action.payload.projectId] ?? {
-        expanded: false,
-        filter: "all",
-      };
-      state.trackerByProject[action.payload.projectId] = {
-        ...current,
-        ...action.payload.changes,
-      };
     },
     setOnboardingCliAutoSelectApplied: (
       state,
@@ -208,12 +188,12 @@ export const {
   setBrowserPanelWidth,
   setDocumentViewerOpen,
   setDocumentViewerPanelWidth,
+  setTasksDetailWidth,
   setDocumentViewerDoc,
   setTheme,
   setBottomTerminalOpen,
   setWorkspaceListGrouping,
   setWorkspaceGroupExpanded,
-  setTrackerSectionState,
   setOnboardingCliAutoSelectApplied,
 } = appSettingsSlice.actions;
 export default appSettingsSlice.reducer;

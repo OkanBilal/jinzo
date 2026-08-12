@@ -15,6 +15,7 @@ import {
   Sun,
   Relay,
   Plugin,
+  Box,
 } from "@/components/ui/icons";
 import CloneRepoModal from "./clone-repo-modal";
 import CreateProjectModal from "./create-project-modal";
@@ -67,7 +68,6 @@ export default function Sidebar({ collapsed }: SidebarProps) {
 
   const { isSettingsOpen, handleOpenSettings, handleCloseSettings } =
     useSettingsNavigation();
-
 
   // Global listeners
   useScriptNotifications();
@@ -151,9 +151,10 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     location.pathname.startsWith("/plugins/");
   const isPulseRoute =
     location.pathname === "/pulse" || location.pathname.startsWith("/pulse/");
+  const isTasksRoute =
+    location.pathname === "/tasks" || location.pathname.startsWith("/tasks/");
   const isRelayRoute =
-    location.pathname === "/relay" ||
-    location.pathname.startsWith("/relay/");
+    location.pathname === "/relay" || location.pathname.startsWith("/relay/");
   const isPluginsDisabledForAgent = !spaceProvider.supportsPlugins;
 
   return (
@@ -165,7 +166,9 @@ export default function Sidebar({ collapsed }: SidebarProps) {
         }`}
         style={{
           width: isMobile ? "100%" : "var(--sidebar-width)",
-          transform: collapsed ? "translate3d(-100%,0,0)" : "translate3d(0,0,0)",
+          transform: collapsed
+            ? "translate3d(-100%,0,0)"
+            : "translate3d(0,0,0)",
           opacity: collapsed ? 0 : 1,
         }}
         role="complementary"
@@ -230,6 +233,36 @@ export default function Sidebar({ collapsed }: SidebarProps) {
             <div className="px-3 mb-px">
               <Button
                 variant="subtle"
+                tooltip="Issues and pull requests"
+                className={`justify-start flex items-center gap-2 w-full rounded-xl transition-colors ${
+                  isTasksRoute
+                    ? "bg-primary/50 glass-outline dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/10"
+                    : ""
+                }`}
+                onClick={() => navigate("/tasks")}
+                aria-current={isTasksRoute ? "page" : undefined}
+              >
+                <Box
+                  className={`w-4 h-4 -ml-1 ${
+                    isTasksRoute
+                      ? "text-primary-950 dark:text-primary"
+                      : "text-primary-900 dark:text-primary-200"
+                  }`}
+                />
+                <Body
+                  className={`text-s font-normal ${
+                    isTasksRoute
+                      ? "text-primary-950 dark:text-primary"
+                      : "text-primary-900 dark:text-primary-100"
+                  }`}
+                >
+                  Tasks
+                </Body>
+              </Button>
+            </div>
+            <div className="px-3 mb-px">
+              <Button
+                variant="subtle"
                 tooltip="View your pulse"
                 className={`justify-start flex items-center gap-2 w-full rounded-xl transition-colors ${
                   isPulseRoute
@@ -266,7 +299,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                   <span className="block w-full">
                     <Button
                       variant="subtle"
-                      tooltip={`${isPluginsDisabledForAgent ? "Not available for this agent yet.": "View plugins"}`}
+                      tooltip={`${isPluginsDisabledForAgent ? "Not available for this agent yet." : "View plugins"}`}
                       disabled
                       className={`justify-start flex items-center gap-2 w-full rounded-xl transition-colors pointer-events-none opacity-50 ${
                         isPluginsRoute
@@ -407,8 +440,6 @@ export default function Sidebar({ collapsed }: SidebarProps) {
         title="Delete Workspace?"
         description="This action cannot be undone. The workspace will be permanently deleted."
       />
-
-
 
       <HelpMenu
         isOpen={helpMenuState.isOpen}

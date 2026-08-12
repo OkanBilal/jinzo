@@ -188,6 +188,16 @@ export const CHANNELS = {
     update: "providers:update",
     updateCli: "providers:updateCli",
   },
+  pullRequests: {
+    addComment: "pullRequests:addComment",
+    getAvailability: "pullRequests:getAvailability",
+    getDetail: "pullRequests:getDetail",
+    getDiff: "pullRequests:getDiff",
+    markReady: "pullRequests:markReady",
+    merge: "pullRequests:merge",
+    resolveThread: "pullRequests:resolveThread",
+    search: "pullRequests:search",
+  },
   pulse: {
     create: "pulse:create",
     delete: "pulse:delete",
