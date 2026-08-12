@@ -100,7 +100,7 @@ export function SegmentedTabs<T extends string>({
     }
     // plain — the sliding indicator owns the active background.
     return cn(
-      "relative z-(--z-base) px-2.5 py-1 text-s rounded-xl whitespace-nowrap transition-colors duration-300",
+      "relative z-(--z-base) px-2.5 py-1 text-xs rounded-xl whitespace-nowrap transition-colors duration-300",
       "focus-visible:ring-0 focus-visible:ring-offset-0",
       disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
       isActive

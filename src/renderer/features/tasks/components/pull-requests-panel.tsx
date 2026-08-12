@@ -249,7 +249,7 @@ export function PullRequestsPanel({
             </Button>
           )}
         </div>
-        <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <SegmentedTabs
             variant="plain"
             value={relationship}
@@ -265,7 +265,7 @@ export function PullRequestsPanel({
                 tooltip="Clear filters"
               >
                 {activeFilterCount} filter
-                {activeFilterCount === 1 ? "" : "s"} 
+                {activeFilterCount === 1 ? "" : "s"}
               </Button>
             )}
             {/* State + repository facet menu, anchored under the button. */}

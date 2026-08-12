@@ -206,7 +206,7 @@ export function IssuesPanel({ activeEntityId, onSelectIssue }: IssuesPanelProps)
             </Button>
           )}
         </div>
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2 ">
           {/* The Layers button to the right of the tabs toggles the facet
               filter menu; the menu opens anchored under the button. */}
           <div className="relative flex items-center gap-1.5" ref={filterDropdownRef}>
