@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/icons";
 import { proxiedImageSrc } from "@/lib/proxied-image-src";
 import { formatDate } from "@/lib/format-date";
-import { PrDiffView } from "./pr-diff-view";
+import { PrDiffView, warmDiffHighlighter } from "./pr-diff-view";
 
 const DETAIL_TABS: { value: "summary" | "code"; label: string }[] = [
   { value: "summary", label: "Summary" },
@@ -53,7 +53,8 @@ const MERGE_METHODS: { value: PrMergeMethod; label: string }[] = [
 
 const STATE_BADGE: Record<string, string> = {
   open: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400",
-  merged: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400",
+  merged:
+    "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400",
   closed: "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400",
 };
 
@@ -67,9 +68,17 @@ const CHECK_DOT: Record<string, string> = {
 function Avatar({ author }: { author: PrComment["author"] }) {
   const src = proxiedImageSrc(author?.avatarUrl);
   if (!src) {
-    return <span className="size-6 rounded-full bg-primary/30 dark:bg-primary/10 shrink-0" />;
+    return (
+      <span className="size-6 rounded-full bg-primary/30 dark:bg-primary/10 shrink-0" />
+    );
   }
-  return <img src={src} alt={author?.login ?? ""} className="size-6 rounded-full shrink-0" />;
+  return (
+    <img
+      src={src}
+      alt={author?.login ?? ""}
+      className="size-6 rounded-full shrink-0"
+    />
+  );
 }
 
 function Markdown({ children }: { children: string }) {
@@ -134,7 +143,12 @@ interface PrDetailProps {
 export function PrDetail({ pr }: PrDetailProps) {
   const ref = { owner: pr.repo.owner, repo: pr.repo.repo, number: pr.number };
 
-  const { data: detail, isLoading, isError, refetch } = useGetPrDetailQuery(ref);
+  const {
+    data: detail,
+    isLoading,
+    isError,
+    refetch,
+  } = useGetPrDetailQuery(ref);
 
   const [tab, setTab] = useState<"summary" | "code">("summary");
   const [mergeMethod, setMergeMethod] = useState<PrMergeMethod>("merge");
@@ -151,6 +165,12 @@ export function PrDetail({ pr }: PrDetailProps) {
   useClickOutside(mergeMenuRef, () => {
     if (mergeMenuOpen) setMergeMenuOpen(false);
   });
+
+  // Warm the diff highlighter while the user is still on Summary, so the
+  // Code tab's first paint doesn't wait on shiki loading.
+  useEffect(() => {
+    void warmDiffHighlighter();
+  }, []);
 
   const [mergePr, { isLoading: isMerging }] = useMergePrMutation();
   const [markReady, { isLoading: isMarkingReady }] = useMarkPrReadyMutation();
@@ -242,17 +262,23 @@ export function PrDetail({ pr }: PrDetailProps) {
         <div className="flex items-start gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-            <Body className=" text-primary-600 dark:text-primary-400 truncate">
+              <Body className=" text-primary-600 dark:text-primary-400 truncate">
                 {pr.repo.owner}/{pr.repo.repo}
               </Body>
 
-              <span className={`inline-flex capitalize items-center px-2 py-0.5 rounded-full text-xxs font-medium ${stateBadge}`}>
-                {current.isDraft && current.state === "open" ? "Draft" : current.state}
+              <span
+                className={`inline-flex capitalize items-center px-2 py-0.5 rounded-full text-xxs font-medium ${stateBadge}`}
+              >
+                {current.isDraft && current.state === "open"
+                  ? "Draft"
+                  : current.state}
               </span>
             </div>
             <Heading3 className="text-base font-medium text-primary-950 dark:text-primary-50 mt-1 wrap-break-word">
               {current.title}{" "}
-              <span className="text-primary-500 dark:text-primary-400 font-normal">#{pr.number}</span>
+              <span className="text-primary-500 dark:text-primary-400 font-normal">
+                #{pr.number}
+              </span>
             </Heading3>
           </div>
           <Button
@@ -279,28 +305,36 @@ export function PrDetail({ pr }: PrDetailProps) {
               /* GitHub-style split button: the left half runs the selected
                  merge method, the right chevron picks one. */
               <div className="relative" ref={mergeMenuRef}>
-                <div className="inline-flex items-stretch">
+                <div className="inline-flex items-stretch glass-outline rounded-xl">
                   <Button
-                    variant="submit"
+                    variant="ghost"
                     disabled={!canMerge || isMerging}
                     onClick={handleMerge}
-                    className="rounded-r-none "
+                    className="rounded-r-none  bg-[#2563eb] hover:bg-[#2868f1]! text-primary!"
                   >
                     {isMerging
                       ? "Merging..."
                       : MERGE_METHODS.find((m) => m.value === mergeMethod)
                           ?.label}
                   </Button>
+                  {/* Divider lives outside the buttons — a border-l on the
+                      glass button skews its 0.5px rim border and the halves
+                      fall out of alignment. */}
+                  <span
+                    aria-hidden
+                    className="w-px self-stretch bg-primary/60"
+                  />
+
                   <Button
-                    variant="submit"
+                    variant="ghost"
                     disabled={!canMerge || isMerging}
                     onClick={() => setMergeMenuOpen((open) => !open)}
                     aria-label="Choose merge method"
                     aria-expanded={mergeMenuOpen}
-                    className="rounded-l-none px-2 border-l border-primary-400/30 dark:border-primary/0 mt-px  "
+                    className="rounded-l-none px-2 bg-[#2563eb]  hover:bg-[#2868f1]! text-primary!"
                   >
                     <ArrowUp
-                      className={`size-3.5 transition-transform rotate-180`}
+                      className={`size-3.5 transition-transform rotate-180 text-primary`}
                     />
                   </Button>
                 </div>
@@ -335,7 +369,7 @@ export function PrDetail({ pr }: PrDetailProps) {
           value={tab}
           onChange={setTab}
           options={DETAIL_TABS}
-          className="w-fit mt-2.5"
+          className="w-fit mt-4"
         />
       </div>
 
@@ -373,7 +407,10 @@ export function PrDetail({ pr }: PrDetailProps) {
                   -{current.deletions.toLocaleString()}
                 </span>
               </MetaRow>
-              <MetaRow icon={<Personalize className="w-4 h-4" />} label="Reviewers">
+              <MetaRow
+                icon={<Personalize className="w-4 h-4" />}
+                label="Reviewers"
+              >
                 {reviewers.length > 0 ? reviewers.join(", ") : "No reviewers"}
                 {detail.reviewDecision && (
                   <span className="text-primary-500 dark:text-primary-400 capitalize">
@@ -421,7 +458,10 @@ export function PrDetail({ pr }: PrDetailProps) {
                   </div>
                 )}
               </MetaRow>
-              <MetaRow icon={<PullRequest className="w-4 h-4" />} label="Status">
+              <MetaRow
+                icon={<PullRequest className="w-4 h-4" />}
+                label="Status"
+              >
                 {statusText}
               </MetaRow>
             </div>
@@ -446,11 +486,11 @@ export function PrDetail({ pr }: PrDetailProps) {
                 <Body className="text-xs font-medium text-primary-700 dark:text-primary-300 mb-1.5">
                   Review threads
                 </Body>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {detail.reviewThreads.map((thread) => (
                     <div
                       key={thread.id}
-                      className={`rounded-xl px-3 py-2 glass-outline ${
+                      className={`rounded-3xl px-4 py-3 glass-outline ${
                         thread.isResolved
                           ? "bg-primary/10 dark:bg-primary/3 opacity-70"
                           : "bg-primary/30 dark:bg-primary/5"
@@ -470,6 +510,7 @@ export function PrDetail({ pr }: PrDetailProps) {
                           ? thread.viewerCanUnresolve
                           : thread.viewerCanResolve) && (
                           <Button
+                            variant="subtle"
                             onClick={() =>
                               handleResolveThread(thread.id, !thread.isResolved)
                             }
@@ -481,7 +522,10 @@ export function PrDetail({ pr }: PrDetailProps) {
                       </div>
                       <div className="space-y-1.5">
                         {thread.comments.map((comment) => (
-                          <div key={comment.id} className="flex items-start gap-2">
+                          <div
+                            key={comment.id}
+                            className="flex items-start gap-2"
+                          >
                             <Avatar author={comment.author} />
                             <div className="min-w-0 flex-1">
                               <span className="text-s font-medium text-primary-800 dark:text-primary-200 mr-1.5">
@@ -536,8 +580,8 @@ export function PrDetail({ pr }: PrDetailProps) {
               }
             }}
             placeholder="Leave a comment"
-            rows={2}
-            className="w-full resize-none px-3 py-2 pr-12 text-s rounded-xl bg-primary/40 dark:bg-primary/5 glass-outline placeholder:text-primary-600 dark:placeholder:text-primary-500 text-primary-900 dark:text-primary-100 outline-none"
+            rows={3}
+            className="w-full resize-none px-3 py-2 pr-12 text-s rounded-2xl bg-primary/40 dark:bg-primary/5 glass-outline placeholder:text-primary-600 dark:placeholder:text-primary-500 text-primary-900 dark:text-primary-100 outline-none"
           />
           <div className="absolute bottom-4 right-2 z-10">
             <SendButton

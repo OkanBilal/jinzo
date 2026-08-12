@@ -485,6 +485,8 @@ export {
   useMergePrMutation,
   useMarkPrReadyMutation,
   useAddPrCommentMutation,
+  useAddPrReviewCommentMutation,
+  useReplyToPrThreadMutation,
   useResolvePrThreadMutation,
 } from "./pullRequestsApi";
 export type {

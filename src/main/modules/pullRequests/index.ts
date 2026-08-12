@@ -15,6 +15,7 @@ export type {
   PrDiff,
   PrLifecycle,
   PrMergeMethod,
+  PrNewReviewComment,
   PrRelationship,
   PrReviewThread,
   PrSearchFilters,

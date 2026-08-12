@@ -33,10 +33,7 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
         <div className="space-y-3">
           {/* Title */}
           <Heading2>
-            {title}{" "}
-            {iss.number != null && (
-              <Caption className="font-mono">#{iss.number}</Caption>
-            )}
+            {title}
           </Heading2>
 
           {/* State badge */}
@@ -72,7 +69,7 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
             {labels.map((label) => (
               <span
                 key={label}
-                className={`inline-block px-2.5 py-1 text-xs rounded-full capitalize font-medium bg-primary-200 dark:bg-primary-600 text-primary-600 dark:text-primary-100`}
+                className={`inline-block glass-primary px-2.5 py-1 text-xs rounded-full capitalize font-medium text-primary-600 dark:text-primary-100`}
               >
                 {label}
               </span>

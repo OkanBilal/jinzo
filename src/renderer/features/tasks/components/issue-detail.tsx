@@ -13,16 +13,16 @@ export function IssueDetail({ issue }: { issue: IssueWithEntity }) {
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      <div className="flex items-center gap-2 px-8 py-2.5 border-b border-primary/20 dark:border-primary/10">
+      <div className="flex items-center gap-1.5 px-8 py-2.5 border-b border-primary/20 dark:border-primary/10">
         <ProviderIcon provider={iss.provider} className="size-4.5 shrink-0 text-primary-800 dark:text-primary-300" />
+        <span className="text-sm text-primary-700 dark:text-primary-100 truncate">
+          {iss.repo ?? ""}
+        </span>
         {iss.number != null && (
-          <span className="text-s text-primary-600 dark:text-primary-400">
+          <span className="text-sm text-primary-600 dark:text-primary-300">
             #{iss.number}
           </span>
         )}
-        <span className="text-s text-primary-700 dark:text-primary-300 truncate">
-          {iss.repo ?? ""}
-        </span>
         <div className="ml-auto flex items-center gap-1">
           {entity.url && (
             <Button

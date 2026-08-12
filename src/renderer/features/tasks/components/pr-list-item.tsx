@@ -48,7 +48,7 @@ export function PrListItem({
       }}
       className={`w-full text-left px-2 py-1.5 rounded-2xl cursor-pointer transition-all duration-200 ease-out flex items-center gap-2.5 group ${
         isActive
-          ? "bg-primary/80 dark:bg-primary/5 glass-outline"
+          ? "bg-primary-50 dark:bg-primary/5 glass-outline"
           : "bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
       }`}
     >
@@ -63,26 +63,37 @@ export function PrListItem({
       </span>
 
       {/* Title + repo/branch line */}
-      <div className="flex-1 min-w-0 flex flex-col justify-center">
+      <div className="flex-1 min-w-0 flex gap-1.5 flex-col justify-center">
         <span className="text-s text-primary-900 dark:text-primary-100 font-medium truncate">
           {pr.title}
+          <span className="ml-1"> #{pr.number}</span>
           {pr.isDraft && (
             <span className="ml-1.5 text-xxs font-normal text-primary-600 dark:text-primary-400">
               Draft
             </span>
           )}
         </span>
-        <span className="text-xxs text-primary-700 dark:text-primary-400 truncate">
-          {pr.repo.owner}/{pr.repo.repo}
-          <span className="mx-1">·</span>
-          {pr.headRefName}
-          <span className="mx-1">·</span>
-          #{pr.number}
+        <span className="flex items-center gap-1.5 min-w-0 text-xs text-primary-700 dark:text-primary-400">
+          {avatarSrc && (
+            <img
+              src={avatarSrc}
+              alt={pr.author?.login ?? "author"}
+              title={pr.author?.login}
+              className="size-4 rounded-full shrink-0"
+            />
+          )}
+          <span className="truncate">
+            {pr.repo.owner}/{pr.repo.repo}
+            <span className="mx-1">·</span>
+            {pr.headRefName}
+          </span>
         </span>
       </div>
 
-      {/* Diff stats, time, avatar */}
-      <div className={`shrink-0 items-center gap-2.5 ${compact ? "hidden" : "flex"}`}>
+      {/* Diff stats + time (author avatar lives on the meta line) */}
+      <div
+        className={`shrink-0 items-center gap-2.5 ${compact ? "hidden" : "flex"}`}
+      >
         <span className="text-xxs tabular-nums whitespace-nowrap">
           <span className="text-green-600 dark:text-green-400">
             +{pr.additions}
@@ -94,16 +105,6 @@ export function PrListItem({
         <span className="text-xxs text-primary-700 dark:text-primary-400 whitespace-nowrap">
           {formatDate(pr.updatedAt)}
         </span>
-        {avatarSrc ? (
-          <img
-            src={avatarSrc}
-            alt={pr.author?.login ?? "author"}
-            title={pr.author?.login}
-            className="w-4.5 h-4.5 rounded-full"
-          />
-        ) : (
-          <span className="w-4.5 h-4.5 rounded-full bg-primary/30 dark:bg-primary/10" />
-        )}
       </div>
     </div>
   );

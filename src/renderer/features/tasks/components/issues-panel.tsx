@@ -3,7 +3,7 @@ import { useGetIssuesInboxQuery, type IssueWithEntity } from "@/lib/redux/api";
 import { IssueListItem } from "@/features/workspace/components/issue-list-item";
 import { ProviderIcon } from "@/features/workspace/components/provider-icon";
 import { Button, DropdownWrapper, Input, SegmentedTabs } from "@/components/ui";
-import { Layers, Search } from "@/components/ui/icons";
+import { Close, Layers, Search, Trash } from "@/components/ui/icons";
 import { Body } from "@/components/ui/text";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { parseLabels } from "@/lib/label-colors";
@@ -116,6 +116,11 @@ export function IssuesPanel({ activeEntityId, onSelectIssue }: IssuesPanelProps)
     filters.labels.length +
     filters.assignees.length;
 
+  // Facets come from the loaded rows, so an empty tab offers nothing —
+  // the menu explains itself instead of opening as a blank shell.
+  const hasFilterOptions =
+    filterOptions.providers.length > 0 || filterOptions.repos.length > 0;
+
   const toggleFilter = (group: FilterGroup, value: string) =>
     setFilters((prev) => ({
       ...prev,
@@ -188,8 +193,18 @@ export function IssuesPanel({ activeEntityId, onSelectIssue }: IssuesPanelProps)
             onChange={(e) => setText(e.target.value)}
             placeholder="Search issues"
             aria-label="Search issues"
-            className="w-full pl-9 pr-3 py-1.5 text-s rounded-2xl bg-primary/40 dark:bg-primary/5 glass-outline placeholder:text-primary-600 dark:placeholder:text-primary-500 text-primary-900 dark:text-primary-100 outline-none"
+            className={`w-full pl-9 ${text ? "pr-9" : "pr-3"} py-1.5 text-s rounded-2xl bg-primary/40 dark:bg-primary/5 glass-outline placeholder:text-primary-600 dark:placeholder:text-primary-500 text-primary-900 dark:text-primary-100 outline-none`}
           />
+          {text && (
+            <Button
+              onClick={() => setText("")}
+              tooltip="Clear search"
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 z-10 -translate-y-1/2 p-1 rounded-lg cursor-pointer text-primary-500 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 hover:bg-primary/50 dark:hover:bg-primary/10"
+            >
+              <Close className="size-3" />
+            </Button>
+          )}
         </div>
         <div className="flex items-center gap-2 mb-2">
           {/* The Layers button to the right of the tabs toggles the facet
@@ -228,6 +243,11 @@ export function IssuesPanel({ activeEntityId, onSelectIssue }: IssuesPanelProps)
             <div className="absolute inset-y-0" style={{ left: menuLeft }}>
               <DropdownWrapper isOpen={filterOpen} minWidth="min-w-80">
               <div className="max-h-80 overflow-y-auto noscrollbar pb-1.5">
+                {!hasFilterOptions && activeFilterCount === 0 && (
+                  <div className="px-3 py-3 text-xs text-primary-600 dark:text-primary-400 -mb-1.5">
+                    Nothing to filter — this list is empty.
+                  </div>
+                )}
                 <FilterSection
                   title="Connection"
                   entries={filterOptions.providers}
@@ -262,6 +282,7 @@ export function IssuesPanel({ activeEntityId, onSelectIssue }: IssuesPanelProps)
                 {activeFilterCount > 0 && (
                   <div className="px-3 pt-2">
                     <Button
+                    variant="subtle"
                       onClick={() => setFilters(EMPTY_FILTERS)}
                       className="w-full text-center text-xs text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 cursor-pointer py-1"
                     >
@@ -274,14 +295,17 @@ export function IssuesPanel({ activeEntityId, onSelectIssue }: IssuesPanelProps)
             </div>
           </div>
           {activeFilterCount > 0 && (
+
             <Button
               onClick={() => setFilters(EMPTY_FILTERS)}
-              className="px-2 py-0.5 text-xxs rounded-full bg-primary/60 dark:bg-primary/10 glass-outline text-primary-800 dark:text-primary-200 cursor-pointer"
+              className="flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-primary/60 dark:bg-primary/10 glass-outline text-primary-800 dark:text-primary-200 cursor-pointer"
               tooltip="Clear filters"
             >
-              {activeFilterCount} filter{activeFilterCount === 1 ? "" : "s"} ·
-              clear
+               <Trash className="size-3.5"/>
+              {activeFilterCount} filter{activeFilterCount === 1 ? "" : "s"}
+
             </Button>
+
           )}
         </div>
       </div>
@@ -307,7 +331,7 @@ export function IssuesPanel({ activeEntityId, onSelectIssue }: IssuesPanelProps)
             )}
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1">
             {filteredIssues.map((row, index) => (
               <div
                 key={row.issue.entityId}

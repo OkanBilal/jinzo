@@ -850,6 +850,10 @@ const api = {
       ipcRenderer.invoke(CHANNELS.pullRequests.markReady, input),
     addComment: (input: unknown) =>
       ipcRenderer.invoke(CHANNELS.pullRequests.addComment, input),
+    addReviewComment: (input: unknown) =>
+      ipcRenderer.invoke(CHANNELS.pullRequests.addReviewComment, input),
+    replyToThread: (input: unknown) =>
+      ipcRenderer.invoke(CHANNELS.pullRequests.replyToThread, input),
     resolveThread: (input: unknown) =>
       ipcRenderer.invoke(CHANNELS.pullRequests.resolveThread, input),
   },

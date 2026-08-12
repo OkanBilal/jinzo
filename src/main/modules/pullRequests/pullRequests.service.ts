@@ -4,6 +4,8 @@
 // user-readable errors thrown to the IPC seam.
 // ─────────────────────────────────────────────────────────────
 
+import { getConnectionWithSecrets } from "../connections";
+import { getSelectedResources } from "../sync/sync.connection-utils";
 import {
   createPrSource,
   isSupportedPrProvider,
@@ -48,6 +50,28 @@ export interface PrSearchInput {
 }
 
 const REPO_SLUG_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
+
+/** Resource kind holding a provider's selected repositories. */
+const REPO_RESOURCE_KIND: Record<"github", string> = {
+  github: "github_repo",
+};
+
+/**
+ * The repos selected on the provider's connection (Settings → Connections),
+ * i.e. the same set issue sync pulls from. Empty when the provider isn't
+ * connected or nothing is selected.
+ */
+async function getConnectionRepoScope(provider: "github"): Promise<string[]> {
+  const connection = await getConnectionWithSecrets(provider);
+  if (!connection) return [];
+  const resources = await getSelectedResources(
+    connection.id,
+    REPO_RESOURCE_KIND[provider],
+  );
+  return resources
+    .map((resource) => resource.externalId)
+    .filter((slug) => REPO_SLUG_PATTERN.test(slug));
+}
 
 export interface PrRefInput {
   provider?: string;
@@ -123,9 +147,15 @@ export const pullRequestsService = {
       throw new Error(`Unknown pull request state filter "${lifecycle}"`);
     }
 
-    const repos = (input.repos ?? []).filter(
+    let repos = (input.repos ?? []).filter(
       (slug) => typeof slug === "string" && REPO_SLUG_PATTERN.test(slug),
     );
+    // No explicit repo filter → scope to the repos selected on the
+    // connection (the same set issue sync pulls from). With none selected
+    // the search stays global (involves:@me).
+    if (repos.length === 0) {
+      repos = await getConnectionRepoScope(id);
+    }
 
     const source = await requireSource(id);
 
@@ -180,6 +210,44 @@ export const pullRequestsService = {
     if (!body) throw new Error("Comment text is required");
     const source = await requireSource(input.provider);
     await source.addComment(validateRef(input), body);
+  },
+
+  async addReviewComment(
+    input: PrRefInput & {
+      path?: string;
+      line?: number;
+      side?: string;
+      body?: string;
+    },
+  ): Promise<void> {
+    const body = typeof input.body === "string" ? input.body.trim() : "";
+    if (!body) throw new Error("Comment text is required");
+    const path = typeof input.path === "string" ? input.path.trim() : "";
+    if (!path) throw new Error("File path is required");
+    if (!Number.isInteger(input.line) || (input.line as number) <= 0) {
+      throw new Error("Line number is required");
+    }
+    const source = await requireSource(input.provider);
+    await source.addReviewComment(validateRef(input), {
+      path,
+      line: input.line as number,
+      side: input.side === "left" ? "left" : "right",
+      body,
+    });
+  },
+
+  async replyToThread(input: {
+    provider?: string;
+    threadId: string;
+    body?: string;
+  }): Promise<void> {
+    if (typeof input.threadId !== "string" || !input.threadId) {
+      throw new Error("Review thread id is required");
+    }
+    const body = typeof input.body === "string" ? input.body.trim() : "";
+    if (!body) throw new Error("Comment text is required");
+    const source = await requireSource(input.provider);
+    await source.replyToReviewThread(input.threadId, body);
   },
 
   async resolveThread(input: {

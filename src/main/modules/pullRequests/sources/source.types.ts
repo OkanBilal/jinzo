@@ -78,9 +78,18 @@ export interface PrReviewThread {
   isResolved: boolean;
   path: string | null;
   line: number | null;
+  /** Which side of the diff the thread anchors to (null on outdated threads). */
+  side: "left" | "right" | null;
   viewerCanResolve: boolean;
   viewerCanUnresolve: boolean;
   comments: PrComment[];
+}
+
+export interface PrNewReviewComment {
+  path: string;
+  line: number;
+  side: "left" | "right";
+  body: string;
 }
 
 export interface PrCheck {
@@ -136,6 +145,12 @@ export interface PrSource {
   markReady(nodeId: string): Promise<void>;
 
   addComment(ref: PrRef, body: string): Promise<void>;
+
+  /** Start a new review thread on a diff line. */
+  addReviewComment(ref: PrRef, input: PrNewReviewComment): Promise<void>;
+
+  /** Reply to an existing review thread. */
+  replyToReviewThread(threadId: string, body: string): Promise<void>;
 
   resolveThread(threadId: string, resolved: boolean): Promise<void>;
 }

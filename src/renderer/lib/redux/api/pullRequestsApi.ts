@@ -68,6 +68,8 @@ export interface PrReviewThread {
   isResolved: boolean;
   path: string | null;
   line: number | null;
+  /** Which side of the diff the thread anchors to (null on outdated threads). */
+  side: "left" | "right" | null;
   viewerCanResolve: boolean;
   viewerCanUnresolve: boolean;
   comments: PrComment[];
@@ -174,6 +176,33 @@ export const pullRequestsApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, input) => [detailTag(input)],
     }),
 
+    addPrReviewComment: builder.mutation<
+      void,
+      PrRefInput & {
+        path: string;
+        line: number;
+        side: "left" | "right";
+        body: string;
+      }
+    >({
+      query: (input) => ({
+        handler: CHANNELS.pullRequests.addReviewComment,
+        args: [input],
+      }),
+      invalidatesTags: (_result, _error, input) => [detailTag(input)],
+    }),
+
+    replyToPrThread: builder.mutation<
+      void,
+      PrRefInput & { threadId: string; body: string }
+    >({
+      query: ({ provider, threadId, body }) => ({
+        handler: CHANNELS.pullRequests.replyToThread,
+        args: [{ provider, threadId, body }],
+      }),
+      invalidatesTags: (_result, _error, input) => [detailTag(input)],
+    }),
+
     resolvePrThread: builder.mutation<
       void,
       PrRefInput & { threadId: string; resolved: boolean }
@@ -197,5 +226,7 @@ export const {
   useMergePrMutation,
   useMarkPrReadyMutation,
   useAddPrCommentMutation,
+  useAddPrReviewCommentMutation,
+  useReplyToPrThreadMutation,
   useResolvePrThreadMutation,
 } = pullRequestsApi;

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   useGetPrAvailabilityQuery,
+  useGetSelectedResourcesQuery,
   useSearchPullRequestsQuery,
   useLazySearchPullRequestsQuery,
   type PrLifecycle,
@@ -15,7 +16,7 @@ import {
   Input,
   SegmentedTabs,
 } from "@/components/ui";
-import { Layers, Search } from "@/components/ui/icons";
+import { Close, Layers, Search } from "@/components/ui/icons";
 import { Body } from "@/components/ui/text";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import {
@@ -133,10 +134,17 @@ export function PullRequestsPanel({
     : firstPage;
   const hasNextPage = lastPage?.hasNextPage === true && lastPage.endCursor;
 
-  // Facet options come from the loaded rows; selected repos stay listed even
-  // when the filtered results no longer include them, so they can be unticked.
+  // Facet options are the repos selected on the GitHub connection — the same
+  // set the search is scoped to by default — plus anything present in the
+  // loaded rows (covers the no-selection global fallback).
+  const { data: selectedResources } = useGetSelectedResourcesQuery("github");
+
   const repoOptions = useMemo(() => {
     const counts = new Map<string, number>();
+    for (const resource of selectedResources?.items ?? []) {
+      const slug = resource?.externalId;
+      if (typeof slug === "string" && slug.includes("/")) counts.set(slug, 0);
+    }
     for (const pr of items) {
       const slug = `${pr.repo.owner}/${pr.repo.repo}`;
       counts.set(slug, (counts.get(slug) ?? 0) + 1);
@@ -145,7 +153,7 @@ export function PullRequestsPanel({
       if (!counts.has(slug)) counts.set(slug, 0);
     }
     return sortedEntries(counts);
-  }, [items, repoFilters]);
+  }, [selectedResources, items, repoFilters]);
 
   const toggleRepoFilter = (slug: string) =>
     setRepoFilters((prev) =>
@@ -228,8 +236,18 @@ export function PullRequestsPanel({
             onChange={(e) => setText(e.target.value)}
             placeholder="Search pull requests"
             aria-label="Search pull requests"
-            className="w-full pl-9 pr-3 py-1.5 text-s rounded-2xl bg-primary/40 dark:bg-primary/5 glass-outline placeholder:text-primary-600 dark:placeholder:text-primary-500 text-primary-900 dark:text-primary-100 outline-none"
+            className={`w-full pl-9 ${text ? "pr-9" : "pr-3"} py-1.5 text-s rounded-2xl bg-primary/40 dark:bg-primary/5 glass-outline placeholder:text-primary-600 dark:placeholder:text-primary-500 text-primary-900 dark:text-primary-100 outline-none`}
           />
+          {text && (
+            <Button
+              onClick={() => setText("")}
+              tooltip="Clear search"
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 z-10 -translate-y-1/2 p-1 rounded-lg cursor-pointer text-primary-500 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 hover:bg-primary/50 dark:hover:bg-primary/10"
+            >
+              <Close className="size-3" />
+            </Button>
+          )}
         </div>
         <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
           <SegmentedTabs
@@ -247,7 +265,7 @@ export function PullRequestsPanel({
                 tooltip="Clear filters"
               >
                 {activeFilterCount} filter
-                {activeFilterCount === 1 ? "" : "s"} · clear
+                {activeFilterCount === 1 ? "" : "s"} 
               </Button>
             )}
             {/* State + repository facet menu, anchored under the button. */}
@@ -286,6 +304,7 @@ export function PullRequestsPanel({
                   {activeFilterCount > 0 && (
                     <div className="px-3 pt-2">
                       <Button
+                        variant="subtle"
                         onClick={clearFilters}
                         className="w-full text-center text-xs text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 cursor-pointer py-1"
                       >

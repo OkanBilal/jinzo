@@ -190,11 +190,13 @@ export const CHANNELS = {
   },
   pullRequests: {
     addComment: "pullRequests:addComment",
+    addReviewComment: "pullRequests:addReviewComment",
     getAvailability: "pullRequests:getAvailability",
     getDetail: "pullRequests:getDetail",
     getDiff: "pullRequests:getDiff",
     markReady: "pullRequests:markReady",
     merge: "pullRequests:merge",
+    replyToThread: "pullRequests:replyToThread",
     resolveThread: "pullRequests:resolveThread",
     search: "pullRequests:search",
   },

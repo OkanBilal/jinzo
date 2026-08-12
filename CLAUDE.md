@@ -255,8 +255,9 @@ Core tables:
 - Claude/Copilot enforce package safety through a PreToolUse Bash hook; Codex/Cursor expose the `CheckPackage` tool instead. This asymmetry is deliberate.
 
 **Pull Requests Module** (`src/main/modules/pullRequests/`)
-- Live PR inbox behind the `/tasks` screen — no DB tables (PRs are view models, never entities; see CONTEXT.md). Channels: `pullRequests:getAvailability`, `pullRequests:search`, `pullRequests:getDetail`, `pullRequests:getDiff` (unified diff, truncated at a file boundary past 300k chars), plus the actions `pullRequests:merge`, `pullRequests:markReady`, `pullRequests:addComment`, `pullRequests:resolveThread`.
+- Live PR inbox behind the `/tasks` screen — no DB tables (PRs are view models, never entities; see CONTEXT.md). Channels: `pullRequests:getAvailability`, `pullRequests:search`, `pullRequests:getDetail`, `pullRequests:getDiff` (unified diff, truncated at a file boundary past 300k chars), plus the actions `pullRequests:merge`, `pullRequests:markReady`, `pullRequests:addComment`, `pullRequests:addReviewComment` (new review thread on a diff line), `pullRequests:replyToThread`, `pullRequests:resolveThread`.
 - `sources/` holds the per-provider `PrSource` interface (mirrors sync's `ResourceFetcher` pattern): `github.source.ts` runs GraphQL search/detail and the write mutations with the stored connection token via `getConnectionWithSecrets` — no `gh` CLI dependency. GitLab/Bitbucket land as new source files behind `source.factory.ts`.
+- Search defaults to the repos selected on the connection (the same set issue sync pulls from, via `getSelectedResources`); with none selected it falls back to a global `involves:@me` search. An explicit `repos` filter overrides the default scope.
 
 **Browser Module** (`src/main/modules/browser/`)
 - Drives an embedded `WebContentsView` panel inside the Electron window — attach/detach, set bounds, navigate, capture screenshots

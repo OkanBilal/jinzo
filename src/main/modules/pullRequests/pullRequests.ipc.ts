@@ -55,6 +55,27 @@ export function registerPullRequestsIpc(): void {
   );
 
   ipcMain.handle(
+    CHANNELS.pullRequests.addReviewComment,
+    handle(
+      (
+        input: PrRefInput & {
+          path?: string;
+          line?: number;
+          side?: string;
+          body?: string;
+        },
+      ) => pullRequestsService.addReviewComment(input),
+    ),
+  );
+
+  ipcMain.handle(
+    CHANNELS.pullRequests.replyToThread,
+    handle((input: { provider?: string; threadId: string; body?: string }) =>
+      pullRequestsService.replyToThread(input),
+    ),
+  );
+
+  ipcMain.handle(
     CHANNELS.pullRequests.resolveThread,
     handle((input: { provider?: string; threadId: string; resolved: boolean }) =>
       pullRequestsService.resolveThread(input),
@@ -71,6 +92,8 @@ export function unregisterPullRequestsIpc(): void {
     CHANNELS.pullRequests.merge,
     CHANNELS.pullRequests.markReady,
     CHANNELS.pullRequests.addComment,
+    CHANNELS.pullRequests.addReviewComment,
+    CHANNELS.pullRequests.replyToThread,
     CHANNELS.pullRequests.resolveThread,
   ].forEach((channel) => ipcMain.removeHandler(channel));
 }

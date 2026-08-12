@@ -12,6 +12,7 @@ import type {
   PrComment,
   PrDiff,
   PrMergeMethod,
+  PrNewReviewComment,
   PrRef,
   PrReviewThread,
   PrSearchFilters,
@@ -155,6 +156,7 @@ const DETAIL_QUERY = `
             isResolved
             path
             line
+            diffSide
             viewerCanResolve
             viewerCanUnresolve
             comments(first: 30) {
@@ -276,6 +278,7 @@ interface GraphQlDetailNode extends GraphQlPullRequestNode {
       isResolved: boolean;
       path: string | null;
       line: number | null;
+      diffSide: "LEFT" | "RIGHT" | null;
       viewerCanResolve: boolean;
       viewerCanUnresolve: boolean;
       comments: { nodes: Array<GraphQlCommentNode | null> } | null;
@@ -287,17 +290,23 @@ interface GraphQlDetailResponse {
   repository: { pullRequest: GraphQlDetailNode | null } | null;
 }
 
+/** GitHub caps search queries at 256 characters. */
+const MAX_SEARCH_QUERY_CHARS = 256;
+
 /**
  * Build the GitHub search qualifier string. Mirrors the qualifiers GitHub's
- * own PR inbox uses; `all` still scopes to `involves:@me` because an
- * unqualified `is:pr` search would span every public repository.
+ * own PR inbox uses. Without a repo scope, `all` narrows to `involves:@me`
+ * because an unqualified `is:pr` search would span every public repository;
+ * with a repo scope the repos themselves bound the search, so `all` means
+ * every PR in those repos.
  */
 export function buildSearchQuery(filters: PrSearchFilters): string {
+  const repos = filters.repos ?? [];
   const parts = ["is:pr"];
 
   switch (filters.relationship) {
     case "all":
-      parts.push("involves:@me");
+      if (repos.length === 0) parts.push("involves:@me");
       break;
     case "authored":
       parts.push("author:@me");
@@ -324,7 +333,8 @@ export function buildSearchQuery(filters: PrSearchFilters): string {
       break;
   }
 
-  for (const repo of filters.repos ?? []) {
+  const repoStart = parts.length;
+  for (const repo of repos) {
     parts.push(`repo:${repo}`);
   }
 
@@ -334,7 +344,20 @@ export function buildSearchQuery(filters: PrSearchFilters): string {
   }
 
   parts.push("sort:updated-desc");
-  return parts.join(" ");
+
+  // Stay under GitHub's query-length cap by dropping trailing repo
+  // qualifiers — a slightly wider scope beats a failed search. Under the
+  // `all` relationship at least one repo must survive: it is the only
+  // qualifier bounding the search.
+  const minRepos = filters.relationship === "all" && repos.length > 0 ? 1 : 0;
+  let query = parts.join(" ");
+  let repoEnd = repoStart + repos.length;
+  while (query.length > MAX_SEARCH_QUERY_CHARS && repoEnd > repoStart + minRepos) {
+    repoEnd--;
+    parts.splice(repoEnd, 1);
+    query = parts.join(" ");
+  }
+  return query;
 }
 
 function toPrState(state: GraphQlPullRequestNode["state"]): PrState {
@@ -435,6 +458,10 @@ function toDetail(node: GraphQlDetailNode): PullRequestDetail {
       isResolved: t.isResolved,
       path: t.path,
       line: t.line,
+      side:
+        t.diffSide === "LEFT" ? ("left" as const)
+        : t.diffSide === "RIGHT" ? ("right" as const)
+        : null,
       viewerCanResolve: t.viewerCanResolve,
       viewerCanUnresolve: t.viewerCanUnresolve,
       comments: (t.comments?.nodes ?? [])
@@ -565,6 +592,41 @@ export function createGithubPrSource(options: { token: string }): PrSource {
         issue_number: ref.number,
         body,
       });
+    },
+
+    async addReviewComment(
+      ref: PrRef,
+      input: PrNewReviewComment,
+    ): Promise<void> {
+      // REST review comments anchor to a commit; use the current head.
+      const { data: pull } = await octokit.pulls.get({
+        owner: ref.owner,
+        repo: ref.repo,
+        pull_number: ref.number,
+      });
+      await octokit.pulls.createReviewComment({
+        owner: ref.owner,
+        repo: ref.repo,
+        pull_number: ref.number,
+        commit_id: pull.head.sha,
+        path: input.path,
+        line: input.line,
+        side: input.side === "left" ? "LEFT" : "RIGHT",
+        body: input.body,
+      });
+    },
+
+    async replyToReviewThread(threadId: string, body: string): Promise<void> {
+      await octokit.graphql(
+        `mutation ($id: ID!, $body: String!) {
+          addPullRequestReviewThreadReply(
+            input: { pullRequestReviewThreadId: $id, body: $body }
+          ) {
+            comment { id }
+          }
+        }`,
+        { id: threadId, body },
+      );
     },
 
     async resolveThread(threadId: string, resolved: boolean): Promise<void> {

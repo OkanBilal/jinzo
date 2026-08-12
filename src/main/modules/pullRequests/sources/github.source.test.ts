@@ -42,6 +42,48 @@ describe("buildSearchQuery", () => {
     );
   });
 
+  it("drops involves:@me when repos bound the 'all' search", () => {
+    expect(
+      buildSearchQuery({
+        relationship: "all",
+        lifecycle: "open",
+        repos: ["OkanBilal/life"],
+      }),
+    ).toBe("is:pr is:open repo:OkanBilal/life sort:updated-desc");
+  });
+
+  it("trims trailing repos to stay under GitHub's 256-char cap", () => {
+    const repos = Array.from(
+      { length: 30 },
+      (_, i) => `owner-${i}/repository-name-${i}`,
+    );
+    const query = buildSearchQuery({
+      relationship: "authored",
+      lifecycle: "open",
+      repos,
+    });
+
+    expect(query.length).toBeLessThanOrEqual(256);
+    expect(query).toContain("repo:owner-0/repository-name-0");
+    expect(query).toContain("author:@me");
+    expect(query.endsWith("sort:updated-desc")).toBe(true);
+  });
+
+  it("keeps at least one repo under 'all' so the search stays bounded", () => {
+    const repos = Array.from(
+      { length: 30 },
+      (_, i) => `a-very-long-owner-name-${i}/an-even-longer-repository-name-${i}`,
+    );
+    const query = buildSearchQuery({
+      relationship: "all",
+      lifecycle: "open",
+      repos,
+    });
+
+    expect(query).toContain("repo:a-very-long-owner-name-0/");
+    expect(query).not.toContain("involves:@me");
+  });
+
   it("quotes and escapes free text, collapsing whitespace", () => {
     expect(
       buildSearchQuery({
