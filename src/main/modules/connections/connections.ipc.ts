@@ -37,6 +37,16 @@ export function registerConnectionsHandlers(): void {
   );
 
   ipcMain.handle(
+    CHANNELS.connections.githubDeviceStart,
+    handle(() => connectionsService.startGithubDeviceFlow()),
+  );
+
+  ipcMain.handle(
+    CHANNELS.connections.githubDevicePoll,
+    handle((deviceCode: string) => connectionsService.pollGithubDeviceFlow(deviceCode)),
+  );
+
+  ipcMain.handle(
     CHANNELS.connections.getLinearTeams,
     handle((connectionId: string) => connectionsService.getLinearTeams(connectionId)),
   );
@@ -112,6 +122,8 @@ export function unregisterConnectionsHandlers(): void {
     CHANNELS.connections.saveCredentials,
     CHANNELS.connections.checkCredentials,
     CHANNELS.connections.getGithubRepos,
+    CHANNELS.connections.githubDeviceStart,
+    CHANNELS.connections.githubDevicePoll,
     CHANNELS.connections.getLinearTeams,
     CHANNELS.connections.getJiraProjects,
     CHANNELS.connections.getAsanaProjects,

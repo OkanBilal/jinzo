@@ -29,11 +29,15 @@ export {
   useLazyGetSelectedResourcesQuery,
   useSaveResourcesMutation,
   useDeleteResourceMutation,
+  useStartGithubDeviceFlowMutation,
+  usePollGithubDeviceFlowMutation,
 } from "./connectionsApi";
 export type {
   Connection,
   ConnectionState,
   UpdateConnectionStatePayload,
+  GitHubDeviceAuthorization,
+  GitHubDevicePollResult,
   GitHubRepo,
   GitLabProject,
   LinearTeam,

@@ -2,6 +2,12 @@ import { Octokit } from "@octokit/rest";
 import { LinearClient } from "@linear/sdk";
 import { connectionsRepo } from "./connections.repo";
 import {
+  startGitHubDeviceFlow,
+  pollGitHubDeviceFlow,
+  type GitHubDeviceAuthorization,
+  type GitHubDevicePollResult,
+} from "./github-device-flow";
+import {
   parseConnectionMetadata,
   parseResourceMetadata,
   encryptSecrets,
@@ -246,6 +252,16 @@ const SELECTED_RESOURCE_CONFIGS: Record<string, {
 // ServiceResponse envelope is applied by handle() at the IPC seam.
 // ─────────────────────────────────────────────────────────────
 export const connectionsService = {
+  // GitHub — OAuth device flow (token acquisition only; the renderer
+  // saves the resulting token via the normal saveCredentials path)
+  async startGithubDeviceFlow(): Promise<GitHubDeviceAuthorization> {
+    return startGitHubDeviceFlow();
+  },
+
+  async pollGithubDeviceFlow(deviceCode: string): Promise<GitHubDevicePollResult> {
+    return pollGitHubDeviceFlow(deviceCode);
+  },
+
   // GitHub
   async getGithubRepos(connectionId: string): Promise<{ repos: GithubRepo[] }> {
     try {

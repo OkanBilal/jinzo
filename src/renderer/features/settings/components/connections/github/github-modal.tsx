@@ -6,6 +6,7 @@ import {
   ResourceWizardModal,
   type ResourceWizardConfig,
 } from "../shared/resource-wizard-modal";
+import { GitHubDeviceFlowPanel } from "./github-device-flow-panel";
 
 interface GitHubModalProps {
   open: boolean;
@@ -25,7 +26,7 @@ const CONFIG: ResourceWizardConfig = {
   credentialFields: [
     {
       id: "github-token",
-      label: "Personal Access Token",
+      label: "",
       placeholder: "ghp_xxxxxxxxxxxxxxxxxxxx",
       dataKey: "token",
       emptyError: "Please enter a valid token",
@@ -33,24 +34,32 @@ const CONFIG: ResourceWizardConfig = {
   ],
   credentialInstructions: (
     <>
-      <strong>How to create a token:</strong>
-      <br />
-      1. Go to GitHub Settings → Developer settings →{" "}
+      Create a{" "}
       <a
         href="https://github.com/settings/tokens"
         target="_blank"
         rel="noopener noreferrer"
         className="text-primary-600 dark:text-primary-400 underline"
       >
-        Personal access tokens
-      </a>
-      <br />
-      2. Generate new token (classic)
-      <br />
-      3. Select scopes: <code>repo</code> and <code>read:user</code>
+        classic token
+      </a>{" "}
+      with the <code>repo</code> and <code>read:user</code> scopes.
     </>
   ),
   buildCredentials: (values) => ({ token: values.token }),
+
+  // OAuth device flow as the default sign-in; the PAT form stays as the
+  // second tab. Both paths save a plain token via saveCredentials.
+  credentialAlternative: {
+    label: "Sign in with GitHub",
+    tokenLabel: "Access token",
+    render: ({ submitValues, submitting }) => (
+      <GitHubDeviceFlowPanel
+        submitting={submitting}
+        onToken={(token) => submitValues({ token })}
+      />
+    ),
+  },
 
   loadingMessage: "Loading repositories...",
   selectTitle: "Select the repositories you want to connect.",

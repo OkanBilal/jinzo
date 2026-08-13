@@ -59,6 +59,24 @@ export interface SelectedRepo {
   metadata: any;
 }
 
+// Mirrors src/main/modules/connections/github-device-flow.ts
+export interface GitHubDeviceAuthorization {
+  deviceCode: string;
+  userCode: string;
+  verificationUri: string;
+  /** Seconds until the user code expires. */
+  expiresIn: number;
+  /** Minimum seconds between polls. */
+  interval: number;
+}
+
+export type GitHubDevicePollResult =
+  | { status: "pending" }
+  | { status: "slow_down"; interval: number }
+  | { status: "expired" }
+  | { status: "denied" }
+  | { status: "success"; token: string };
+
 export interface LinearTeam {
   id: string;
   key: string;
@@ -372,6 +390,21 @@ export const connectionsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['Connection'],
     }),
+
+    // ── GitHub OAuth device flow (token acquisition; the token is then
+    //    saved through the normal saveCredentials mutation) ──
+    startGithubDeviceFlow: builder.mutation<GitHubDeviceAuthorization, void>({
+      query: () => ({
+        handler: CHANNELS.connections.githubDeviceStart,
+      }),
+    }),
+
+    pollGithubDeviceFlow: builder.mutation<GitHubDevicePollResult, string>({
+      query: (deviceCode) => ({
+        handler: CHANNELS.connections.githubDevicePoll,
+        args: [deviceCode],
+      }),
+    }),
   }),
   overrideExisting: false,
 });
@@ -395,4 +428,6 @@ export const {
   useLazyGetSelectedResourcesQuery,
   useSaveResourcesMutation,
   useDeleteResourceMutation,
+  useStartGithubDeviceFlowMutation,
+  usePollGithubDeviceFlowMutation,
 } = connectionsApi;

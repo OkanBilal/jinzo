@@ -85,6 +85,10 @@ const api = {
       ipcRenderer.invoke(CHANNELS.connections.revoke, provider),
     getGithubRepos: (connectionId: string) =>
       ipcRenderer.invoke(CHANNELS.connections.getGithubRepos, connectionId),
+    githubDeviceStart: () =>
+      ipcRenderer.invoke(CHANNELS.connections.githubDeviceStart),
+    githubDevicePoll: (deviceCode: string) =>
+      ipcRenderer.invoke(CHANNELS.connections.githubDevicePoll, deviceCode),
     getLinearTeams: (connectionId: string) =>
       ipcRenderer.invoke(CHANNELS.connections.getLinearTeams, connectionId),
     getJiraProjects: (connectionId: string) =>

@@ -361,6 +361,8 @@ Each connection type has:
 
 Supported: GitHub, GitLab, Linear, Jira, Asana, Trello, Sentry (+ Socket.dev for the guards module).
 
+GitHub additionally offers **OAuth device flow** sign-in next to the PAT form (`connections:githubDeviceStart` / `connections:githubDevicePoll`, main-process only because GitHub's OAuth endpoints send no CORS headers). The flow yields a plain access token that the renderer saves through the normal `connections:saveCredentials` path — storage, sync, and the PR inbox are method-agnostic. Requires a GitHub OAuth App client id (`MAINS_GITHUB_CLIENT_ID` env or the constant in `github-device-flow.ts`); unset, the button reports sign-in as unconfigured and the token tab still works. The credential-step tabs come from `ResourceWizardConfig.credentialAlternative` — provider-agnostic, GitHub is just the first user.
+
 **Credential Storage (Encrypted JSON Blob)**
 
 All provider secrets are stored as a single encrypted JSON blob in `connectionTokens.accessTokenEnc`. Each provider declares its secret fields in `PROVIDER_SECRET_FIELDS` (`connections.utils.ts`), shaped as `{ required: string[]; optional?: string[] }`:

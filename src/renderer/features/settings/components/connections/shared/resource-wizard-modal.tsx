@@ -1,6 +1,8 @@
 import { ReactNode, useState } from "react";
 
 import {
+  ErrorText,
+  SegmentedTabs,
   WizardModal,
   useWizard,
   type WizardStep,
@@ -49,6 +51,22 @@ export interface ResourceWizardConfig {
   credentialFields: CredentialField[];
   /** Build SaveCredentials payload extras (provider, connectionId added by wrapper) */
   buildCredentials: (values: Record<string, string>) => Record<string, string>;
+  /**
+   * Optional second sign-in method rendered as a tab on the credential step
+   * (e.g. GitHub's OAuth device flow). `submitValues` runs the same
+   * save-credentials → fetch-resources tail the token form uses, so both
+   * methods land on the resource-select step identically.
+   */
+  credentialAlternative?: {
+    /** Tab label for the alternative method (e.g. "Sign in with GitHub"). */
+    label: string;
+    /** Tab label for the manual token form (e.g. "Access token"). */
+    tokenLabel: string;
+    render: (ctx: {
+      submitValues: (values: Record<string, string>) => Promise<void>;
+      submitting: boolean;
+    }) => ReactNode;
+  };
 
   loadingMessage: string;
   selectTitle: string;
@@ -112,22 +130,15 @@ function CredentialsStep({
 }) {
   const { data, setData, goTo } = useWizard<WizardData>();
   const [loading, setLoading] = useState(false);
+  const [method, setMethod] = useState<"alternative" | "token">(
+    config.credentialAlternative ? "alternative" : "token",
+  );
   const [getConnection] = useLazyGetConnectionQuery();
   const [saveCredentials] = useSaveCredentialsMutation();
 
-  const handleSubmit = async () => {
-    for (const field of config.credentialFields) {
-      const value = (data[field.dataKey] as string | undefined) ?? "";
-      if (field.required === false) continue;
-      if (!value.trim()) {
-        setData({
-          errorMessage:
-            field.emptyError ?? `Please enter a valid ${field.label}`,
-        });
-        return;
-      }
-    }
-
+  // Shared submit tail — both the token form and any alternative sign-in
+  // method (device flow) land here with the same credential values shape.
+  const submitValues = async (formValues: Record<string, string>) => {
     setLoading(true);
     setData({ errorMessage: "" });
 
@@ -135,12 +146,6 @@ function CredentialsStep({
       const work = (async () => {
         const connection = await getConnection(config.provider).unwrap();
         const connId = connection.id;
-
-        const formValues: Record<string, string> = {};
-        for (const field of config.credentialFields) {
-          formValues[field.dataKey] =
-            (data[field.dataKey] as string | undefined) ?? "";
-        }
 
         await saveCredentials({
           provider: config.provider,
@@ -176,7 +181,28 @@ function CredentialsStep({
     }
   };
 
-  return (
+  const handleSubmit = async () => {
+    for (const field of config.credentialFields) {
+      const value = (data[field.dataKey] as string | undefined) ?? "";
+      if (field.required === false) continue;
+      if (!value.trim()) {
+        setData({
+          errorMessage:
+            field.emptyError ?? `Please enter a valid ${field.label}`,
+        });
+        return;
+      }
+    }
+
+    const formValues: Record<string, string> = {};
+    for (const field of config.credentialFields) {
+      formValues[field.dataKey] =
+        (data[field.dataKey] as string | undefined) ?? "";
+    }
+    await submitValues(formValues);
+  };
+
+  const tokenForm = (
     <CredentialStep
       description={config.credentialDescription}
       fields={config.credentialFields.map((field) => ({
@@ -196,6 +222,48 @@ function CredentialsStep({
       loading={loading}
       error={data.errorMessage || ""}
     />
+  );
+
+  const alternative = config.credentialAlternative;
+  if (!alternative) return tokenForm;
+
+  return (
+    <div className="space-y-4">
+      <SegmentedTabs
+        value={method}
+        onChange={(next) => {
+          setMethod(next);
+          setData({ errorMessage: "" });
+        }}
+        options={[
+          { value: "alternative", label: alternative.label },
+          { value: "token", label: alternative.tokenLabel },
+        ]}
+        className="w-fit"
+      />
+      {/* Both panes stay mounted in the same grid cell so the modal keeps
+          one height across tabs (the taller pane sets it) and each tab's
+          state survives switching. */}
+      <div className="grid">
+        <div
+          className={`col-start-1 row-start-1 ${
+            method === "token" ? "" : "invisible pointer-events-none"
+          }`}
+          aria-hidden={method !== "token"}
+        >
+          {tokenForm}
+        </div>
+        <div
+          className={`col-start-1 row-start-1 flex flex-col ${
+            method === "token" ? "invisible pointer-events-none" : ""
+          }`}
+          aria-hidden={method === "token"}
+        >
+          {alternative.render({ submitValues, submitting: loading })}
+          {data.errorMessage ? <ErrorText>{data.errorMessage}</ErrorText> : null}
+        </div>
+      </div>
+    </div>
   );
 }
 

@@ -59,6 +59,8 @@ export const CHANNELS = {
     getSentryProjects: "connections:getSentryProjects",
     getSocketDevOrganizations: "connections:getSocketDevOrganizations",
     getTrelloBoards: "connections:getTrelloBoards",
+    githubDevicePoll: "connections:githubDevicePoll",
+    githubDeviceStart: "connections:githubDeviceStart",
     listStates: "connections:listStates",
     removeResource: "connections:removeResource",
     revoke: "connections:revoke",
