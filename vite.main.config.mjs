@@ -6,6 +6,18 @@ import { copyFileSync, mkdirSync, readdirSync, existsSync, cpSync } from 'fs';
 // https://vitejs.dev/config
 export default defineConfig(() => {
   return {
+  // The GitHub OAuth device-flow client id is a *public* identifier (device
+  // flow has no client secret), but it has to travel with the bundle: every
+  // other MAINS_* env var in the main process is read at runtime on the user's
+  // machine, and a released app has no build-time environment to read from.
+  // Baking it here is what turns the repo/CI secret into a working sign-in
+  // button. Unset at build time it collapses to "", and the device-flow module
+  // reports sign-in as unconfigured while the paste-a-token tab keeps working.
+  define: {
+    'process.env.MAINS_GITHUB_CLIENT_ID': JSON.stringify(
+      process.env.MAINS_GITHUB_CLIENT_ID ?? '',
+    ),
+  },
   resolve: {
     // Some libs that can run in both Web and Node.js environments are shipped with both ESM and CJS, and make use of Node.js compatible modules.
     // In order to handle these modules, Electron needs to tell Vite to build for Node.js environments.

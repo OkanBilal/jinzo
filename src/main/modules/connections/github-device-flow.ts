@@ -10,8 +10,13 @@
 // paste-a-token flow uses.
 // ─────────────────────────────────────────────────────────────
 
-// Register at github.com → Settings → Developer settings → OAuth Apps,
-// enable "Device Flow", and put the app's client id here (env wins).
+// Register at github.com → Settings → Developer settings → OAuth Apps and
+// enable "Device Flow". Unlike every other MAINS_* env var in the main
+// process, this one is read at *build* time: vite.main.config.mjs replaces it
+// with the value present in the build environment (`.env.local` locally, the
+// MAINS_GITHUB_CLIENT_ID repo secret in the release workflow), because a
+// released app has no build environment left to read. Empty at build time →
+// requireClientId throws and the paste-a-token tab carries the flow.
 const GITHUB_DEVICE_CLIENT_ID = process.env.MAINS_GITHUB_CLIENT_ID ?? "";
 
 /** Same scopes the PAT instructions ask for. */

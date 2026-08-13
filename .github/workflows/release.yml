@@ -83,4 +83,8 @@ jobs:
           # Optional — when unset, osx-sign auto-discovers the imported cert.
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Baked into the main bundle at build time by vite.main.config.mjs.
+          # Unset, the GitHub sign-in button reports itself as unconfigured and
+          # the personal-access-token tab still works.
+          MAINS_GITHUB_CLIENT_ID: ${{ secrets.MAINS_GITHUB_CLIENT_ID }}
         run: npx electron-forge publish --platform darwin --arch ${{ matrix.arch }}
