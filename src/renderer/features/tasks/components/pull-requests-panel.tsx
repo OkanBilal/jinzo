@@ -16,7 +16,7 @@ import {
   Input,
   SegmentedTabs,
 } from "@/components/ui";
-import { Close, Layers, Search } from "@/components/ui/icons";
+import { Close, Layers, Search, Trash } from "@/components/ui/icons";
 import { Body } from "@/components/ui/text";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import {
@@ -261,9 +261,10 @@ export function PullRequestsPanel({
             {activeFilterCount > 0 && (
               <Button
                 onClick={clearFilters}
-                className="px-2 py-0.5 text-xxs rounded-full bg-primary/60 dark:bg-primary/10 glass-outline text-primary-800 dark:text-primary-200 cursor-pointer whitespace-nowrap"
+                className="px-2 py-1 flex items-center gap-1 text-xs rounded-full bg-primary/60 dark:bg-primary/10 glass-outline text-primary-800 dark:text-primary-200 cursor-pointer whitespace-nowrap"
                 tooltip="Clear filters"
               >
+                <Trash className="size-3.5"/>
                 {activeFilterCount} filter
                 {activeFilterCount === 1 ? "" : "s"}
               </Button>
@@ -362,6 +363,7 @@ export function PullRequestsPanel({
                   variant="subtle"
                   disabled={isFetchingMore}
                   onClick={handleLoadMore}
+                  className="text-primary-800 dark:text-primary-200"
                 >
                   {isFetchingMore ? "Loading..." : "Load more"}
                 </Button>
