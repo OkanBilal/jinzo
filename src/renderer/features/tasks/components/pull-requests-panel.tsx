@@ -53,7 +53,7 @@ export function PullRequestsPanel({
 }: PullRequestsPanelProps) {
   const navigate = useNavigate();
   const [relationship, setRelationship] = useState<PrRelationship>("all");
-  const [lifecycle, setLifecycle] = useState<PrLifecycle>("open");
+  const [lifecycle, setLifecycle] = useState<PrLifecycle>("all");
   const [text, setText] = useState("");
   const [debouncedText, setDebouncedText] = useState("");
   // Pages loaded past the first via "Load more", keyed by the filters they
@@ -165,11 +165,11 @@ export function PullRequestsPanel({
   // A non-default state counts as a filter too, now that it lives inside
   // the facet menu with no always-visible control of its own.
   const activeFilterCount =
-    repoFilters.length + (lifecycle !== "open" ? 1 : 0);
+    repoFilters.length + (lifecycle !== "all" ? 1 : 0);
 
   const clearFilters = () => {
     setRepoFilters([]);
-    setLifecycle("open");
+    setLifecycle("all");
   };
 
   // The detail drawer is always open — keep it pointed at the top row
