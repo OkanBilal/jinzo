@@ -25,7 +25,7 @@ const VARIANT_COLOR: Record<AsciiSpinnerVariant, string> = {
   copilot: "text-copilot",
   codex: "text-codex",
   cursor: "text-cursor",
-  null: "text-primary-900 dark:text-primary-200",
+  null: "text-primary-900 dark:text-primary-100",
   inherit: "",
 };
 

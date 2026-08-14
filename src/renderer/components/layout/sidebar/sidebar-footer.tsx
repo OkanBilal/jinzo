@@ -55,7 +55,7 @@ export function SidebarFooter({
             tooltip="Open Settings"
             tooltipPosition="top-right"
           >
-            <Settings className="size-4 text-primary-900 dark:text-primary-200 hover:text-primary-950 dark:hover:text-primary-100 transition-colors duration-300" />
+            <Settings className="size-4 text-primary-900 dark:text-primary-100 hover:text-primary-950 dark:hover:text-primary-100 transition-colors duration-300" />
           </Button>
         </div>
           <div className="">
@@ -74,7 +74,7 @@ export function SidebarFooter({
             aria-label="Help & Resources"
             title="Help & Resources"
           >
-            <Question className="size-4  text-primary-900 dark:text-primary-200 hover:text-primary-950 dark:hover:text-primary-100 transition-colors duration-300" />
+            <Question className="size-4  text-primary-900 dark:text-primary-100 hover:text-primary-950 dark:hover:text-primary-100 transition-colors duration-300" />
           </Button>
         </div>
       </div>

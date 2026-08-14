@@ -64,7 +64,7 @@ function toneOf(task: TaskMetadata): Tone {
 }
 
 const TONE_TEXT: Record<Tone, string> = {
-  running: "text-primary-500 dark:text-primary-300",
+  running: "text-primary-600 dark:text-primary-400",
   ok: "text-success dark:text-success",
   warn: "text-warning dark:text-warning",
   error: "text-danger dark:text-danger",
@@ -183,7 +183,7 @@ export function TaskProgressStrip({
           </span>
         )}
         {context && (
-          <span className="shrink-0 text-primary-400 dark:text-primary-400">{context}</span>
+          <span className="shrink-0 text-primary-600 dark:text-primary-400">{context}</span>
         )}
       </button>
 
@@ -193,7 +193,7 @@ export function TaskProgressStrip({
             {detail}
           </ToolOutputBody>
           {outputFile && (
-            <div className="flex items-center gap-1 pt-1 text-s text-primary-400 dark:text-primary-400">
+            <div className="flex items-center gap-1 pt-1 text-s text-primary-600 dark:text-primary-400">
               <Document className="size-3 shrink-0" />
               <span className="truncate font-mono">{outputFile}</span>
             </div>
@@ -204,7 +204,7 @@ export function TaskProgressStrip({
       {/* No body to expand, but the captured output still has a location worth
           surfacing — a backgrounded command's real stdout lives only there. */}
       {!hasDetail && outputFile && (
-        <div className="flex items-center gap-1 py-0.5 text-s text-primary-400 dark:text-primary-400">
+        <div className="flex items-center gap-1 py-0.5 text-s text-primary-600 dark:text-primary-400">
           <Document className="size-3 shrink-0" />
           <span className="truncate font-mono">{outputFile}</span>
         </div>

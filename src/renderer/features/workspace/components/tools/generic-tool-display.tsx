@@ -93,7 +93,7 @@ export function GenericToolDisplay({
           <ToolOutputBody as="div" className="text-s font-sans space-y-2 max-h-64">
             {inputJson && (
               <div className="space-y-1">
-                <div className="text-t font-medium text-primary-400 dark:text-primary-500">
+                <div className="text-t font-medium text-primary-600 dark:text-primary-400">
                   Input
                 </div>
                 <pre className="noscrollbar whitespace-pre-wrap wrap-break-word font-mono text-t">
@@ -108,7 +108,7 @@ export function GenericToolDisplay({
                   inputJson ? "pt-1 border-t border-primary-100 dark:border-primary/10" : ""
                 }`}
               >
-                <div className="text-t font-medium text-primary-400 dark:text-primary-500">
+                <div className="text-t font-medium text-primary-600 dark:text-primary-400">
                   {status === "error" ? "Error" : "Output"}
                 </div>
                 <pre

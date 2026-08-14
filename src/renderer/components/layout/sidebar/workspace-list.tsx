@@ -115,7 +115,7 @@ function WorkspaceGroupSection({
               className="hidden group-hover/section:flex items-center p-0.5 cursor-pointer rounded-md"
               aria-label="Create new worktree"
             >
-              <Plus className="w-3 h-3 text-primary-800 dark:text-primary-200 hover:text-primary-950 dark:hover:text-primary-100" />
+              <Plus className="w-3 h-3 text-primary-800 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-100" />
             </Button>
           )}
           <ArrowUp
@@ -400,7 +400,7 @@ export default function WorkspacesList({
             />
           </div>
           {/* <ArrowUp
-            className={`w-4 h-4 text-primary-900 dark:text-primary-200 transition-transform duration-200 ${
+            className={`w-4 h-4 text-primary-900 dark:text-primary-100 transition-transform duration-200 ${
               isExpanded ? "rotate-180" : "rotate-90"
             }`}
           /> */}

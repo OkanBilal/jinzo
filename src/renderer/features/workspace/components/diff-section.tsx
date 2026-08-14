@@ -236,7 +236,7 @@ export function DiffSection({
   if (isFetching) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <span className="text-xs text-primary-500 dark:text-primary-400">
+        <span className="text-xs text-primary-600 dark:text-primary-400">
           Loading changes...
         </span>
       </div>
@@ -247,7 +247,7 @@ export function DiffSection({
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="flex flex-col items-center gap-2 px-4 text-center">
-          <Diff className="w-4 h-4 dark:text-primary-400 text-primary-700" />
+          <Diff className="w-4 h-4 dark:text-primary-300 text-primary-700" />
           <Caption>
             No changes detected.
           </Caption>
@@ -262,7 +262,7 @@ export function DiffSection({
       <div className="shrink-0 flex items-center gap-2 mb-2">
         <Button
           onClick={handleReviewChanges}
-          className="flex-1 flex items-center glass-outline justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100/50 dark:bg-primary/5 hover:bg-primary-100 dark:hover:bg-primary/10 text-primary-900 dark:text-primary-200 transition-colors"
+          className="flex-1 flex items-center glass-outline justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100/50 dark:bg-primary/5 hover:bg-primary-100 dark:hover:bg-primary/10 text-primary-900 dark:text-primary-100 transition-colors"
         >
           {variant === "codex" ? <Codex className="w-3.5 h-3.5" /> : <Chat className="w-3.5 h-3.5" />}
           Review Changes
@@ -272,7 +272,7 @@ export function DiffSection({
       {/* Stats header */}
       {diff && diff.files && diff.files.length > 0 && (
         <div className="shrink-0 flex items-center justify-between px-1 py-1.5 mb-1">
-          <span className="text-xxs text-primary-900 dark:text-primary-200">
+          <span className="text-xxs text-primary-900 dark:text-primary-100">
             {diff.files.length} file{diff.files.length !== 1 ? "s" : ""} changed
           </span>
           <DiffStats stats={diff.stats} />
@@ -319,8 +319,8 @@ export function DiffSection({
                   // longer and less identifying — gives up room first.
                   className={`min-w-0 shrink-[0.25] truncate text-xs font-medium ${
                     isDeleted
-                      ? "line-through decoration-primary-800/50 dark:decoration-primary/50 text-primary-700 dark:text-primary-400"
-                      : "text-primary-900 dark:text-primary-200"
+                      ? "line-through decoration-primary-800/50 dark:decoration-primary/50 text-primary-700 dark:text-primary-300"
+                      : "text-primary-900 dark:text-primary-100"
                   }`}
                 >
                   {fileName}
@@ -368,7 +368,7 @@ export function DiffSection({
                 className="w-4 h-4 shrink-0"
               />
               <div className="flex items-baseline gap-1.5 min-w-0 flex-1">
-                <span className="min-w-0 shrink-[0.25] truncate text-xs font-medium text-primary-900 dark:text-primary-200">
+                <span className="min-w-0 shrink-[0.25] truncate text-xs font-medium text-primary-900 dark:text-primary-100">
                   {fileName}
                 </span>
                 {dirPath && (

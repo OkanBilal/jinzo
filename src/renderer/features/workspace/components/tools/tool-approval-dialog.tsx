@@ -296,7 +296,7 @@ export function ToolApprovalDialog({
           <div className="flex gap-3 px-3.5 pb-2 pt-3.5 sm:px-4 sm:pt-4">
             <Question className="mt-0.5 size-4 shrink-0 text-primary-600 dark:text-primary-400" />
             <div className="min-w-0 flex-1 space-y-2">
-              <div className="text-xxs font-semibold uppercase tracking-wide text-primary-500 dark:text-primary-400">
+              <div className="text-xxs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">
                 {request.header || `${request.serverName ?? "MCP"} needs input`}
               </div>
               <Body className="leading-snug font-medium">
@@ -363,7 +363,7 @@ export function ToolApprovalDialog({
             <Question className="mt-0.5 size-4 shrink-0 text-primary-600 dark:text-primary-400" />
             <div className="min-w-0 flex-1 space-y-2">
               {request.header && (
-                <div className="text-xxs font-semibold uppercase tracking-wide text-primary-500 dark:text-primary-400">
+                <div className="text-xxs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">
                   {request.header}
                 </div>
               )}
@@ -447,7 +447,7 @@ export function ToolApprovalDialog({
                       if (e.key === "Enter") handleSubmitAnswer();
                     }}
                     placeholder="Type a custom answer…"
-                    className="w-full rounded-lg bg-primary-100/50   px-3 py-2 text-xs text-primary-950 transition-colors placeholder:text-primary-500 focus:outline-none dark:bg-primary-800/50 dark:text-primary-100 dark:placeholder:text-primary-500"
+                    className="w-full rounded-lg bg-primary-100/50   px-3 py-2 text-xs text-primary-900 transition-colors placeholder:text-primary-500 focus:outline-none dark:bg-primary-800/50 dark:text-primary-100 dark:placeholder:text-primary-500"
                   />
                 </label>
               )}
@@ -520,7 +520,7 @@ export function ToolApprovalDialog({
     <div className="mr-auto mb-1 max-w-210">
       <div className="overflow-hidden rounded-2xl glass-surface">
         <div className="flex items-center gap-2 px-4 pb-1 pt-3.5">
-          <span className="text-primary-500 dark:text-primary-400">
+          <span className="text-primary-600 dark:text-primary-400">
             {headerIcon}
           </span>
           <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
@@ -557,7 +557,7 @@ export function ToolApprovalDialog({
               <div className="space-y-1.5 text-xs">
                 {initialParamEntries.map((entry, idx) => (
                   <div key={`${entry.label}-${idx}`} className="flex gap-3">
-                    <div className="w-28 shrink-0 text-primary-500 dark:text-primary-400">
+                    <div className="w-28 shrink-0 text-primary-600 dark:text-primary-400">
                       {entry.label}
                     </div>
                     <div className="min-w-0 flex-1 whitespace-pre-wrap wrap-break-word text-primary-900 dark:text-primary-100">
@@ -579,7 +579,7 @@ export function ToolApprovalDialog({
                             key={`${entry.label}-${idx + VISIBLE_PARAMS_INITIAL}`}
                             className="flex gap-3"
                           >
-                            <div className="w-28 shrink-0 text-primary-500 dark:text-primary-400">
+                            <div className="w-28 shrink-0 text-primary-600 dark:text-primary-400">
                               {entry.label}
                             </div>
                             <div className="min-w-0 flex-1 whitespace-pre-wrap wrap-break-word text-primary-900 dark:text-primary-100">
@@ -595,7 +595,7 @@ export function ToolApprovalDialog({
                   <Button
                     aria-expanded={showAllParams}
                     onClick={() => setShowAllParams((v) => !v)}
-                    className="mt-1 inline-flex items-center gap-1 text-xs text-primary-500 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-200"
+                    className="mt-1 inline-flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
                   >
                     <span>
                       {showAllParams
@@ -617,7 +617,7 @@ export function ToolApprovalDialog({
 
         <div className="flex items-center justify-between gap-3 px-4 py-2">
           {isCodex ? (
-            <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-primary-500 dark:text-primary-400 mb-2">
+            <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-400 mb-2">
               <Checkbox
                 checked={allowForSession}
                 onChange={() => setAllowForSession((v) => !v)}

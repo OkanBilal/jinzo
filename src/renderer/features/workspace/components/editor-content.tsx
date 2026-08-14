@@ -39,7 +39,7 @@ export function EditorContent({ className = "" }: EditorContentProps) {
   if (isLoadingFileContent) {
     return (
       <div className={`flex items-center justify-center h-full ${className}`}>
-        <div className="flex flex-col items-center gap-2 text-primary-500 dark:text-primary-400">
+        <div className="flex flex-col items-center gap-2 text-primary-600 dark:text-primary-400">
           <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
           <span className="text-xs">Loading file...</span>
         </div>
@@ -75,7 +75,7 @@ export function EditorContent({ className = "" }: EditorContentProps) {
   if (!selectedFileContent) {
     return (
       <div className={`flex items-center justify-center h-full ${className}`}>
-        <div className="flex flex-col items-center gap-2 text-primary-500 dark:text-primary-400">
+        <div className="flex flex-col items-center gap-2 text-primary-600 dark:text-primary-400">
           <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
           <span className="text-xs">Loading...</span>
         </div>
@@ -87,7 +87,7 @@ export function EditorContent({ className = "" }: EditorContentProps) {
   if (selectedFileContent.isBinary) {
     return (
       <div className={`flex items-center justify-center h-full ${className}`}>
-        <div className="flex flex-col items-center gap-2 text-primary-500 dark:text-primary-400 text-center px-4">
+        <div className="flex flex-col items-center gap-2 text-primary-600 dark:text-primary-400 text-center px-4">
           <svg
             className="w-8 h-8 opacity-50"
             fill="none"

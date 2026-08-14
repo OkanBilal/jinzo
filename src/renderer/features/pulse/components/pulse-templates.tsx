@@ -35,7 +35,7 @@ export function PulseTemplates({
                     <div className="text-sm font-medium text-primary-900 dark:text-primary-100 truncate mb-1">
                       {tpl.title}
                     </div>
-                    <div className="text-xs text-primary-500 dark:text-primary-400 line-clamp-2">
+                    <div className="text-xs text-primary-600 dark:text-primary-400 line-clamp-2">
                       {tpl.description}
                     </div>
                   </div>

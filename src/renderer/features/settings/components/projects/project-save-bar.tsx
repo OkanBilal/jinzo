@@ -12,7 +12,7 @@ interface ProjectSaveBarProps {
 export function ProjectSaveBar({ lastSavedLabel, isDirty, saving, isLoading, onRefresh, onSave }: ProjectSaveBarProps) {
   return (
     <div className="flex items-center justify-between pt-2 mb-8">
-      <div className="text-xs text-primary-500 dark:text-primary-400">
+      <div className="text-xs text-primary-600 dark:text-primary-400">
         {lastSavedLabel ? `Last saved: ${lastSavedLabel}` : "Not saved yet"}
       </div>
       <div className="flex items-center gap-3">

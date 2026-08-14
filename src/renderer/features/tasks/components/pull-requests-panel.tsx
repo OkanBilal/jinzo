@@ -217,7 +217,7 @@ export function PullRequestsPanel({
           {availability?.error ?? "GitHub is not connected"}
         </Body>
         {!availability?.error && (
-          <Body className="text-xs text-primary-700 dark:text-primary-400 max-w-90">
+          <Body className="text-xs text-primary-700 dark:text-primary-300 max-w-90">
             Connect GitHub to see pull requests you authored, are reviewing, or
             were asked to review.
           </Body>
@@ -244,14 +244,14 @@ export function PullRequestsPanel({
             onChange={(e) => setText(e.target.value)}
             placeholder="Search pull requests"
             aria-label="Search pull requests"
-            className={`w-full pl-9 ${text ? "pr-9" : "pr-3"} py-1.5 text-s rounded-2xl bg-primary/40 dark:bg-primary/5 glass-outline placeholder:text-primary-600 dark:placeholder:text-primary-500 text-primary-900 dark:text-primary-100 outline-none`}
+            className={`w-full pl-9 ${text ? "pr-9" : "pr-3"} py-1.5 text-s rounded-2xl bg-primary/40 dark:bg-primary/5 glass-outline placeholder:text-primary-500 dark:placeholder:text-primary-500 text-primary-900 dark:text-primary-100 outline-none`}
           />
           {text && (
             <Button
               onClick={() => setText("")}
               tooltip="Clear search"
               aria-label="Clear search"
-              className="absolute right-2 top-1/2 z-10 -translate-y-1/2 p-1 rounded-lg cursor-pointer text-primary-500 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 hover:bg-primary/50 dark:hover:bg-primary/10"
+              className="absolute right-2 top-1/2 z-10 -translate-y-1/2 p-1 rounded-lg cursor-pointer text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 hover:bg-primary/50 dark:hover:bg-primary/10"
             >
               <Close className="size-3" />
             </Button>
@@ -287,7 +287,7 @@ export function PullRequestsPanel({
                 className={`p-1.5 rounded-xl cursor-pointer transition-colors ${
                   repoFilterOpen || activeFilterCount > 0
                     ? "bg-primary/80 dark:bg-primary/10 glass-outline text-primary-900 dark:text-primary-100"
-                    : "text-primary-500 dark:text-primary-400 hover:bg-primary/50 dark:hover:bg-primary/10 hover:text-primary-800 dark:hover:text-primary-200"
+                    : "text-primary-600 dark:text-primary-400 hover:bg-primary/50 dark:hover:bg-primary/10 hover:text-primary-800 dark:hover:text-primary-200"
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />
@@ -332,7 +332,7 @@ export function PullRequestsPanel({
       <div className="flex-1 min-h-0 overflow-y-auto noscrollbar px-6 pt-3 pb-16 mask-[linear-gradient(to_bottom,transparent,black_1.75rem)]">
         {isError ? (
           <div className="flex flex-col items-center gap-2 py-10">
-            <Body className="text-xs text-primary-800 dark:text-primary-300">
+            <Body className="text-xs text-primary-800 dark:text-primary-200">
               Unable to load pull requests.
             </Body>
             <Button variant="subtle" onClick={() => refetch()}>
@@ -345,7 +345,7 @@ export function PullRequestsPanel({
           </div>
         ) : items.length === 0 ? (
           <div className="flex items-center justify-center py-10">
-            <Body className="text-xs text-primary-800 dark:text-primary-300">
+            <Body className="text-xs text-primary-800 dark:text-primary-200">
               No pull requests match these filters.
             </Body>
           </div>

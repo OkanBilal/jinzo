@@ -14,7 +14,7 @@ const TONE = {
   normal: {
     stroke: "stroke-primary-500 dark:stroke-primary-300",
     fill: "bg-primary-500 dark:bg-primary-300",
-    text: "text-primary-700 dark:text-primary-200",
+    text: "text-primary-700 dark:text-primary-300",
   },
   warn: {
     stroke: "stroke-amber-500",
@@ -39,12 +39,12 @@ function MetricRow({
 }) {
   return (
     <div className="flex items-baseline justify-between gap-4">
-      <span className="text-primary-500 dark:text-primary-400">{label}</span>
+      <span className="text-primary-600 dark:text-primary-400">{label}</span>
       <span
         className={`tabular-nums ${
           emphasis
-            ? "font-medium text-primary-950 dark:text-primary-100"
-            : "text-primary-600 dark:text-primary-300"
+            ? "font-medium text-primary-900 dark:text-primary-100"
+            : "text-primary-600 dark:text-primary-400"
         }`}
       >
         {value}
@@ -87,7 +87,7 @@ export function ContextUsageRing({ usage }: ContextUsageRingProps) {
   const tooltip = (
     <div className="flex w-49 flex-col gap-2 text-xs">
       <div className="flex items-baseline justify-between gap-3">
-        <span className="text-t font-medium uppercase tracking-wider text-primary-500 dark:text-primary-400">
+        <span className="text-t font-medium uppercase tracking-wider text-primary-600 dark:text-primary-400">
           Context window
         </span>
         <span className={`text-s font-semibold tabular-nums ${toneText}`}>
@@ -115,7 +115,7 @@ export function ContextUsageRing({ usage }: ContextUsageRingProps) {
       </div>
 
       {(usage.model || thresholdPct != null) && (
-        <div className="flex items-center justify-between gap-3 border-t border-primary-950/10 pt-1.5 text-xxs text-primary-500 dark:border-primary-100/10 dark:text-primary-400">
+        <div className="flex items-center justify-between gap-3 border-t border-primary-950/10 pt-1.5 text-xxs text-primary-600 dark:border-primary-100/10 dark:text-primary-400">
           {usage.model && <span className="min-w-0 truncate">{usage.model}</span>}
           {thresholdPct != null && (
             <span className="shrink-0 tabular-nums">
@@ -158,7 +158,7 @@ export function ContextUsageRing({ usage }: ContextUsageRingProps) {
             className={`${arcClass} transition-[stroke-dasharray] duration-300`}
           />
         </svg>
-        <span className="absolute text-xxs font-medium tabular-nums text-primary-500 dark:text-primary-400">
+        <span className="absolute text-xxs font-medium tabular-nums text-primary-600 dark:text-primary-400">
           {pct.toFixed(0)}
         </span>
       </div>

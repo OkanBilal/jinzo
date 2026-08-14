@@ -48,7 +48,7 @@ export default function RecentSessionsList({ sessions }: RecentSessionsListProps
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-3 shrink-0 text-primary-400 dark:text-primary-500">
+            <div className="flex items-center gap-3 shrink-0 text-primary-600 dark:text-primary-400">
               {s.durationMs !== null && (
                 <Caption>{formatDurationMs(s.durationMs)}</Caption>
               )}

@@ -33,7 +33,7 @@ interface CompactComposerControlsProps {
 }
 
 const SECTION =
-  "px-2.5 pt-2.5 pb-1 text-xxs uppercase tracking-wide text-primary-400 dark:text-primary-500";
+  "px-2.5 pt-2.5 pb-1 text-xxs uppercase tracking-wide text-primary-600 dark:text-primary-400";
 const ROW =
   "w-full flex items-center gap-2 text-left px-2.5 py-2 text-sm cursor-pointer transition-colors";
 const ROW_ACTIVE =
@@ -93,7 +93,7 @@ export function CompactComposerControls({
               className={`capitalize ${
                 effortLevel === "ultracode"
                   ? `font-medium ${ULTRACODE_GRADIENT_TEXT}`
-                  : "font-normal text-primary-500 dark:text-primary-300"
+                  : "font-normal text-primary-600 dark:text-primary-400"
               }`}
             >
               {" "}

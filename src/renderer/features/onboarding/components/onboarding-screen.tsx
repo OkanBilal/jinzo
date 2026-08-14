@@ -115,7 +115,7 @@ export function OnboardingScreen() {
           <StepIndicator count={STEPS.length} current={stepIndex} />
           {/* Agents + preferences steps change real settings — reassure it's not final */}
           {stepIndex > 0 && (
-            <span className="absolute left-1/2 -translate-x-1/2 text-xs text-primary-500 dark:text-primary-400">
+            <span className="absolute left-1/2 -translate-x-1/2 text-xs text-primary-600 dark:text-primary-400">
               You can change these later in Settings.
             </span>
           )}

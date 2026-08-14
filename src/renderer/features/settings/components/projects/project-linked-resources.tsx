@@ -35,7 +35,7 @@ export function ProjectLinkedResources({ projectId, onManageClick }: ProjectLink
             <div key={r.id}>
               {i > 0 && <SettingsDivider />}
               <div className="flex items-center gap-3 py-4">
-                <span className="text-primary-500 dark:text-primary-400 shrink-0">
+                <span className="text-primary-600 dark:text-primary-400 shrink-0">
                   <ResourceIcon kind={r.resource.kind} />
                 </span>
                 <div className="flex-1 min-w-0">
@@ -50,7 +50,7 @@ export function ProjectLinkedResources({ projectId, onManageClick }: ProjectLink
                 </div>
                 <Button
                   type="button"
-                  className="shrink-0  cursor-pointer hover:bg-primary-100/80 dark:hover:bg-primary/10 p-1.5 glass-button rounded-full text-primary-900 dark:text-primary-300 transition-all duration-300 ease-out"
+                  className="shrink-0  cursor-pointer hover:bg-primary-100/80 dark:hover:bg-primary/10 p-1.5 glass-button rounded-full text-primary-900 dark:text-primary-100 transition-all duration-300 ease-out"
                   onClick={() => handleRemove(r.resourceId)}
                 >
                   <Close className="size-4" />

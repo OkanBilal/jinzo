@@ -259,7 +259,7 @@ export default function WorkspaceItem({
                 />
               )}
               {/* {branch && updatedAt && (
-                <span className="text-primary-900 text-lg leading-6 dark:text-primary-200">
+                <span className="text-primary-900 text-lg leading-6 dark:text-primary-100">
                   ·
                 </span>
               )}

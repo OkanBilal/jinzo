@@ -155,7 +155,7 @@ function SessionTimeBar({
   const hasUsage = turn && (turn.inputTokens || turn.outputTokens || turn.cacheReadTokens || turn.cacheWriteTokens || turn.costMicros);
 
   return (
-    <div className="flex items-center gap-2 text-s text-primary-700 dark:text-primary-400  -mt-1">
+    <div className="flex items-center gap-2 text-s text-primary-700 dark:text-primary-300  -mt-1">
       {hasUsage ? (
         <Tooltip
           content={<UsageTooltipContent turn={turn} />}

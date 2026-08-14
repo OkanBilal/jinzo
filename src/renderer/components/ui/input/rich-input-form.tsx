@@ -648,7 +648,7 @@ export const RichInputForm = forwardRef<RichInputFormHandle, RichInputFormProps>
           onPaste={handlePaste}
           className="rounded-2xl w-full pl-5 pr-24 pt-4 pb-1 text-sm outline-none whitespace-pre-wrap wrap-break-word
             min-h-12 max-h-80 overflow-y-auto noscrollbar
-            dark:text-primary-200 text-primary-700"
+            dark:text-primary-300 text-primary-700"
         />
         {isEmpty && placeholder && (
           <div className="pointer-events-none absolute left-5 top-4 text-sm text-primary-600 dark:text-primary-400">
@@ -656,7 +656,7 @@ export const RichInputForm = forwardRef<RichInputFormHandle, RichInputFormProps>
           </div>
         )}
         {showFocusHint && (
-          <kbd className="absolute cursor-default right-3 top-3 px-1.5 py-0.5 text-xxs font-sans text-primary-700 dark:text-primary-200">
+          <kbd className="absolute cursor-default right-3 top-3 px-1.5 py-0.5 text-xxs font-sans text-primary-700 dark:text-primary-300">
             ⌘ P to focus
           </kbd>
         )}

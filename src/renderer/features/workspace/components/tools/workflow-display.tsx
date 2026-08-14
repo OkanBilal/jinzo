@@ -89,7 +89,7 @@ export function WorkflowDisplay({
         <ToolCollapse isExpanded={isExpanded}>
           <ToolOutputBody as="div" className="text-s font-sans space-y-2">
             {description && (
-              <p className="whitespace-pre-wrap text-primary-600 dark:text-primary-300">
+              <p className="whitespace-pre-wrap text-primary-600 dark:text-primary-400">
                 {description}
               </p>
             )}
@@ -104,7 +104,7 @@ export function WorkflowDisplay({
                     <span className="min-w-0">
                       <span className="font-medium">{phase.title}</span>
                       {phase.detail && (
-                        <span className="text-primary-500 dark:text-primary-400">
+                        <span className="text-primary-600 dark:text-primary-400">
                           {" — "}
                           {phase.detail}
                         </span>
@@ -116,23 +116,23 @@ export function WorkflowDisplay({
             )}
 
             {(result.runId || result.taskId || params.scriptPath) && (
-              <div className="pt-1 border-t border-primary-100 dark:border-primary/10 space-y-0.5 text-t font-mono text-primary-500 dark:text-primary-400">
+              <div className="pt-1 border-t border-primary-100 dark:border-primary/10 space-y-0.5 text-t font-mono text-primary-600 dark:text-primary-400">
                 {result.launched && <div>Launched in background</div>}
                 {result.runId && (
                   <div>
-                    <span className="text-primary-400 dark:text-primary-500">Run</span>{" "}
+                    <span className="text-primary-600 dark:text-primary-400">Run</span>{" "}
                     {result.runId}
                   </div>
                 )}
                 {result.taskId && (
                   <div>
-                    <span className="text-primary-400 dark:text-primary-500">Task</span>{" "}
+                    <span className="text-primary-600 dark:text-primary-400">Task</span>{" "}
                     {result.taskId}
                   </div>
                 )}
                 {params.resumeFromRunId && (
                   <div>
-                    <span className="text-primary-400 dark:text-primary-500">Resumed from</span>{" "}
+                    <span className="text-primary-600 dark:text-primary-400">Resumed from</span>{" "}
                     {params.resumeFromRunId}
                   </div>
                 )}

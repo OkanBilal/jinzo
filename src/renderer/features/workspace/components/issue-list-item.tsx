@@ -58,7 +58,7 @@ export function IssueListItem({
       }`}
     >
       {/* Provider badge - left, vertically centered */}
-      <ProviderIcon provider={iss.provider} className="size-4 shrink-0 text-primary-800 dark:text-primary-300" />
+      <ProviderIcon provider={iss.provider} className="size-4 shrink-0 text-primary-800 dark:text-primary-200" />
 
       {/* Content - title on top, labels below */}
       <div className="flex-1 min-w-0 flex flex-col justify-center">
@@ -71,7 +71,7 @@ export function IssueListItem({
             {labels.map((label) => (
               <span
                 key={label}
-                className={`inline-block capitalize px-2 py-px text-xxs font-medium rounded-full glass-primary  text-primary-800 dark:text-primary-100`}
+                className={`inline-block capitalize px-2 py-px text-xxs font-medium rounded-full glass-primary  text-primary-800 dark:text-primary-200`}
               >
                 {label}
               </span>
@@ -87,7 +87,7 @@ export function IssueListItem({
           className="shrink-0 w-5 h-5 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 hover:bg-primary/20 dark:hover:bg-primary/10 transition-all"
           title="Add to context"
         >
-          <Plus className="w-3 h-3 text-primary-500 dark:text-primary-400" />
+          <Plus className="w-3 h-3 text-primary-600 dark:text-primary-400" />
         </Button>
       )}
     </div>

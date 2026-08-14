@@ -49,7 +49,7 @@ export default function ChartCard({
       {isEmpty ? (
         <div
           className={cn(
-            "flex items-center justify-center text-xs text-primary-400 dark:text-primary-500",
+            "flex items-center justify-center text-xs text-primary-600 dark:text-primary-400",
             emptyHeight,
           )}
         >

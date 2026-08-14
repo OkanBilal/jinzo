@@ -122,7 +122,7 @@ export function GitHubDeviceFlowPanel({
             {auth.userCode}
           </code>
           <CopyButton text={auth.userCode} tooltip="Copy code" variant="bare"
-          className=" text-primary-700 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-100 transition-colors cursor-pointer"
+          className=" text-primary-700 dark:text-primary-300 hover:text-primary-900 dark:hover:text-primary-100 transition-colors cursor-pointer"
           />
         </div>
 

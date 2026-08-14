@@ -383,7 +383,7 @@ export function ModelSelectDropdown({
           }
           className={`text-sm  px-2 py-1.5 flex items-center gap-1.5 ${
             noModels
-              ? "text-primary-400 dark:text-primary-600 cursor-not-allowed"
+              ? "text-primary-600 dark:text-primary-400 cursor-not-allowed"
               : "cursor-pointer text-primary-950 dark:text-primary"
           }`}
           aria-haspopup="true"
@@ -405,7 +405,7 @@ export function ModelSelectDropdown({
                   className={`shrink-0 capitalize ${
                     effortLevel === "ultracode"
                       ? `font-medium ${ULTRACODE_GRADIENT_TEXT}`
-                      : "font-normal text-primary-500 dark:text-primary-300"
+                      : "font-normal text-primary-600 dark:text-primary-400"
                   }`}
                 >
                   {selectedEffortLabel}
@@ -505,13 +505,13 @@ export function ModelSelectDropdown({
               ref={effortMenuHeaderRef}
               className="flex items-center gap-1.5 px-3 pb-1.5 pt-2 text-xxs font-medium tracking-wide"
             >
-              <span className="shrink-0 text-primary-500 dark:text-primary-300">
+              <span className="shrink-0 text-primary-600 dark:text-primary-400">
                 {getModelIcon(hoveredModelDisplayName, variant)}
               </span>
-              <span className="min-w-0 flex-1 truncate text-primary-600 dark:text-primary-300">
+              <span className="min-w-0 flex-1 truncate text-primary-600 dark:text-primary-400">
                 {hoveredModelDisplayName}
               </span>
-              <span className="shrink-0 text-primary-400 dark:text-primary-500">
+              <span className="shrink-0 text-primary-600 dark:text-primary-400">
                 {hoveredModelEffortLevels.length > 0 ? "Effort" : "Thinking"}
               </span>
             </div>

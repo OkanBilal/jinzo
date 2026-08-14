@@ -158,7 +158,7 @@ export function LinkResourcesModal({
             : ""
         }`}
       >
-        <span className="text-primary-500 dark:text-primary-400">{icon}</span>
+        <span className="text-primary-600 dark:text-primary-400">{icon}</span>
         <div className="flex-1 min-w-0">
           <div className="flex gap-2 items-center">
             <Body className="font-medium"
@@ -209,7 +209,7 @@ export function LinkResourcesModal({
             </div>
           ) : resources.length === 0 ? (
             <div className="p-8 text-center flex flex-col items-center">
-              <Connect className="size-6 mb-3 text-primary-400 dark:text-primary-700" />
+              <Connect className="size-6 mb-3 text-primary-600 dark:text-primary-400" />
               <Body className="font-medium">
                 No resources available
               </Body>
@@ -218,7 +218,7 @@ export function LinkResourcesModal({
                 <Button
                   type="button"
                   onClick={goToApps}
-                  className="underline dark:hover:text-primary-300 hover:text-primary-600 transition-colors cursor-pointer"
+                  className="underline dark:hover:text-primary-400 hover:text-primary-600 transition-colors cursor-pointer"
                 >
                   settings
                 </Button>{" "}

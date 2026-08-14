@@ -112,7 +112,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
   //   const last = parts.pop();
   //   const prefix = parts.join("/");
   //   return (
-  //     <span className="text-s text-primary-500 dark:text-primary-400 ">
+  //     <span className="text-s text-primary-600 dark:text-primary-400 ">
   //       {prefix && <>{prefix}/</>}
   //       <span className="font-semibold text-s text-primary-900 dark:text-primary-100">
   //         {last}

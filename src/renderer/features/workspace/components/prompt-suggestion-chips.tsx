@@ -32,7 +32,7 @@ export function PromptSuggestionChips({
           <span className="spark" />
           <span className="spark-backdrop rounded-2xl" />
           <span className="relative z-10 flex items-start gap-2 px-4 py-2.5 text-sm
-            text-primary-950 dark:text-primary-50">
+            text-primary-900 dark:text-primary-100">
             {/* Wraps rather than truncates: a suggestion you can't read is one
                 you can't judge before sending it. */}
             <span className="wrap-break-word">{suggestion}</span>
@@ -42,7 +42,7 @@ export function PromptSuggestionChips({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3, ease: "easeOut" }}
-          className="text-xxs  tracking-tight text-primary-500 dark:text-primary-600 -mt-2 mr-1"
+          className="text-xxs  tracking-tight text-primary-600 dark:text-primary-400 -mt-2 mr-1"
         >
         follow-up
         </m.span>

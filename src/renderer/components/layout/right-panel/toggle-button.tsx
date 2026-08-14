@@ -43,7 +43,7 @@ export function ToggleButton({
           onClick={onBrowserToggle}
           className={`p-1.25 transition-all duration-300 ease-out rounded-full cursor-pointer  hover:bg-primary-100/80 dark:hover:bg-primary/10 ${
             browserOpen
-              ? "text-primary-800 dark:text-primary-100"
+              ? "text-primary-800 dark:text-primary-200"
               : "text-primary-700 dark:text-primary-300"
           }`}
           aria-label={browserOpen ? "Close browser" : "Open browser"}
@@ -68,7 +68,7 @@ export function ToggleButton({
            `}
           aria-label={terminalOpen ? "Close terminal" : "Open terminal"}
         >
-          {terminalOpen ? <TerminalOpen className="size-4 text-primary-800 dark:text-primary-100" /> : <Terminal className="size-4 text-primary-700 dark:text-primary-300" />}
+          {terminalOpen ? <TerminalOpen className="size-4 text-primary-800 dark:text-primary-200" /> : <Terminal className="size-4 text-primary-700 dark:text-primary-300" />}
         </Button>
       )}
       <Button
@@ -79,7 +79,7 @@ export function ToggleButton({
         aria-label={isOpen ? "Close right panel" : "Open right panel"}
       >
         {isOpen ? (
-          <Toggle  className="size-4 text-primary-800 dark:text-primary-100" />
+          <Toggle  className="size-4 text-primary-800 dark:text-primary-200" />
         ) : (
           <ToggleClose  className="size-4 text-primary-700 dark:text-primary-300" />
         )}

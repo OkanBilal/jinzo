@@ -147,13 +147,13 @@ export default function Select<T extends string = string>({
           </span>
         </div>
         <Caption
-          className="text-primary-900 dark:text-primary-200
+          className="text-primary-900 dark:text-primary-100
                 absolute right-8 top-1/2 -translate-y-1/2 text-xs"
         >
           {title}
         </Caption>
         <SelectOption
-          className={`size-3 text-primary-900 dark:text-primary-400`}
+          className={`size-3 text-primary-900 dark:text-primary-100`}
         />
       </Button>
 
@@ -197,7 +197,7 @@ export default function Select<T extends string = string>({
                 <div className="flex flex-col min-w-0">
                   <span className="truncate my-0.5">{option.label}</span>
                   {option.description && (
-                    <span className="text-xxs tracking-tight text-primary-500 dark:text-primary-400 font-normal truncate">
+                    <span className="text-xxs tracking-tight text-primary-600 dark:text-primary-400 font-normal truncate">
                       {option.description}
                     </span>
                   )}

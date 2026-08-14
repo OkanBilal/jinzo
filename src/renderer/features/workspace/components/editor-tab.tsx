@@ -18,9 +18,9 @@ export function EditorTab({ isActive, isFirst, onClick, hasFile, fileName, onClo
       onClick={onClick}
       onClose={onClose}
       tooltip={fileName || "Editor"}
-      icon={<Code className="size-4 shrink-0 text-primary-800 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200 " />}
+      icon={<Code className="size-4 shrink-0 text-primary-800 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-100 " />}
       label={
-        <span className="text-xs tracking-tight font-medium truncate text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200  flex-1">
+        <span className="text-xs tracking-tight font-medium truncate text-primary-900 dark:text-primary-100 hover:text-primary-900 dark:hover:text-primary-100  flex-1">
           {fileName || "Editor"}
           {hasFile && <span className="ml-1 ">*</span>}
         </span>

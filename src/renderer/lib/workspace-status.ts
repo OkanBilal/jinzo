@@ -9,13 +9,13 @@ interface WorkspaceStatusConfig {
 const statusConfig: Record<WorkspaceStatus, WorkspaceStatusConfig> = {
   backlog: {
     label: "Backlog",
-    color: "text-primary-500 dark:text-primary-400",
-    iconColor: "text-primary-800 dark:text-primary-500",
+    color: "text-primary-600 dark:text-primary-400",
+    iconColor: "text-primary-800 dark:text-primary-200",
   },
   todo: {
     label: "Todo",
     color: "text-blue-600 dark:text-blue-400",
-    iconColor: "text-primary-800 dark:text-primary-300",
+    iconColor: "text-primary-800 dark:text-primary-200",
   },
   in_progress: {
     label: "In Progress",
@@ -39,8 +39,8 @@ const statusConfig: Record<WorkspaceStatus, WorkspaceStatusConfig> = {
   },
   duplicate: {
     label: "Duplicate",
-    color: "text-primary-400 dark:text-primary-500",
-    iconColor: "text-primary-400 dark:text-primary-500",
+    color: "text-primary-600 dark:text-primary-400",
+    iconColor: "text-primary-600 dark:text-primary-400",
   },
 };
 

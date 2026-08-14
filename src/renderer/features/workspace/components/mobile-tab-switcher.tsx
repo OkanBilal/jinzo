@@ -58,7 +58,7 @@ export function MobileTabSwitcher({
           {active?.label ?? "Tabs"}
         </span>
         {tabs.length > 1 && (
-          <span className="shrink-0 rounded-full bg-primary-200/60 px-1.5 py-0.5 text-xxs text-primary-600 dark:bg-primary-800/60 dark:text-primary-300">
+          <span className="shrink-0 rounded-full bg-primary-200/60 px-1.5 py-0.5 text-xxs text-primary-600 dark:bg-primary-800/60 dark:text-primary-400">
             {tabs.length}
           </span>
         )}
@@ -72,7 +72,7 @@ export function MobileTabSwitcher({
             if (items.length === 0) return null;
             return (
               <div key={group}>
-                <div className="px-2.5 pt-2.5 pb-1 text-xxs uppercase tracking-wide text-primary-400 dark:text-primary-500">
+                <div className="px-2.5 pt-2.5 pb-1 text-xxs uppercase tracking-wide text-primary-600 dark:text-primary-400">
                   {group}
                 </div>
                 {items.map((t) => {

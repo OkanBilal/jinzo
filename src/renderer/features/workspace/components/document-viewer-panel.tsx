@@ -100,7 +100,7 @@ export function DocumentViewerPanel() {
             {currentDoc?.fileName ?? "Document"}
           </div>
           {currentDoc && (
-            <div className="text-t text-primary-500 dark:text-primary-400 -mt-px">
+            <div className="text-t text-primary-600 dark:text-primary-400 -mt-px">
               {DOC_VIEWER_LABELS[currentDoc.docType]}
             </div>
           )}
@@ -154,7 +154,7 @@ export function DocumentViewerPanel() {
       {currentDoc ? (
         <DocumentRenderHost doc={currentDoc} zoom={zoom} />
       ) : (
-        <div className="flex-1 flex items-center justify-center text-primary-500 dark:text-primary-400 text-xs">
+        <div className="flex-1 flex items-center justify-center text-primary-600 dark:text-primary-400 text-xs">
           No document selected
         </div>
       )}

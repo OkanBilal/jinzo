@@ -134,7 +134,7 @@ function InlineThreadCard({
                 <span className="text-s tracking-tight font-medium text-primary-900 dark:text-primary-100">
                   {comment.author?.login ?? "unknown"}
                 </span>
-                <span className="text-xs text-primary-500 dark:text-primary-400">
+                <span className="text-xs text-primary-600 dark:text-primary-400">
                   {formatDate(comment.createdAt)}
                 </span>
               </div>
@@ -163,7 +163,7 @@ function InlineThreadCard({
               }}
               placeholder="Reply"
               rows={2}
-              className="w-full resize-none px-3 py-2 pr-12 text-s rounded-xl bg-primary/40 dark:bg-primary/5 glass-outline placeholder:text-primary-600 dark:placeholder:text-primary-500 text-primary-900 dark:text-primary-100 outline-none"
+              className="w-full resize-none px-3 py-2 pr-12 text-s rounded-xl bg-primary/40 dark:bg-primary/5 glass-outline placeholder:text-primary-500 dark:placeholder:text-primary-500 text-primary-900 dark:text-primary-100 outline-none"
             />
             <div className="absolute bottom-2.5 right-2 z-10">
               <SendButton
@@ -256,7 +256,7 @@ function InlineCommentComposer({
           }}
           placeholder={`Comment on line ${target.line}`}
           rows={2}
-          className="w-full resize-none px-3 py-2 pr-12 text-s rounded-xl bg-primary/40 dark:bg-primary/5 glass-outline placeholder:text-primary-600 dark:placeholder:text-primary-500 text-primary-900 dark:text-primary-100 outline-none"
+          className="w-full resize-none px-3 py-2 pr-12 text-s rounded-xl bg-primary/40 dark:bg-primary/5 glass-outline placeholder:text-primary-500 dark:placeholder:text-primary-500 text-primary-900 dark:text-primary-100 outline-none"
         />
         <div className="absolute bottom-2.5 right-2 z-10">
           <SendButton
@@ -464,7 +464,7 @@ export function PrDiffView({ prRef }: { prRef: PrRefInput }) {
   if (isError) {
     return (
       <div className="flex flex-col items-center gap-2 py-10">
-        <Body className="text-xs text-primary-800 dark:text-primary-300">
+        <Body className="text-xs text-primary-800 dark:text-primary-200">
           Unable to load the diff.
         </Body>
         <Button variant="subtle" onClick={() => refetch()}>
@@ -477,7 +477,7 @@ export function PrDiffView({ prRef }: { prRef: PrRefInput }) {
   if (files.length === 0) {
     return (
       <div className="flex items-center justify-center py-10">
-        <Body className="text-xs text-primary-800 dark:text-primary-300">
+        <Body className="text-xs text-primary-800 dark:text-primary-200">
           No changes in this pull request.
         </Body>
       </div>

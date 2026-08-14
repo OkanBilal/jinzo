@@ -34,13 +34,13 @@ const variantStyles: Record<ButtonVariant, string> = {
   // Glass variants carry no bg-*/hover:bg-* — the `glass-*` utility owns the
   // background, and a hover:bg-* would win on specificity and wipe the rim.
   // Their hover fills come from the --glass-hover-* tokens in index.css.
-  primary: "cursor-pointer text-primary-700 dark:text-primary-200 glass-primary",
+  primary: "cursor-pointer text-primary-700 dark:text-primary-300 glass-primary",
   secondary: "cursor-pointer text-primary dark:text-primary glass-secondary",
   submit: "cursor-pointer text-primary glass-submit",
   ghost:
     "cursor-pointer text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900",
   danger: "cursor-pointer text-primary glass-danger",
-  icon: "cursor-pointer p-1 rounded-md text-primary-600 dark:text-primary-200 hover:bg-primary-200/40 dark:hover:bg-primary-700",
+  icon: "cursor-pointer p-1 rounded-md text-primary-600 dark:text-primary-400 hover:bg-primary-200/40 dark:hover:bg-primary-700",
   subtle:
     "cursor-pointer flex items-center gap-2  hover:bg-primary/80 dark:hover:bg-primary/10 ",
   bare: "cursor-pointer",

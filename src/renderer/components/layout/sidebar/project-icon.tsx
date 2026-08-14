@@ -16,7 +16,7 @@ export function ProjectIcon({
       const tint = iconColorClass(parsed.color);
       return (
         <IconComp
-          className={`size-3.5 ${tint || "text-primary-700 dark:text-primary-200"}`}
+          className={`size-3.5 ${tint || "text-primary-700 dark:text-primary-300"}`}
         />
       );
     }

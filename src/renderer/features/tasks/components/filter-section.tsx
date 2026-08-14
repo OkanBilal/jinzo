@@ -23,7 +23,7 @@ export function FilterChoiceSection<T extends string>({
 }) {
   return (
     <div>
-      <div className="px-3 pt-2 pb-1 text-s font-medium text-primary-400 dark:text-primary-500">
+      <div className="px-3 pt-2 pb-1 text-s font-medium text-primary-600 dark:text-primary-400">
         {title}
       </div>
       {options.map((opt) => (
@@ -32,7 +32,7 @@ export function FilterChoiceSection<T extends string>({
           onClick={() => onSelect(opt.value)}
           className="w-full flex items-center gap-2 px-3 py-1.5 text-left cursor-pointer transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800"
         >
-          <span className="flex-1 min-w-0 truncate text-s text-primary-800 dark:text-primary-100">
+          <span className="flex-1 min-w-0 truncate text-s text-primary-800 dark:text-primary-200">
             {opt.label}
           </span>
           {value === opt.value && (
@@ -61,7 +61,7 @@ export function FilterSection({
   if (entries.length === 0) return null;
   return (
     <div>
-      <div className="px-3 pt-2 pb-1 text-s font-medium text-primary-400 dark:text-primary-500">
+      <div className="px-3 pt-2 pb-1 text-s font-medium text-primary-600 dark:text-primary-400">
         {title}
       </div>
       {entries.map(([value, count]) => {
@@ -73,10 +73,10 @@ export function FilterSection({
             className="w-full flex items-center gap-2 px-3 py-1.5 text-left cursor-pointer transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800"
           >
             {renderIcon?.(value)}
-            <span className="flex-1 min-w-0 truncate text-s text-primary-800 dark:text-primary-100">
+            <span className="flex-1 min-w-0 truncate text-s text-primary-800 dark:text-primary-200">
               {value}
             </span>
-            <span className="shrink-0 text-xxs text-primary-500 dark:text-primary-400 tabular-nums">
+            <span className="shrink-0 text-xxs text-primary-600 dark:text-primary-400 tabular-nums">
               {count}
             </span>
             {isSelected && (

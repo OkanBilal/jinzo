@@ -246,7 +246,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                   className={`w-4 h-4 -ml-1 ${
                     isTasksRoute
                       ? "text-primary-950 dark:text-primary"
-                      : "text-primary-900 dark:text-primary-200"
+                      : "text-primary-900 dark:text-primary-100"
                   }`}
                 />
                 <Body
@@ -276,7 +276,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                   className={`w-4 h-4 -ml-1 ${
                     isPulseRoute
                       ? "text-primary-950 dark:text-primary"
-                      : "text-primary-900 dark:text-primary-200"
+                      : "text-primary-900 dark:text-primary-100"
                   }`}
                 />
                 <Body
@@ -312,7 +312,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                         className={`w-4 h-4 -ml-1 -rotate-45 ${
                           isPluginsRoute
                             ? "text-primary-950 dark:text-primary"
-                            : "text-primary-900 dark:text-primary-200"
+                            : "text-primary-900 dark:text-primary-100"
                         }`}
                       />
                       <Body
@@ -345,7 +345,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                     className={`w-4 h-4 -ml-1 shrink-0 -rotate-45 ${
                       isPluginsRoute
                         ? "text-primary-950 dark:text-primary"
-                        : "text-primary-900 dark:text-primary-200"
+                        : "text-primary-900 dark:text-primary-100"
                     }`}
                   />
                   <Body
@@ -377,7 +377,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                   className={`w-4 h-4 -ml-1 shrink-0 ${
                     isRelayRoute
                       ? "text-primary-950 dark:text-primary"
-                      : "text-primary-900 dark:text-primary-200"
+                      : "text-primary-900 dark:text-primary-100"
                   }`}
                 />
                 <Body
@@ -393,7 +393,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                   className={`shrink-0 text-t -mr-1 uppercase px-1.5 py-px rounded-md ${
                     isRelayRoute
                       ? "bg-primary-400/20 text-primary-800 dark:bg-primary/5 dark:text-primary"
-                      : "bg-primary-400/20 text-primary-600 dark:bg-primary/5 dark:text-primary-200"
+                      : "bg-primary-400/20 text-primary-600 dark:bg-primary/5 dark:text-primary-400"
                   }`}
                 >
                   Beta

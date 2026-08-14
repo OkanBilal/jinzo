@@ -356,7 +356,7 @@ export function BrowserPanel() {
           onClick={handleToggleSelect}
           className={`p-1 rounded-full cursor-pointer transition-colors ${
             selectMode
-              ? "bg-primary-500/20 text-primary-800 dark:text-primary-100"
+              ? "bg-primary-500/20 text-primary-800 dark:text-primary-200"
               : "text-primary-700 dark:text-primary-300 hover:bg-primary-200/60 dark:hover:bg-primary-800/60"
           }`}
           aria-label={selectMode ? "Exit select mode" : "Select in browser"}
@@ -377,7 +377,7 @@ export function BrowserPanel() {
       </div>
 
       {/* Title bar */}
-      <div className="px-3 py-1 text-xxs -mb-px text-primary-500 dark:text-primary-400 truncate border-b border-primary-200/40 dark:border-primary-800/40">
+      <div className="px-3 py-1 text-xxs -mb-px text-primary-600 dark:text-primary-400 truncate border-b border-primary-200/40 dark:border-primary-800/40">
         {nav.title || nav.url || "New tab"}
       </div>
 
@@ -387,7 +387,7 @@ export function BrowserPanel() {
         className="relative flex-1 overflow-hidden mb-px"
       >
         {!nav.url && (
-          <div className="absolute inset-0 flex items-center justify-center text-primary-500 dark:text-primary-400 text-xs pointer-events-none">
+          <div className="absolute inset-0 flex items-center justify-center text-primary-600 dark:text-primary-400 text-xs pointer-events-none">
             Enter a URL above to get started
           </div>
         )}

@@ -202,7 +202,7 @@ function EnableButton({
               showPreview && "hover:glass-danger hover:text-white",
             )
           : cn(
-              "bg-primary-500/10 text-primary-500 dark:text-primary-400",
+              "bg-primary-500/10 text-primary-600 dark:text-primary-400",
               showPreview && "hover:bg-success/15 hover:text-success",
             ),
       )}
@@ -281,7 +281,7 @@ function CliInstallBadge({
           </span>
           {install.sections.map((section) => (
             <div key={section.label} className="space-y-1.5">
-              <span className="block text-xs text-primary-500 dark:text-primary-400">
+              <span className="block text-xs text-primary-600 dark:text-primary-400">
                 {section.label}
               </span>
               {section.commands.map((command) => (
@@ -415,7 +415,7 @@ export function AgentComparisonStep() {
                 )}
               />
             </span>
-            <span className="text-base font-medium text-primary-900 dark:text-primary-50">
+            <span className="text-base font-medium text-primary-900 dark:text-primary-100">
               {name}
             </span>
           </div>
@@ -430,7 +430,7 @@ export function AgentComparisonStep() {
               <Grok className="size-5 text-primary-900 dark:text-primary-100" />
             </span>
           </div>
-          <span className="text-md font-semibold text-primary-900 dark:text-primary-50">
+          <span className="text-md font-semibold text-primary-900 dark:text-primary-100">
             Gemini &amp; Grok
           </span>
         </div>
@@ -448,7 +448,7 @@ export function AgentComparisonStep() {
                   className={cn(
                     "inline-flex items-center rounded-full px-3 py-1 text-sm font-medium",
                     detectedClis === undefined
-                      ? "bg-primary-500/10 text-primary-500 dark:text-primary-400"
+                      ? "bg-primary-500/10 text-primary-600 dark:text-primary-400"
                       : "bg-success/15 text-success",
                   )}
                 >
@@ -460,7 +460,7 @@ export function AgentComparisonStep() {
         })}
         {/* Spans every body row of the coming-soon column */}
         <RowCell className="row-span-4">
-          <span className="text-sm italic text-primary-600 dark:text-primary-300">
+          <span className="text-sm italic text-primary-600 dark:text-primary-400">
             Soon…
           </span>
         </RowCell>
@@ -469,7 +469,7 @@ export function AgentComparisonStep() {
         <RowLabel>Works with</RowLabel>
         {AGENT_COLUMNS.map(({ slug, subscription }) => (
           <RowCell key={slug}>
-            <span className="text-s text-primary-700 dark:text-primary-200">
+            <span className="text-s text-primary-700 dark:text-primary-300">
               {subscription}
             </span>
           </RowCell>
@@ -482,7 +482,7 @@ export function AgentComparisonStep() {
             {features.map((feature) => (
               <span
                 key={feature}
-                className="text-xs leading-snug text-primary-700 dark:text-primary-200"
+                className="text-xs leading-snug text-primary-700 dark:text-primary-300"
               >
                 {feature}
               </span>

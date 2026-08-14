@@ -55,7 +55,7 @@ export default function SuccessRateChart({ data }: SuccessRateChartProps) {
       emptyMessage="No status data yet"
       headerRight={
         total > 0 ? (
-          <span className="text-xs font-medium text-primary-400 dark:text-primary-500">
+          <span className="text-xs font-medium text-primary-600 dark:text-primary-400">
             {total} runs this week
           </span>
         ) : undefined
@@ -88,7 +88,7 @@ export default function SuccessRateChart({ data }: SuccessRateChartProps) {
         labels={paddedDays.map((day, i) => ({
           key: day.date || i,
           content: (
-            <span className="text-t text-primary-400 dark:text-primary-500">
+            <span className="text-t text-primary-600 dark:text-primary-400">
               {day.dayLabel}
             </span>
           ),
@@ -103,7 +103,7 @@ export default function SuccessRateChart({ data }: SuccessRateChartProps) {
               className="w-2.5 h-2.5 rounded-full"
               style={{ backgroundColor: item.color }}
             />
-            <span className="text-xs text-primary-500 dark:text-primary-400">
+            <span className="text-xs text-primary-600 dark:text-primary-400">
               {item.label}
             </span>
             <span className="text-xs font-medium text-primary-700 dark:text-primary-300">

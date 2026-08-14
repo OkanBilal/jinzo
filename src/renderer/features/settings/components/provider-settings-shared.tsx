@@ -144,7 +144,7 @@ export function ProviderCliSection({
       >
         <div className="flex items-center gap-3">
           {updateResult && (
-            <span className="text-xs text-primary-500 dark:text-primary-400">
+            <span className="text-xs text-primary-600 dark:text-primary-400">
               {updateResult}
             </span>
           )}
@@ -202,13 +202,13 @@ export function ProviderAccountSection({
         </SettingsRow>
       ) : isApiKey ? (
         <SettingsRow title="Authentication" description="Connected via API key">
-          <span className="text-sm text-primary-500 dark:text-primary-400">
+          <span className="text-sm text-primary-600 dark:text-primary-400">
             API Key
           </span>
         </SettingsRow>
       ) : (
         <SettingsRow title="Not signed in" description={notSignedInDescription}>
-          <span className="text-xs text-primary-400 dark:text-primary-500">
+          <span className="text-xs text-primary-600 dark:text-primary-400">
             No account
           </span>
         </SettingsRow>
@@ -258,7 +258,7 @@ function UsageRateLimitRow({
           {row.label}
         </span>
         {row.resetsAt && (
-          <span className="text-xs text-primary-400 dark:text-primary-500">
+          <span className="text-xs text-primary-600 dark:text-primary-400">
             {formatResetDate(row.resetsAt)}
           </span>
         )}
@@ -271,11 +271,11 @@ function UsageRateLimitRow({
           />
         </div>
         {display === "remaining" ? (
-          <span className="text-sm text-primary-500 dark:text-primary-400 w-16 text-right">
+          <span className="text-sm text-primary-600 dark:text-primary-400 w-16 text-right">
             {remaining}% left
           </span>
         ) : (
-          <span className="text-sm text-primary-500 dark:text-primary-400 w-24 text-right tabular-nums">
+          <span className="text-sm text-primary-600 dark:text-primary-400 w-24 text-right tabular-nums">
             {hasCounts
               ? `${row.used!.toLocaleString()} / ${row.total!.toLocaleString()}`
               : `${row.usedPercent}% used`}
@@ -321,7 +321,7 @@ export function ProviderUsageSection({
         </div>
       ) : (
         <div className="px-4 py-3">
-          <span className="text-sm text-primary-400 dark:text-primary-500">
+          <span className="text-sm text-primary-600 dark:text-primary-400">
             No usage data available
           </span>
         </div>

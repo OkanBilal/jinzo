@@ -84,7 +84,7 @@ export function SegmentedTabs<T extends string>({
         disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
         isActive
           ? "text-primary-900 dark:text-primary-100"
-          : "text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300",
+          : "text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300",
       );
     }
     if (variant === "bordered") {
@@ -92,7 +92,7 @@ export function SegmentedTabs<T extends string>({
         "px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors",
         "focus-visible:ring-0 focus-visible:ring-offset-0",
         disabled
-          ? "bg-primary-100 dark:bg-primary-900 text-primary-400 dark:text-primary-600 cursor-not-allowed opacity-50"
+          ? "bg-primary-100 dark:bg-primary-900 text-primary-600 dark:text-primary-400 cursor-not-allowed opacity-50"
           : isActive
             ? "bg-primary-900 dark:bg-primary-200 text-primary dark:text-primary-900 cursor-pointer"
             : "bg-primary dark:bg-primary-950/50 text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-800 cursor-pointer",
@@ -105,7 +105,7 @@ export function SegmentedTabs<T extends string>({
       disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
       isActive
         ? "text-primary-900 dark:text-primary-100"
-        : "text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-200 hover:bg-primary-100/50 dark:hover:bg-primary-800/30",
+        : "text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-100/50 dark:hover:bg-primary-800/30",
     );
   };
 

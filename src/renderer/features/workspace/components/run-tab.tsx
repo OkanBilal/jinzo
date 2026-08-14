@@ -108,11 +108,11 @@ export function RunTab({ run, isActive, isFirst, onClick, onClose, onRename, tit
       onBlur={handleRenameConfirm}
       onKeyDown={handleRenameKeyDown}
       onClick={(e) => e.stopPropagation()}
-      className="text-xs font-medium text-primary-900 dark:text-primary-200 bg-transparent outline-none border-b border-primary-400 dark:border-primary-600 w-full"
+      className="text-xs font-medium text-primary-900 dark:text-primary-100 bg-transparent outline-none border-b border-primary-400 dark:border-primary-600 w-full"
       maxLength={50}
     />
   ) : (
-    <AnimatedTitle title={title} className="text-xs font-medium tracking-tight text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200 truncate flex-1" />
+    <AnimatedTitle title={title} className="text-xs font-medium tracking-tight text-primary-900 dark:text-primary-100 hover:text-primary-900 dark:hover:text-primary-100 truncate flex-1" />
   );
 
   return (
@@ -125,7 +125,7 @@ export function RunTab({ run, isActive, isFirst, onClick, onClose, onRename, tit
         icon={<TabIcon run={run} variant={variant} isActive={isActive} />}
         label={label}
         tooltip={isRenaming ? undefined : run.title || run.goal || title}
-        closeIcon={<Option className="size-3.5 text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200" />}
+        closeIcon={<Option className="size-3.5 text-primary-900 dark:text-primary-100 hover:text-primary-900 dark:hover:text-primary-100" />}
       />
       <DropdownMenu
         isOpen={isDropdownOpen}

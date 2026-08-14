@@ -51,7 +51,7 @@ export function NoteTabContent({ reviewId }: NoteTabContentProps) {
               {config.label}
             </span> */}
             {updatedAt && (
-              <span className="text-xs text-primary-400 dark:text-primary-500">
+              <span className="text-xs text-primary-600 dark:text-primary-400">
                 Created in {updatedAt.toLocaleDateString(undefined, {
                   month: "short",
                   day: "numeric",

@@ -85,7 +85,7 @@ function UpdateButton({
     case "not-available":
       return (
         <div className="flex items-center gap-2">
-          <span className="text-xs text-primary-500 dark:text-primary-400">
+          <span className="text-xs text-primary-600 dark:text-primary-400">
             Up to date
           </span>
           <Button type="button" variant="ghost" onClick={onCheck}>

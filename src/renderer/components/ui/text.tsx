@@ -22,9 +22,9 @@ export interface TextProps {
 }
 
 const variantStyles: Record<TextVariant, string> = {
-  h1: "text-3xl text-primary-950 dark:text-primary-100",
-  h2: "text-2xl text-primary-950 dark:text-primary-100",
-  h3: "text-xl text-primary-950 dark:text-primary-100",
+  h1: "text-3xl text-primary-900 dark:text-primary-100",
+  h2: "text-2xl text-primary-900 dark:text-primary-100",
+  h3: "text-xl text-primary-900 dark:text-primary-100",
 
   body: "text-sm text-primary-900 dark:text-primary-100",
 

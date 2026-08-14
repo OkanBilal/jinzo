@@ -54,7 +54,7 @@ export interface PanelItemProps {
  */
 export const PANEL_ROW_X = "px-3";
 const ROW_Y = "py-1.5";
-const ROW_TEXT = "text-left text-s text-primary-700 dark:text-primary-200";
+const ROW_TEXT = "text-left text-s text-primary-700 dark:text-primary-300";
 const ROW_BASE = `flex w-full items-center gap-2 ${PANEL_ROW_X} ${ROW_Y} ${ROW_TEXT}`;
 const ROW_HOVER =
   "transition-colors hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-primary/5";
@@ -74,7 +74,7 @@ export function PanelItem({
   hoverAction,
 }: PanelItemProps) {
   const iconSlot = (
-    <span className="shrink-0 text-primary-500 dark:text-primary-400">
+    <span className="shrink-0 text-primary-600 dark:text-primary-400">
       {loading ? <Refresh className="size-4 animate-spin" /> : icon}
     </span>
   );
@@ -146,7 +146,7 @@ export function PanelItem({
               disabled={hoverAction.pending}
               title={hoverAction.title}
               aria-label={hoverAction.title}
-              className={`absolute inset-y-0 right-0 flex items-center rounded-md px-1 text-primary-500 transition-opacity hover:text-primary-900 focus-visible:opacity-100 dark:text-primary-400 dark:hover:text-primary-100 ${
+              className={`absolute inset-y-0 right-0 flex items-center rounded-md px-1 text-primary-600 transition-opacity hover:text-primary-900 focus-visible:opacity-100 dark:text-primary-400 dark:hover:text-primary-100 ${
                 hoverAction.pending
                   ? "opacity-100"
                   : "opacity-0 group-hover:opacity-100"

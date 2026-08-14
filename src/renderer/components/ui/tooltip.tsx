@@ -169,7 +169,7 @@ export default function Tooltip({
         >
           <span>{content}</span>
           {shortcut && (
-            <span className="text-primary-400 dark:text-primary-500 font-normal">
+            <span className="text-primary-600 dark:text-primary-400 font-normal">
               {shortcut}
             </span>
           )}

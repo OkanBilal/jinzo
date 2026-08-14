@@ -329,7 +329,7 @@ function PluginCard({
             {name}
           </span>
           {plugin.installed && !plugin.enabled && (
-            <span className="shrink-0 text-t px-1.5 py-0.5 rounded-full bg-primary-200/60 dark:bg-primary-800/40 text-primary-500 dark:text-primary-400">
+            <span className="shrink-0 text-t px-1.5 py-0.5 rounded-full bg-primary-200/60 dark:bg-primary-800/40 text-primary-600 dark:text-primary-400">
               Disabled
             </span>
           )}
@@ -339,7 +339,7 @@ function PluginCard({
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2 text-xs text-primary-500 dark:text-primary-400 min-w-0">
+        <div className="flex items-center gap-2 text-xs text-primary-600 dark:text-primary-400 min-w-0">
           <span className="truncate">{description}</span>
           {typeof plugin.installs === "number" && plugin.installs > 0 && (
             <span className="shrink-0 tabular-nums opacity-70">
@@ -353,7 +353,7 @@ function PluginCard({
         className={`shrink-0 ${compact ? "size-7" : "size-8"} flex items-center justify-center rounded-full text-lg transition-colors cursor-pointer ${
           plugin.installed
             ? "bg-success/15 text-success"
-            : "bg-primary-200/60 dark:bg-primary-800/20 text-primary-500 dark:text-primary-400 hover:bg-primary-300/60 dark:hover:bg-primary-700/30"
+            : "bg-primary-200/60 dark:bg-primary-800/20 text-primary-600 dark:text-primary-400 hover:bg-primary-300/60 dark:hover:bg-primary-700/30"
         }`}
         onClick={(e) => {
           e.stopPropagation();
@@ -463,7 +463,7 @@ function PluginDetail({
     <div className="mb-12">
       <Button
         onClick={onBack}
-        className="flex items-center gap-1.5 text-sm text-primary-500 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-100 mb-6 cursor-pointer"
+        className="flex items-center gap-1.5 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-100 mb-6 cursor-pointer"
       >
         <ArrowUp className="size-4 rotate-270 -ml-1" />
         Back to plugins
@@ -578,7 +578,7 @@ function PluginDetail({
             {groupAppsByCategory(detail.apps).map(({ category, apps: categoryApps }) => (
               <Fragment key={category ?? "uncategorized"}>
                 {category && (
-                  <div className="px-4 pt-2.5 pb-1 text-xs font-medium text-primary-400 dark:text-primary-500">
+                  <div className="px-4 pt-2.5 pb-1 text-xs font-medium text-primary-600 dark:text-primary-400">
                     {category}
                   </div>
                 )}
@@ -588,18 +588,18 @@ function PluginDetail({
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-primary-900 dark:text-primary-100">
                         {app.name || name}{" "}
-                        <span className="text-xs font-normal text-primary-400 dark:text-primary-500 ml-1">
+                        <span className="text-xs font-normal text-primary-600 dark:text-primary-400 ml-1">
                           App
                         </span>
                       </div>
                       {app.description && (
-                        <div className="text-xs text-primary-500 dark:text-primary-400 truncate">
+                        <div className="text-xs text-primary-600 dark:text-primary-400 truncate">
                           {app.description}
                         </div>
                       )}
                     </div>
                 {app.isEnabled === false ? (
-                  <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-primary-200/60 dark:bg-primary-800/20 text-primary-500 dark:text-primary-400">
+                  <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-primary-200/60 dark:bg-primary-800/20 text-primary-600 dark:text-primary-400">
                     Disabled
                   </span>
                 ) : app.isAccessible === true ? (
@@ -632,12 +632,12 @@ function PluginDetail({
                 <div className="min-w-0">
                   <div className="text-sm font-medium text-primary-900 dark:text-primary-100">
                     {skill.displayName || formatIncludeName(skill.name)}{" "}
-                    <span className="text-xs font-normal text-primary-400 dark:text-primary-500 ml-1">
+                    <span className="text-xs font-normal text-primary-600 dark:text-primary-400 ml-1">
                       Skill
                     </span>
                   </div>
                   {(skill.shortDescription || skill.description) && (
-                    <div className="text-xs text-primary-500 dark:text-primary-400 truncate">
+                    <div className="text-xs text-primary-600 dark:text-primary-400 truncate">
                       {skill.shortDescription || skill.description}
                     </div>
                   )}
@@ -647,14 +647,14 @@ function PluginDetail({
             {detail.mcpServers.map((server) => (
               <div key={server} className="flex items-center gap-3 px-4 py-3">
                 <div className="size-8 rounded-lg bg-primary-200/50 dark:bg-primary-700/30 flex items-center justify-center shrink-0">
-                  <span className="text-xs text-primary-500 dark:text-primary-400">
+                  <span className="text-xs text-primary-600 dark:text-primary-400">
                     MCP
                   </span>
                 </div>
                 <div className="min-w-0">
                   <div className="text-sm font-medium text-primary-900 dark:text-primary-100">
                     {server}{" "}
-                    <span className="text-xs font-normal text-primary-400 dark:text-primary-500 ml-1">
+                    <span className="text-xs font-normal text-primary-600 dark:text-primary-400 ml-1">
                       MCP Server
                     </span>
                   </div>
@@ -787,7 +787,7 @@ function PromptRow({ prompt }: { prompt: string }) {
         tooltip="Copy"
         copiedTooltip="Copied!"
         variant="bare"
-        className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-primary-400 dark:text-primary-500 hover:text-primary-700 dark:hover:text-primary-200"
+        className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
       />
     </div>
   );
@@ -796,7 +796,7 @@ function PromptRow({ prompt }: { prompt: string }) {
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between px-4 py-3">
-      <span className="text-sm text-primary-500 dark:text-primary-400">
+      <span className="text-sm text-primary-600 dark:text-primary-400">
         {label}
       </span>
       <span className="text-sm font-medium text-primary-900 dark:text-primary-100">
@@ -1098,7 +1098,7 @@ export default function ProviderPlugins({
             className={`shrink-0 whitespace-nowrap px-2.5 py-1 text-sm rounded-xl transition-colors cursor-pointer ${
               !categoryFilter
                 ? "bg-primary-200/80 glass-button dark:bg-primary-800/60 text-primary-900 dark:text-primary-100"
-                : "text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-200 hover:bg-primary-100/50 dark:hover:bg-primary-800/30"
+                : "text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-100/50 dark:hover:bg-primary-800/30"
             }`}
           >
             All
@@ -1112,7 +1112,7 @@ export default function ProviderPlugins({
               className={`shrink-0 whitespace-nowrap px-2.5 py-1 text-sm rounded-xl transition-colors cursor-pointer ${
                 categoryFilter === cat
                   ? "bg-primary-200/80 dark:bg-primary-800/60 text-primary-900 dark:text-primary-100"
-                  : "text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-200 hover:bg-primary-100/50 dark:hover:bg-primary-800/30"
+                  : "text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-100/50 dark:hover:bg-primary-800/30"
               }`}
             >
               {formatCategory(cat)}
@@ -1120,13 +1120,13 @@ export default function ProviderPlugins({
           ))}
         </div>
         <div className="relative w-full md:w-56 md:shrink-0">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-primary-400 dark:text-primary-500 pointer-events-none" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-primary-600 dark:text-primary-400 pointer-events-none" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search plugins..."
-            className="w-full pl-8 pr-3 py-1.5 rounded-xl glass-input   text-sm text-primary-900 dark:text-primary-100 placeholder:text-primary-400 dark:placeholder:text-primary-500 outline-none "
+            className="w-full pl-8 pr-3 py-1.5 rounded-xl glass-input   text-sm text-primary-900 dark:text-primary-100 placeholder:text-primary-500 dark:placeholder:text-primary-500 outline-none "
           />
         </div>
       </div>

@@ -106,10 +106,10 @@ function MetaRow({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <span className="shrink-0 mt-0.5 w-4 flex items-center justify-center text-primary-500 dark:text-primary-400">
+      <span className="shrink-0 mt-0.5 w-4 flex items-center justify-center text-primary-600 dark:text-primary-400">
         {icon}
       </span>
-      <span className="shrink-0 w-24 text-s text-primary-500 dark:text-primary-400">
+      <span className="shrink-0 w-24 text-s text-primary-600 dark:text-primary-400">
         {label}
       </span>
       <span className="min-w-0 text-s text-primary-900 dark:text-primary-100">
@@ -274,9 +274,9 @@ export function PrDetail({ pr }: PrDetailProps) {
                   : current.state}
               </span>
             </div>
-            <Heading3 className="text-base font-medium text-primary-950 dark:text-primary-50 mt-1 wrap-break-word">
+            <Heading3 className="text-base font-medium text-primary-900 dark:text-primary-100 mt-1 wrap-break-word">
               {current.title}{" "}
-              <span className="text-primary-500 dark:text-primary-400 font-normal">
+              <span className="text-primary-600 dark:text-primary-400 font-normal">
                 #{pr.number}
               </span>
             </Heading3>
@@ -349,7 +349,7 @@ export function PrDetail({ pr }: PrDetailProps) {
                         }}
                         className="w-full flex items-center gap-2 px-3 py-1.5 text-left cursor-pointer transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800"
                       >
-                        <span className="flex-1 min-w-0 truncate text-s text-primary-800 dark:text-primary-100">
+                        <span className="flex-1 min-w-0 truncate text-s text-primary-800 dark:text-primary-200">
                           {m.label}
                         </span>
                         {mergeMethod === m.value && (
@@ -383,7 +383,7 @@ export function PrDetail({ pr }: PrDetailProps) {
           </div>
         ) : isError && !detail ? (
           <div className="flex flex-col items-center gap-2 py-8">
-            <Body className="text-xs text-primary-800 dark:text-primary-300">
+            <Body className="text-xs text-primary-800 dark:text-primary-200">
               Unable to load this pull request.
             </Body>
             <Button variant="subtle" onClick={() => refetch()}>
@@ -396,7 +396,7 @@ export function PrDetail({ pr }: PrDetailProps) {
             <div className="space-y-2.5">
               <MetaRow icon={<Branch className="w-4 h-4" />} label="Branch">
                 <span className="break-all">{current.headRefName}</span>
-                <span className="text-primary-500 dark:text-primary-400 mx-1.5">
+                <span className="text-primary-600 dark:text-primary-400 mx-1.5">
                   →
                 </span>
                 <span>{current.baseRefName}</span>{" "}
@@ -413,7 +413,7 @@ export function PrDetail({ pr }: PrDetailProps) {
               >
                 {reviewers.length > 0 ? reviewers.join(", ") : "No reviewers"}
                 {detail.reviewDecision && (
-                  <span className="text-primary-500 dark:text-primary-400 capitalize">
+                  <span className="text-primary-600 dark:text-primary-400 capitalize">
                     {" · "}
                     {detail.reviewDecision.replace(/_/g, " ").toLowerCase()}
                   </span>
@@ -502,7 +502,7 @@ export function PrDetail({ pr }: PrDetailProps) {
                           {thread.line != null ? `:${thread.line}` : ""}
                         </span>
                         {thread.isResolved && (
-                          <span className="text-xxs text-primary-500 dark:text-primary-400">
+                          <span className="text-xxs text-primary-600 dark:text-primary-400">
                             Resolved
                           </span>
                         )}
@@ -581,7 +581,7 @@ export function PrDetail({ pr }: PrDetailProps) {
             }}
             placeholder="Leave a comment"
             rows={3}
-            className="w-full resize-none px-3 py-2 pr-12 text-s rounded-2xl bg-primary/40 dark:bg-primary/5 glass-outline placeholder:text-primary-600 dark:placeholder:text-primary-500 text-primary-900 dark:text-primary-100 outline-none"
+            className="w-full resize-none px-3 py-2 pr-12 text-s rounded-2xl bg-primary/40 dark:bg-primary/5 glass-outline placeholder:text-primary-500 dark:placeholder:text-primary-500 text-primary-900 dark:text-primary-100 outline-none"
           />
           <div className="absolute bottom-4 right-2 z-10">
             <SendButton

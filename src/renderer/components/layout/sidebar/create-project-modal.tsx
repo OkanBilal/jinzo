@@ -89,7 +89,7 @@ export default function CreateProjectModal({
               onChange={(e) => setName(e.target.value)}
               placeholder="my-new-project"
               autoFocus
-              className="w-full px-3 py-2 rounded-xl bg-primary-100/50 dark:bg-primary-800/30 text-primary-900 dark:text-primary-100 text-sm glass-input outline-none transition-colors placeholder:text-primary-400 dark:placeholder:text-primary-600"
+              className="w-full px-3 py-2 rounded-xl bg-primary-100/50 dark:bg-primary-800/30 text-primary-900 dark:text-primary-100 text-sm glass-input outline-none transition-colors placeholder:text-primary-500 dark:placeholder:text-primary-500"
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleSubmit();
               }}
@@ -106,7 +106,7 @@ export default function CreateProjectModal({
                 value={parentPath}
                 onChange={(e) => setParentPath(e.target.value)}
                 placeholder="Desktop (default)"
-                className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-primary-100/50 dark:bg-primary-800/30 text-primary-900 dark:text-primary-100 text-sm glass-input outline-none transition-colors placeholder:text-primary-400 dark:placeholder:text-primary-600"
+                className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-primary-100/50 dark:bg-primary-800/30 text-primary-900 dark:text-primary-100 text-sm glass-input outline-none transition-colors placeholder:text-primary-500 dark:placeholder:text-primary-500"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleSubmit();
                 }}

@@ -165,7 +165,7 @@ export function PermissionModeDropdown({
   const triggerIconClass = isBypass ? BYPASS_TRIGGER.icon : "";
   const triggerChevronClass = isBypass
     ? BYPASS_TRIGGER.chevron
-    : "text-primary-400 dark:text-primary-300";
+    : "text-primary-600 dark:text-primary-400";
   return (
     <div className="relative mx-0.5" ref={dropdownRef}>
       <Button
@@ -243,7 +243,7 @@ export function PermissionModeDropdown({
               }}
               className={`w-full text-left px-2.5 py-1.5 transition-colors flex items-center gap-2.5 last:rounded-b-xl border-t border-primary-200/40 dark:border-primary/5 ${
                 planDisabled
-                  ? "cursor-not-allowed opacity-50 text-primary-500 dark:text-primary-500"
+                  ? "cursor-not-allowed opacity-50 text-primary-600 dark:text-primary-400"
                   : planMode
                     ? "cursor-pointer bg-primary-200/60 dark:bg-primary-200/10 text-primary-950 dark:text-primary"
                     : "cursor-pointer hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"

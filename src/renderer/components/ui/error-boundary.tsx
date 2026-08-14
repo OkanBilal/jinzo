@@ -25,7 +25,7 @@ function ErrorFallback({ error, resetError, level }: ErrorFallbackProps) {
       </div>
 
       <details className="max-w-lg rounded-xl bg-primary-100 dark:bg-primary-900 p-4 text-left">
-        <summary className="cursor-pointer text-xs font-medium text-primary-500 dark:text-primary-400">
+        <summary className="cursor-pointer text-xs font-medium text-primary-600 dark:text-primary-400">
           Error details
         </summary>
         <pre className="mt-2 overflow-auto whitespace-pre-wrap text-xs text-red-600 dark:text-red-400">

@@ -190,7 +190,7 @@ export function DropdownMenuSub({
         onMouseLeave={handleTriggerLeave}
         className={cn(
           "w-full flex items-center gap-3 px-3 py-2 text-s cursor-pointer",
-          "text-primary-700 dark:text-primary-100 hover:text-primary-900 dark:hover:text-primary-50",
+          "text-primary-700 dark:text-primary-300 hover:text-primary-900 dark:hover:text-primary-100",
           "hover:bg-primary-200/40 dark:hover:bg-primary/5 transition-colors",
           className,
         )}
@@ -237,7 +237,7 @@ export function DropdownMenuItem({
   selected,
 }: DropdownMenuItemProps) {
   const variantClasses = {
-    default: "text-primary-700 dark:text-primary-100 hover:text-primary-900 dark:hover:text-primary-50",
+    default: "text-primary-700 dark:text-primary-300 hover:text-primary-900 dark:hover:text-primary-100",
     danger: "text-danger dark:text-danger",
   };
 

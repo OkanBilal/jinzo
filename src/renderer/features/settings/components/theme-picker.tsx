@@ -138,7 +138,7 @@ export function ThemePreviewCard({
           "text-s font-medium transition-colors",
           isSelected
             ? "text-primary-900 dark:text-primary-100"
-            : "text-primary-500 dark:text-primary-400 group-hover:text-primary-700 dark:group-hover:text-primary-300",
+            : "text-primary-600 dark:text-primary-400 group-hover:text-primary-700 dark:group-hover:text-primary-300",
         )}
       >
         {label}

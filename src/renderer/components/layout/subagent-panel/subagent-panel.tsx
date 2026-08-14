@@ -281,7 +281,7 @@ function CollapsedPill({
           />
         );
       })}
-      <span className="text-s tabular-nums font-medium text-primary-700 dark:text-primary-200">
+      <span className="text-s tabular-nums font-medium text-primary-700 dark:text-primary-300">
         {running > 0 ? `${running}/${subagents.length}` : subagents.length}
       </span>
     </Button>
@@ -311,7 +311,7 @@ function SubagentList({
       <div
         className={`flex items-center justify-between gap-2 py-2 ${PANEL_ROW_X}`}
       >
-        <Caption className="text-s font-medium text-primary-700 dark:text-primary-200">
+        <Caption className="text-s font-medium text-primary-700 dark:text-primary-300">
           Subagents ({subagents.length})
         </Caption>
 
@@ -322,7 +322,7 @@ function SubagentList({
             aria-label="Hide subagents"
             className="rounded-md p-0.5 text-primary-400 transition-colors hover:bg-primary-50 hover:text-primary-900 dark:hover:bg-primary/5 dark:hover:text-primary-100"
           >
-            <Minimize className="size-4 scale-x-[-1] text-primary-700 dark:text-primary-200 " />
+            <Minimize className="size-4 scale-x-[-1] text-primary-700 dark:text-primary-300 " />
           </Button>
         </span>
       </div>
@@ -351,7 +351,7 @@ function SubagentList({
               <span className="flex min-w-0 items-center gap-1.5">
                 <span className="truncate">{display.name}</span>
                 {/* {secondary && (
-                  <span className="truncate font-normal text-primary-500 dark:text-primary-400">
+                  <span className="truncate font-normal text-primary-600 dark:text-primary-400">
                     {secondary}
                   </span>
                 )} */}

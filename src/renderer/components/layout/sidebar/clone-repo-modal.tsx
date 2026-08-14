@@ -87,7 +87,7 @@ export default function CloneRepoModal({
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://github.com/user/repo.git"
-              className="w-full px-3 py-2 rounded-xl bg-primary-100/50 dark:bg-primary-800/30 text-primary-900 dark:text-primary-100 text-sm glass-input outline-none transition-colors placeholder:text-primary-400 dark:placeholder:text-primary-600"
+              className="w-full px-3 py-2 rounded-xl bg-primary-100/50 dark:bg-primary-800/30 text-primary-900 dark:text-primary-100 text-sm glass-input outline-none transition-colors placeholder:text-primary-500 dark:placeholder:text-primary-500"
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleSubmit();
               }}
@@ -105,7 +105,7 @@ export default function CloneRepoModal({
                 value={clonePath}
                 onChange={(e) => setClonePath(e.target.value)}
                 placeholder="/path/to/directory"
-                className="flex-1 px-3 py-2 rounded-xl bg-primary-100/50 dark:bg-primary-800/30 text-primary-900 dark:text-primary-100 text-sm glass-input outline-none transition-colors placeholder:text-primary-400 dark:placeholder:text-primary-600"
+                className="flex-1 px-3 py-2 rounded-xl bg-primary-100/50 dark:bg-primary-800/30 text-primary-900 dark:text-primary-100 text-sm glass-input outline-none transition-colors placeholder:text-primary-500 dark:placeholder:text-primary-500"
               />
               <Button
                 variant="primary"

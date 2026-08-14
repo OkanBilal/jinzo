@@ -315,10 +315,10 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
     return wrap(
       <div className=" ">
         <div className="flex items-center gap-1 text-s font-sans">
-          <span className="text-primary-500/60 group-hover:text-primary-900 group-hover:dark:text-primary-200">
+          <span className="text-primary-500/60 group-hover:text-primary-900 group-hover:dark:text-primary-100">
             {toolIcon}
           </span>
-          <span className="text-primary-500/60 group-hover:text-primary-900 group-hover:dark:text-primary-200 font-medium">
+          <span className="text-primary-500/60 group-hover:text-primary-900 group-hover:dark:text-primary-100 font-medium">
             {resolved.displayName}
           </span>
           <span className="text-primary-500/60 italic truncate" />

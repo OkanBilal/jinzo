@@ -174,7 +174,7 @@ function ImageGroupChip({
                   className="shrink-0 rounded-full p-1 hover:bg-primary-200/40 dark:hover:bg-primary-600/40"
                   aria-label={`Remove ${uploadedFile.file.name}`}
                 >
-                  <Close className="h-3.5 w-3.5 text-primary-600 dark:text-primary-300" />
+                  <Close className="h-3.5 w-3.5 text-primary-600 dark:text-primary-400" />
                 </Button>
               </div>
             );
@@ -287,7 +287,7 @@ function DocumentGroupChip({
                   className="shrink-0 rounded-full p-1 hover:bg-primary-200/40 dark:hover:bg-primary-600/40"
                   aria-label={`Remove ${uploadedFile.file.name}`}
                 >
-                  <Close className="h-3.5 w-3.5 text-primary-600 dark:text-primary-300" />
+                  <Close className="h-3.5 w-3.5 text-primary-600 dark:text-primary-400" />
                 </Button>
               </div>
             );
@@ -330,7 +330,7 @@ export function FileUploadDropdown({
               className="flex cursor-pointer items-center gap-2"
               aria-label="Remove document"
             >
-              <Close className="h-4 w-4 text-primary-600 dark:text-primary-300" />
+              <Close className="h-4 w-4 text-primary-600 dark:text-primary-400" />
               <span className="max-w-25 truncate text-xs text-primary-950 dark:text-primary">
                 {uploadedFile.file.name}
               </span>
@@ -372,7 +372,7 @@ export function FileUploadDropdown({
                 className="absolute inset-0 flex cursor-pointer items-center justify-center bg-primary-950/50 transition-opacity"
                 aria-label="Remove image"
               >
-                <Close className="h-4 w-4 text-primary-600 dark:text-primary-300" />
+                <Close className="h-4 w-4 text-primary-600 dark:text-primary-400" />
               </Button>
             )}
           </div>
@@ -404,7 +404,7 @@ export function FileUploadDropdown({
               className="absolute inset-0 flex cursor-pointer items-center justify-center bg-primary-950/50 opacity-0 transition-opacity group-hover:opacity-100"
               aria-label="Remove image"
             >
-              <Close className="h-4 w-4 text-primary-600 dark:text-primary-300" />
+              <Close className="h-4 w-4 text-primary-600 dark:text-primary-400" />
             </Button>
           </div>
           <span className="max-w-25 truncate text-xs text-primary-950 dark:text-primary">
@@ -518,7 +518,7 @@ export function FileUploadDropdown({
             type="button"
             onClick={onClick}
             role="menuitem"
-            className="flex w-full cursor-pointer items-center px-3 py-2 text-left text-sm text-primary-900 first:rounded-t-xl last:rounded-b-xl hover:bg-primary-200/30 dark:text-primary-200 dark:hover:bg-primary-800"
+            className="flex w-full cursor-pointer items-center px-3 py-2 text-left text-sm text-primary-900 first:rounded-t-xl last:rounded-b-xl hover:bg-primary-200/30 dark:text-primary-100 dark:hover:bg-primary-800"
           >
             <Icon className="mr-2 size-3.5" />
             {label}

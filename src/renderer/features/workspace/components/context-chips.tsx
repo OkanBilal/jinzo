@@ -53,7 +53,7 @@ function BrowserSelectionPreview({
       className="max-w-lg w-full bg-primary-50 dark:bg-primary-950"
     >
       <ModalHeader onClose={onClose}>
-        <Web className="w-3.5 h-3.5 shrink-0 text-primary-800 dark:text-primary-100" />
+        <Web className="w-3.5 h-3.5 shrink-0 text-primary-800 dark:text-primary-200" />
         <div className="min-w-0">
           <Body className="text-xs">
             {summary}
@@ -143,7 +143,7 @@ export function ContextChips({
             {contextIssues.map((issue) => (
               <div
                 key={issue.entityId}
-                className={`flex items-center glass-button gap-1.5 px-2 py-1.5 rounded-full text-xs  dark:text-primary-200 text-primary-700`}
+                className={`flex items-center glass-button gap-1.5 px-2 py-1.5 rounded-full text-xs  dark:text-primary-300 text-primary-700`}
               >
                 <ProviderIcon provider={issue.provider} className="size-4" fallback="text" />
                 <span className="truncate max-w-37.5">{issue.title}</span>
@@ -162,7 +162,7 @@ export function ContextChips({
             {contextSignals.map((signal) => (
               <div
                 key={signal.entityId}
-                className={`flex items-center glass-button gap-1.5 px-2 py-1.5 rounded-full text-xs dark:text-primary-200 text-primary-700`}
+                className={`flex items-center glass-button gap-1.5 px-2 py-1.5 rounded-full text-xs dark:text-primary-300 text-primary-700`}
               >
                 <ProviderIcon provider={signal.source} className="w-3 h-3" fallback="text" />
                 <span className="truncate max-w-37.5">{signal.title}</span>
@@ -192,7 +192,7 @@ export function ContextChips({
                   tabIndex={0}
                   onClick={() => setPreviewId(sel.id)}
                   onKeyDown={(e) => e.key === "Enter" && setPreviewId(sel.id)}
-                  className="flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full glass-button text-xs bg-primary dark:bg-primary-300/10 dark:text-primary-200 text-primary-700 cursor-pointer"
+                  className="flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full glass-button text-xs bg-primary dark:bg-primary-300/10 dark:text-primary-300 text-primary-700 cursor-pointer"
                   title={`Click to preview · ${sel.title || sel.url} — ${sel.selector}`}
                 >
                   {thumb ? (

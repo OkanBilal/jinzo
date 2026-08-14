@@ -338,7 +338,7 @@ export default function CodexSettings() {
           description="Define JSON Schemas to constrain the agent's output format"
         >
           <div className="flex items-center gap-3">
-            <span className="text-sm text-primary-500 dark:text-primary-400">
+            <span className="text-sm text-primary-600 dark:text-primary-400">
               {selectedSchemaName}
             </span>
             <Button

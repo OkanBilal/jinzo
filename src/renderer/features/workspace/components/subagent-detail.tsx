@@ -137,11 +137,11 @@ export function SubagentDetail({
           active={state === "running"}
           className="size-4"
         />
-        <span className="min-w-0 flex-1 truncate text-sm font-medium text-primary-700 dark:text-primary-200">
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-primary-700 dark:text-primary-300">
           {display.name}
         </span>
         {workedMs !== undefined && (
-          <span className="shrink-0 text-xs tabular-nums text-primary-700 dark:text-primary-200">
+          <span className="shrink-0 text-xs tabular-nums text-primary-700 dark:text-primary-300">
             {formatWorkedFor(workedMs)}
           </span>
         )}
@@ -150,21 +150,21 @@ export function SubagentDetail({
           onClick={onBack}
           title="Back to subagents"
           aria-label="Back to subagents"
-          className="shrink-0 rounded-md p-0.5 text-primary-500 transition-colors hover:bg-primary-50 hover:text-primary-900 dark:text-primary-400 dark:hover:bg-primary/5 dark:hover:text-primary-100"
+          className="shrink-0 rounded-md p-0.5 text-primary-600 transition-colors hover:bg-primary-50 hover:text-primary-900 dark:text-primary-400 dark:hover:bg-primary/5 dark:hover:text-primary-100"
         >
-          <Minimize className="size-4 scale-x-[-1] text-primary-700 dark:text-primary-200 " />
+          <Minimize className="size-4 scale-x-[-1] text-primary-700 dark:text-primary-300 " />
         </Button>
       </div>
 
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 noscrollbar">
         {display.detail && (
-          <span className="block text-xs text-primary-400 dark:text-primary-500">
+          <span className="block text-xs text-primary-600 dark:text-primary-400">
             {display.detail}
           </span>
         )}
 
         {meta.prompt && (
-          <div className="rounded-xl bg-primary-50 px-3 py-2.5 text-sm whitespace-pre-wrap text-primary-700 dark:bg-primary/5 dark:text-primary-200">
+          <div className="rounded-xl bg-primary-50 px-3 py-2.5 text-sm whitespace-pre-wrap text-primary-700 dark:bg-primary/5 dark:text-primary-300">
             {meta.prompt}
           </div>
         )}
@@ -184,7 +184,7 @@ export function SubagentDetail({
               // Same bubble language as the task prompt above.
               <div
                 key={item.key}
-                className="my-3 rounded-xl bg-primary-50 px-3 py-2.5 text-sm whitespace-pre-wrap text-primary-700 dark:bg-primary/5 dark:text-primary-200"
+                className="my-3 rounded-xl bg-primary-50 px-3 py-2.5 text-sm whitespace-pre-wrap text-primary-700 dark:bg-primary/5 dark:text-primary-300"
               >
                 {item.content}
               </div>

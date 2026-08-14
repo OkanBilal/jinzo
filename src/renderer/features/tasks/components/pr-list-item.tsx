@@ -30,7 +30,7 @@ export function PrListItem({
   compact = false,
 }: PrListItemProps) {
   const stateClass = pr.isDraft
-    ? "text-primary-500 dark:text-primary-400"
+    ? "text-primary-600 dark:text-primary-400"
     : (STATE_CLASSES[pr.state] ?? STATE_CLASSES.open);
   const ciDot = CI_DOT_CLASSES[pr.ciStatus];
   const avatarSrc = proxiedImageSrc(pr.author?.avatarUrl);
@@ -73,7 +73,7 @@ export function PrListItem({
             </span>
           )}
         </span>
-        <span className="flex items-center gap-1.5 min-w-0 text-xs text-primary-700 dark:text-primary-400">
+        <span className="flex items-center gap-1.5 min-w-0 text-xs text-primary-700 dark:text-primary-300">
           {avatarSrc && (
             <img
               src={avatarSrc}
@@ -102,7 +102,7 @@ export function PrListItem({
             -{pr.deletions}
           </span>
         </span>
-        <span className="text-xxs text-primary-700 dark:text-primary-400 whitespace-nowrap">
+        <span className="text-xxs text-primary-700 dark:text-primary-300 whitespace-nowrap">
           {formatDate(pr.updatedAt)}
         </span>
       </div>

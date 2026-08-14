@@ -26,7 +26,7 @@ const stateColors: Record<string, string> = {
   resolved:
     "bg-primary-100 dark:bg-primary-800 text-primary-600 dark:text-primary-400",
   ignored:
-    "bg-primary-100 dark:bg-primary-800 text-primary-500 dark:text-primary-500",
+    "bg-primary-100 dark:bg-primary-800 text-primary-600 dark:text-primary-400",
   regressed: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",
 };
 
@@ -73,7 +73,7 @@ export function SignalTabContent({ signal }: SignalTabContentProps) {
         </div>
 
         {/* Meta info */}
-        <div className="flex items-center gap-4 flex-wrap text-sm text-primary-500 dark:text-primary-400">
+        <div className="flex items-center gap-4 flex-wrap text-sm text-primary-600 dark:text-primary-400">
           <span>
             Source:{" "}
             <span className="font-medium text-primary-700 dark:text-primary-300 capitalize">
@@ -108,7 +108,7 @@ export function SignalTabContent({ signal }: SignalTabContentProps) {
 
         {/* File location */}
         {sig.file && (
-          <div className="text-sm text-primary-500 dark:text-primary-400">
+          <div className="text-sm text-primary-600 dark:text-primary-400">
             <span className="font-mono text-xs bg-primary-100 dark:bg-primary-800 px-2 py-1 rounded">
               {sig.file}
               {sig.function ? `:${sig.function}` : ""}

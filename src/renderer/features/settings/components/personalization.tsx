@@ -206,7 +206,7 @@ function PersonalizationForm({ initialValues, lastSavedAt, saving, loading, onSu
           </SettingsSection>
 
           <div className="flex items-center justify-between pt-2">
-            <div className="text-xs text-primary-500 dark:text-primary-400">
+            <div className="text-xs text-primary-600 dark:text-primary-400">
               {lastSavedLabel
                 ? `Last saved: ${lastSavedLabel}`
                 : "Not saved yet"}

@@ -146,7 +146,7 @@ export function buildElicitationContent(
 }
 
 const inputClass =
-  "w-full rounded-lg bg-primary-100/50 px-3 py-2 text-xs text-primary-950 transition-colors placeholder:text-primary-500 focus:outline-none dark:bg-primary-800/50 dark:text-primary-100 dark:placeholder:text-primary-500";
+  "w-full rounded-lg bg-primary-100/50 px-3 py-2 text-xs text-primary-900 transition-colors placeholder:text-primary-500 focus:outline-none dark:bg-primary-800/50 dark:text-primary-100 dark:placeholder:text-primary-500";
 
 export function ElicitationForm({
   fields,

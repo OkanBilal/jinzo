@@ -75,7 +75,7 @@ export function ActivitySection({ workspaceId }: ActivitySectionProps) {
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <span className="text-xs text-primary-700 dark:text-primary-500">Loading...</span>
+        <span className="text-xs text-primary-700 dark:text-primary-300">Loading...</span>
       </div>
     );
   }
@@ -84,7 +84,7 @@ export function ActivitySection({ workspaceId }: ActivitySectionProps) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="flex flex-col items-center gap-2 px-4 text-center">
-          <Note className="w-4 h-4 dark:text-primary-400 text-primary-700" />
+          <Note className="w-4 h-4 dark:text-primary-300 text-primary-700" />
           <Caption>
             No activity yet.
           </Caption>
@@ -141,7 +141,7 @@ export function ActivitySection({ workspaceId }: ActivitySectionProps) {
                 }`}
               >
                 <div className="flex-1 min-w-0">
-                  <span className="text-s text-primary-900 dark:text-primary-200 truncate max-w-full text-left block">
+                  <span className="text-s text-primary-900 dark:text-primary-100 truncate max-w-full text-left block">
                     {activity.type === "commit" ? (
                       <>
                         You committed changes
@@ -156,7 +156,7 @@ export function ActivitySection({ workspaceId }: ActivitySectionProps) {
                     ) : (
                       activity.title
                     )}
-                    <span className="text-primary-700 dark:text-primary-400 text-xxs font-normal">
+                    <span className="text-primary-700 dark:text-primary-300 text-xxs font-normal">
                       {" "}&middot; {formatDate(activity.createdAt)}
                     </span>
                   </span>
@@ -167,7 +167,7 @@ export function ActivitySection({ workspaceId }: ActivitySectionProps) {
                       }`}
                     >
                       <div className="overflow-hidden">
-                        <span className="text-t text-primary-700 dark:text-primary-400 text-left block mt-1 whitespace-pre-wrap">
+                        <span className="text-t text-primary-700 dark:text-primary-300 text-left block mt-1 whitespace-pre-wrap">
                           {detail}
                         </span>
                       </div>

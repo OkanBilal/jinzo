@@ -66,12 +66,12 @@ export function BaseTab({
 
       {/* Content */}
       <span className={`relative flex items-center justify-center size-4 shrink-0 transition-colors duration-150 ${
-        isActive ? "text-primary-900 dark:text-primary-200" : "text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200"
+        isActive ? "text-primary-900 dark:text-primary-100" : "text-primary-900 dark:text-primary-100 hover:text-primary-900 dark:hover:text-primary-100"
       }`}>
         {icon}
       </span>
       <span className={`relative min-w-0 flex-1 mb-0.5 truncate transition-colors duration-150 ${
-        isActive ? "text-primary-900 dark:text-primary-200" : "text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200"
+        isActive ? "text-primary-900 dark:text-primary-100" : "text-primary-900 dark:text-primary-100 hover:text-primary-900 dark:hover:text-primary-100"
       }`}>
         {typeof label === "string" ? (
           <span className="text-xs font-medium tracking-tight">{label}</span>
@@ -149,7 +149,7 @@ function CloseOverlay({
         onClick={onClose}
         className="relative z-(--z-base) p-1 glass-outline  hover:bg-primary/5 cursor-pointer rounded-full transition-all pointer-events-auto"
       >
-        {closeIcon || <Close className="size-3.25 text-primary-900 dark:text-primary hover:text-primary-900 dark:hover:text-primary-200" />}
+        {closeIcon || <Close className="size-3.25 text-primary-900 dark:text-primary hover:text-primary-900 dark:hover:text-primary-100" />}
       </Button>
     </div>
   );

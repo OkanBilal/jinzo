@@ -56,7 +56,7 @@ export function CheckPackageDisplay({
             passed
           </span>
         )}
-        <span className="text-primary-400 dark:text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+        <span className="text-primary-600 dark:text-primary-400 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
           {summaryText}
         </span>
       </ToolHeader>
@@ -77,12 +77,12 @@ export function CheckPackageDisplay({
                   <span>{r.blocked ? "✘" : "✔"}</span>
                   <span className="font-medium">{r.name}</span>
                   {r.score && (
-                    <span className="text-primary-400 dark:text-primary-500">
+                    <span className="text-primary-600 dark:text-primary-400">
                       score: {r.score}
                     </span>
                   )}
                   {r.reason && (
-                    <span className="text-primary-400 dark:text-primary-500 truncate">
+                    <span className="text-primary-600 dark:text-primary-400 truncate">
                       {r.reason}
                     </span>
                   )}

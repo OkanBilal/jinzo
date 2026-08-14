@@ -213,7 +213,7 @@ export const  markdownComponents: Components = {
     // to its sentence so it never towers over the prose around it.
     return (
       <code
-        className="block p-4 rounded-xl bg-primary-50 dark:bg-primary/10 text-primary-900 dark:text-primary overflow-x-auto"
+        className="block p-4 rounded-xl bg-primary-100 dark:bg-primary-900 text-primary-900 dark:text-primary overflow-x-auto"
         style={{ fontSize: CODE_FONT_SIZE_CSS }}
       >
         {children}

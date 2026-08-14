@@ -39,7 +39,7 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
           {/* State badge */}
           <div className="flex items-center gap-3 flex-wrap">
             {iss.assignee && (
-              <span className="text-sm text-primary-500 dark:text-primary-400">
+              <span className="text-sm text-primary-600 dark:text-primary-400">
                 Assigned to{" "}
                 <span className="font-medium text-primary-700 dark:text-primary-300">
                   {iss.assignee}
@@ -69,7 +69,7 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
             {labels.map((label) => (
               <span
                 key={label}
-                className={`inline-block glass-primary px-2.5 py-1 text-xs rounded-full capitalize font-medium text-primary-600 dark:text-primary-100`}
+                className={`inline-block glass-primary px-2.5 py-1 text-xs rounded-full capitalize font-medium text-primary-600 dark:text-primary-400`}
               >
                 {label}
               </span>

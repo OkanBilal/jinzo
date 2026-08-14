@@ -154,7 +154,7 @@ export function WorkspaceSidebar() {
             className={`relative z-(--z-base) flex-1 min-w-0 whitespace-nowrap truncate text-xs font-medium py-1 px-2 transition-colors ${
               sidebarTab === "files"
                 ? "text-primary-900 dark:text-primary-100"
-                : "text-primary-800 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-200"
+                : "text-primary-800 dark:text-primary-200 hover:text-primary-800 dark:hover:text-primary-200"
             }`}
           >
             Files
@@ -164,7 +164,7 @@ export function WorkspaceSidebar() {
             className={`relative z-(--z-base) flex-1 min-w-0 flex items-center justify-center gap-1 whitespace-nowrap text-xs font-medium py-1 px-2  transition-colors ${
               sidebarTab === "changes"
                 ? "text-primary-900 dark:text-primary-100"
-                : "text-primary-800 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-200"
+                : "text-primary-800 dark:text-primary-200 hover:text-primary-800 dark:hover:text-primary-200"
             }`}
           >
             {/* The label may truncate under a narrow panel; the count never does. */}
@@ -178,7 +178,7 @@ export function WorkspaceSidebar() {
             className={`relative z-(--z-base) flex-1 min-w-0 whitespace-nowrap truncate text-xs font-medium py-1 px-2 rounded-lg transition-colors ${
               sidebarTab === "reviews"
                 ? "text-primary-900 dark:text-primary-100"
-                : "text-primary-800 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-200"
+                : "text-primary-800 dark:text-primary-200 hover:text-primary-800 dark:hover:text-primary-200"
             }`}
           >
             Activity

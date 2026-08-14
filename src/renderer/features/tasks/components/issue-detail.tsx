@@ -14,12 +14,12 @@ export function IssueDetail({ issue }: { issue: IssueWithEntity }) {
   return (
     <div className="flex flex-col h-full min-h-0">
       <div className="flex items-center gap-1.5 px-8 py-2.5 border-b border-primary/20 dark:border-primary/10">
-        <ProviderIcon provider={iss.provider} className="size-4.5 shrink-0 text-primary-800 dark:text-primary-300" />
-        <span className="text-sm text-primary-700 dark:text-primary-100 truncate">
+        <ProviderIcon provider={iss.provider} className="size-4.5 shrink-0 text-primary-800 dark:text-primary-200" />
+        <span className="text-sm text-primary-700 dark:text-primary-300 truncate">
           {iss.repo ?? ""}
         </span>
         {iss.number != null && (
-          <span className="text-sm text-primary-600 dark:text-primary-300">
+          <span className="text-sm text-primary-600 dark:text-primary-400">
             #{iss.number}
           </span>
         )}

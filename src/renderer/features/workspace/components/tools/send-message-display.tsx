@@ -101,7 +101,7 @@ export function SendMessageDisplay({
         isCompact={isCompact}
       >
         {recipient && (
-          <span className="shrink-0 max-w-40 truncate font-medium text-primary-600 dark:text-primary-300">
+          <span className="shrink-0 max-w-40 truncate font-medium text-primary-600 dark:text-primary-400">
             {recipient}
           </span>
         )}
@@ -131,7 +131,7 @@ export function SendMessageDisplay({
             )}
 
             {protocol && (protocol.feedback || protocol.reason) && (
-              <p className="whitespace-pre-wrap text-primary-600 dark:text-primary-300">
+              <p className="whitespace-pre-wrap text-primary-600 dark:text-primary-400">
                 {protocol.feedback || protocol.reason}
               </p>
             )}
@@ -143,13 +143,13 @@ export function SendMessageDisplay({
             )}
 
             {(receiptText || receipt.resumedAgentId) && (
-              <div className="pt-1 border-t border-primary-100 dark:border-primary/10 space-y-0.5 text-t text-primary-500 dark:text-primary-400">
+              <div className="pt-1 border-t border-primary-100 dark:border-primary/10 space-y-0.5 text-t text-primary-600 dark:text-primary-400">
                 {receiptText && (
                   <p className="whitespace-pre-wrap wrap-break-word">{receiptText}</p>
                 )}
                 {receipt.resumedAgentId && (
                   <div className="font-mono">
-                    <span className="text-primary-400 dark:text-primary-500">Resumed</span>{" "}
+                    <span className="text-primary-600 dark:text-primary-400">Resumed</span>{" "}
                     {receipt.resumedAgentId}
                   </div>
                 )}

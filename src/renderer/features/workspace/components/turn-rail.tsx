@@ -94,11 +94,11 @@ export function TurnRail({
           style={{ top: hovered.offsetY }}
           role="tooltip"
         >
-          <p className="line-clamp-2 text-xs font-medium text-primary-800 dark:text-primary-100">
+          <p className="line-clamp-2 text-xs font-medium text-primary-800 dark:text-primary-200">
             {hovered.marker.prompt}
           </p>
           {hovered.marker.reply && (
-            <p className="mt-1 line-clamp-3 text-xs text-primary-500 dark:text-primary-400">
+            <p className="mt-1 line-clamp-3 text-xs text-primary-600 dark:text-primary-400">
               {hovered.marker.reply}
             </p>
           )}

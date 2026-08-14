@@ -48,7 +48,7 @@ function PreferenceRow({
           {title}
         </span>
         {description && (
-          <span className="text-xs leading-snug text-primary-500 dark:text-primary-400">
+          <span className="text-xs leading-snug text-primary-600 dark:text-primary-400">
             {description}
           </span>
         )}

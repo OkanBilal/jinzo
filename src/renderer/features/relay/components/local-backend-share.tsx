@@ -48,7 +48,7 @@ function CopyButton({ value, tooltip }: { value: string; tooltip: string }) {
       text={value}
       tooltip={tooltip}
       variant="bare"
-      className="text-primary-900 dark:text-primary-200"
+      className="text-primary-900 dark:text-primary-100"
     />
   );
 }

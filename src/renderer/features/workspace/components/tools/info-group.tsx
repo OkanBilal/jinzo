@@ -375,7 +375,7 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
                 {issues.map((issue) => (
                   <div
                     key={`${issue.provider}-${issue.number ?? issue.title}`}
-                    className={`flex items-center gap-1.5 px-2 py-2 rounded-xl text-xs bg-primary-200/40 dark:bg-primary-200/20 text-primary-800 dark:text-primary-100`}
+                    className={`flex items-center gap-1.5 px-2 py-2 rounded-xl text-xs bg-primary-200/40 dark:bg-primary-200/20 text-primary-800 dark:text-primary-200`}
                   >
                     <ProviderIcon
                       provider={issue.provider}
@@ -391,7 +391,7 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
                 {signals.map((signal) => (
                   <div
                     key={`${signal.source}-${signal.title}`}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-xl text-xs bg-primary-200 dark:bg-primary-400 text-primary-600 dark:text-primary-100"
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-xl text-xs bg-primary-200 dark:bg-primary-400 text-primary-600 dark:text-primary-400"
                   >
                     <ProviderIcon
                       provider={signal.source}
@@ -404,11 +404,11 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
                 {externalFiles.map((file) => (
                   <div
                     key={file.fullPath}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-primary-200/40 dark:bg-primary-200/20 text-xs text-primary-800 dark:text-primary-100"
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-primary-200/40 dark:bg-primary-200/20 text-xs text-primary-800 dark:text-primary-200"
                     title={file.fullPath}
                   >
-                    <Code className="size-3 dark:text-primary-200 text-primary-700" />
-                    <span className="text-primary-700 dark:text-primary-200">
+                    <Code className="size-3 dark:text-primary-300 text-primary-700" />
+                    <span className="text-primary-700 dark:text-primary-300">
                       {file.displayName}
                     </span>
                   </div>
@@ -425,7 +425,7 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
                       onClick={() =>
                         setPreviewAtt({ name: att.name, dataUrl: imgSrc })
                       }
-                      className="flex items-center gap-1.5 pl-2 pr-2 py-1 rounded-xl bg-primary-200/40 dark:bg-primary-200/20 text-xs text-primary-800 dark:text-primary-100 hover:bg-primary-100 dark:hover:bg-primary-700/30 transition-colors cursor-pointer"
+                      className="flex items-center gap-1.5 pl-2 pr-2 py-1 rounded-xl bg-primary-200/40 dark:bg-primary-200/20 text-xs text-primary-800 dark:text-primary-200 hover:bg-primary-100 dark:hover:bg-primary-700/30 transition-colors cursor-pointer"
                       title={`Click to preview · ${att.name}`}
                     >
                       <img
@@ -433,7 +433,7 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
                         alt={att.name}
                         className="h-6 w-6 rounded-lg object-cover  border border-primary-200/60 dark:border-primary-700/40"
                       />
-                      <span className="text-primary-700 dark:text-primary-200 truncate max-w-40">
+                      <span className="text-primary-700 dark:text-primary-300 truncate max-w-40">
                         {att.name}
                       </span>
                     </Button>
@@ -444,11 +444,11 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
                       title={att.name}
                     >
                       {att.type === "image" ? (
-                        <Picture className="size-3 dark:text-primary-200 text-primary-700" />
+                        <Picture className="size-3 dark:text-primary-300 text-primary-700" />
                       ) : (
-                        <Document className="size-3 dark:text-primary-200 text-primary-700" />
+                        <Document className="size-3 dark:text-primary-300 text-primary-700" />
                       )}
-                      <span className="text-primary-700 dark:text-primary-200">
+                      <span className="text-primary-700 dark:text-primary-300">
                         {att.name}
                       </span>
                     </div>
@@ -561,7 +561,7 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
 
   return (
     <div className=" py-1.5 flex items-start gap-2 text-sm">
-      <span className="text-primary-600 dark:text-primary-300">
+      <span className="text-primary-600 dark:text-primary-400">
         {event.content}
       </span>
     </div>
@@ -647,7 +647,7 @@ function ImageArtifact({
         </DropdownMenuItem>
       )}
       {isFetching ? (
-        <div className="px-3 py-2 text-xs text-primary-500 dark:text-primary-400">
+        <div className="px-3 py-2 text-xs text-primary-600 dark:text-primary-400">
           Loading applications…
         </div>
       ) : (
@@ -696,7 +696,7 @@ function ImageArtifact({
                 onError={() => setThumbFailed(true)}
               />
             ) : (
-              <Picture className="size-7 text-primary-400 dark:text-primary-500" />
+              <Picture className="size-7 text-primary-600 dark:text-primary-400" />
             )}
           </div>
         </Button>
@@ -751,7 +751,7 @@ function ImageArtifact({
         <div className="text-sm font-medium text-primary-950 dark:text-primary truncate">
           {fileName}
         </div>
-        <div className="text-xs text-primary-500 dark:text-primary-400 mt-0.5">
+        <div className="text-xs text-primary-600 dark:text-primary-400 mt-0.5">
           Image{ext ? ` · ${ext}` : ""}
         </div>
       </Button>
@@ -759,7 +759,7 @@ function ImageArtifact({
         ref={openBtnRef}
         type="button"
         onClick={openMenu}
-        className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium text-primary-800 dark:text-primary-100  bg-primary-100/80 dark:bg-primary-800/40 hover:bg-primary-200/60 dark:hover:bg-primary-700/35 transition-colors cursor-pointer"
+        className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium text-primary-800 dark:text-primary-200  bg-primary-100/80 dark:bg-primary-800/40 hover:bg-primary-200/60 dark:hover:bg-primary-700/35 transition-colors cursor-pointer"
       >
         Open
         <ArrowUp className="size-3.5  rotate-180" />

@@ -80,7 +80,7 @@ export function DocumentArtifact({
         <div className="text-sm font-medium text-primary-950 dark:text-primary truncate">
           {fileName}
         </div>
-        <div className="text-xs text-primary-500 dark:text-primary-400 mt-0.5">
+        <div className="text-xs text-primary-600 dark:text-primary-400 mt-0.5">
           {DOC_VIEWER_LABELS[docType]}
           {ext ? ` · ${ext}` : ""}
         </div>
@@ -89,7 +89,7 @@ export function DocumentArtifact({
         ref={openBtnRef}
         type="button"
         onClick={openMenu}
-        className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium text-primary-800 dark:text-primary-100 bg-primary-100/80 dark:bg-primary-800/40 hover:bg-primary-200/60 dark:hover:bg-primary-700/35 transition-colors cursor-pointer"
+        className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium text-primary-800 dark:text-primary-200 bg-primary-100/80 dark:bg-primary-800/40 hover:bg-primary-200/60 dark:hover:bg-primary-700/35 transition-colors cursor-pointer"
       >
         Open
         <ArrowUp className="size-3.5 rotate-180" />
@@ -112,7 +112,7 @@ export function DocumentArtifact({
           </DropdownMenuItem>
         )}
         {isFetching ? (
-          <div className="px-3 py-2 text-xs text-primary-500 dark:text-primary-400">
+          <div className="px-3 py-2 text-xs text-primary-600 dark:text-primary-400">
             Loading applications…
           </div>
         ) : (

@@ -80,7 +80,7 @@ function str(val: unknown, maxLen = 300): string {
 
 function Mono({ children }: { children: React.ReactNode }) {
   return (
-    <span className="font-mono text-primary-300 dark:text-primary-400 break-all">
+    <span className="font-mono text-primary-700 dark:text-primary-300 break-all">
       {children}
     </span>
   );
@@ -88,7 +88,7 @@ function Mono({ children }: { children: React.ReactNode }) {
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <span className="text-primary-400 dark:text-primary-500 text-xs capitalize tracking-wide">
+    <span className="text-primary-600 dark:text-primary-400 text-xs capitalize tracking-wide">
       {children}
     </span>
   );
@@ -96,7 +96,7 @@ function Label({ children }: { children: React.ReactNode }) {
 
 function CodeBlock({ children }: { children: React.ReactNode }) {
   return (
-    <pre className="text-primary-300 dark:text-primary-400 whitespace-pre-wrap break-all px-3 py-2 mt-1">
+    <pre className="text-primary-700 dark:text-primary-300 whitespace-pre-wrap break-all px-3 py-2 mt-1">
       {children}
     </pre>
   );
@@ -149,7 +149,7 @@ const RENDERERS: Record<string, Renderer> = {
   Bash: (input) => (
     <>
       {!!input.description && (
-        <div className="px-3 pt-2 text-primary-500 dark:text-primary-400 leading-relaxed whitespace-pre-wrap wrap-break-word">
+        <div className="px-3 pt-2 text-primary-600 dark:text-primary-400 leading-relaxed whitespace-pre-wrap wrap-break-word">
           {str(input.description, 500)}
         </div>
       )}
@@ -250,7 +250,7 @@ const RENDERERS: Record<string, Renderer> = {
   Sql: (input) => (
     <>
       {!!input.description && (
-        <div className="px-3 pt-2 text-primary-500 dark:text-primary-400 leading-relaxed whitespace-pre-wrap wrap-break-word">
+        <div className="px-3 pt-2 text-primary-600 dark:text-primary-400 leading-relaxed whitespace-pre-wrap wrap-break-word">
           {str(input.description, 300)}
         </div>
       )}
@@ -333,7 +333,7 @@ const RENDERERS: Record<string, Renderer> = {
         <Label>url</Label> <Mono>{str(input.url)}</Mono>
       </div>
       {!!input.prompt && (
-        <div className="text-primary-400 dark:text-primary-500 mt-1">
+        <div className="text-primary-600 dark:text-primary-400 mt-1">
           {str(input.prompt)}
         </div>
       )}
@@ -352,13 +352,13 @@ const RENDERERS: Record<string, Renderer> = {
       {!!input.subagent_type && (
         <div>
           <Label>agent</Label>{" "}
-          <span className="text-primary-300 dark:text-primary-400">
+          <span className="text-primary-700 dark:text-primary-300">
             {str(input.subagent_type)}
           </span>
         </div>
       )}
       {!!input.description && (
-        <div className="text-primary-400 dark:text-primary-500">
+        <div className="text-primary-600 dark:text-primary-400">
           {str(input.description)}
         </div>
       )}
@@ -368,17 +368,17 @@ const RENDERERS: Record<string, Renderer> = {
    Plan: (input) => (
     <div className="px-3 py-2 space-y-1">
       {!!input.name && (
-        <div className="text-primary-200 dark:text-primary-300 font-medium text-sm">
+        <div className="text-primary-800 dark:text-primary-200 font-medium text-sm">
           {str(input.name)}
         </div>
       )}
       {!!input.overview && (
-        <div className="text-primary-400 dark:text-primary-500">
+        <div className="text-primary-600 dark:text-primary-400">
           {str(input.overview, 500)}
         </div>
       )}
       {!!input.plan && (
-        <pre className="text-primary-300 dark:text-primary-400 whitespace-pre-wrap wrap-break-word leading-relaxed mt-1">
+        <pre className="text-primary-700 dark:text-primary-300 whitespace-pre-wrap wrap-break-word leading-relaxed mt-1">
           {str(input.plan, 2000)}
         </pre>
       )}
@@ -386,13 +386,13 @@ const RENDERERS: Record<string, Renderer> = {
   ),
 
   AskUser: (input) => (
-    <div className="px-3 py-2 text-primary-300 dark:text-primary-400">
+    <div className="px-3 py-2 text-primary-700 dark:text-primary-300">
       {str(input.question, 500)}
     </div>
   ),
 
   Ask_user: (input) => (
-    <div className="px-3 py-2 text-primary-300 dark:text-primary-400">
+    <div className="px-3 py-2 text-primary-700 dark:text-primary-300">
       {str(input.question, 500)}
     </div>
   ),
@@ -406,7 +406,7 @@ const RENDERERS: Record<string, Renderer> = {
       {!!input.edit_mode && (
         <div>
           <Label>mode</Label>{" "}
-          <span className="text-primary-300 dark:text-primary-400">
+          <span className="text-primary-700 dark:text-primary-300">
             {str(input.edit_mode)}
           </span>
         </div>
@@ -458,7 +458,7 @@ function renderFallback(input: Record<string, unknown>): React.ReactNode {
   try {
     const s = JSON.stringify(input, null, 2);
     return (
-      <pre className="text-primary-400 dark:text-primary-500 whitespace-pre-wrap break-all">
+      <pre className="text-primary-600 dark:text-primary-400 whitespace-pre-wrap break-all">
         {s.length > 500 ? s.slice(0, 500) + "\n…" : s}
       </pre>
     );

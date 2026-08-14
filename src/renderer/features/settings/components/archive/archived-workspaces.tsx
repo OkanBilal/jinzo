@@ -469,7 +469,7 @@ function ArchiveEmptyState({
 }) {
   return (
     <div className="flex flex-col items-center gap-2 py-16 text-center">
-      <Archive className="size-5 text-primary-400 dark:text-primary-600" />
+      <Archive className="size-5 text-primary-600 dark:text-primary-400" />
       <Muted>{title}.</Muted>
       <Caption>{description}</Caption>
     </div>

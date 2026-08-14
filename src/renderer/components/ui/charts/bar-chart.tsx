@@ -98,7 +98,7 @@ export default function BarChart({
             className={cn(
               "fixed px-2 py-1 rounded-lg pointer-events-none whitespace-nowrap -translate-x-1/2",
               "text-xs font-light",
-              "bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-200",
+              "bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300",
               "border border-primary-200 dark:border-primary-800",
               "shadow-lg shadow-primary-950/10",
             )}

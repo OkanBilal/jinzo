@@ -758,7 +758,7 @@ export function GitActionsSection({
               disabled={!hasChanges || busy || generatingMessage}
               tooltip="Generate a commit message from the changes"
               tooltipPosition="top-left"
-              className="absolute glass-primary bottom-3 right-2 flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-primary-500 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-100 bg-primary-100/60 hover:bg-primary-200/60 dark:bg-primary-800/40 dark:hover:bg-primary-700/40 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+              className="absolute glass-primary bottom-3 right-2 flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-100 bg-primary-100/60 hover:bg-primary-200/60 dark:bg-primary-800/40 dark:hover:bg-primary-700/40 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
             >
               {generatingMessage ? (
                 <>
@@ -773,7 +773,7 @@ export function GitActionsSection({
               )}
             </Button>
           </div>
-          <label className="mt-1 mb-2 flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-300">
+          <label className="mt-1 mb-2 flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-400">
             <Checkbox
               checked={includeUnstaged}
               onChange={() => setIncludeUnstaged((v) => !v)}
@@ -854,7 +854,7 @@ export function GitActionsSection({
                   disabled={busy || generatingPr}
                   tooltip="Generate the title and description from the branch"
                   tooltipPosition="top-left"
-                  className="absolute glass-primary bottom-3 right-2 flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-primary-500 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-100 bg-primary-100/60 hover:bg-primary-200/60 dark:bg-primary-800/40 dark:hover:bg-primary-700/40 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                  className="absolute glass-primary bottom-3 right-2 flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-100 bg-primary-100/60 hover:bg-primary-200/60 dark:bg-primary-800/40 dark:hover:bg-primary-700/40 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {generatingPr ? (
                     <>
@@ -869,7 +869,7 @@ export function GitActionsSection({
                   )}
                 </Button>
               </div>
-              <label className="mb-1 -mt-1 flex cursor-pointer select-none items-center gap-2 text-s text-primary-600 dark:text-primary-300">
+              <label className="mb-1 -mt-1 flex cursor-pointer select-none items-center gap-2 text-s text-primary-600 dark:text-primary-400">
                 <Checkbox
                   checked={prDraft}
                   onChange={() => setPrDraft((v) => !v)}
@@ -923,7 +923,7 @@ export function GitActionsSection({
                     spellCheck={false}
                     autoCapitalize="off"
                     autoCorrect="off"
-                    className="min-w-0 flex-1 bg-transparent py-2 font-mono text-xs text-primary-950 placeholder:text-primary-500 focus:outline-none dark:text-primary-100"
+                    className="min-w-0 flex-1 bg-transparent py-2 font-mono text-xs text-primary-900 placeholder:text-primary-500 focus:outline-none dark:text-primary-100"
                   />
                 </div>
               </div>
@@ -933,7 +933,7 @@ export function GitActionsSection({
                   Visibility
                 </Caption>
                 <div className="flex items-center gap-4">
-                  <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-300">
+                  <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-400">
                     <Checkbox
                       checked={publishPrivate}
                       onChange={() => setPublishPrivate(true)}
@@ -941,7 +941,7 @@ export function GitActionsSection({
                     <Lock className="size-3.5 text-primary-500" />
                     Private
                   </label>
-                  <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-300">
+                  <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-400">
                     <Checkbox
                       checked={!publishPrivate}
                       onChange={() => setPublishPrivate(false)}
@@ -954,7 +954,7 @@ export function GitActionsSection({
               <Button
                 type="button"
                 onClick={() => setPublishAdvanced((v) => !v)}
-                className="flex items-center gap-1 pt-2 text-s text-primary-500 hover:text-primary-700 dark:hover:text-primary-200"
+                className="flex items-center gap-1 pt-2 text-s text-primary-500 hover:text-primary-700 dark:hover:text-primary-300"
               >
                 <ArrowUp
                   className={`size-3 transition-transform duration-200 ${publishAdvanced ? "rotate-180" : "rotate-90"}`}
@@ -989,14 +989,14 @@ export function GitActionsSection({
                         Protocol
                       </Caption>
                       <div className="flex items-center gap-4">
-                        <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-300">
+                        <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-400">
                           <Checkbox
                             checked={publishSsh}
                             onChange={() => setPublishSsh(true)}
                           />
                           SSH
                         </label>
-                        <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-300">
+                        <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-400">
                           <Checkbox
                             checked={!publishSsh}
                             onChange={() => setPublishSsh(false)}

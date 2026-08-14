@@ -751,7 +751,7 @@ export function WorkspaceInput({
               <Button
                 type="button"
                 onClick={() => setTargetMenuOpen((open) => !open)}
-                className="flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-full glass-button text-xs dark:text-primary-200 text-primary-700 cursor-pointer"
+                className="flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-full glass-button text-xs dark:text-primary-300 text-primary-700 cursor-pointer"
                 title="Choose which chat this message is sent to"
                 aria-haspopup="true"
                 aria-expanded={targetMenuOpen}

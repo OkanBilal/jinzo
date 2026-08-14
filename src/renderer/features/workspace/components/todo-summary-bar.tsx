@@ -329,13 +329,13 @@ export function TodoSummaryBar({
                         <span className="size-1.5 rounded-full bg-warning animate-pulse" />
                       )}
                     </span>
-                    <span className="text-primary-500 dark:text-primary-400 tabular-nums shrink-0 w-4 text-right">
+                    <span className="text-primary-600 dark:text-primary-400 tabular-nums shrink-0 w-4 text-right">
                       {idx + 1}.
                     </span>
                     <span
                       className={`min-w-0 flex-1 ${
                         isDone
-                          ? "text-primary-500 dark:text-primary-500 line-through"
+                          ? "text-primary-600 dark:text-primary-400 line-through"
                           : isActive
                             ? "text-primary-900 dark:text-primary-100 font-medium"
                             : "text-primary-700 dark:text-primary-300"

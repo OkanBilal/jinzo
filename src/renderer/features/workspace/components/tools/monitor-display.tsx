@@ -84,14 +84,14 @@ export function MonitorDisplay({
           <ToolOutputBody as="div" className="text-s font-sans space-y-2">
             {source && (
               <div className="space-y-1">
-                <div className="text-t font-medium text-primary-400 dark:text-primary-500">
+                <div className="text-t font-medium text-primary-600 dark:text-primary-400">
                   {wsUrl ? "WebSocket" : "Command"}
                 </div>
                 <pre className="noscrollbar whitespace-pre-wrap break-all font-mono text-t overflow-x-auto">
                   {source}
                 </pre>
                 {protocols.length > 0 && (
-                  <div className="text-t font-mono text-primary-500 dark:text-primary-400">
+                  <div className="text-t font-mono text-primary-600 dark:text-primary-400">
                     {protocols.join(", ")}
                   </div>
                 )}
@@ -100,7 +100,7 @@ export function MonitorDisplay({
 
             {result && (
               <div className="pt-1 border-t border-primary-100 dark:border-primary/10">
-                <div className="text-t font-medium text-primary-400 dark:text-primary-500 mb-1">
+                <div className="text-t font-medium text-primary-600 dark:text-primary-400 mb-1">
                   {status === "error" ? "Error" : "Events"}
                 </div>
                 <pre

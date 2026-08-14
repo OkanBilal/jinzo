@@ -124,7 +124,7 @@ function PulseStep({ isEditing }: { isEditing: boolean }) {
         value={data.prompt}
         onChange={(e) => setData({ prompt: e.target.value })}
         placeholder="Add prompt e.g. look for crashes in $sentry"
-        className="w-full h-64 py-4 bg-transparent outline-none resize-none text-sm text-primary-900 dark:text-primary-200 placeholder-primary-400 dark:placeholder-primary-700"
+        className="w-full h-64 py-4 bg-transparent outline-none resize-none text-sm text-primary-900 dark:text-primary-100 placeholder-primary-400 dark:placeholder-primary-700"
       />
 
       {/* Footer */}
@@ -178,7 +178,7 @@ export function PulseModal({
       {
         id: "pulse",
         title: isEditing ? "Edit automation" : "New pulse",
-        titleIcon: <Sun className="size-5.5! text-primary-900 dark:text-primary-200" />,
+        titleIcon: <Sun className="size-5.5! text-primary-900 dark:text-primary-100" />,
         render: () => <PulseStep isEditing={isEditing} />,
       },
     ],

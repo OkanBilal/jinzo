@@ -40,7 +40,7 @@ export function AgentCard({
         "group flex flex-col items-stretch overflow-hidden rounded-2xl  transition-all duration-200 cursor-pointer flex-1 min-w-0 glass-card",
         isSelected
           ? " text-primary-900 dark:text-primary"
-          : " text-primary-500 dark:text-primary-400 opacity-80 hover:opacity-100",
+          : " text-primary-600 dark:text-primary-400 opacity-80 hover:opacity-100",
         disabled && "opacity-60 cursor-not-allowed",
       )}
       aria-pressed={isSelected}
@@ -54,7 +54,7 @@ export function AgentCard({
           "flex items-center justify-center h-6 border-t transition-colors",
           isSelected
             ? "border-primary-200/40 dark:border-primary-800/40 text-success"
-            : "border-primary-200/40 dark:border-primary-800/40 text-primary-500 dark:text-primary-400",
+            : "border-primary-200/40 dark:border-primary-800/40 text-primary-600 dark:text-primary-400",
         )}
       >
         {isSelected ? (

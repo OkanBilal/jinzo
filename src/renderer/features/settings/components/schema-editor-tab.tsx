@@ -53,7 +53,7 @@ function PropertyRow({
         className={`shrink-0 px-2.5 py-2 border  border-primary-950/10 dark:border-primary/10 rounded-xl text-sm transition-all  ${
           property.isArray
             ? "bg-primary-950/10 dark:bg-primary/20 text-primary-800 dark:text-primary-200"
-            : "bg-primary-950/5 dark:bg-primary/5 text-primary-500 dark:text-primary-400"
+            : "bg-primary-950/5 dark:bg-primary/5 text-primary-600 dark:text-primary-400"
         }`}
         tooltip="Is Array"
       >
@@ -64,7 +64,7 @@ function PropertyRow({
         className={`shrink-0 py-2.5 px-2 border border-primary-950/10 dark:border-primary/10 rounded-xl text-sm transition-all ${
           property.isRequired
             ? "bg-primary-950/10 dark:bg-primary/20 text-primary-800 dark:text-primary-200"
-            : "bg-primary-950/5 dark:bg-primary/5 text-primary-500 dark:text-primary-400"
+            : "bg-primary-950/5 dark:bg-primary/5 text-primary-600 dark:text-primary-400"
         }`}
         tooltip="Required"
       >

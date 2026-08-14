@@ -209,7 +209,7 @@ function ConnectionCard({
       </div>
       <div className="flex items-end justify-between">
         {connection.config ? (
-          <span className="text-xs px-1 text-primary-400 dark:text-primary-300 leading-tight">
+          <span className="text-xs px-1 text-primary-600 dark:text-primary-400 leading-tight">
             {(() => { try { const c = JSON.parse(connection.config); return c.description ?? ""; } catch { return ""; } })()}
           </span>
         ) : <span />}

@@ -118,7 +118,7 @@ export default function ClaudeSettings(
                 href="https://platform.claude.com/docs/en/agent-sdk/structured-outputs"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="ml-1 text-primary-500 hover:text-primary-600 dark:text-primary-200 dark:hover:text-primary-300 underline"
+                className="ml-1 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 underline"
               >
                 Learn more about structured outputs
               </a>
@@ -126,7 +126,7 @@ export default function ClaudeSettings(
           }
         >
           <div className="flex items-center gap-3">
-            <span className="text-sm text-primary-500 dark:text-primary-400">
+            <span className="text-sm text-primary-600 dark:text-primary-400">
               {selectedSchemaName}
             </span>
             <Button
@@ -153,7 +153,7 @@ export default function ClaudeSettings(
                 href="https://platform.claude.com/docs/en/agent-sdk/mcp"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="ml-1 text-primary-500 hover:text-primary-600 dark:text-primary-200 dark:hover:text-primary-300 underline"
+                className="ml-1 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 underline"
               >
                 Learn more about MCP
               </a>
@@ -178,7 +178,7 @@ export default function ClaudeSettings(
                 href="https://platform.claude.com/docs/en/agent-sdk/skills"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="ml-1 text-primary-500 hover:text-primary-600 dark:text-primary-200 dark:hover:text-primary-300 underline"
+                className="ml-1 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 underline"
               >
                 Learn more about skills
               </a>
@@ -202,7 +202,7 @@ export default function ClaudeSettings(
                 href="https://platform.claude.com/docs/en/agent-sdk/subagents"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="ml-1 text-primary-500 hover:text-primary-600 dark:text-primary-200 dark:hover:text-primary-300 underline"
+                className="ml-1 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 underline"
               >
                 Learn more about subagents
               </a>
@@ -227,7 +227,7 @@ export default function ClaudeSettings(
                 href="https://platform.claude.com/docs/en/agent-sdk/slash-commands"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="ml-1 text-primary-500 hover:text-primary-600 dark:text-primary-200 dark:hover:text-primary-300 underline"
+                className="ml-1 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 underline"
               >
                 Learn more about slash commands
               </a>
