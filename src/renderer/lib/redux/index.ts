@@ -31,6 +31,8 @@ const appSettingsPersistConfig = {
     "documentViewerWidth",
     "tasksDetailWidth",
     "theme",
+    "interfaceFontSize",
+    "codeFontSize",
     "bottomTerminalOpen",
     // Pill vs list is a lasting preference: the panel still appears/hides on
     // its own with the run's agents, but HOW it shows is the user's choice

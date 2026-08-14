@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { Components } from "react-markdown";
 
+import { CODE_FONT_SIZE_CSS } from "@/lib/appearance-fonts";
 import { proxiedImageSrc } from "@/lib/proxied-image-src";
 import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
 import { useOpenFileInEditor } from "@/features/workspace/hooks/use-open-file-in-editor";
@@ -208,8 +209,13 @@ export const  markdownComponents: Components = {
         </code>
       );
     }
+    // Blocks carry the Code font-size setting; inline code above stays relative
+    // to its sentence so it never towers over the prose around it.
     return (
-      <code className="block p-4 rounded-xl bg-primary-50 dark:bg-primary/10 text-primary-900 dark:text-primary text-[0.9em] overflow-x-auto">
+      <code
+        className="block p-4 rounded-xl bg-primary-50 dark:bg-primary/10 text-primary-900 dark:text-primary overflow-x-auto"
+        style={{ fontSize: CODE_FONT_SIZE_CSS }}
+      >
         {children}
       </code>
     );

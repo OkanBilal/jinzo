@@ -39,6 +39,7 @@ import { OnboardingScreen } from "./features/onboarding/components/onboarding-sc
 import { ErrorBoundary } from "./components/ui/error-boundary";
 import { MainHeaderProvider } from "./hooks/use-main-header";
 import { useLayoutWidthVars } from "./hooks/use-layout-width-vars";
+import { useAppearanceFonts } from "./hooks/use-appearance-fonts";
 import { getProviderVariant } from "./lib/provider-variants";
 
 /** Layout widths live in CSS (`--sidebar-width`, `--panel-width`, `--browser-panel-width`) — see index.css. */
@@ -80,6 +81,7 @@ function useDropdownAnimationPrewarm() {
 function AppContent() {
   useDropdownAnimationPrewarm();
   useLayoutWidthVars();
+  useAppearanceFonts();
   const location = useLocation();
   const hideRightPanel = shouldHideRightPanel(location.pathname);
   const variant = useWorkspaceVariant();

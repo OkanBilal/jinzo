@@ -1,19 +1,32 @@
 import type { CSSProperties } from "react";
 import type { BaseCodeOptions, BaseDiffOptions } from "@pierre/diffs";
+import { CODE_FONT_SIZE_CSS } from "./appearance-fonts";
 
 /**
  * Typography for every `@pierre/diffs` surface (`PatchDiff`, `File`).
  *
  * The library renders into a shadow root, so Tailwind's `text-*` utilities and
  * the `--text-*` scale in `index.css` never reach it — the size has to travel
- * in as the library's own `--diffs-font-size` custom property. `12px` mirrors
- * `text-xs`; keep the two in step if the scale moves.
+ * in as the library's own `--diffs-font-size` custom property.
+ *
+ * The size defers to the Code font-size setting, which publishes the same
+ * property on `:root` (see `lib/appearance-fonts.ts`). Re-declaring it here
+ * would shadow that, so this indirects through `--font-size-code` instead; the
+ * fallback covers the tick before the setting is applied.
+ *
+ * The line height has to travel with it. The library declares the two
+ * independently (`line-height: var(--diffs-line-height, 20px)`) and sizes its
+ * utility buttons off `1lh`, so leaving the fallback in place would pin rows at
+ * 20px while the text ranges over 10–18px — cramped and clipped at the top of
+ * that range, adrift at the bottom. The ratio reproduces the library's own
+ * 20px at the 12px default.
  *
  * Spread onto the component's `style` prop so the diff viewer, code viewer, PR
  * diff, and the Edit/Write/ApplyPatch tool displays can't drift apart.
  */
 export const DIFF_TYPOGRAPHY_STYLE = {
-  "--diffs-font-size": "12px",
+  "--diffs-font-size": CODE_FONT_SIZE_CSS,
+  "--diffs-line-height": `calc(${CODE_FONT_SIZE_CSS} * 5 / 3)`,
   "--diffs-font-family": "ui-monospace, monospace",
 } as CSSProperties;
 

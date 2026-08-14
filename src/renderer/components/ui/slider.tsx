@@ -1,10 +1,17 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import NumberFlow from "@number-flow/react";
 import { Body } from "./text";
 
 interface SliderProps {
   value: number;
   onChange: (value: number) => void;
+  /**
+   * Called when the drag ends, with the value it ended on. For settings whose
+   * effect moves the slider itself — the interface font size rescales the whole
+   * page, this control included — apply on commit and let `onChange` only drive
+   * the preview, so the drag target stays under the cursor.
+   */
+  onCommit?: (value: number) => void;
   min?: number;
   max?: number;
   step?: number;
@@ -18,6 +25,7 @@ interface SliderProps {
 export function Slider({
   value,
   onChange,
+  onCommit,
   min = 0,
   max = 100,
   step = 1,
@@ -28,6 +36,23 @@ export function Slider({
 }: SliderProps) {
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  // The commit fires from a window listener installed once per drag, so it
+  // closes over the render that started the drag. Both the value it reports and
+  // the handler it calls are read from refs refreshed after every render —
+  // otherwise a caller whose `onCommit` closes over state would commit against
+  // a snapshot taken at mousedown.
+  const latestValue = useRef(value);
+  const latestCommit = useRef(onCommit);
+  useEffect(() => {
+    latestValue.current = value;
+    latestCommit.current = onCommit;
+  });
+
+  // Stable, so the drag listeners can be subscribed honestly rather than behind
+  // a suppressed dependency check.
+  const commit = useCallback(() => {
+    latestCommit.current?.(latestValue.current);
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(parseFloat(e.target.value));
@@ -37,20 +62,23 @@ export function Slider({
     setIsDragging(true);
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     setIsDragging(false);
-  };
+    commit();
+  }, [commit]);
+
+  // Keyboard stepping never goes through the drag listeners, so commit here too.
+  const handleKeyUp = commit;
 
   useEffect(() => {
-    if (isDragging) {
-      window.addEventListener("mouseup", handleMouseUp);
-      window.addEventListener("touchend", handleMouseUp, { passive: true });
-    }
+    if (!isDragging) return;
+    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("touchend", handleMouseUp, { passive: true });
     return () => {
       window.removeEventListener("mouseup", handleMouseUp);
       window.removeEventListener("touchend", handleMouseUp);
     };
-  }, [isDragging]);
+  }, [isDragging, handleMouseUp]);
 
   const displayValue = formatValue ? formatValue(value) : value;
   const percentage = ((value - min) / (max - min)) * 100;
@@ -63,11 +91,11 @@ export function Slider({
       <div
         ref={containerRef}
         className="relative
-          w-full px-3 py-4
+          w-full px-3 py-3.5
           overflow-hidden
-          min-w-50 rounded-xl
+          min-w-50 rounded-[10px]
           bg-primary-950/5 dark:bg-primary/5
-          border border-primary-950/10 dark:border-primary/10
+          glass-outline
           text-primary-900 dark:text-primary
           text-sm focus:outline-none cursor-pointer
           flex items-center justify-between
@@ -75,13 +103,17 @@ export function Slider({
           shadow-(--shadow-inset-subtle) dark:shadow-(--shadow-inset-subtle-dark)
         "
       >
+        {/* The fill animates during the drag too, not just after it. Coarse
+            scales (the font sizes span seven steps) otherwise snap between a
+            handful of positions, which reads as stuttering rather than
+            tracking; a short duration keeps it attached to the cursor. */}
         <div
-          className={`absolute inset-y-0 left-0 rounded-lg bg-primary-950/12 dark:bg-primary/10 ${isDragging ? "" : "transition-[width] duration-150 ease-out"}`}
+          className={`absolute inset-y-0 left-0 rounded-lg bg-primary-950/12 dark:bg-primary/10 transition-[width] ease-out ${isDragging ? "duration-100" : "duration-150"}`}
           style={{ width: `${percentage}%` }}
         >
           {/* Vertical line inside percentage bar */}
           <div
-            className="absolute inset-y-0 right-2 h-4.5 rounded-full top-1.75 w-[1.5px] bg-primary-950/20 dark:bg-primary/50 transition-opacity duration-150"
+            className="absolute inset-y-0 right-2 h-4 rounded-full top-1.5 w-[1.5px] bg-primary-950/20 dark:bg-primary/50 transition-opacity duration-150"
             style={{ opacity: lineOpacity }}
           />
         </div>
@@ -108,6 +140,7 @@ export function Slider({
           onChange={handleChange}
           onMouseDown={handleMouseDown}
           onTouchStart={handleMouseDown}
+          onKeyUp={handleKeyUp}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
         />
       </div>

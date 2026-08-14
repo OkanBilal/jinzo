@@ -44,7 +44,7 @@ export function PromptSuggestionChips({
           transition={{ duration: 0.3, ease: "easeOut" }}
           className="text-xxs  tracking-tight text-primary-500 dark:text-primary-600 -mt-2 mr-1"
         >
-        follow up
+        follow-up
         </m.span>
       </div>
       </MotionConfig>

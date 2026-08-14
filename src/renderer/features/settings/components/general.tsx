@@ -1,4 +1,16 @@
-import { Button, Select, Toggle, toast } from "@/components/ui";
+import { useState } from "react";
+import { Button, Select, Slider, Toggle, toast } from "@/components/ui";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
+import {
+  setCodeFontSize,
+  setInterfaceFontSize,
+} from "@/lib/redux/slices/appSettingsSlice";
+import {
+  MAX_CODE_FONT_SIZE,
+  MAX_INTERFACE_FONT_SIZE,
+  MIN_CODE_FONT_SIZE,
+  MIN_INTERFACE_FONT_SIZE,
+} from "@/lib/appearance-fonts";
 import {
   useGetAppSettingsQuery,
   useSetShowToolCallsMutation,
@@ -207,6 +219,53 @@ function NotifyToolApprovalToggle() {
   );
 }
 
+/**
+ * Applied on release, not while dragging: the interface size rescales the whole
+ * page — this row included — so a live update would slide the handle out from
+ * under the cursor. The draft drives the readout during the drag.
+ */
+function InterfaceFontSizeSlider() {
+  const dispatch = useAppDispatch();
+  const stored = useAppSelector((s) => s.appSettings.interfaceFontSize);
+  const [draft, setDraft] = useState(stored);
+  const [syncedFrom, setSyncedFrom] = useState(stored);
+
+  // Adjust during render rather than in an effect: keying the slider off
+  // `stored` would remount it on every commit and drop keyboard focus mid-step.
+  if (syncedFrom !== stored) {
+    setSyncedFrom(stored);
+    setDraft(stored);
+  }
+
+  return (
+    <Slider
+      value={draft}
+      onChange={setDraft}
+      onCommit={(next) => dispatch(setInterfaceFontSize(next))}
+      min={MIN_INTERFACE_FONT_SIZE}
+      max={MAX_INTERFACE_FONT_SIZE}
+      step={1}
+      formatValue={(size) => `${size}px`}
+    />
+  );
+}
+
+function CodeFontSizeSlider() {
+  const dispatch = useAppDispatch();
+  const value = useAppSelector((s) => s.appSettings.codeFontSize);
+
+  return (
+    <Slider
+      value={value}
+      onChange={(next) => dispatch(setCodeFontSize(next))}
+      min={MIN_CODE_FONT_SIZE}
+      max={MAX_CODE_FONT_SIZE}
+      step={1}
+      formatValue={(size) => `${size}px`}
+    />
+  );
+}
+
 export default function GeneralSettings() {
   const {
     state: updateState,
@@ -253,6 +312,22 @@ export default function GeneralSettings() {
           ) : (
             <ThemePicker onChange={handleThemeChange} />
           )}
+        </SettingsRow>
+
+        <SettingsDivider />
+        <SettingsRow
+          title="Interface Size"
+          description="Scales the whole interface — text, spacing, and controls"
+        >
+          <InterfaceFontSizeSlider />
+        </SettingsRow>
+
+        <SettingsDivider />
+        <SettingsRow
+          title="Code Size"
+          description="Size of diffs, file previews, and code blocks"
+        >
+          <CodeFontSizeSlider />
         </SettingsRow>
       </SettingsSection>
 
