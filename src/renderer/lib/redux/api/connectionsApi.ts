@@ -224,6 +224,17 @@ export interface SaveResourcesPayload {
 // (`ConnectionState`) refreshes independently from per-connection
 // queries (`Connection`). See ADR-0002.
 // ─────────────────────────────────────────────────────────────
+// Deleting a connection or one of its resources cascade-deletes the `entities`
+// rows behind it — and with them `issues` and `signals` (FK onDelete: cascade).
+// Every tag family reading synced content has to refresh, or the Tasks screen
+// keeps listing issues from a connection that no longer exists.
+const SYNCED_CONTENT_TAGS = [
+  'Entity',
+  'Issue',
+  'ProjectIssues',
+  'ProjectSignals',
+] as const;
+
 export const connectionsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
 
@@ -272,7 +283,7 @@ export const connectionsApi = baseApi.injectEndpoints({
         handler: CHANNELS.connections.revoke,
         args: [provider],
       }),
-      invalidatesTags: ['Connection', 'ConnectionState'],
+      invalidatesTags: ['Connection', 'ConnectionState', ...SYNCED_CONTENT_TAGS],
     }),
 
     // ── per-provider resource discovery ──
@@ -388,7 +399,7 @@ export const connectionsApi = baseApi.injectEndpoints({
         handler: CHANNELS.connections.deleteResource,
         args: [resourceId],
       }),
-      invalidatesTags: ['Connection'],
+      invalidatesTags: ['Connection', ...SYNCED_CONTENT_TAGS],
     }),
 
     // ── GitHub OAuth device flow (token acquisition; the token is then

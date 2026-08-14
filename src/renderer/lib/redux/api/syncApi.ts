@@ -28,7 +28,10 @@ export const syncApi = baseApi.injectEndpoints({
         handler: CHANNELS.sync.runEntitySync,
         args: provider ? [provider] : [],
       }),
-      invalidatesTags: ["Entity", "ProjectIssues"],
+      // A sync writes `entities`, `issues`, and `signals` — every tag family
+      // reading those rows has to refresh, or a freshly connected provider's
+      // issues only show up after a reload.
+      invalidatesTags: ["Entity", "Issue", "ProjectIssues", "ProjectSignals"],
     }),
   }),
   overrideExisting: false,

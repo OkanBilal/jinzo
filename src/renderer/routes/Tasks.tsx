@@ -32,12 +32,14 @@ export default function TasksPage() {
   };
 
   const selectPr = useCallback(
-    (pr: PullRequestSummary) => setDetail({ kind: "pr", pr }),
+    (pr: PullRequestSummary | null) =>
+      setDetail(pr ? { kind: "pr", pr } : null),
     [],
   );
 
   const selectIssue = useCallback(
-    (issue: IssueWithEntity) => setDetail({ kind: "issue", issue }),
+    (issue: IssueWithEntity | null) =>
+      setDetail(issue ? { kind: "issue", issue } : null),
     [],
   );
 

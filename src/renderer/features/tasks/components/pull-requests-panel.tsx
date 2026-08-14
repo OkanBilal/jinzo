@@ -44,7 +44,8 @@ const LIFECYCLE_FILTERS: { value: PrLifecycle; label: string }[] = [
 
 interface PullRequestsPanelProps {
   selectedNodeId: string | null;
-  onSelectPr: (pr: PullRequestSummary) => void;
+  /** `null` clears the drawer — the list has nothing left to point at. */
+  onSelectPr: (pr: PullRequestSummary | null) => void;
 }
 
 export function PullRequestsPanel({
@@ -76,8 +77,10 @@ export function PullRequestsPanel({
     return () => clearTimeout(timer);
   }, [text]);
 
+  // Re-checked on mount like the search below: returning from the connections
+  // screen must not keep serving a cached "not connected".
   const { data: availability, isLoading: availabilityLoading } =
-    useGetPrAvailabilityQuery(undefined);
+    useGetPrAvailabilityQuery(undefined, { refetchOnMountOrArgChange: 30 });
 
   const filters = useMemo(
     () => ({
@@ -175,12 +178,17 @@ export function PullRequestsPanel({
   // The detail drawer is always open — keep it pointed at the top row
   // whenever nothing (or something no longer listed) is selected.
   useEffect(() => {
-    if (items.length === 0) return;
+    if (items.length === 0) {
+      // Same as the issues panel: a disconnected provider (or a search that
+      // came back empty) must not leave a stale PR in the drawer.
+      if (selectedNodeId && !isFetching) onSelectPr(null);
+      return;
+    }
     if (selectedNodeId && items.some((pr) => pr.nodeId === selectedNodeId)) {
       return;
     }
     onSelectPr(items[0]);
-  }, [items, selectedNodeId, onSelectPr]);
+  }, [items, selectedNodeId, isFetching, onSelectPr]);
 
   const handleLoadMore = async () => {
     if (!lastPage?.endCursor) return;

@@ -112,11 +112,17 @@ const detailTag = (ref: PrRefInput) =>
 
 export const pullRequestsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
+    // Both PR reads are derived from the provider connection: availability is
+    // the token check itself, and search is scoped to the repos selected on
+    // that connection. Tagging them `Connection` makes connecting, revoking,
+    // or re-scoping repos refresh the inbox instead of serving the cached
+    // "not connected" answer until a reload.
     getPrAvailability: builder.query<PrAvailability, string | undefined>({
       query: (provider) => ({
         handler: CHANNELS.pullRequests.getAvailability,
         args: [provider],
       }),
+      providesTags: ["Connection"],
     }),
 
     searchPullRequests: builder.query<PrSearchPage, PrSearchInput>({
@@ -124,7 +130,7 @@ export const pullRequestsApi = baseApi.injectEndpoints({
         handler: CHANNELS.pullRequests.search,
         args: [input],
       }),
-      providesTags: ["PullRequests"],
+      providesTags: ["PullRequests", "Connection"],
     }),
 
     getPrDetail: builder.query<PullRequestDetail, PrRefInput>({

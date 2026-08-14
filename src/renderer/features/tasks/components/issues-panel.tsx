@@ -35,7 +35,8 @@ const EMPTY_FILTERS: IssueFilters = {
 
 interface IssuesPanelProps {
   activeEntityId: string | null;
-  onSelectIssue: (issue: IssueWithEntity) => void;
+  /** `null` clears the drawer — the list has nothing left to point at. */
+  onSelectIssue: (issue: IssueWithEntity | null) => void;
 }
 
 export function IssuesPanel({ activeEntityId, onSelectIssue }: IssuesPanelProps) {
@@ -171,7 +172,13 @@ export function IssuesPanel({ activeEntityId, onSelectIssue }: IssuesPanelProps)
   // The detail drawer is always open — keep it pointed at the top row
   // whenever nothing (or something no longer listed) is selected.
   useEffect(() => {
-    if (filteredIssues.length === 0) return;
+    if (filteredIssues.length === 0) {
+      // Revoking a connection deletes its issues, so a settled empty list has
+      // to drop the drawer's row too. `isFetching` keeps the refetch gap from
+      // clearing a still-valid selection.
+      if (activeEntityId && !isFetching) onSelectIssue(null);
+      return;
+    }
     if (
       activeEntityId &&
       filteredIssues.some((row) => row.issue.entityId === activeEntityId)
@@ -179,7 +186,7 @@ export function IssuesPanel({ activeEntityId, onSelectIssue }: IssuesPanelProps)
       return;
     }
     onSelectIssue(filteredIssues[0]);
-  }, [filteredIssues, activeEntityId, onSelectIssue]);
+  }, [filteredIssues, activeEntityId, isFetching, onSelectIssue]);
 
   return (
     <div className="flex flex-col h-full min-h-0">
