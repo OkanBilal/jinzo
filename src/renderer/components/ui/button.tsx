@@ -97,7 +97,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           <div className="flex items-center gap-1.5">
             {/* `inherit` so the spinner picks up the button's own text color
                 (warning, danger, provider accent…) like the label beside it. */}
-            <AsciiSpinner variant="inherit" />
+            <AsciiSpinner variant="inherit" kind="circle" />
             <span>Loading...</span>
           </div>
         ) : (

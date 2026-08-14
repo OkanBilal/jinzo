@@ -12,6 +12,7 @@ const Settings = lazy(() => import("@/routes/Settings"));
 const PluginsPage = lazy(() => import("@/routes/Plugins"));
 const Pulse = lazy(() => import("@/routes/Pulse"));
 const Relay = lazy(() => import("@/routes/Relay"));
+const Tasks = lazy(() => import("@/routes/Tasks"));
 
 function DefaultRoute() {
   const { activeSpace } = useActiveSpace();
@@ -37,6 +38,7 @@ export function MainRoutes() {
         <Route path="/plugins" element={<PluginsPage />} />
         <Route path="/pulse" element={<Pulse />} />
         <Route path="/relay" element={<Relay />} />
+        <Route path="/tasks" element={<Tasks />} />
       </Routes>
     </Suspense>
   );

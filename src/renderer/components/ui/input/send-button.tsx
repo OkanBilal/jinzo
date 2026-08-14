@@ -28,7 +28,7 @@ export function SendButton({ loading, onSubmit, onStop, disabled = false }: Send
   return (
     <Button
       type="button"
-      tooltip="Send a message"
+      tooltip="Send"
       onClick={() => {
         if (!isDisabled) onSubmit();
       }}

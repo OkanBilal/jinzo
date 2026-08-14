@@ -184,6 +184,16 @@ _Avoid_: re-introducing turn-grouping / accordion / session-bar math inside `wor
 The framework-free bookkeeping state machine behind `use-workspace-runs.ts`, in `features/workspace/lib/run-cache.ts` (`createRunCache()` factory — no class, matching the repo's object-literal lean). It owns the LRU of retained runs (`MAX_RETAINED_RUNS`), the incremental-sync cursors (`artifact` id + `tool` updatedAt), the "loaded once" set, the finalized set, and the in-flight/pending-reload dedup. The hook holds one instance in a ref and keeps all data-fetching + `setState`; the cache only tracks indices and enforces their invariants. Load invariant folded into `touch(runId)`: a run evicted from the LRU also loses its cursors + loaded flag, so re-opening it re-fetches full history rather than a truncated delta. In-flight dedup is `tryAcquireLoad` / `clearPending` / `hasPending` / `releaseLoad` (the `await` loop stays in the hook). `pruneRunMap` (evict a `Record` to an allowed set) lives here too.
 _Avoid_: re-scattering LRU / cursor / dedup refs back into the hook; advancing a cursor without `Math.max` (cursors are monotonic); forgetting that `touch` already prunes evicted runs' cursors.
 
+## Pull request inbox
+
+**PR view model**:
+A pull request row served by the `pullRequests` module (`pullRequests:search` / `pullRequests:getAvailability`) for the `/tasks` screen. PRs are **live view models, never entities**: CI status, mergeability, and review state go stale too fast for the sync path, so the module queries the provider per request (GitHub GraphQL `search` via the stored connection token) and persists nothing. The synced `github:pull_requests` fetcher still exists for entity-backed surfaces (pulse/signals), but the PR inbox never reads entities — one screen, one source of truth.
+_Avoid_: writing PR rows into `entities`; rendering the PR tab from synced entity data; adding a DB table to the `pullRequests` module.
+
+**PrSource**:
+The per-provider interface (`pullRequests/sources/source.types.ts`) behind the PR inbox — reads (`getViewer`, `search`, `getDetail`, `getDiff`) plus write actions (`merge`, `markReady`, `addComment`, `addReviewComment`, `replyToReviewThread`, `resolveThread`). Search scope defaults to the connection's selected repos (`getSelectedResources`, the set issue sync uses); under that scope the `all` relationship means "every PR in those repos", not `involves:@me` — mirroring the sync module's `ResourceFetcher` seam: one file per provider, `source.factory.ts` resolves provider id → source using `getConnectionWithSecrets` from the connections barrel. GitHub is the first implementation; GitLab/Bitbucket slot in as new files behind the same interface. Sources are constructed per call (no cache) so a token change is picked up immediately.
+_Avoid_: provider `if`/`switch` branches in `pullRequests.service` beyond the factory; importing connection crypto helpers (call `getConnectionWithSecrets`); shelling out to `gh` for inbox reads (the token path works without the CLI installed).
+
 ## Flagged ambiguities
 
 - "ServiceResponse" was historically defined ~27 times across `src/main/modules/*/dto.ts` in two structurally incompatible shapes (discriminated union vs optional-fields object). Resolved: the discriminated union is canonical; every module now re-exports the canonical type (no remaining bespoke envelopes).

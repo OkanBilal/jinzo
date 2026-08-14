@@ -29,11 +29,15 @@ export {
   useLazyGetSelectedResourcesQuery,
   useSaveResourcesMutation,
   useDeleteResourceMutation,
+  useStartGithubDeviceFlowMutation,
+  usePollGithubDeviceFlowMutation,
 } from "./connectionsApi";
 export type {
   Connection,
   ConnectionState,
   UpdateConnectionStatePayload,
+  GitHubDeviceAuthorization,
+  GitHubDevicePollResult,
   GitHubRepo,
   GitLabProject,
   LinearTeam,
@@ -73,6 +77,7 @@ export {
   useGetIssueByEntityIdQuery,
   useUpdateIssueStateMutation,
   useGetIssuesByRepoQuery,
+  useGetIssuesInboxQuery,
 } from "./entitiesApi";
 export type {
   Entity,
@@ -473,6 +478,38 @@ export type {
   CreateAutomationInput,
   UpdateAutomationInput,
 } from "./automationsApi";
+
+export {
+  pullRequestsApi,
+  useGetPrAvailabilityQuery,
+  useSearchPullRequestsQuery,
+  useLazySearchPullRequestsQuery,
+  useGetPrDetailQuery,
+  useGetPrDiffQuery,
+  useMergePrMutation,
+  useMarkPrReadyMutation,
+  useAddPrCommentMutation,
+  useAddPrReviewCommentMutation,
+  useReplyToPrThreadMutation,
+  useResolvePrThreadMutation,
+} from "./pullRequestsApi";
+export type {
+  PrAvailability,
+  PrSearchInput,
+  PrSearchPage,
+  PrRelationship,
+  PrLifecycle,
+  PrState,
+  PrCiStatus,
+  PrCheck,
+  PrComment,
+  PrDiff,
+  PrMergeMethod,
+  PrRefInput,
+  PrReviewThread,
+  PullRequestDetail,
+  PullRequestSummary,
+} from "./pullRequestsApi";
 
 export {
   pulseApi,

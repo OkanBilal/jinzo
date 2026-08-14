@@ -29,6 +29,7 @@ const appSettingsPersistConfig = {
     // the loaded document isn't persisted, so reopening to an empty panel on
     // restart would be confusing — start closed instead.
     "documentViewerWidth",
+    "tasksDetailWidth",
     "theme",
     "bottomTerminalOpen",
     // Pill vs list is a lasting preference: the panel still appears/hides on
@@ -37,7 +38,6 @@ const appSettingsPersistConfig = {
     "subagentPanelCollapsed",
     "workspaceListGrouping",
     "workspaceGroupExpanded",
-    "trackerByProject",
     "onboardingCliAutoSelectApplied",
   ],
 };

@@ -85,6 +85,10 @@ const api = {
       ipcRenderer.invoke(CHANNELS.connections.revoke, provider),
     getGithubRepos: (connectionId: string) =>
       ipcRenderer.invoke(CHANNELS.connections.getGithubRepos, connectionId),
+    githubDeviceStart: () =>
+      ipcRenderer.invoke(CHANNELS.connections.githubDeviceStart),
+    githubDevicePoll: (deviceCode: string) =>
+      ipcRenderer.invoke(CHANNELS.connections.githubDevicePoll, deviceCode),
     getLinearTeams: (connectionId: string) =>
       ipcRenderer.invoke(CHANNELS.connections.getLinearTeams, connectionId),
     getJiraProjects: (connectionId: string) =>
@@ -834,6 +838,29 @@ const api = {
     getAvailableActions: () => ipcRenderer.invoke(CHANNELS.automations.getAvailableActions),
   },
 
+  // Pull request inbox (live provider queries, GitHub for now)
+  pullRequests: {
+    getAvailability: (provider?: string) =>
+      ipcRenderer.invoke(CHANNELS.pullRequests.getAvailability, provider),
+    search: (input: unknown) =>
+      ipcRenderer.invoke(CHANNELS.pullRequests.search, input),
+    getDetail: (input: unknown) =>
+      ipcRenderer.invoke(CHANNELS.pullRequests.getDetail, input),
+    getDiff: (input: unknown) =>
+      ipcRenderer.invoke(CHANNELS.pullRequests.getDiff, input),
+    merge: (input: unknown) =>
+      ipcRenderer.invoke(CHANNELS.pullRequests.merge, input),
+    markReady: (input: unknown) =>
+      ipcRenderer.invoke(CHANNELS.pullRequests.markReady, input),
+    addComment: (input: unknown) =>
+      ipcRenderer.invoke(CHANNELS.pullRequests.addComment, input),
+    addReviewComment: (input: unknown) =>
+      ipcRenderer.invoke(CHANNELS.pullRequests.addReviewComment, input),
+    replyToThread: (input: unknown) =>
+      ipcRenderer.invoke(CHANNELS.pullRequests.replyToThread, input),
+    resolveThread: (input: unknown) =>
+      ipcRenderer.invoke(CHANNELS.pullRequests.resolveThread, input),
+  },
   // Pulse operations (scheduled work runs)
   pulse: {
     getAll: () => ipcRenderer.invoke(CHANNELS.pulse.getAll),

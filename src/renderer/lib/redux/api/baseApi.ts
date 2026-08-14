@@ -85,6 +85,8 @@ export const baseApi = createApi({
     'Automations',
     'Pulse',
     'ProjectSignals',
+    'PullRequests',
+    'PullRequestDetail',
   ],
   endpoints: () => ({}),
 });

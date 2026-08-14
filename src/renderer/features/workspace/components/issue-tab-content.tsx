@@ -5,7 +5,7 @@ import rehypeSanitize from "rehype-sanitize";
 import { markdownComponents } from "@/components/markdown-components";
 import { markdownSanitizeSchema } from "@/lib/markdown-sanitize";
 import type { IssueWithEntity } from "@/lib/redux/api";
-import { Heading2, Button, Caption, Text } from "@/components/ui";
+import { Heading2, Caption } from "@/components/ui";
 
 interface IssueTabContentProps {
   issue: IssueWithEntity;
@@ -33,10 +33,7 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
         <div className="space-y-3">
           {/* Title */}
           <Heading2>
-            {title}{" "}
-            {iss.number != null && (
-              <Caption className="font-mono">#{iss.number}</Caption>
-            )}
+            {title}
           </Heading2>
 
           {/* State badge */}
@@ -72,7 +69,7 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
             {labels.map((label) => (
               <span
                 key={label}
-                className={`inline-block px-2.5 py-1 text-xs rounded-full capitalize font-medium bg-primary-200 dark:bg-primary-600 text-primary-600 dark:text-primary-100`}
+                className={`inline-block glass-primary px-2.5 py-1 text-xs rounded-full capitalize font-medium text-primary-600 dark:text-primary-100`}
               >
                 {label}
               </span>
@@ -97,30 +94,6 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
             </Caption>
           )}
         </div>
-        {entity.url && (
-          <div>
-            <Text className="mt-0.5">
-              <Button
-                variant="primary"
-                onClick={() => window.api.shell.openExternal(entity.url!)}
-              >
-                {iss.provider === "linear"
-                  ? "View on Linear"
-                  : iss.provider === "jira"
-                    ? "View on Jira"
-                    : iss.provider === "asana"
-                      ? "View on Asana"
-                      : iss.provider === "github"
-                        ? "View on GitHub"
-                        : iss.provider === "gitlab"
-                          ? "View on GitLab"
-                          : iss.provider === "trello"
-                            ? "View on Trello"
-                        : "View on Provider"}
-              </Button>
-            </Text>
-          </div>
-        )}
       </div>
     </div>
   );
