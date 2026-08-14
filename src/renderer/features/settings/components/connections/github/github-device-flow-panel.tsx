@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button, Caption, CopyButton, ErrorText, Muted } from "@/components/ui";
 import { AsciiSpinner } from "@/components/ui/ascii-spinner";
-import { Clipboard, External, Github } from "@/components/ui/icons";
+import { Github } from "@/components/ui/icons";
 import {
   useStartGithubDeviceFlowMutation,
   usePollGithubDeviceFlowMutation,
@@ -32,11 +32,9 @@ export function GitHubDeviceFlowPanel({
 
   const [auth, setAuth] = useState<GitHubDeviceAuthorization | null>(null);
   const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
 
   const handleStart = async () => {
     setError("");
-    setCopied(false);
     try {
       const authorization = await startFlow().unwrap();
       setAuth(authorization);
@@ -47,14 +45,6 @@ export function GitHubDeviceFlowPanel({
     }
   };
 
-  const handleCopy = async (code: string) => {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopied(true);
-    } catch {
-      // Clipboard unavailable — the code is visible to copy by hand.
-    }
-  };
 
   // Poll while an authorization is pending. GitHub dictates the pace
   // (interval, slow_down); the loop dies with the effect on cancel/unmount.
