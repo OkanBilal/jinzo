@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useIsDarkMode } from "@/hooks/use-is-dark-mode";
 import { Edit } from "@/components/ui/icons";
 import { PatchDiff } from "@pierre/diffs/react";
+import { DIFF_TYPOGRAPHY_STYLE, patchDiffOptions } from "@/lib/diff-style";
 import { normalizePatchForPatchDiff } from "../../utils/patch-utils";
 import { useOpenFileInEditor } from "../../hooks/use-open-file-in-editor";
 import { FileIconComponent } from "../file-explorer/components/file-icon";
@@ -103,20 +104,8 @@ export function ApplyPatchDisplay({
           <div className="max-h-80 overflow-y-auto noscrollbar p-0.5">
             <PatchDiff
               patch={unifiedDiff}
-              style={
-                {
-                  "--diffs-font-size": "12px",
-                  "--diffs-font-family": "ui-monospace, monospace",
-                } as React.CSSProperties
-              }
-              options={{
-                theme: isDarkMode ? "pierre-dark" : "pierre-light",
-                themeType: isDarkMode ? "dark" : "light",
-                diffStyle: "unified",
-                overflow: "wrap",
-                disableFileHeader: true,
-                unsafeCSS: `:host, [data-diffs], [data-diffs-header], [data-error-wrapper], [data-line], [data-column-number], [data-code] { --diffs-bg: var(--color-${isDarkMode ? "primary-950" : "primary"}); background-color: var(--color-${isDarkMode ? "primary-950" : "primary"}); }`,
-              }}
+              style={DIFF_TYPOGRAPHY_STYLE}
+              options={patchDiffOptions(isDarkMode)}
             />
           </div>
         </ToolCollapse>

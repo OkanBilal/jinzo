@@ -289,7 +289,7 @@ function ArchivedRunsPanel({ runs }: { runs: ArchivedRun[] }) {
                 {group.runs.length} run{group.runs.length === 1 ? "" : "s"}
               </Caption>
               {group.workspaceArchived && (
-                <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400">
+                <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-t font-medium text-amber-700 dark:text-amber-400">
                   Workspace archived
                 </span>
               )}
@@ -353,7 +353,7 @@ function ArchivedWorkspaceRow({
           {!workspace.pathExists && (
             <span className="flex shrink-0 items-center gap-1 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-amber-700 dark:text-amber-500">
               <Danger className="size-3" />
-              <span className="text-[10px]">Folder missing</span>
+              <span className="text-t">Folder missing</span>
             </span>
           )}
         </div>

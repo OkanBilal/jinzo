@@ -14,6 +14,7 @@ import type { FileContentResponse, ServiceResponse } from "@/features/workspace/
 import { ImagePreviewModal } from "./image-preview-modal";
 import { useLocalImageUrl } from "@/hooks/use-local-image-url";
 import { useIsDarkMode } from "@/hooks/use-is-dark-mode";
+import { DIFF_TYPOGRAPHY_STYLE, patchDiffOptions } from "@/lib/diff-style";
 import { Button } from "@/components/ui";
 import type { FindingSeverity } from "@/lib/redux/api";
 import {
@@ -313,15 +314,8 @@ export function DiffViewer({
       ) : (
         <PatchDiff
           patch={expandedDiff}
-          style={{ "--diffs-font-size": "12px", "--diffs-font-family": "ui-monospace, monospace" } as React.CSSProperties}
-          options={{
-            theme: isDarkMode ? "pierre-dark" : "pierre-light",
-            themeType: isDarkMode ? "dark" : "light",
-            diffStyle: "unified",
-            overflow: "wrap",
-            disableFileHeader: true,
-            unsafeCSS: `:host, [data-diffs], [data-diffs-header], [data-error-wrapper], [data-line], [data-column-number], [data-code] { --diffs-bg: var(--color-${isDarkMode ? "primary-950" : "primary"}); background-color: var(--color-${isDarkMode ? "primary-950" : "primary"}); }`,
-          }}
+          style={DIFF_TYPOGRAPHY_STYLE}
+          options={patchDiffOptions(isDarkMode)}
           lineAnnotations={lineAnnotations}
           renderAnnotation={lineAnnotations ? renderAnnotation : undefined}
         />

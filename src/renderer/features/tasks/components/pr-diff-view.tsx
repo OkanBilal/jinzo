@@ -19,6 +19,7 @@ import { extractErrorMessage } from "@/lib/extract-error-message";
 import { ArrowUp } from "@/components/ui/icons";
 import { proxiedImageSrc } from "@/lib/proxied-image-src";
 import { formatDate } from "@/lib/format-date";
+import { DIFF_TYPOGRAPHY_STYLE, patchDiffOptions } from "@/lib/diff-style";
 
 interface FileDiff {
   path: string;
@@ -385,21 +386,8 @@ function FileSection({
         <div className="overflow-hidden min-h-0">
           <PatchDiff<AnnotationMeta>
             patch={file.patch}
-            style={
-              {
-                "--diffs-font-size": "12px",
-                "--diffs-font-family": "ui-monospace, monospace",
-              } as React.CSSProperties
-            }
-            options={{
-              theme: isDarkMode ? "pierre-dark" : "pierre-light",
-              themeType: isDarkMode ? "dark" : "light",
-              diffStyle: "unified",
-              overflow: "wrap",
-              disableFileHeader: true,
-              enableGutterUtility: true,
-              unsafeCSS: `:host, [data-diffs], [data-diffs-header], [data-error-wrapper], [data-line], [data-column-number], [data-code] { --diffs-bg: var(--color-${isDarkMode ? "primary-950" : "primary"}); background-color: var(--color-${isDarkMode ? "primary-950" : "primary"}); }`,
-            }}
+            style={DIFF_TYPOGRAPHY_STYLE}
+            options={{ ...patchDiffOptions(isDarkMode), enableGutterUtility: true }}
             lineAnnotations={lineAnnotations}
             renderAnnotation={lineAnnotations ? renderAnnotation : undefined}
             /* The library forbids combining onGutterUtilityClick with a

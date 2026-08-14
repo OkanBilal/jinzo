@@ -9,6 +9,7 @@ import {
   addContextCodeSelection,
 } from "@/lib/redux/slices/workspaceSlice";
 import { useResyncWorkspaceDiffMutation } from "@/lib/redux/api";
+import { DIFF_TYPOGRAPHY_STYLE, diffSurfaceOptions } from "@/lib/diff-style";
 import { Button } from "@/components/ui";
 import type {
   FileContentResponse,
@@ -371,21 +372,8 @@ export function CodeViewer({
             file={file}
             edit={!!filePath}
             editorOptions={editorOptions}
-            style={
-              {
-                "--diffs-font-size": "12px",
-                "--diffs-font-family": "ui-monospace, monospace",
-              } as React.CSSProperties
-            }
-            options={{
-              theme: isDarkMode ? "pierre-dark" : "pierre-light",
-              themeType: isDarkMode ? "dark" : "light",
-              overflow: "scroll",
-              disableFileHeader: true,
-              unsafeCSS: `:host, [data-diffs], [data-diffs-header], [data-error-wrapper],
-          [data-line], [data-column-number], [data-code] { --diffs-bg: var(--color-${isDarkMode ? "primary-950" : "primary"});
-          background-color: var(--color-${isDarkMode ? "primary-950" : "primary"}); }`,
-            }}
+            style={DIFF_TYPOGRAPHY_STYLE}
+            options={{ ...diffSurfaceOptions(isDarkMode), overflow: "scroll" }}
           />
         </EditProvider>
       </div>
