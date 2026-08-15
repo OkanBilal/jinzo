@@ -1,4 +1,4 @@
-import Code from "@/components/ui/icons/space/code";
+import { Code } from "@/components/ui/icons/space";
 import { Text } from "@/components/ui";
 import { BaseTab } from "./base-tab";
 

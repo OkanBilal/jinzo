@@ -1,5 +1,12 @@
 import { useState, useMemo } from "react";
-import { Text, Button, SegmentedTabs, toast, Body } from "@/components/ui";
+import {
+  AsciiSpinner,
+  Body,
+  Button,
+  SegmentedTabs,
+  Text,
+  toast,
+} from "@/components/ui";
 import { SettingsPageShell } from "../settings-layout";
 import AsanaModal from "./asana/asana-modal";
 import GitHubModal from "./github/github-modal";
@@ -12,7 +19,6 @@ import SocketDevModal from "./socketdev/socketdev-modal";
 import { useRunEntitySyncMutation } from "@/lib/redux/api/syncApi";
 import { useGetConnectionStatesQuery } from "@/lib/redux/api";
 import type { ConnectionState } from "@/lib/redux/api";
-import { AsciiSpinner } from "@/components/ui/ascii-spinner";
 
 type ConnectionItem = ConnectionState;
 

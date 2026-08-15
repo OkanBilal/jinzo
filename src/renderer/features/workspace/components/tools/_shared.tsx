@@ -1,7 +1,6 @@
 import { createContext, useContext, type ReactNode } from "react";
 import { ArrowUp } from "@/components/ui/icons";
-import { Button } from "@/components/ui";
-import { SquareSpinner } from "@/components/ui/square-spinner";
+import { Button, SquareSpinner } from "@/components/ui";
 import type { RunEvent } from "../../types";
 
 /**

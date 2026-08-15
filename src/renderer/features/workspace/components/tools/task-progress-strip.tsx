@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Text } from "@/components/ui";
+import { Button, SquareSpinner, Text } from "@/components/ui";
 import {
   subagentStateOf,
   type SubagentLifecycleMeta,
@@ -7,7 +7,6 @@ import {
   type SubagentTaskMeta,
 } from "../../utils/subagent-identity";
 import { Bot, Clock, Document, Stop } from "@/components/ui/icons";
-import { SquareSpinner } from "@/components/ui/square-spinner";
 import { TOOL_ROW_TEXT, ToolCollapse, ToolOutputBody } from "./_shared";
 
 /**

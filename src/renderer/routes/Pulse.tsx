@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Plus } from "@/components/ui/icons";
 import { useGetPulsesQuery, type Pulse } from "@/lib/redux/api/pulseApi";
 import { PulseList } from "@/features/pulse/components/pulse-list";
 import { PulseModal } from "@/features/pulse/components/pulse-modal";
 import { PulseTemplates } from "@/features/pulse/components/pulse-templates";
 import type { PulseTemplate } from "@/features/pulse/templates";
-import { Heading3, Muted } from "@/components/ui";
+import { Button, Heading3, Muted } from "@/components/ui";
 import { PageShell } from "@/components/layout/page-shell";
 
 export default function PulsePage() {

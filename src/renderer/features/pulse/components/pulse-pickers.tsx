@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import Text from "@/components/ui/text";
+import { Button, DropdownWrapper, Select, Text } from "@/components/ui";
 import {
   ArrowUp,
   Bot,
@@ -16,8 +15,6 @@ import {
   type ProviderVariant,
 } from "@/lib/provider-variants";
 import { ProjectIcon } from "@/components/layout/sidebar/project-icon";
-import DropdownWrapper from "@/components/ui/dropdown-wrapper";
-import Select from "@/components/ui/select";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import {
   getModelIcon,

@@ -5,7 +5,7 @@ import {
   setWorkspaceGroupExpanded,
   setWorkspaceListGrouping,
 } from "@/lib/redux/slices/appSettingsSlice";
-import { Button } from "@/components/ui";
+import { Button, Text, toast } from "@/components/ui";
 import { ArrowUp, Plus } from "@/components/ui/icons";
 import WorkspaceItem from "./workspace-item";
 import type {
@@ -15,7 +15,7 @@ import type {
 import { LinkResourcesModal } from "@/features/workspace/components/link-resources-modal";
 import { WORKSPACE_BASE_PATH } from "@/lib/route-utils";
 import { getWorkspaceStatusConfig } from "@/lib/workspace-status";
-import WorkspaceStatusIcon from "@/components/ui/icons/workspace-status-icon";
+import { WorkspaceStatusIcon } from "@/components/ui/icons";
 import type { WorkspaceStatus } from "@/lib/redux/api/workspaceApi";
 import {
   useListProjectsQuery,
@@ -25,10 +25,8 @@ import {
   useGetAccountQuery,
 } from "@/lib/redux/api";
 import type { Project } from "@/lib/redux/api/projectsApi";
-import { toast } from "@/components/ui";
 import { ProjectIcon } from "./project-icon";
 import { WorkspaceGroupDropdown, type GroupingMode } from "./workspace-group-dropdown";
-import Text from "@/components/ui/text";
 
 type WorkspaceGroup = {
   key: string;

@@ -23,17 +23,18 @@ import {
   addContextSkill,
   removeContextSkill,
 } from "@/lib/redux/slices/workspaceSlice";
-import type {
-  UploadedFile,
-  RichInputFormHandle,
-  RichSkillChipData,
-  RichFileChipData,
-  RichCodeChipData,
+import {
+  Button,
+  DropdownWrapper,
+  RichInputForm,
+  type UploadedFile,
+  type RichInputFormHandle,
+  type RichSkillChipData,
+  type RichFileChipData,
+  type RichCodeChipData,
 } from "@/components/ui";
 import { useSpaceProviderVariant } from "@/hooks/use-space-provider-variant";
 import { useIsMobile } from "@/lib/platform";
-import { RichInputForm, Button } from "@/components/ui";
-import DropdownWrapper from "@/components/ui/dropdown-wrapper";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { Chat, Check, Plus } from "@/components/ui/icons";
 import {

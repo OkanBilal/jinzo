@@ -51,6 +51,18 @@ export default tseslint.config(
       ...reactHooksPlugin.configs.recommended.rules,
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '(?:^|/)components/ui/(?!icons(?:$|/(?:space|file-icons)$)).+',
+              message:
+                'Import shared UI from @/components/ui. Use only the icons, icons/space, or icons/file-icons sub-barrels directly.',
+            },
+          ],
+        },
+      ],
       'no-restricted-syntax': [
         'error',
         {

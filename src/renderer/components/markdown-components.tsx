@@ -2,8 +2,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { Components } from "react-markdown";
 
-import Text from "@/components/ui/text";
-import { Button } from "@/components/ui/button";
+import { Button, Text } from "@/components/ui";
 import { CODE_FONT_SIZE_CSS } from "@/lib/appearance-fonts";
 import { proxiedImageSrc } from "@/lib/proxied-image-src";
 import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";

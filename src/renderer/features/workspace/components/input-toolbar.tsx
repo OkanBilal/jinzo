@@ -2,8 +2,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { getProviderVariant } from "@/lib/provider-variants";
 import { useIsMobile } from "@/lib/platform";
-import { CompactComposerControls } from "@/components/ui/input/compact-composer-controls";
 import {
+  CompactComposerControls,
   SendButton,
   DictationButton,
   ModelSelectDropdown,

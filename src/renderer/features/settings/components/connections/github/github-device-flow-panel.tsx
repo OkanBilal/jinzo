@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
-import { Button, Caption, CopyButton, ErrorText, Muted, Text } from "@/components/ui";
-import { AsciiSpinner } from "@/components/ui/ascii-spinner";
+import {
+  AsciiSpinner,
+  Button,
+  Caption,
+  CopyButton,
+  ErrorText,
+  Muted,
+  Text,
+} from "@/components/ui";
 import { Github } from "@/components/ui/icons";
 import {
   useStartGithubDeviceFlowMutation,

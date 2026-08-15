@@ -1,8 +1,14 @@
-import { Apps, Asana, Gitlab, Jira, Trello } from "@/components/ui/icons";
+import {
+  Apps,
+  Asana,
+  Github,
+  Gitlab,
+  Jira,
+  Linear,
+  Sentry,
+  Trello,
+} from "@/components/ui/icons";
 import { Text } from "@/components/ui";
-import Github from "@/components/ui/icons/github";
-import Linear from "@/components/ui/icons/linear";
-import Sentry from "@/components/ui/icons/sentry";
 import type { ComponentType } from "react";
 
 const PROVIDER_ICONS: Record<string, ComponentType<{ className?: string }>> = {

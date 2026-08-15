@@ -1,7 +1,7 @@
 import { useId, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Body, Muted } from "./text";
-import { Button } from "@/components/ui/button";
+import { Button } from "./button";
 import { Enter } from "./icons";
 import { useSuppressBrowserView } from "@/hooks/use-suppress-browser-view";
 import { useDialogFocus } from "./dialog-focus";

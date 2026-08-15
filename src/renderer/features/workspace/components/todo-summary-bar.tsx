@@ -2,8 +2,13 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "reac
 import type { RunEvent } from "../types";
 import { resolveTool } from "../utils/resolve-tool";
 import { Check } from "@/components/ui/icons";
-import { AsciiSpinner, Button, Text, toastStore } from "@/components/ui";
-import type { AsciiSpinnerVariant } from "@/components/ui";
+import {
+  AsciiSpinner,
+  Button,
+  Text,
+  toastStore,
+  type AsciiSpinnerVariant,
+} from "@/components/ui";
 
 interface TodoSummaryBarProps {
   events: RunEvent[];

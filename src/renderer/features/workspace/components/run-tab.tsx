@@ -2,10 +2,14 @@ import { Archive, Option, Edit } from "@/components/ui/icons";
 import type { Run } from "../types";
 import { cn } from "@/lib/cn";
 import { PROVIDER_VARIANTS, type ProviderVariant } from "@/lib/provider-variants";
-import { AnimatedTitle, Input } from "@/components/ui";
+import {
+  AnimatedTitle,
+  AsciiSpinner,
+  DropdownMenu,
+  DropdownMenuItem,
+  Input,
+} from "@/components/ui";
 import { BaseTab } from "./base-tab";
-import { AsciiSpinner } from "@/components/ui/ascii-spinner";
-import { DropdownMenu, DropdownMenuItem } from "@/components/ui";
 import { useState, useRef, useCallback, useEffect } from "react";
 
 interface RunTabProps {

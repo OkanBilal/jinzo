@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { useAutoUpdate } from "@/hooks/use-auto-update";
-import { Button } from "@/components/ui";
+import { AsciiSpinner, Button, Text } from "@/components/ui";
 import { Close } from "@/components/ui/icons";
-import { AsciiSpinner } from "@/components/ui/ascii-spinner";
-import Text from "@/components/ui/text";
 
 export function UpdateBanner() {
   const { state, install } = useAutoUpdate();

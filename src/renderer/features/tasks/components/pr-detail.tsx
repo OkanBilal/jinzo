@@ -25,8 +25,8 @@ import {
   SendButton,
   Text,
   Textarea,
+  toast,
 } from "@/components/ui";
-import { toast } from "@/components/ui/toast";
 import { extractErrorMessage } from "@/lib/extract-error-message";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import {

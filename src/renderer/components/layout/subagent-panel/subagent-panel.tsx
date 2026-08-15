@@ -8,9 +8,8 @@ import {
   LAYOUT_PANEL_ANIM_MS,
   SESSION_PANEL_GUTTER,
 } from "@/lib/layout";
-import { AgentGlyph } from "@/components/ui/agent-glyph";
 import { Check, Close, Minimize, Stop } from "@/components/ui/icons";
-import { Button, Caption, Text } from "@/components/ui";
+import { AgentGlyph, Button, Caption, Text } from "@/components/ui";
 import { SubagentDetail } from "@/features/workspace/components/subagent-detail";
 import { useSessionSubagents } from "@/features/workspace/hooks/use-session-subagents";
 import {

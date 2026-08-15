@@ -1,6 +1,13 @@
 import { useMemo } from "react";
-import { Button, Input, Textarea } from "@/components/ui";
-import { WizardModal, useWizard, type WizardStep } from "@/components/ui/wizard-modal";
+import {
+  Button,
+  Input,
+  Textarea,
+  WizardModal,
+  toast,
+  useWizard,
+  type WizardStep,
+} from "@/components/ui";
 import { useGetAccountQuery } from "@/lib/redux/api/accountApi";
 import {
   useCreatePulseMutation,
@@ -24,7 +31,6 @@ import {
 } from "./pulse-pickers";
 import type { PulseTemplate } from "../templates";
 import { Sun } from "@/components/ui/icons";
-import { toast } from "@/components/ui/toast/toast";
 
 type PulseWizardData = PulseFormState;
 

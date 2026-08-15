@@ -1,5 +1,13 @@
 import { useState } from "react";
-import { Button, Select, Slider, Text, Toggle, toast } from "@/components/ui";
+import {
+  AsciiSpinner,
+  Button,
+  Select,
+  Slider,
+  Text,
+  Toggle,
+  toast,
+} from "@/components/ui";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import {
   setCodeFontSize,
@@ -29,7 +37,6 @@ import { ThemePicker, ThemeSelect, type ThemeValue } from "./theme-picker";
 import { useAutoUpdate } from "@/hooks/use-auto-update";
 import { useCapabilities, useIsMobile } from "@/lib/platform";
 import { Refresh } from "@/components/ui/icons";
-import { AsciiSpinner } from "@/components/ui/ascii-spinner";
 import {
   AgentCard,
   AGENT_CHOICES,

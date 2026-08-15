@@ -6,8 +6,7 @@ import rehypeSanitize from "rehype-sanitize";
 import { markdownComponents } from "@/components/markdown-components";
 import { markdownSanitizeSchema } from "@/lib/markdown-sanitize";
 import { Check, Close, Minimize, Stop } from "@/components/ui/icons";
-import { AgentGlyph } from "@/components/ui/agent-glyph";
-import { Button, Text } from "@/components/ui";
+import { AgentGlyph, Button, Text } from "@/components/ui";
 import {
   useGetRunArtifactsQuery,
   useGetToolCallsByRunQuery,

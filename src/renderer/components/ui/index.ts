@@ -2,6 +2,7 @@
 export { Button } from "./button";
 export type { ButtonProps, ButtonVariant } from "./button";
 export { CopyButton } from "./copy-button";
+export { AgentGlyph } from "./agent-glyph";
 
 // Segmented tabs
 export { getSegmentedTabId, SegmentedTabs } from "./segmented-tabs";
@@ -55,6 +56,7 @@ export { ModelSelectDropdown } from "./input/model-select-dropdown";
 export { FastModeButton } from "./input/fast-mode-button";
 export { GoalButton } from "./input/goal-button";
 export { PermissionModeDropdown } from "./input/permission-mode-dropdown";
+export { CompactComposerControls } from "./input/compact-composer-controls";
 
 // Select (custom dropdown)
 export { default as Select } from "./select";
@@ -111,6 +113,7 @@ export { ErrorBoundary } from "./error-boundary";
 
 // Toast
 export { toast, toastStore } from "./toast/toast";
+export { Toaster } from "./toast/Toaster";
 export type {
   Toast,
   ToastType,

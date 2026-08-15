@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Edit, Trash } from "@/components/ui/icons";
 import {
   useDeletePulseMutation,
@@ -9,7 +8,7 @@ import {
 } from "@/lib/redux/api/pulseApi";
 import { useListWorkspacesQuery } from "@/lib/redux/api/workspaceApi";
 import { formatSchedule } from "../utils/format-schedule";
-import { Body, Text } from "@/components/ui";
+import { Body, Button, Text } from "@/components/ui";
 
 interface PulseListProps {
   onEdit: (pulse: Pulse) => void;

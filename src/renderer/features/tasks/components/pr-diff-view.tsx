@@ -12,8 +12,14 @@ import {
   type PrReviewThread,
 } from "@/lib/redux/api";
 import { useIsDarkMode } from "@/hooks/use-is-dark-mode";
-import { Body, Button, SendButton, Text, Textarea } from "@/components/ui";
-import { toast } from "@/components/ui/toast";
+import {
+  Body,
+  Button,
+  SendButton,
+  Text,
+  Textarea,
+  toast,
+} from "@/components/ui";
 import { extractErrorMessage } from "@/lib/extract-error-message";
 import { ArrowUp } from "@/components/ui/icons";
 import { proxiedImageSrc } from "@/lib/proxied-image-src";

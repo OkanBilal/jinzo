@@ -24,7 +24,7 @@ import { useDocumentViewer, DocumentViewerProvider } from "./hooks/use-document-
 import { DocumentViewerPanel } from "./features/workspace/components/document-viewer-panel";
 import { useWorkspaceVariant } from "./hooks/use-workspace-variant";
 import { ReduxProvider } from "./providers/redux-provider";
-import { Toaster } from "./components/ui/toast/Toaster";
+import { ErrorBoundary, Toaster } from "@/components/ui";
 import { useAppSelector, useAppDispatch } from "./lib/redux/hooks";
 import { onAppReady } from "./lib/app-ready";
 import { isWeb, useIsMobile } from "./lib/platform";
@@ -36,7 +36,6 @@ import {
 } from "./lib/redux/slices/appSettingsSlice";
 import { SidebarToggleButton } from "./components/layout/sidebar/sidebar-toggle-button";
 import { OnboardingScreen } from "./features/onboarding/components/onboarding-screen";
-import { ErrorBoundary } from "./components/ui/error-boundary";
 import { MainHeaderProvider } from "./hooks/use-main-header";
 import { useLayoutWidthVars } from "./hooks/use-layout-width-vars";
 import { useAppearanceFonts } from "./hooks/use-appearance-fonts";

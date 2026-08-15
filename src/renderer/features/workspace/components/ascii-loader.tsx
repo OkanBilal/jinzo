@@ -1,6 +1,7 @@
 import { useEffect, useReducer } from "react";
-import { Text } from "@/components/ui";
-export { AsciiSpinner } from "@/components/ui/ascii-spinner";
+import { AsciiSpinner, Text } from "@/components/ui";
+
+export { AsciiSpinner };
 
 const ASCII_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 

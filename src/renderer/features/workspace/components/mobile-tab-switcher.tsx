@@ -1,6 +1,5 @@
 import { useRef, useState, type ReactNode } from "react";
-import DropdownWrapper from "@/components/ui/dropdown-wrapper";
-import { Button, Text } from "@/components/ui";
+import { Button, DropdownWrapper, Text } from "@/components/ui";
 import { ArrowUp, Check, Close, Plus } from "@/components/ui/icons";
 import { useClickOutside } from "@/hooks/use-click-outside";
 

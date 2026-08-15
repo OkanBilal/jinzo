@@ -7,8 +7,7 @@ import type {
 } from "@/lib/redux/slices/workspaceSlice";
 import { Close, Web } from "@/components/ui/icons";
 import { ProviderIcon } from "./provider-icon";
-import { Button, Modal, ModalHeader, Text } from "@/components/ui";
-import { Body } from "@/components/ui/text";
+import { Body, Button, Modal, ModalHeader, Text } from "@/components/ui";
 
 interface ContextChipsProps {
   contextIssues: ContextIssue[];
