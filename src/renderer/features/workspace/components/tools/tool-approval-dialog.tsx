@@ -192,9 +192,9 @@ function findPluginLogo(
 }
 
 const RISK_LEVEL_STYLES: Record<string, string> = {
-  high: "bg-red-500/15 text-red-700 dark:text-red-300",
-  medium: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  low: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+  high: "bg-danger/15 text-danger",
+  medium: "bg-warning/15 text-warning",
+  low: "bg-success/15 text-success",
 };
 
 export function ToolApprovalDialog({
@@ -391,14 +391,14 @@ export function ToolApprovalDialog({
                     onClick={() => toggleOption(opt.label)}
                     className={`flex w-full gap-2.5 rounded-lg  px-2.5 py-2.5 text-left text-xs transition-colors ${
                       isSelected
-                        ? " bg-emerald-500/8  dark:bg-emerald-500/10"
+                        ? " bg-success/10"
                         : " bg-primary-100/30 hover:border-primary-300/70 dark:bg-primary-800/50 dark:hover:border-primary-600/50"
                     }`}
                   >
                     <span
                       className={`mt-0.5 flex size-4 shrink-0 items-center justify-center rounded ${
                         isSelected
-                          ? " bg-emerald-500 text-primary dark:bg-emerald-600"
+                          ? " bg-success text-primary "
                           : " bg-primary-50 dark:border-primary-600 dark:bg-primary-900/50"
                       }`}
                       aria-hidden
@@ -413,7 +413,7 @@ export function ToolApprovalDialog({
                       <span
                         className={`font-semibold ${
                           isSelected
-                            ? "text-emerald-800 dark:text-emerald-200"
+                            ? "text-success"
                             : "text-primary-800 dark:text-primary-200"
                         }`}
                       >

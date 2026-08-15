@@ -33,7 +33,7 @@ export function PRDisplay({
         isCompact={isCompact}
       >
         {params.draft && (
-          <span className="text-yellow-500 dark:text-yellow-400 text-xs shrink-0">
+          <span className="text-warning text-xs shrink-0">
             draft
           </span>
         )}

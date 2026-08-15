@@ -64,9 +64,9 @@ export function SaveFindingDisplay({
         isCompact={isCompact}
       >
         <span className="flex items-center gap-1.5 text-primary-500">
-          {critical > 0 && <span className="text-red-400">{critical} critical</span>}
-          {warning > 0 && <span className="text-yellow-400">{warning} warning</span>}
-          {info > 0 && <span className="text-blue-400">{info} info</span>}
+          {critical > 0 && <span className="text-danger">{critical} critical</span>}
+          {warning > 0 && <span className="text-warning">{warning} warning</span>}
+          {info > 0 && <span className="text-accent">{info} info</span>}
         </span>
         {findings.length === 1 && findings[0].file && (
           <span className="text-primary-500 truncate text-xs font-mono group-hover:text-primary-950 group-hover:dark:text-primary">
@@ -97,7 +97,7 @@ export function SaveFindingDisplay({
                   <Tiny as="div" className="whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2">{f.message}</Tiny>
                 )}
                 {f.suggestion && (
-                  <Text className="text-xs text-green-600 dark:text-green-400">{f.suggestion}</Text>
+                  <Text className="text-xs text-success">{f.suggestion}</Text>
                 )}
               </div>
             ))}

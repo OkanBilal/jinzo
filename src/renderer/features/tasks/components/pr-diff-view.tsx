@@ -366,8 +366,8 @@ function FileSection({
           {file.path}
         </span>
         <span className="ml-auto text-xxs tabular-nums whitespace-nowrap shrink-0">
-          <span className="text-green-600 dark:text-green-400">+{file.additions}</span>{" "}
-          <span className="text-red-500 dark:text-red-400">-{file.deletions}</span>
+          <span className="text-success">+{file.additions}</span>{" "}
+          <span className="text-danger">-{file.deletions}</span>
         </span>
         <ArrowUp
           className={`w-3 h-3 text-primary-600 dark:text-primary-400 transition-transform ${
@@ -405,7 +405,7 @@ function FileSection({
                     side: hovered.side === "deletions" ? "left" : "right",
                   });
                 }}
-                className="flex items-center justify-center w-4 h-4 rounded bg-blue-500 text-white text-xs font-semibold leading-none cursor-pointer select-none"
+                className="flex items-center justify-center w-4 h-4 rounded bg-accent text-white text-xs font-semibold leading-none cursor-pointer select-none"
               >
                 +
               </button>

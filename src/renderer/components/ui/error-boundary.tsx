@@ -28,7 +28,7 @@ function ErrorFallback({ error, resetError, level }: ErrorFallbackProps) {
         <summary className="cursor-pointer text-xs font-medium text-primary-600 dark:text-primary-400">
           Error details
         </summary>
-        <pre className="mt-2 overflow-auto whitespace-pre-wrap text-xs text-red-600 dark:text-red-400">
+        <pre className="mt-2 overflow-auto whitespace-pre-wrap text-xs text-danger">
           {error.message}
           {error.stack && `\n\n${error.stack}`}
         </pre>

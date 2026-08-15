@@ -38,8 +38,8 @@ const PERMISSION_MODES = [
 const BYPASS_TRIGGER = {
   trigger:
     "font-medium bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 bg-clip-text text-transparent dark:from-orange-400 dark:via-amber-400 dark:to-yellow-400",
-  icon: "text-orange-500 dark:text-orange-400",
-  chevron: "text-yellow-500 dark:text-yellow-400",
+  icon: "text-warning",
+  chevron: "text-warning",
 } as const;
 
 function isBypassPermissionMode(mode: string): boolean {

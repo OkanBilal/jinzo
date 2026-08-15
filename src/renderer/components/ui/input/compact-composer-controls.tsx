@@ -177,7 +177,7 @@ export function CompactComposerControls({
                   <Brain
                     className={`size-3.5 shrink-0 ${
                       thinkingMode && effortLevel === "ultracode"
-                        ? "text-cyan-500 dark:text-cyan-400"
+                        ? "text-accent"
                         : ""
                     }`}
                   />

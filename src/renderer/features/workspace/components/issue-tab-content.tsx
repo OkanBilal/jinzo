@@ -49,13 +49,13 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
             <span
               className={`inline-flex capitalize items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
                 isOpen
-                  ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                  ? "bg-primary-100 dark:bg-success/30 text-success"
                   : "bg-primary-100 dark:bg-primary-800 text-primary-600 dark:text-primary-400"
               }`}
             >
               <span
                 className={`w-2 h-2 rounded-full ${
-                  isOpen ? "bg-green-500" : "bg-primary-400"
+                  isOpen ? "bg-success" : "bg-primary-400"
                 }`}
               />
               {iss.state}

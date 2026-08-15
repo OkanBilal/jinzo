@@ -4,15 +4,15 @@ import { formatDate } from "@/lib/format-date";
 import type { PullRequestSummary } from "@/lib/redux/api";
 
 const STATE_CLASSES: Record<string, string> = {
-  open: "text-green-600 dark:text-green-400",
+  open: "text-success",
   merged: "text-purple-600 dark:text-purple-400",
-  closed: "text-red-500 dark:text-red-400",
+  closed: "text-danger",
 };
 
 const CI_DOT_CLASSES: Record<string, string> = {
-  passing: "bg-green-500",
-  failing: "bg-red-500",
-  pending: "bg-yellow-500",
+  passing: "bg-success",
+  failing: "bg-danger",
+  pending: "bg-warning",
 };
 
 interface PrListItemProps {
@@ -95,10 +95,10 @@ export function PrListItem({
         className={`shrink-0 items-center gap-2.5 ${compact ? "hidden" : "flex"}`}
       >
         <span className="text-xxs tabular-nums whitespace-nowrap">
-          <span className="text-green-600 dark:text-green-400">
+          <span className="text-success">
             +{pr.additions}
           </span>{" "}
-          <span className="text-red-500 dark:text-red-400">
+          <span className="text-danger">
             -{pr.deletions}
           </span>
         </span>

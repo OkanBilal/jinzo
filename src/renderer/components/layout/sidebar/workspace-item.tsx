@@ -231,7 +231,7 @@ export default function WorkspaceItem({
                   position="top"
                 >
                   <Muted
-                    className={`text-xs text-amber-600 dark:text-amber-500 truncate ${grouping === "status" ? "-ml-1.5" : ""}`}
+                    className={`text-xs text-warning truncate ${grouping === "status" ? "-ml-1.5" : ""}`}
                   >
                     Folder missing
                   </Muted>
@@ -281,14 +281,14 @@ export default function WorkspaceItem({
               <NumberFlow
                 value={parseInt(insertions)}
                 prefix="+"
-                className="text-green-600 dark:text-green-400"
+                className="text-success"
               />
             )}
             {deletions && (
               <NumberFlow
                 value={parseInt(deletions)}
                 prefix="-"
-                className="text-red-500 dark:text-red-400"
+                className="text-danger"
               />
             )}
           </span>

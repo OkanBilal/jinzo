@@ -201,7 +201,7 @@ export function ImagePreviewModal({ name, src, onClose }: ImagePreviewModalProps
             onClick={zoomOut}
             disabled={scale <= MIN_SCALE}
             aria-label="Zoom out"
-            className="p-1.5 rounded-full text-primary-200 hover:bg-primary-100/15 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            className="p-1.5 rounded-full text-primary-200 hover:bg-primary-100/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Minus className="w-3.5 h-3.5" />
           </Button>
@@ -218,7 +218,7 @@ export function ImagePreviewModal({ name, src, onClose }: ImagePreviewModalProps
             onClick={zoomIn}
             disabled={scale >= MAX_SCALE}
             aria-label="Zoom in"
-            className="p-1.5 rounded-full text-primary-200 hover:bg-primary-100/15 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            className="p-1.5 rounded-full text-primary-200 hover:bg-primary-100/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Plus className="w-3.5 h-3.5" />
           </Button>

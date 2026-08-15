@@ -35,7 +35,7 @@ const variantStyles: Record<TextVariant, string> = {
   button: "text-sm font-medium",
   buttonSmall: "text-xs font-medium",
 
-  error: "text-sm text-red-700 dark:text-red-300",
+  error: "text-sm text-danger",
 
   caption: "text-xs text-primary-700 dark:text-primary-300",
 

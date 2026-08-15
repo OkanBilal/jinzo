@@ -47,12 +47,12 @@ export function CheckPackageDisplay({
         isCompact={isCompact}
       >
         {blockedCount > 0 && (
-          <span className="text-red-500 dark:text-red-400 text-xs font-medium shrink-0">
+          <span className="text-danger text-xs font-medium shrink-0">
             {blockedCount} blocked
           </span>
         )}
         {allPassed && (
-          <span className="text-green-500 dark:text-green-400 text-xs font-medium shrink-0">
+          <span className="text-success text-xs font-medium shrink-0">
             passed
           </span>
         )}
@@ -70,8 +70,8 @@ export function CheckPackageDisplay({
                   key={i}
                   className={`flex items-center gap-2 text-xs font-mono py-0.5 ${
                     r.blocked
-                      ? "text-red-500 dark:text-red-400"
-                      : "text-green-600 dark:text-green-400"
+                      ? "text-danger"
+                      : "text-success"
                   }`}
                 >
                   <span>{r.blocked ? "✘" : "✔"}</span>

@@ -17,14 +17,14 @@ const TONE = {
     text: "text-primary-700 dark:text-primary-300",
   },
   warn: {
-    stroke: "stroke-amber-500",
-    fill: "bg-amber-500",
-    text: "text-amber-600 dark:text-amber-400",
+    stroke: "stroke-warning",
+    fill: "bg-warning",
+    text: "text-warning",
   },
   critical: {
-    stroke: "stroke-red-500",
-    fill: "bg-red-500",
-    text: "text-red-600 dark:text-red-400",
+    stroke: "stroke-danger",
+    fill: "bg-danger",
+    text: "text-danger",
   },
 } satisfies Record<Tone, { stroke: string; fill: string; text: string }>;
 

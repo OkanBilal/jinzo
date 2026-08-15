@@ -95,7 +95,7 @@ function ToastItem({ toast, onDismiss }: ToastItemProps) {
             toast.action?.onClick();
             handleDismiss();
           }}
-          className="text-sm font-semibold text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+          className="text-sm font-semibold text-accent transition-colors"
         >
           {toast.action.label}
         </Button>

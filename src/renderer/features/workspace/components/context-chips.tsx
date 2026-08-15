@@ -73,7 +73,7 @@ function BrowserSelectionPreview({
             className="w-full max-h-72 object-contain"
           />
           {elementImg && (
-            <div className="absolute bottom-2 right-2 rounded-md overflow-hidden border-2 border-blue-500 shadow-lg">
+            <div className="absolute bottom-2 right-2 rounded-md overflow-hidden border-2 border-accent shadow-lg">
               <img
                 src={elementImg}
                 alt="Selected element"

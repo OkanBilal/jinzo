@@ -52,16 +52,16 @@ const MERGE_METHODS: { value: PrMergeMethod; label: string }[] = [
 ];
 
 const STATE_BADGE: Record<string, string> = {
-  open: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400",
+  open: "bg-primary-100 dark:bg-success/30 text-success",
   merged:
-    "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400",
-  closed: "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400",
+    "bg-primary-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400",
+  closed: "bg-primary-100 dark:bg-danger/30 text-danger",
 };
 
 const CHECK_DOT: Record<string, string> = {
-  passing: "bg-green-500",
-  failing: "bg-red-500",
-  pending: "bg-yellow-500",
+  passing: "bg-success",
+  failing: "bg-danger",
+  pending: "bg-warning",
   none: "bg-primary-400",
 };
 
@@ -310,7 +310,7 @@ export function PrDetail({ pr }: PrDetailProps) {
                     variant="ghost"
                     disabled={!canMerge || isMerging}
                     onClick={handleMerge}
-                    className="rounded-r-none  bg-[#2563eb] hover:bg-[#2868f1]! text-primary!"
+                    className="rounded-r-none  bg-accent hover:bg-[#2868f1]! text-primary!"
                   >
                     {isMerging
                       ? "Merging..."
@@ -331,7 +331,7 @@ export function PrDetail({ pr }: PrDetailProps) {
                     onClick={() => setMergeMenuOpen((open) => !open)}
                     aria-label="Choose merge method"
                     aria-expanded={mergeMenuOpen}
-                    className="rounded-l-none px-2 bg-[#2563eb]  hover:bg-[#2868f1]! text-primary!"
+                    className="rounded-l-none px-2 bg-accent  hover:bg-[#2868f1]! text-primary!"
                   >
                     <ArrowUp
                       className={`size-3.5 transition-transform rotate-180 text-primary`}
@@ -400,10 +400,10 @@ export function PrDetail({ pr }: PrDetailProps) {
                   →
                 </span>
                 <span>{current.baseRefName}</span>{" "}
-                <span className="text-green-600 dark:text-green-400 tabular-nums">
+                <span className="text-success tabular-nums">
                   +{current.additions.toLocaleString()}
                 </span>{" "}
-                <span className="text-red-500 dark:text-red-400 tabular-nums">
+                <span className="text-danger tabular-nums">
                   -{current.deletions.toLocaleString()}
                 </span>
               </MetaRow>

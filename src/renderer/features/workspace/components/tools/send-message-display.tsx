@@ -120,8 +120,8 @@ export function SendMessageDisplay({
                   <span
                     className={`rounded px-1.5 py-px text-t font-medium ${
                       protocol.approve
-                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                        : "bg-red-500/10 text-red-600 dark:text-red-400"
+                        ? "bg-success/10 text-success"
+                        : "bg-danger/10 text-danger"
                     }`}
                   >
                     {protocol.approve ? "approved" : "rejected"}

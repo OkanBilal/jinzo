@@ -214,58 +214,58 @@ const FILENAME_PATTERNS: Array<[RegExp, FileIconType]> = [
 ];
 
 const EXTENSION_COLORS: Record<string, string> = {
-  js: "text-yellow-400",
-  jsx: "text-yellow-400",
-  ts: "text-blue-400",
-  tsx: "text-blue-400",
-  mjs: "text-yellow-400",
-  cjs: "text-yellow-400",
-  html: "text-orange-500",
-  htm: "text-orange-500",
-  css: "text-blue-500",
+  js: "text-warning",
+  jsx: "text-warning",
+  ts: "text-accent",
+  tsx: "text-accent",
+  mjs: "text-warning",
+  cjs: "text-warning",
+  html: "text-warning",
+  htm: "text-warning",
+  css: "text-accent",
   scss: "text-pink-400",
   sass: "text-pink-400",
-  less: "text-blue-600",
-  json: "text-yellow-500",
-  yaml: "text-red-400",
-  yml: "text-red-400",
-  xml: "text-orange-400",
-  toml: "text-gray-400",
-  md: "text-blue-300",
-  mdx: "text-blue-300",
-  txt: "text-gray-400",
-  rst: "text-gray-400",
-  py: "text-green-400",
-  rb: "text-red-500",
-  go: "text-cyan-400",
-  rs: "text-orange-400",
-  java: "text-red-400",
+  less: "text-accent",
+  json: "text-warning",
+  yaml: "text-danger",
+  yml: "text-danger",
+  xml: "text-warning",
+  toml: "text-primary-600 dark:text-primary-400",
+  md: "text-accent",
+  mdx: "text-accent",
+  txt: "text-primary-600 dark:text-primary-400",
+  rst: "text-primary-600 dark:text-primary-400",
+  py: "text-success",
+  rb: "text-danger",
+  go: "text-accent",
+  rs: "text-warning",
+  java: "text-danger",
   kt: "text-purple-400",
-  swift: "text-orange-500",
-  c: "text-blue-500",
-  cpp: "text-blue-500",
+  swift: "text-warning",
+  c: "text-accent",
+  cpp: "text-accent",
   h: "text-purple-400",
   hpp: "text-purple-400",
-  cs: "text-green-500",
+  cs: "text-success",
   php: "text-indigo-400",
-  sh: "text-green-400",
-  bash: "text-green-400",
-  zsh: "text-green-400",
-  fish: "text-green-400",
+  sh: "text-success",
+  bash: "text-success",
+  zsh: "text-success",
+  fish: "text-success",
   png: "text-purple-400",
   jpg: "text-purple-400",
   jpeg: "text-purple-400",
   gif: "text-purple-400",
-  svg: "text-yellow-400",
+  svg: "text-warning",
   ico: "text-purple-400",
   webp: "text-purple-400",
-  pdf: "text-red-500",
-  zip: "text-yellow-600",
-  tar: "text-yellow-600",
-  gz: "text-yellow-600",
-  env: "text-yellow-500",
-  lock: "text-gray-500",
-  gitignore: "text-gray-500",
+  pdf: "text-danger",
+  zip: "text-warning",
+  tar: "text-warning",
+  gz: "text-warning",
+  env: "text-warning",
+  lock: "text-primary-500 dark:text-primary-500",
+  gitignore: "text-primary-500 dark:text-primary-500",
 };
 
 /**
@@ -328,7 +328,7 @@ export const FileIconComponent = memo(function FileIconComponent({
   className = "",
 }: FileIconComponentProps) {
   if (isDirectory) {
-    const colorClass = "text-amber-400 dark:text-amber-300";
+    const colorClass = "text-warning";
     if (isExpanded) {
       return <FolderOpenIcon className={`${colorClass} ${className}`} />;
     }
@@ -341,8 +341,8 @@ export const FileIconComponent = memo(function FileIconComponent({
   }
 
     const colorClass = extension
-    ? EXTENSION_COLORS[extension.toLowerCase()] || "text-gray-400"
-    : "text-gray-400";
+    ? EXTENSION_COLORS[extension.toLowerCase()] || "text-primary-600 dark:text-primary-400"
+    : "text-primary-600 dark:text-primary-400";
 
   return <FileIcon className={`${colorClass} ${className}`} />;
 });

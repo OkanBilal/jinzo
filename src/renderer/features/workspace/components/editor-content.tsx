@@ -51,7 +51,7 @@ export function EditorContent({ className = "" }: EditorContentProps) {
   if (fileContentError) {
     return (
       <div className={`flex items-center justify-center h-full ${className}`}>
-        <div className="flex flex-col items-center gap-2 text-red-500 dark:text-red-400 text-center px-4">
+        <div className="flex flex-col items-center gap-2 text-danger text-center px-4">
           <svg
             className="w-8 h-8"
             fill="none"

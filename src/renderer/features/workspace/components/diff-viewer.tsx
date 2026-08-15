@@ -41,7 +41,7 @@ function ImageDiffView({ absPath, fileName }: { absPath: string; fileName: strin
     <div className="h-full overflow-auto px-2  ">
       <div className="mx-auto ">
         {error ? (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-3 text-xs text-red-300 break-all">
+          <div className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-xs text-danger break-all">
             <div className="font-medium mb-1">Image failed to load</div>
             <div className="opacity-70">{error}</div>
             <div className="mt-1 font-mono opacity-60">{absPath}</div>
@@ -137,13 +137,13 @@ function makeFindingAnnotation({ colors, textColor, mutedColor, suggestionColor,
                 <div className="flex items-center gap-1.5 shrink-0">
                   <Button
                     onClick={() => onApprove(f.id)}
-                    className="px-2 cursor-pointer py-0.5 text-xxs rounded-sm font-medium transition-colors bg-green-600/13 text-green-500"
+                    className="px-2 cursor-pointer py-0.5 text-xxs rounded-sm font-medium transition-colors bg-success/10 text-success"
                   >
                     ✓ Approve
                   </Button>
                   <Button
                     onClick={() => onFix(f)}
-                    className="px-2 cursor-pointer py-0.5 text-xxs rounded-sm font-medium transition-colors bg-blue-500/13 text-blue-400"
+                    className="px-2 cursor-pointer py-0.5 text-xxs rounded-sm font-medium transition-colors bg-accent/10 text-accent"
                   >
                     Fix
                   </Button>

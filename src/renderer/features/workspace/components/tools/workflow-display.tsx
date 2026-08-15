@@ -79,7 +79,7 @@ export function WorkflowDisplay({
           {title}
         </span>
         {meta.phases.length > 0 && (
-          <span className="text-primary-500/70 shrink-0 group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className="text-primary-500 shrink-0 group-hover:text-primary-950 group-hover:dark:text-primary">
             {meta.phases.length} phase{meta.phases.length !== 1 ? "s" : ""}
           </span>
         )}

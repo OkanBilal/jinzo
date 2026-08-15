@@ -65,27 +65,27 @@ const STATUS_LETTER: Record<
   added: {
     label: "A",
     title: "Added",
-    className: "text-green-600 dark:text-green-400",
+    className: "text-success",
   },
   untracked: {
     label: "U",
     title: "Untracked",
-    className: "text-green-600 dark:text-green-400",
+    className: "text-success",
   },
   modified: {
     label: "M",
     title: "Modified",
-    className: "text-amber-600 dark:text-amber-400",
+    className: "text-warning",
   },
   deleted: {
     label: "D",
     title: "Deleted",
-    className: "text-red-500 dark:text-red-400",
+    className: "text-danger",
   },
   renamed: {
     label: "R",
     title: "Renamed",
-    className: "text-blue-500 dark:text-blue-400",
+    className: "text-accent",
   },
 };
 
@@ -326,7 +326,7 @@ export function DiffSection({
                   {fileName}
                 </span>
                 {dirPath && (
-                  <span className="min-w-0 truncate text-xxs text-primary-600/80 dark:text-primary-400/70">
+                  <span className="min-w-0 truncate text-xxs text-primary-600 dark:text-primary-400">
                     {dirPath}
                   </span>
                 )}
@@ -372,7 +372,7 @@ export function DiffSection({
                   {fileName}
                 </span>
                 {dirPath && (
-                  <span className="min-w-0 truncate text-xxs text-primary-600/80 dark:text-primary-400/70">
+                  <span className="min-w-0 truncate text-xxs text-primary-600 dark:text-primary-400">
                     {dirPath}
                   </span>
                 )}

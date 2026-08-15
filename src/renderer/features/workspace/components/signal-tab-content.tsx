@@ -12,22 +12,22 @@ interface SignalTabContentProps {
 }
 
 const levelColors: Record<string, string> = {
-  fatal: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",
-  critical: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",
+  fatal: "bg-red-100 dark:bg-red-900/30 text-danger",
+  critical: "bg-red-100 dark:bg-red-900/30 text-danger",
   error:
-    "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400",
+    "bg-orange-100 dark:bg-orange-900/30 text-warning",
   warning:
-    "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400",
-  info: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400",
+    "bg-yellow-100 dark:bg-yellow-900/30 text-warning",
+  info: "bg-blue-100 dark:bg-blue-900/30 text-accent",
 };
 
 const stateColors: Record<string, string> = {
-  open: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400",
+  open: "bg-green-100 dark:bg-green-900/30 text-success",
   resolved:
     "bg-primary-100 dark:bg-primary-800 text-primary-600 dark:text-primary-400",
   ignored:
     "bg-primary-100 dark:bg-primary-800 text-primary-600 dark:text-primary-400",
-  regressed: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",
+  regressed: "bg-red-100 dark:bg-red-900/30 text-danger",
 };
 
 export function SignalTabContent({ signal }: SignalTabContentProps) {

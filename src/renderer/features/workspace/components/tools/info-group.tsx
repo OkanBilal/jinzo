@@ -320,17 +320,17 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
         <div className="w-full overflow-hidden">
           <div className="w-full py-2 flex justify-end">
             <div className="flex flex-col items-end gap-2 max-w-[80%]">
-              <div className="px-4 py-2 rounded-2xl bg-blue-50 dark:bg-blue-500/8 border border-blue-200/60 dark:border-blue-500/15">
-                <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
+              <div className="px-4 py-2 rounded-2xl bg-accent/10 dark:bg-accent/10 border border-accent/60 dark:border-accent/10">
+                <div className="flex items-center gap-2 text-accent">
                   <Codex className="size-3.5 shrink-0" />
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-blue-600 dark:text-blue-300/70">
+                    <span className="text-xs text-accent">
                       {targetLabel}
                     </span>
                   </div>
                 </div>
                 {message && (
-                  <Text className="text-xs  text-blue-900 dark:text-blue-100 mt-1.5">
+                  <Text className="text-xs  text-accent mt-1.5">
                     {message}
                   </Text>
                 )}
@@ -440,7 +440,7 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
                   ) : (
                     <div
                       key={att.name}
-                      className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary-50 dark:bg-primary-700/15 text-xs"
+                      className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary-50 dark:bg-primary-700/10 text-xs"
                       title={att.name}
                     >
                       {att.type === "image" ? (

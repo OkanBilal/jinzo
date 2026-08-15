@@ -113,7 +113,7 @@ export function GenericToolDisplay({
                 </div>
                 <pre
                   className={`noscrollbar whitespace-pre-wrap wrap-break-word font-mono text-t ${
-                    status === "error" ? "text-red-600 dark:text-red-400" : ""
+                    status === "error" ? "text-danger" : ""
                   }`}
                 >
                   {outputText}

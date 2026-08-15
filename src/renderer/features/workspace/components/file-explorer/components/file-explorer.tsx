@@ -317,7 +317,7 @@ export const FileExplorer = memo(function FileExplorer({
   if (error) {
     return (
       <div className={`flex items-center justify-center h-full ${className}`}>
-        <div className="flex flex-col items-center gap-2 text-red-500 dark:text-red-400 px-4 text-center">
+        <div className="flex flex-col items-center gap-2 text-danger px-4 text-center">
           <span className="text-sm">{error}</span>
         </div>
       </div>

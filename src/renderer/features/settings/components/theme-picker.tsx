@@ -53,7 +53,7 @@ export function ThemePreviewCard({
           "relative rounded-xl overflow-hidden border transition-all duration-200",
           dimensions,
           isSelected
-            ? "border-blue-500/40"
+            ? "border-accent/40"
             : "glass-card",
         )}
       >
@@ -64,7 +64,7 @@ export function ThemePreviewCard({
                 className="w-4 h-full flex flex-col p-1 gap-1"
                 style={lightBgStyle}
               >
-                <div className="w-2 h-2 bg-primary-950/15 rounded-full" />
+                <div className="w-2 h-2 bg-primary-950/10 rounded-full" />
                 <div className="w-full h-1 bg-primary-950/10 rounded-full mt-1" />
                 <div className="w-2/3 h-1 bg-primary-950/10 rounded-full" />
               </div>
@@ -97,7 +97,7 @@ export function ThemePreviewCard({
               <div
                 className={cn(
                   "w-2 h-2 rounded-full",
-                  isLight ? "bg-primary-950/15" : "bg-primary/20",
+                  isLight ? "bg-primary-950/10" : "bg-primary/10",
                 )}
               />
               <div className="flex flex-col gap-0.5 mt-1">

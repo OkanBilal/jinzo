@@ -70,8 +70,8 @@ export function MonitorDisplay({
           <span
             className={`shrink-0 text-t tabular-nums ${
               isRunning && params.persistent
-                ? "text-emerald-600 dark:text-emerald-400"
-                : "text-primary-500/70 group-hover:text-primary-950 group-hover:dark:text-primary"
+                ? "text-success"
+                : "text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary"
             }`}
           >
             {limit}
@@ -105,7 +105,7 @@ export function MonitorDisplay({
                 </div>
                 <pre
                   className={`noscrollbar whitespace-pre-wrap text-t font-mono max-h-40 overflow-y-auto ${
-                    status === "error" ? "text-red-600 dark:text-red-400" : ""
+                    status === "error" ? "text-danger" : ""
                   }`}
                 >
                   {result}

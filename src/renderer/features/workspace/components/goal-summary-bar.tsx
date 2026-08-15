@@ -49,11 +49,11 @@ function statusIconColor(status: string): string {
     case "blocked":
     case "budgetLimited":
     case "usageLimited":
-      return "text-amber-500 dark:text-amber-400";
+      return "text-warning";
     case "paused":
       return "text-primary-600 dark:text-primary-400";
     default: // active + complete
-      return "text-emerald-500 dark:text-emerald-400";
+      return "text-success";
   }
 }
 
@@ -146,7 +146,7 @@ export function GoalSummaryBar({ providerId, runId, isRunning, enabled, rootPath
                 type="button"
                 onClick={() => resume()}
                 disabled={isBusy}
-                className="rounded-full p-1 text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400 cursor-pointer"
+                className="rounded-full p-1 text-success hover:bg-success/10 cursor-pointer"
               >
                 <Play className="size-3.5" />
               </Button>
@@ -156,7 +156,7 @@ export function GoalSummaryBar({ providerId, runId, isRunning, enabled, rootPath
               type="button"
               onClick={() => clear()}
               disabled={isBusy}
-              className="rounded-full p-1 text-primary-600 hover:bg-red-500/10 hover:text-red-500 dark:text-primary-400 dark:hover:text-red-400 cursor-pointer"
+              className="rounded-full p-1 text-primary-600 hover:bg-danger/10 hover:text-danger dark:text-primary-400 cursor-pointer"
             >
               <Trash className="size-3.5" />
             </Button>
@@ -186,7 +186,7 @@ export function GoalSummaryBar({ providerId, runId, isRunning, enabled, rootPath
               type="button"
               onClick={commitEdit}
               disabled={isBusy}
-              className="mt-0.5 p-1  rounded-full text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400 cursor-pointer"
+              className="mt-0.5 p-1 rounded-full text-success hover:bg-success/10 cursor-pointer"
             >
               <Check className="size-3.5" />
             </Button>

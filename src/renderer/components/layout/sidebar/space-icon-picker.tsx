@@ -213,8 +213,8 @@ export default function SpaceIconPicker({
                           aria-pressed={isSelected}
                           className={`flex items-center justify-center size-6 rounded-full cursor-pointer transition-colors ${
                             isSelected
-                              ? "bg-primary-950/15 dark:bg-primary/20"
-                              : "hover:bg-primary-950/8 dark:hover:bg-primary/10"
+                              ? "bg-primary-950/10 dark:bg-primary/10"
+                              : "hover:bg-primary-950/10 dark:hover:bg-primary/10"
                           }`}
                         >
                           <span className={`size-4 rounded-full ${swatch}`} />
@@ -232,7 +232,7 @@ export default function SpaceIconPicker({
                         onClick={() => onSelectIcon(name)}
                         className={`flex items-center justify-center size-8 rounded-lg transition-colors cursor-pointer ${
                           icon === name
-                            ? "bg-primary-950/15 dark:bg-primary/20"
+                            ? "bg-primary-950/10 dark:bg-primary/10"
                             : "hover:bg-primary-950/10 dark:hover:bg-primary/10"
                         } ${tint || "text-primary-700 dark:text-primary-300"}`}
                         title={name}

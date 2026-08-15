@@ -128,9 +128,9 @@ function DiffView({ diff, oldStr, newStr }: { diff?: string; oldStr?: string; ne
           key={`${lineNum}:${l.type}`}
           className={
             l.type === "add"
-              ? "text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30 px-2"
+              ? "text-success bg-primary-50 dark:bg-primary-950/30 px-2"
               : l.type === "remove"
-                ? "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 px-2"
+                ? "text-danger bg-primary-50 dark:bg-primary-950/30 px-2"
                 : "text-primary-600 dark:text-primary-400 px-2"
           }
         >

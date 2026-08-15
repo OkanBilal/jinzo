@@ -94,18 +94,18 @@ export function AskUserQuestionDisplay({
                             key={opt.label}
                             className={`flex items-start gap-2 rounded px-2 py-1.5 ${
                               isSelected
-                                ? "bg-emerald-50/80 dark:bg-emerald-500/10"
+                                ? "bg-primary/80 dark:bg-success/10"
                                 : "bg-primary-100/50 dark:bg-primary/10"
                             }`}
                           >
                             {isSelected && (
-                              <Check className="size-3 mt-0.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                              <Check className="size-3 mt-0.5 text-success shrink-0" />
                             )}
                             <div className="min-w-0">
                               <span
                                 className={
                                   isSelected
-                                    ? "font-medium text-emerald-700 dark:text-emerald-300"
+                                    ? "font-medium text-success"
                                     : "font-medium text-primary-700 dark:text-primary-300"
                                 }
                               >
@@ -125,9 +125,9 @@ export function AskUserQuestionDisplay({
                   {(!q.options || q.options.length === 0) &&
                     selectedAnswer != null &&
                     String(selectedAnswer).trim() !== "" && (
-                    <div className="flex items-start gap-2 rounded px-2 py-1.5 bg-emerald-50/80 dark:bg-emerald-500/10">
-                      <Check className="size-3 mt-0.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                      <span className="font-medium text-emerald-700 dark:text-emerald-300 min-w-0 wrap-break-word">
+                    <div className="flex items-start gap-2 rounded px-2 py-1.5 bg-primary/80 dark:bg-success/10">
+                      <Check className="size-3 mt-0.5 text-success shrink-0" />
+                      <span className="font-medium text-success min-w-0 wrap-break-word">
                         {Array.isArray(selectedAnswer)
                           ? selectedAnswer.join(", ")
                           : String(selectedAnswer)}

@@ -15,16 +15,16 @@ export function asFindingSeverity(s: string): FindingSeverity {
 
 /** Inline text accents for severity dots/counters. */
 export const SEVERITY_TEXT: Record<FindingSeverity, string> = {
-  critical: "text-red-500 dark:text-red-400",
-  warning: "text-yellow-400",
-  info: "text-blue-500",
+  critical: "text-danger",
+  warning: "text-warning",
+  info: "text-accent",
 };
 
 /** Tinted chip (bg + text) for severity badges on finding cards. */
 export const SEVERITY_TINT: Record<FindingSeverity, string> = {
-  critical: "bg-red-500/10 text-red-400",
-  warning: "bg-yellow-500/10 text-yellow-400",
-  info: "bg-blue-500/10 text-blue-400",
+  critical: "bg-danger/10 text-danger",
+  warning: "bg-warning/10 text-warning",
+  info: "bg-accent/10 text-accent",
 };
 
 export interface SeverityHex {
@@ -46,5 +46,5 @@ export const SEVERITY_HEX_DARK: Record<FindingSeverity, SeverityHex> = {
 };
 
 /** Diff insertion/deletion accents shared by every diff summary surface. */
-export const DIFF_ADDED_TEXT = "text-green-600 dark:text-green-400";
-export const DIFF_REMOVED_TEXT = "text-red-500 dark:text-red-400";
+export const DIFF_ADDED_TEXT = "text-success";
+export const DIFF_REMOVED_TEXT = "text-danger";

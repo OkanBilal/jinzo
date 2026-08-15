@@ -765,7 +765,7 @@ function ExternalLinkValue({ url, label }: { url: string; label?: string }) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-blue-500 dark:text-blue-400 hover:underline"
+      className="text-accent hover:underline"
       onClick={(e) => {
         e.preventDefault();
         window.open(url, "_blank");

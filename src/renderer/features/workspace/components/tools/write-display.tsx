@@ -237,17 +237,17 @@ export function WriteDisplay({
           (added > 0 || removed > 0) && (
             <span className="text-primary-500 text-xs shrink-0 group-hover:text-primary-950 group-hover:dark:text-primary">
               {added > 0 && (
-                <span className="text-green-600 dark:text-green-400">+{added}</span>
+                <span className="text-success">+{added}</span>
               )}
               {added > 0 && removed > 0 && " "}
               {removed > 0 && (
-                <span className="text-red-500 dark:text-red-400">-{removed}</span>
+                <span className="text-danger">-{removed}</span>
               )}
             </span>
           )
         ) : (
           lineCount > 0 && (
-            <span className="text-green-600 text-xs shrink-0">
+            <span className="text-success text-xs shrink-0">
               +{lineCount}
             </span>
           )

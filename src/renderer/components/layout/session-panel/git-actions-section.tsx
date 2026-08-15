@@ -900,7 +900,7 @@ export function GitActionsSection({
           <PanelCollapse isOpen={isSectionOpen("publish")}>
             <div className={`space-y-2 pt-2 pb-1 ${PANEL_ROW_X}`}>
               {!preflightFetching && preflight && !preflight.ghReady && (
-                <div className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-400/10 dark:text-amber-300">
+                <div className="rounded-lg bg-primary px-3 py-2 text-xs text-warning dark:bg-warning/10">
                   {preflight.notReadyReason ??
                     "Sign in with the GitHub CLI first."}
                 </div>

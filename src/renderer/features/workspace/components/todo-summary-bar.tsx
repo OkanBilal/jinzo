@@ -286,7 +286,7 @@ export function TodoSummaryBar({
           className="flex items-center gap-3 w-full px-5 py-3 cursor-pointer"
         >
           {allDone ? (
-            <Check className="size-3.5 text-emerald-500 shrink-0" />
+            <Check className="size-3.5 text-success shrink-0" />
           ) : (
             <AsciiSpinner variant={variant} kind="circle" />
           )}
@@ -317,7 +317,7 @@ export function TodoSummaryBar({
                     <span
                       className={`mt-0.5 size-4 rounded-full  flex items-center justify-center shrink-0 ${
                         isDone
-                          ? " bg-success/15 text-success dark:text-success"
+                          ? " bg-success/15 text-success"
                           : isActive
                             ? " bg-warning/20"
                             : " bg-primary-300/50 dark:bg-primary-600/40"
