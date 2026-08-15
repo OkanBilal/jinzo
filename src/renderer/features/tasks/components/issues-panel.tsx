@@ -226,6 +226,8 @@ export function IssuesPanel({ activeEntityId, onSelectIssue }: IssuesPanelProps)
                 }
               }}
               options={STATE_FILTERS}
+              semantics="radiogroup"
+              aria-label="Issue state"
               className="w-fit"
             />
             <Button

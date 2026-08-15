@@ -19,6 +19,7 @@ import {
   Body,
   Button,
   DropdownWrapper,
+  getSegmentedTabId,
   Heading3,
   SegmentedTabs,
   SendButton,
@@ -392,15 +393,23 @@ export function PrDetail({ pr }: PrDetailProps) {
 
         {/* Summary / Code tabs */}
         <SegmentedTabs
+          id="pr-detail-tabs"
           value={tab}
           onChange={setTab}
           options={DETAIL_TABS}
+          panelId="pr-detail-panel"
+          aria-label="Pull request view"
           className="w-fit mt-4"
         />
       </div>
 
       {/* Body */}
-      <div className="flex-1 min-h-0 overflow-y-auto noscrollbar px-8 py-3 space-y-4">
+      <div
+        id="pr-detail-panel"
+        role="tabpanel"
+        aria-labelledby={getSegmentedTabId("pr-detail-tabs", tab)}
+        className="flex-1 min-h-0 overflow-y-auto noscrollbar px-8 py-3 space-y-4"
+      >
         {tab === "code" ? (
           <PrDiffView prRef={ref} />
         ) : isLoading && !detail ? (

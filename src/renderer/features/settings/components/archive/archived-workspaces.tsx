@@ -5,6 +5,7 @@ import {
   Button,
   Caption,
   Checkbox,
+  getSegmentedTabId,
   Input,
   Muted,
   SegmentedTabs,
@@ -54,11 +55,9 @@ export default function ArchiveSettings() {
   return (
     <SettingsPageShell
       title="Archive"
-      isLoading={isLoading}
-      error={error}
-      errorMessage={`Unable to load archived ${activeTab}.`}
       headerActions={
         <SegmentedTabs
+          id="archive-tabs"
           value={activeTab}
           onChange={setActiveTab}
           options={[
@@ -71,15 +70,27 @@ export default function ArchiveSettings() {
               label: `Runs`,
             },
           ]}
+          panelId="archive-panel"
+          aria-label="Archive type"
           className="min-w-40"
         />
       }
     >
-      {activeTab === "workspaces" ? (
-        <ArchivedWorkspacesPanel workspaces={workspacesQuery.data ?? []} />
-      ) : (
-        <ArchivedRunsPanel runs={runsQuery.data ?? []} />
-      )}
+      <div
+        id="archive-panel"
+        role="tabpanel"
+        aria-labelledby={getSegmentedTabId("archive-tabs", activeTab)}
+      >
+        {isLoading ? (
+          <Muted>Loading...</Muted>
+        ) : error ? (
+          <Muted>{`Unable to load archived ${activeTab}.`}</Muted>
+        ) : activeTab === "workspaces" ? (
+          <ArchivedWorkspacesPanel workspaces={workspacesQuery.data ?? []} />
+        ) : (
+          <ArchivedRunsPanel runs={runsQuery.data ?? []} />
+        )}
+      </div>
     </SettingsPageShell>
   );
 }

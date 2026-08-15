@@ -110,6 +110,8 @@ export default function ConnectionsSettings() {
         onChange={setFilter}
         options={FILTER_TABS.map((t) => ({ value: t.id, label: t.label }))}
         variant="plain"
+        semantics="radiogroup"
+        aria-label="Connection category"
         className="mb-6"
       />
 

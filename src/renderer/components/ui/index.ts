@@ -4,8 +4,13 @@ export type { ButtonProps, ButtonVariant } from "./button";
 export { CopyButton } from "./copy-button";
 
 // Segmented tabs
-export { SegmentedTabs } from "./segmented-tabs";
-export type { SegmentedTabOption } from "./segmented-tabs";
+export { getSegmentedTabId, SegmentedTabs } from "./segmented-tabs";
+export type {
+  SegmentedTabOption,
+  SegmentedTabsNavigationKey,
+  SegmentedTabsProps,
+  SegmentedTabsSemantics,
+} from "./segmented-tabs";
 
 // Text
 export {

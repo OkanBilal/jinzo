@@ -3,8 +3,6 @@ import { cn } from "../../lib/cn";
 import Tooltip, { TooltipPosition } from "./tooltip";
 import { AsciiSpinner } from "./ascii-spinner";
 
-
-
 export type ButtonVariant =
   | "primary"
   | "submit"
@@ -14,7 +12,6 @@ export type ButtonVariant =
   | "icon"
   | "subtle"
   | "bare";
-
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -34,21 +31,26 @@ const variantStyles: Record<ButtonVariant, string> = {
   // Glass variants carry no bg-*/hover:bg-* — the `glass-*` utility owns the
   // background, and a hover:bg-* would win on specificity and wipe the rim.
   // Their hover fills come from the --glass-hover-* tokens in index.css.
-  primary: "cursor-pointer text-primary-700 dark:text-primary-300 glass-primary",
-  secondary: "cursor-pointer text-primary dark:text-primary glass-secondary",
-  submit: "cursor-pointer text-primary glass-submit",
+  primary: "text-primary-700 dark:text-primary-300 glass-primary",
+  secondary: "text-primary dark:text-primary glass-secondary",
+  submit: "text-primary glass-submit",
   ghost:
-    "cursor-pointer text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900",
-  danger: "cursor-pointer text-primary glass-danger",
-  icon: "cursor-pointer p-1 rounded-md text-primary-600 dark:text-primary-400 hover:bg-primary-200/40 dark:hover:bg-primary-700",
+    "text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900",
+  danger: "text-primary glass-danger",
+  icon: "p-1 rounded-md text-primary-600 dark:text-primary-400 hover:bg-primary-200/40 dark:hover:bg-primary-700",
   subtle:
-    "cursor-pointer flex items-center gap-2  hover:bg-primary/80 dark:hover:bg-primary/10 ",
-  bare: "cursor-pointer",
+    "flex items-center gap-2 hover:bg-primary/80 dark:hover:bg-primary/10",
+  bare: "",
 };
 
+// Interaction semantics belong to the primitive, not to a visual variant.
+// Even a fully custom `bare` button must remain visibly focusable and expose a
+// consistent disabled state.
+const interactionStyles =
+  "cursor-pointer duration-200 transition-[color,background-color,border-color,box-shadow,transform] disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500";
 
-const baseStyles =
-  "px-3 py-1.5 text-s font-medium rounded-xl items-center duration-200 transition-[color,background-color,border-color,box-shadow,transform] justify-center disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500";
+const controlStyles =
+  "px-3 py-1.5 text-s font-medium rounded-xl items-center justify-center";
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
@@ -74,23 +76,21 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ) => {
     const variantClass = variantStyles[variant];
     const widthClass = fullWidth ? "w-full" : "";
-
-    const baseClass =
-      variant === "bare"
-        ? ""
-          : baseStyles;
+    const visualBaseClass = variant === "bare" ? "" : controlStyles;
 
     const buttonElement = (
       <button
         ref={ref}
         type={type}
         className={cn(
-          baseClass,
+          interactionStyles,
+          visualBaseClass,
           variantClass,
           widthClass,
           className,
         )}
         disabled={disabled || isLoading}
+        aria-busy={isLoading || undefined}
         {...props}
       >
         {isLoading ? (

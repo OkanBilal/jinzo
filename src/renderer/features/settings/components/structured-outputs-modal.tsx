@@ -2,7 +2,7 @@ import { useId, useReducer } from "react";
 import {
   useGetProviderByIdQuery,
 } from "@/lib/redux/api";
-import { Modal } from "@/components/ui";
+import { getSegmentedTabId, Modal } from "@/components/ui";
 import { SchemaListTab } from "./schema-list-tab";
 import { SchemaEditorTab, type SchemaProperty } from "./schema-editor-tab";
 import { SchemaDeleteDialog } from "./schema-delete-dialog";
@@ -136,38 +136,48 @@ export function StructuredOutputsModal({
         onClose={onClose}
       />
 
-      {activeTab === "schemas" && (
-        <SchemaListTab
-          sortedEntries={sortedEntries}
-          selectedId={selectedId}
-          renamingId={state.renamingId}
-          renameValue={state.renameValue}
-          onSelectSchema={crud.handleSelectSchema}
-          onOpenNewEditor={crud.openNewEditor}
-          onOpenEditEditor={crud.openEditEditor}
-          onDuplicate={crud.handleDuplicateSchema}
-          onRequestDelete={(id) => updateState({ deleteTargetId: id })}
-          onRenameChange={(value) => updateState({ renameValue: value })}
-          onRenameConfirm={crud.handleRenameConfirm}
-          onRenameCancel={() => updateState({ renamingId: null })}
-        />
-      )}
+      <div
+        id="structured-outputs-panel"
+        role="tabpanel"
+        aria-labelledby={getSegmentedTabId(
+          "structured-outputs-tabs",
+          activeTab,
+        )}
+        className="flex min-h-0 flex-1 flex-col"
+      >
+        {activeTab === "schemas" && (
+          <SchemaListTab
+            sortedEntries={sortedEntries}
+            selectedId={selectedId}
+            renamingId={state.renamingId}
+            renameValue={state.renameValue}
+            onSelectSchema={crud.handleSelectSchema}
+            onOpenNewEditor={crud.openNewEditor}
+            onOpenEditEditor={crud.openEditEditor}
+            onDuplicate={crud.handleDuplicateSchema}
+            onRequestDelete={(id) => updateState({ deleteTargetId: id })}
+            onRenameChange={(value) => updateState({ renameValue: value })}
+            onRenameConfirm={crud.handleRenameConfirm}
+            onRenameCancel={() => updateState({ renamingId: null })}
+          />
+        )}
 
-      {activeTab === "editor" && (
-        <SchemaEditorTab
-          editorName={editorName}
-          editorProperties={editorProperties}
-          editingId={editingId}
-          isSaving={isSaving}
-          canSave={canSave}
-          onNameChange={(name) => updateState({ editorName: name })}
-          onAddProperty={crud.handleAddProperty}
-          onUpdateProperty={crud.handleUpdateProperty}
-          onRemoveProperty={crud.handleRemoveProperty}
-          onReset={() => updateState({ editorProperties: [] })}
-          onSave={crud.handleSaveSchema}
-        />
-      )}
+        {activeTab === "editor" && (
+          <SchemaEditorTab
+            editorName={editorName}
+            editorProperties={editorProperties}
+            editingId={editingId}
+            isSaving={isSaving}
+            canSave={canSave}
+            onNameChange={(name) => updateState({ editorName: name })}
+            onAddProperty={crud.handleAddProperty}
+            onUpdateProperty={crud.handleUpdateProperty}
+            onRemoveProperty={crud.handleRemoveProperty}
+            onReset={() => updateState({ editorProperties: [] })}
+            onSave={crud.handleSaveSchema}
+          />
+        )}
+      </div>
 
       {deleteTargetId && (
         <SchemaDeleteDialog

@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
-import { Button, Input, Body, Caption, Muted, Text, toast } from "@/components/ui";
+import {
+  Body,
+  Button,
+  Caption,
+  Input,
+  Muted,
+  SegmentedTabs,
+  Text,
+  toast,
+} from "@/components/ui";
 import {
   SettingsPageShell,
   SettingsSection,
@@ -16,6 +25,10 @@ import type { TransportStatus } from "@/lib/transport";
 
 const WS_URL_RE = /^wss?:\/\/.+/i;
 const DEFAULT_REMOTE_PORT = 8787;
+const ADD_BACKEND_MODE_OPTIONS = [
+  { value: "direct", label: "Direct URL" },
+  { value: "ssh", label: "SSH tunnel" },
+] as const;
 
 const STATUS_LABEL: Record<TransportStatus, string> = {
   connected: "Connected",
@@ -134,22 +147,14 @@ function AddBackendForm({
 
   return (
     <div className="py-3 space-y-2">
-      <div className="flex items-center gap-1">
-        <Button
-          type="button"
-          variant={mode === "direct" ? "secondary" : "ghost"}
-          onClick={() => setMode("direct")}
-        >
-          Direct URL
-        </Button>
-        <Button
-          type="button"
-          variant={mode === "ssh" ? "secondary" : "ghost"}
-          onClick={() => setMode("ssh")}
-        >
-          SSH tunnel
-        </Button>
-      </div>
+      <SegmentedTabs
+        value={mode}
+        onChange={setMode}
+        options={ADD_BACKEND_MODE_OPTIONS}
+        semantics="radiogroup"
+        aria-label="Backend connection method"
+        className="w-fit"
+      />
 
       <Input
         value={label}

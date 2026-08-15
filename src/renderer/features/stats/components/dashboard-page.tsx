@@ -60,10 +60,16 @@ export default function DashboardPage() {
             value={filter}
             options={OPTIONS}
             onChange={setFilter}
-            aria-label="Dashboard period"
+            aria-label="Dashboard provider"
           />
         ) : (
-          <SegmentedTabs value={filter} onChange={setFilter} options={OPTIONS} />
+          <SegmentedTabs
+            value={filter}
+            onChange={setFilter}
+            options={OPTIONS}
+            semantics="radiogroup"
+            aria-label="Dashboard provider"
+          />
         )}
       </div>
 

@@ -25,12 +25,15 @@ export function SchemaModalHeader({
           Structured outputs
         </Body>
         <SegmentedTabs
+          id="structured-outputs-tabs"
           value={activeTab}
           onChange={onTabChange}
           options={[
             { value: "schemas", label: "Schemas" },
             { value: "editor", label: editingId ? "Edit" : "New" },
           ]}
+          panelId="structured-outputs-panel"
+          aria-label="Structured output view"
           className="min-w-37"
         />
       </div>

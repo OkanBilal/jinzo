@@ -13,10 +13,17 @@ export interface SegmentedTabOption<T extends string> {
   label: ReactNode;
 }
 
-interface SegmentedTabsProps<T extends string> {
+export type SegmentedTabsSemantics = "tabs" | "radiogroup";
+
+interface SegmentedTabsBaseProps<T extends string> {
+  id?: string;
   value: T;
   onChange: (next: T) => void;
   options: ReadonlyArray<SegmentedTabOption<T>>;
+  /** Tabs switch panels; radiogroups choose a filter or setting value. */
+  semantics?: SegmentedTabsSemantics;
+  /** Shared panel controlled by the tabs. Ignored for radiogroups. */
+  panelId?: string;
   /**
    * Visual treatment:
    *  - `pill`     (default) — container bg + sliding indicator (Dashboard, Plugins)
@@ -29,13 +36,52 @@ interface SegmentedTabsProps<T extends string> {
   className?: string;
 }
 
+type SegmentedTabsAccessibleName =
+  | { "aria-label": string; "aria-labelledby"?: never }
+  | { "aria-label"?: never; "aria-labelledby": string };
+
+export type SegmentedTabsProps<T extends string> =
+  SegmentedTabsBaseProps<T> & SegmentedTabsAccessibleName;
+
+export type SegmentedTabsNavigationKey =
+  | "ArrowLeft"
+  | "ArrowRight"
+  | "ArrowUp"
+  | "ArrowDown"
+  | "Home"
+  | "End";
+
+export function getSegmentedTabId(groupId: string, value: string): string {
+  return `${groupId}-${value}-tab`;
+}
+
+export function getNextSegmentedValue<T extends string>(
+  values: ReadonlyArray<T>,
+  current: T,
+  key: SegmentedTabsNavigationKey,
+): T | null {
+  if (values.length === 0) return null;
+  if (key === "Home") return values[0];
+  if (key === "End") return values[values.length - 1];
+
+  const currentIndex = Math.max(0, values.indexOf(current));
+  const forwards = key === "ArrowRight" || key === "ArrowDown";
+  const offset = forwards ? 1 : -1;
+  return values[(currentIndex + offset + values.length) % values.length];
+}
+
 export function SegmentedTabs<T extends string>({
+  id,
   value,
   onChange,
   options,
+  semantics = "tabs",
+  panelId,
   variant = "pill",
   disabled = false,
   className = "",
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
 }: SegmentedTabsProps<T>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Map<T, HTMLButtonElement>>(new Map());
@@ -43,6 +89,33 @@ export function SegmentedTabs<T extends string>({
 
   // Bordered swaps backgrounds in place; pill and plain slide an indicator.
   const hasIndicator = variant !== "bordered";
+  const isTabList = semantics === "tabs";
+  const hasActiveOption = options.some((option) => option.value === value);
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (disabled) return;
+    if (
+      event.key !== "ArrowLeft" &&
+      event.key !== "ArrowRight" &&
+      event.key !== "ArrowUp" &&
+      event.key !== "ArrowDown" &&
+      event.key !== "Home" &&
+      event.key !== "End"
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    const nextValue = getNextSegmentedValue(
+      options.map((option) => option.value),
+      value,
+      event.key,
+    );
+    if (!nextValue) return;
+
+    tabRefs.current.get(nextValue)?.focus();
+    if (nextValue !== value) onChange(nextValue);
+  };
 
   const updateIndicator = useCallback(() => {
     if (!hasIndicator) return;
@@ -80,7 +153,7 @@ export function SegmentedTabs<T extends string>({
     if (variant === "pill") {
       return cn(
         "relative z-(--z-base) flex-1 text-center px-3 py-1 text-xs font-medium rounded-[10px] whitespace-nowrap transition-colors duration-300",
-        "focus-visible:ring-0 focus-visible:ring-offset-0",
+        "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 focus-visible:ring-offset-0",
         disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
         isActive
           ? "text-primary-900 dark:text-primary-100"
@@ -90,7 +163,7 @@ export function SegmentedTabs<T extends string>({
     if (variant === "bordered") {
       return cn(
         "px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors",
-        "focus-visible:ring-0 focus-visible:ring-offset-0",
+        "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 focus-visible:ring-offset-0",
         disabled
           ? "bg-primary-100 dark:bg-primary-900 text-primary-600 dark:text-primary-400 cursor-not-allowed opacity-50"
           : isActive
@@ -101,7 +174,7 @@ export function SegmentedTabs<T extends string>({
     // plain — the sliding indicator owns the active background.
     return cn(
       "relative z-(--z-base) px-2.5 py-1 text-xs rounded-xl whitespace-nowrap transition-colors duration-300",
-      "focus-visible:ring-0 focus-visible:ring-offset-0",
+      "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 focus-visible:ring-offset-0",
       disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
       isActive
         ? "text-primary-900 dark:text-primary-100"
@@ -110,7 +183,15 @@ export function SegmentedTabs<T extends string>({
   };
 
   return (
-    <div ref={containerRef} className={cn(containerClass, className)}>
+    <div
+      id={id}
+      ref={containerRef}
+      role={isTabList ? "tablist" : "radiogroup"}
+      aria-label={ariaLabel}
+      aria-labelledby={ariaLabelledBy}
+      aria-orientation="horizontal"
+      className={cn(containerClass, className)}
+    >
       {hasIndicator && (
         <div
           aria-hidden
@@ -127,21 +208,33 @@ export function SegmentedTabs<T extends string>({
           }}
         />
       )}
-      {options.map((opt) => (
-        <Button
-          key={opt.value}
-          ref={(el) => {
-            if (el) tabRefs.current.set(opt.value, el);
-          }}
-          type="button"
-          onClick={() => !disabled && onChange(opt.value)}
-          disabled={disabled}
-          data-active={value === opt.value ? "true" : undefined}
-          className={tabClass(value === opt.value)}
-        >
-          {opt.label}
-        </Button>
-      ))}
+      {options.map((opt, index) => {
+        const isActive = value === opt.value;
+        const isTabStop = isActive || (!hasActiveOption && index === 0);
+        return (
+          <Button
+            key={opt.value}
+            ref={(el) => {
+              if (el) tabRefs.current.set(opt.value, el);
+              else tabRefs.current.delete(opt.value);
+            }}
+            type="button"
+            onClick={() => !disabled && onChange(opt.value)}
+            onKeyDown={handleKeyDown}
+            disabled={disabled}
+            id={id ? getSegmentedTabId(id, opt.value) : undefined}
+            role={isTabList ? "tab" : "radio"}
+            aria-selected={isTabList ? isActive : undefined}
+            aria-checked={isTabList ? undefined : isActive}
+            aria-controls={isTabList ? panelId : undefined}
+            tabIndex={isTabStop ? 0 : -1}
+            data-active={isActive ? "true" : undefined}
+            className={tabClass(isActive)}
+          >
+            {opt.label}
+          </Button>
+        );
+      })}
     </div>
   );
 }

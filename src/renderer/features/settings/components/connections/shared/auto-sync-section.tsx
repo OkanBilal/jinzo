@@ -98,6 +98,8 @@ export function AutoSyncSection({
                 label: o.label,
               }))}
               variant="bordered"
+              semantics="radiogroup"
+              aria-label="Sync interval"
               disabled={!isEnabled}
             />
           </div>

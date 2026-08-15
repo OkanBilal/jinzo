@@ -266,6 +266,8 @@ export function PullRequestsPanel({
             value={relationship}
             onChange={setRelationship}
             options={RELATIONSHIP_FILTERS}
+            semantics="radiogroup"
+            aria-label="Pull request relationship"
             className="w-fit"
           />
           <div className="flex items-center gap-1.5">
