@@ -1,5 +1,5 @@
 import { PullRequest } from "@/components/ui/icons";
-import { Text } from "@/components/ui";
+import { Button, Text } from "@/components/ui";
 import { proxiedImageSrc } from "@/lib/proxied-image-src";
 import { formatDate } from "@/lib/format-date";
 import type { PullRequestSummary } from "@/lib/redux/api";
@@ -37,16 +37,8 @@ export function PrListItem({
   const avatarSrc = proxiedImageSrc(pr.author?.avatarUrl);
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
+    <Button
       onClick={onClick}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClick();
-        }
-      }}
       className={`w-full text-left px-2 py-1.5 rounded-2xl cursor-pointer transition-all duration-200 ease-out flex items-center gap-2.5 group ${
         isActive
           ? "bg-primary-50 dark:bg-primary/5 glass-outline"
@@ -128,6 +120,6 @@ export function PrListItem({
           {formatDate(pr.updatedAt)}
         </Text>
       </div>
-    </div>
+    </Button>
   );
 }

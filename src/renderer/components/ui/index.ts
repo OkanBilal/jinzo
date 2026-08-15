@@ -30,8 +30,13 @@ export type {
 } from "./text";
 
 // Input (primitives)
-export { Input, Textarea } from "./input";
-export type { InputProps, TextareaProps } from "./input";
+export { Input, NativeSelect, Textarea } from "./input";
+export type {
+  FormControlVariant,
+  InputProps,
+  NativeSelectProps,
+  TextareaProps,
+} from "./input";
 
 // Input (composed)
 export { SendButton } from "./input/send-button";
@@ -55,9 +60,11 @@ export type { CheckboxProps } from "./checkbox";
 
 // Toggle
 export { Toggle } from "./toggle";
+export type { ToggleProps } from "./toggle";
 
 // Slider
 export { Slider } from "./slider";
+export type { SliderProps } from "./slider";
 
 // Tooltip
 export { default as Tooltip } from "./tooltip";

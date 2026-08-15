@@ -155,6 +155,7 @@ function PreventSleepToggle() {
   return (
     <Toggle
       enabled={settings?.preventSleepDuringRuns ?? false}
+      aria-label="Prevent sleep during runs"
       onChange={(val) => setPreventSleep(val)}
     />
   );
@@ -167,6 +168,7 @@ function NotifyRunCompleteToggle() {
   return (
     <Toggle
       enabled={settings?.notifyOnRunComplete ?? true}
+      aria-label="Notify when runs complete"
       onChange={(val) => setNotifyOnRunComplete(val)}
     />
   );
@@ -179,6 +181,7 @@ function MenuBarIconToggle() {
   return (
     <Toggle
       enabled={settings?.showMenuBarIcon ?? true}
+      aria-label="Show menu bar icon"
       onChange={async (val) => {
         await setShowMenuBarIcon(val);
         await window.api.app.setMenuBarIconVisible(val);
@@ -220,6 +223,7 @@ function NotifyToolApprovalToggle() {
   return (
     <Toggle
       enabled={settings?.notifyOnToolApproval ?? true}
+      aria-label="Notify when a tool needs approval"
       onChange={(val) => setNotifyOnToolApproval(val)}
     />
   );
@@ -246,6 +250,7 @@ function InterfaceFontSizeSlider() {
   return (
     <Slider
       value={draft}
+      aria-label="Interface size"
       onChange={setDraft}
       onCommit={(next) => dispatch(setInterfaceFontSize(next))}
       min={MIN_INTERFACE_FONT_SIZE}
@@ -263,6 +268,7 @@ function CodeFontSizeSlider() {
   return (
     <Slider
       value={value}
+      aria-label="Code size"
       onChange={(next) => dispatch(setCodeFontSize(next))}
       min={MIN_CODE_FONT_SIZE}
       max={MAX_CODE_FONT_SIZE}

@@ -14,6 +14,7 @@ import {
   FILE_TYPES,
   type UploadedFile,
   Button,
+  Input,
 } from "@/components/ui";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import { useClickOutside } from "@/hooks/use-click-outside";
@@ -188,10 +189,12 @@ export function InputToolbar({
               onRemoveFile={handleRemoveFile}
               variant={variant}
             />
-          <input
+          <Input
+            variant="bare"
             ref={fileInputRef}
             type="file"
             className="hidden"
+            aria-label="Upload files"
             multiple
             onChange={handleFileChange}
           />

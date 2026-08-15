@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import NumberFlow from "@number-flow/react";
+import { cn } from "../../lib/cn";
 import Text from "./text";
 
-interface SliderProps {
+interface SliderBaseProps {
+  id?: string;
   value: number;
   onChange: (value: number) => void;
   /**
@@ -15,24 +17,34 @@ interface SliderProps {
   min?: number;
   max?: number;
   step?: number;
-  label?: string;
   minLabel?: string;
   maxLabel?: string;
   showValue?: boolean;
   formatValue?: (value: number) => string;
+  disabled?: boolean;
 }
 
+export type SliderProps = SliderBaseProps &
+  (
+    | { label: string; "aria-label"?: string }
+    | { label?: undefined; "aria-label": string }
+  );
+
 export function Slider({
+  id,
   value,
   onChange,
   onCommit,
   min = 0,
   max = 100,
   step = 1,
+  label,
   minLabel,
   maxLabel,
   showValue = true,
   formatValue,
+  disabled = false,
+  "aria-label": ariaLabel,
 }: SliderProps) {
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -81,7 +93,11 @@ export function Slider({
   }, [isDragging, handleMouseUp]);
 
   const displayValue = formatValue ? formatValue(value) : value;
-  const percentage = ((value - min) / (max - min)) * 100;
+  const range = max - min;
+  const percentage =
+    range === 0
+      ? 0
+      : Math.min(100, Math.max(0, ((value - min) / range) * 100));
 
   const lineOpacity =
     percentage > 90 ? 0 : percentage > 75 ? (90 - percentage) / 15 : 1;
@@ -90,18 +106,14 @@ export function Slider({
     <div className="space-y-3">
       <div
         ref={containerRef}
-        className="relative
-          w-full px-3 py-3.5
-          overflow-hidden
-          min-w-50 rounded-[10px]
-          bg-primary-950/5 dark:bg-primary/5
-          glass-outline
-          text-primary-900 dark:text-primary
-          text-sm focus:outline-none cursor-pointer
-          flex items-center justify-between
-          transition-all
-          shadow-(--shadow-inset-subtle) dark:shadow-(--shadow-inset-subtle-dark)
-        "
+        className={cn(
+          "relative w-full min-w-50 overflow-hidden rounded-[10px] px-3 py-3.5",
+          "bg-primary-950/5 dark:bg-primary/5 glass-outline",
+          "flex items-center justify-between text-sm text-primary-900 dark:text-primary",
+          "focus-within:ring-2 focus-within:ring-primary-500 focus-within:ring-offset-2",
+          "shadow-(--shadow-inset-subtle) transition-all dark:shadow-(--shadow-inset-subtle-dark)",
+          disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+        )}
       >
         {/* The fill animates during the drag too, not just after it. Coarse
             scales (the font sizes span seven steps) otherwise snap between a
@@ -137,16 +149,22 @@ export function Slider({
         )}
 
         <input
+          id={id}
           type="range"
           min={min}
           max={max}
           step={step}
           value={value}
+          aria-label={ariaLabel ?? label}
+          aria-valuetext={
+            typeof displayValue === "string" ? displayValue : undefined
+          }
+          disabled={disabled}
           onChange={handleChange}
           onMouseDown={handleMouseDown}
           onTouchStart={handleMouseDown}
           onKeyUp={handleKeyUp}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          className="absolute inset-0 size-full cursor-pointer opacity-0 focus:outline-none disabled:cursor-not-allowed"
         />
       </div>
       {(minLabel || maxLabel) && (

@@ -227,19 +227,14 @@ export function PermissionModeDropdown({
             position="top"
             disabled={!planDisabled}
           >
-            <div
-              role="button"
+            {/* `aria-disabled` rather than `disabled` — a truly disabled button
+                swallows the hover events the Tooltip above needs to explain
+                *why* the row is unavailable. */}
+            <Button
               tabIndex={planDisabled ? -1 : 0}
               aria-disabled={planDisabled}
               onClick={() => {
                 if (!planDisabled) onPlanModeToggle?.();
-              }}
-              onKeyDown={(e) => {
-                if (planDisabled) return;
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onPlanModeToggle?.();
-                }
               }}
               className={`w-full text-left px-2.5 py-1.5 transition-colors flex items-center gap-2.5 last:rounded-b-xl border-t border-primary-200/40 dark:border-primary/5 ${
                 planDisabled
@@ -257,7 +252,7 @@ export function PermissionModeDropdown({
                 </Caption>
               </div>
               <PlanToggleSwitch checked={planMode && !planDisabled} />
-            </div>
+            </Button>
           </Tooltip>
         )}
       </DropdownWrapper>

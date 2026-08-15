@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, Input, Textarea } from "@/components/ui";
 import { WizardModal, useWizard, type WizardStep } from "@/components/ui/wizard-modal";
 import { useGetAccountQuery } from "@/lib/redux/api/accountApi";
 import {
@@ -57,11 +57,13 @@ function PulseStep({ isEditing }: { isEditing: boolean }) {
   return (
     <div className="-m-2">
       {/* Title */}
-      <input
+      <Input
+        variant="bare"
         type="text"
         value={data.title}
         onChange={(e) => setData({ title: e.target.value })}
         placeholder="Automation title"
+        aria-label="Automation title"
         className="w-full bg-transparent outline-none  text-primary-900 dark:text-primary-100 placeholder-primary-500 mb-3"
       />
 
@@ -120,10 +122,12 @@ function PulseStep({ isEditing }: { isEditing: boolean }) {
       {/* Divider */}
 
       {/* Prompt / description */}
-      <textarea
+      <Textarea
+        variant="bare"
         value={data.prompt}
         onChange={(e) => setData({ prompt: e.target.value })}
         placeholder="Add prompt e.g. look for crashes in $sentry"
+        aria-label="Automation prompt"
         className="w-full h-64 py-4 bg-transparent outline-none resize-none text-sm text-primary-900 dark:text-primary-100 placeholder-primary-400 dark:placeholder-primary-700"
       />
 

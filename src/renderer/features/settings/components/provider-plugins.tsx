@@ -9,6 +9,7 @@ import {
   CopyButton,
   toast,
   AsciiSpinner,
+  Input,
   Select,
 } from "@/components/ui";
 import {
@@ -231,9 +232,8 @@ function InstalledPluginShelf({
                 plugin.interface?.displayName ||
                 humanizePluginName(plugin.name);
               return (
-                <button
+                <Button
                   key={plugin.id}
-                  type="button"
                   title={name}
                   aria-label={`Open ${name}`}
                   onClick={() => onSelect(plugin.id)}
@@ -242,7 +242,7 @@ function InstalledPluginShelf({
                   }`}
                 >
                   <PluginLogo plugin={plugin} size="md" />
-                </button>
+                </Button>
               );
             })}
       </HorizontalFadeScroller>
@@ -1173,12 +1173,13 @@ export default function ProviderPlugins({
         </div>
         <div className="relative w-full md:w-56 md:shrink-0">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-primary-600 dark:text-primary-400 pointer-events-none" />
-          <input
+          <Input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search plugins..."
-            className="w-full pl-8 pr-3 py-1.5 rounded-xl glass-input   text-sm text-primary-900 dark:text-primary-100 placeholder:text-primary-500 dark:placeholder:text-primary-500 outline-none "
+            aria-label="Search plugins"
+            className="pl-8 py-1.5"
           />
         </div>
       </div>

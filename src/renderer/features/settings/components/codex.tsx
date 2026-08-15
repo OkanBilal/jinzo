@@ -281,6 +281,7 @@ export default function CodexSettings() {
         >
           <Toggle
             enabled={networkAccessEnabled}
+            aria-label="Allow network access"
             onChange={(enabled) => {
               updateConfig({ networkAccessEnabled: enabled });
               toast.success(
@@ -313,6 +314,7 @@ export default function CodexSettings() {
         >
           <Toggle
             enabled={webSearchMode === "live"}
+            aria-label="Allow web search"
             onChange={(enabled) => {
               updateConfig({ webSearchMode: enabled ? "live" : "disabled" });
               toast.success(
@@ -328,6 +330,7 @@ export default function CodexSettings() {
         >
           <Toggle
             enabled={skipGitRepoCheck}
+            aria-label="Skip Git repository check"
             onChange={(enabled) => {
               updateConfig({ skipGitRepoCheck: enabled });
               toast.success(

@@ -1,166 +1,26 @@
 @import "@xterm/xterm/css/xterm.css";
 @import "tailwindcss";
 
+/* Inter ships as one variable font per style rather than eighteen static
+   instances. Same 4.001 build and the same metrics (2048 upem, 1984 ascender,
+   -494 descender), so nothing reflows — but the `opsz` axis is live now,
+   driven by the `font-optical-sizing` below. Every static instance was pinned
+   at opsz 14, Inter's body-text optical size, which left headings spaced for
+   14px copy. */
 @font-face {
   font-family: 'Inter';
   font-style: normal;
-  font-weight: 100;
+  font-weight: 100 900;
   font-display: swap;
-  src: url('/fonts/Inter-Thin.woff2') format('woff2');
+  src: url('/fonts/InterVariable.woff2') format('woff2');
 }
 @font-face {
   font-family: 'Inter';
   font-style: italic;
-  font-weight: 100;
+  font-weight: 100 900;
   font-display: swap;
-  src: url('/fonts/Inter-ThinItalic.woff2') format('woff2');
+  src: url('/fonts/InterVariable-Italic.woff2') format('woff2');
 }
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 200;
-  font-display: swap;
-  src: url('/fonts/Inter-ExtraLight.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: italic;
-  font-weight: 200;
-  font-display: swap;
-  src: url('/fonts/Inter-ExtraLightItalic.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 300;
-  font-display: swap;
-  src: url('/fonts/Inter-Light.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: italic;
-  font-weight: 300;
-  font-display: swap;
-  src: url('/fonts/Inter-LightItalic.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/Inter-Regular.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: italic;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/Inter-Italic.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('/fonts/Inter-Medium.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: italic;
-  font-weight: 500;
-  font-display: swap;
-  src: url('/fonts/Inter-MediumItalic.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('/fonts/Inter-SemiBold.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: italic;
-  font-weight: 600;
-  font-display: swap;
-  src: url('/fonts/Inter-SemiBoldItalic.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/fonts/Inter-Bold.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: italic;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/fonts/Inter-BoldItalic.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 800;
-  font-display: swap;
-  src: url('/fonts/Inter-ExtraBold.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: italic;
-  font-weight: 800;
-  font-display: swap;
-  src: url('/fonts/Inter-ExtraBoldItalic.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 900;
-  font-display: swap;
-  src: url('/fonts/Inter-Black.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: italic;
-  font-weight: 900;
-  font-display: swap;
-  src: url('/fonts/Inter-BlackItalic.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Geist Mono';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/GeistMono-Medium.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Geist Mono';
-  font-style: italic;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/GeistMono-MediumItalic.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Geist Mono';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/fonts/GeistMono-Bold.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Geist Mono';
-  font-style: italic;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/fonts/GeistMono-BoldItalic.woff2') format('woff2');
-}
-
-
-
-
-
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -288,6 +148,16 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  /* Ties Inter's `opsz` axis to the used font size. It is the browser default,
+     but stated here because it is the whole reason the variable font replaced
+     the static instances — without it every size would render at opsz 14. */
+  font-optical-sizing: auto;
+  /* cv05 = lower-case l with a tail, cv08 = upper-case I with serifs. Branch
+     names, file paths, and package names all render in the sans face, where a
+     bare `l`, `I`, and `1` are otherwise the same vertical stroke. Digits are
+     left alone: the fuller `ss02` set also slashes the zero, which reads as a
+     glyph error in ordinary counts. */
+  font-feature-settings: "cv05" 1, "cv08" 1;
 }
 
 /* While a layout handle is being dragged, suspend the sidebar/main width &
@@ -481,10 +351,6 @@ body[data-resizing] iframe {
   from { transform: translateY(0); }
   to { transform: translateY(calc(-100% + var(--frame-height, 32px))); }
 }
-.cm-editor, .cm-editor * {
-  font-family: 'Geist Mono', ui-monospace, monospace !important;
-}
-
 .animate-slide-in {
   animation: slide-fade-down 0.15s ease-out both;
 }

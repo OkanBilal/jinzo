@@ -205,15 +205,14 @@ export function ImagePreviewModal({ name, src, onClose }: ImagePreviewModalProps
           >
             <Minus className="w-3.5 h-3.5" />
           </Button>
-          <button
-            type="button"
+          <Button
             onClick={resetZoom}
             aria-label="Reset zoom"
             title="Reset zoom"
             className="min-w-12 px-1 text-xs font-medium tabular-nums text-primary-100 hover:text-primary cursor-pointer"
           >
             {Math.round(scale * 100)}%
-          </button>
+          </Button>
           <Button
             onClick={zoomIn}
             disabled={scale >= MAX_SCALE}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Text } from "@/components/ui";
+import { Button, Text } from "@/components/ui";
 import {
   subagentStateOf,
   type SubagentLifecycleMeta,
@@ -165,8 +165,7 @@ export function TaskProgressStrip({
 
   return (
     <div className="flex flex-col">
-      <button
-        type="button"
+      <Button
         onClick={() => hasDetail && setIsExpanded((v) => !v)}
         className={`group flex w-full min-w-0 items-center gap-1.5 py-0.5 text-s font-sans ${
           hasDetail ? "cursor-pointer" : "cursor-default"
@@ -186,7 +185,7 @@ export function TaskProgressStrip({
         {context && (
           <Text as="span" size="inherit" tone="subtle" className="shrink-0">{context}</Text>
         )}
-      </button>
+      </Button>
 
       {hasDetail && (
         <ToolCollapse isExpanded={isExpanded}>

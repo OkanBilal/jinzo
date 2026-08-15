@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Caption, Button, Body } from "@/components/ui";
+import { Caption, Button, Body, Input } from "@/components/ui";
 import { useCapabilities } from "@/lib/platform";
 
 interface CloneRepoModalProps {
@@ -82,12 +82,12 @@ export default function CloneRepoModal({
             <Caption className="mb-1.5 block">
               Git URL
             </Caption>
-            <input
+            <Input
               type="text"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://github.com/user/repo.git"
-              className="w-full px-3 py-2 rounded-xl bg-primary-100/50 dark:bg-primary-800/30 text-primary-900 dark:text-primary-100 text-sm glass-input outline-none transition-colors placeholder:text-primary-500 dark:placeholder:text-primary-500"
+              aria-label="Git URL"
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleSubmit();
               }}
@@ -100,12 +100,13 @@ export default function CloneRepoModal({
               Clone Location
             </Caption>
             <div className="flex gap-2">
-              <input
+              <Input
                 type="text"
                 value={clonePath}
                 onChange={(e) => setClonePath(e.target.value)}
                 placeholder="/path/to/directory"
-                className="flex-1 px-3 py-2 rounded-xl bg-primary-100/50 dark:bg-primary-800/30 text-primary-900 dark:text-primary-100 text-sm glass-input outline-none transition-colors placeholder:text-primary-500 dark:placeholder:text-primary-500"
+                aria-label="Clone location"
+                className="flex-1"
               />
               <Button
                 variant="primary"

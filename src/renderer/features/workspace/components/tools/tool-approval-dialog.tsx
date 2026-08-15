@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
 import { ArrowUp, Question } from "@/components/ui/icons";
-import { Body, Button, Caption, Checkbox, Text } from "@/components/ui";
+import { Body, Button, Caption, Checkbox, Input, Text } from "@/components/ui";
 import {
   ElicitationForm,
   buildElicitationContent,
@@ -476,7 +476,8 @@ export function ToolApprovalDialog({
               {!isCursor && (
                 <label className="min-w-0 flex-1">
                   <span className="sr-only">Custom answer</span>
-                  <input
+                  <Input
+                    variant="bare"
                     type={request.isSecret ? "password" : "text"}
                     autoComplete={request.isSecret ? "new-password" : undefined}
                     value={freeText}

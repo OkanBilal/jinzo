@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Caption, Button, Body } from "@/components/ui";
+import { Caption, Button, Body, Input } from "@/components/ui";
 import { useCapabilities } from "@/lib/platform";
 
 interface CreateProjectModalProps {
@@ -83,13 +83,13 @@ export default function CreateProjectModal({
             <Caption className="mb-1.5 block">
               Project Name
             </Caption>
-            <input
+            <Input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="my-new-project"
+              aria-label="Project name"
               autoFocus
-              className="w-full px-3 py-2 rounded-xl bg-primary-100/50 dark:bg-primary-800/30 text-primary-900 dark:text-primary-100 text-sm glass-input outline-none transition-colors placeholder:text-primary-500 dark:placeholder:text-primary-500"
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleSubmit();
               }}
@@ -101,12 +101,13 @@ export default function CreateProjectModal({
               Project Location
             </Caption>
             <div className="flex gap-2">
-              <input
+              <Input
                 type="text"
                 value={parentPath}
                 onChange={(e) => setParentPath(e.target.value)}
                 placeholder="Desktop (default)"
-                className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-primary-100/50 dark:bg-primary-800/30 text-primary-900 dark:text-primary-100 text-sm glass-input outline-none transition-colors placeholder:text-primary-500 dark:placeholder:text-primary-500"
+                aria-label="Project location"
+                className="flex-1"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleSubmit();
                 }}

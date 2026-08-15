@@ -417,8 +417,7 @@ function FileSection({
                custom renderGutterUtility node — the node handles its own
                clicks and reads the line via getHoveredLine. */
             renderGutterUtility={(getHoveredLine) => (
-              <button
-                type="button"
+              <Button
                 title="Add a comment"
                 onClick={() => {
                   const hovered = getHoveredLine();
@@ -431,7 +430,7 @@ function FileSection({
                 className="flex items-center justify-center w-4 h-4 rounded bg-accent text-white text-xs font-semibold leading-none cursor-pointer select-none"
               >
                 +
-              </button>
+              </Button>
             )}
           />
         </div>

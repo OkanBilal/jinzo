@@ -51,6 +51,30 @@ export default tseslint.config(
       ...reactHooksPlugin.configs.recommended.rules,
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "JSXOpeningElement[name.name='input']",
+          message: 'Use Input from @/components/ui instead of a raw <input>.',
+        },
+        {
+          selector: "JSXOpeningElement[name.name='textarea']",
+          message: 'Use Textarea from @/components/ui instead of a raw <textarea>.',
+        },
+        {
+          selector: "JSXOpeningElement[name.name='select']",
+          message: 'Use Select or NativeSelect from @/components/ui instead of a raw <select>.',
+        },
+      ],
+    },
+  },
+
+  // UI primitives own the native elements; renderer features consume the
+  // primitives above so styling and accessibility behavior cannot drift.
+  {
+    files: ['src/renderer/components/ui/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': 'off',
     },
   },
 

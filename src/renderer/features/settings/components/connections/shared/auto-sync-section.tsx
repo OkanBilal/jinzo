@@ -81,6 +81,7 @@ export function AutoSyncSection({
         </div>
         <Toggle
           enabled={isEnabled ?? false}
+          aria-label={`Automatically sync ${providerLabel} data`}
           onChange={() => handleToggle()}
         />
       </div>

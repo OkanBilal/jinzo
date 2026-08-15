@@ -1,4 +1,4 @@
-import { Body, Text } from "@/components/ui";
+import { Body, Button, Text } from "@/components/ui";
 import { PULSE_CATEGORIES, PULSE_TEMPLATES, type PulseTemplate } from "../templates";
 
 export function PulseTemplates({
@@ -18,15 +18,10 @@ export function PulseTemplates({
             </Body>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-8">
               {items.map((tpl) => (
-                <div
+                <Button
                   key={tpl.id}
-                  className="rounded-3xl glass-surface px-4 py-6 cursor-pointer transition-colors flex items-center gap-3"
+                  className="rounded-3xl glass-surface px-4 py-6 cursor-pointer transition-colors flex items-center gap-3 text-left"
                   onClick={() => onSelect(tpl)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") onSelect(tpl);
-                  }}
                 >
                   <div className="size-10 rounded-2xl flex items-center justify-center text-xl bg-primary-200/60 dark:bg-primary-800/60 shrink-0">
                     {tpl.emoji}
@@ -39,7 +34,7 @@ export function PulseTemplates({
                       {tpl.description}
                     </Text>
                   </div>
-                </div>
+                </Button>
               ))}
             </div>
           </section>

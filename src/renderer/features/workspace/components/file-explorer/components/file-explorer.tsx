@@ -3,7 +3,7 @@ import { appApi } from "@/lib/transport";
 import type { FileNode, DirEntry, ServiceResponse } from "@/features/workspace/types/file-explorer";
 import { FileTreeNode } from "./file-tree-node";
 import { FileIconComponent } from "./file-icon";
-import { Button, Caption, Text } from "@/components/ui";
+import { Button, Caption, Input, Text } from "@/components/ui";
 import { Close, CollapseAll, Plus, Refresh, Search } from "@/components/ui/icons";
 
 interface FileExplorerProps {
@@ -339,13 +339,15 @@ export const FileExplorer = memo(function FileExplorer({
       <div className="flex items-center gap-1 shrink-0 mb-1">
         <div className="relative flex-1 min-w-0 glass-outline rounded-xl bg-transparent dark:bg-primary/5">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-primary-600 dark:text-primary-400 pointer-events-none" />
-          <input
+          <Input
+            variant="bare"
             ref={searchInputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleSearchKeyDown}
             placeholder="Search files"
+            aria-label="Search files"
             spellCheck={false}
             className="w-full h-7 pl-7 pr-7 text-s bg-transparent text-primary-900 dark:text-primary-100 placeholder:text-primary-500 dark:placeholder:text-primary-500 outline-none transition-colors"
           />

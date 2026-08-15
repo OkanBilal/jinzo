@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Text } from "@/components/ui";
+import { Button, Text, Textarea } from "@/components/ui";
 import { Edit, Trash, Stop, Play, Check, Close, Goal } from "@/components/ui/icons";
 import { useCodexGoal } from "../hooks/use-codex-goal";
 import type { GoalInfo } from "@/lib/redux/api/providersApi";
@@ -165,7 +165,7 @@ export function GoalSummaryBar({ providerId, runId, isRunning, enabled, rootPath
 
         {editing ? (
           <div className="mt-1.5 flex items-start gap-1">
-            <textarea
+            <Textarea
               autoFocus
               rows={3}
               value={draft}
@@ -178,7 +178,8 @@ export function GoalSummaryBar({ providerId, runId, isRunning, enabled, rootPath
                   setEditing(false);
                 }
               }}
-              className="min-h-16 max-h-48 min-w-0 flex-1 glass-input resize-none overflow-y-auto rounded-xl bg-white px-2 py-2 text-xs leading-relaxed text-primary-800 outline-none  dark:text-primary-200"
+              aria-label="Goal objective"
+              className="max-h-48 flex-1 resize-none overflow-y-auto px-2 text-xs leading-relaxed text-primary-800 dark:text-primary-200"
               placeholder="Goal objective…"
             />
             <Button

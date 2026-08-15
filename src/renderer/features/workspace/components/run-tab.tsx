@@ -2,7 +2,7 @@ import { Archive, Option, Edit } from "@/components/ui/icons";
 import type { Run } from "../types";
 import { cn } from "@/lib/cn";
 import { PROVIDER_VARIANTS, type ProviderVariant } from "@/lib/provider-variants";
-import { AnimatedTitle } from "@/components/ui";
+import { AnimatedTitle, Input } from "@/components/ui";
 import { BaseTab } from "./base-tab";
 import { AsciiSpinner } from "@/components/ui/ascii-spinner";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui";
@@ -101,13 +101,15 @@ export function RunTab({ run, isActive, isFirst, onClick, onClose, onRename, tit
   }, [onClose]);
 
   const label = isRenaming ? (
-    <input
+    <Input
+      variant="bare"
       ref={inputRef}
       value={renameValue}
       onChange={(e) => setRenameValue(e.target.value)}
       onBlur={handleRenameConfirm}
       onKeyDown={handleRenameKeyDown}
       onClick={(e) => e.stopPropagation()}
+      aria-label="Run title"
       className="text-xs font-medium text-primary-900 dark:text-primary-100 bg-transparent outline-none border-b border-primary-400 dark:border-primary-600 w-full"
       maxLength={50}
     />

@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
-import { Button } from "@/components/ui";
+import { Button, Input } from "@/components/ui";
 import { Search, Close } from "@/components/ui/icons";
 
 interface SearchBarProps {
@@ -35,10 +35,12 @@ export default function SearchBar({
       {isExpanded ? (
         <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-900 dark:text-primary-100 " />
-          <input
+          <Input
+            variant="bare"
             ref={inputRef}
             type="text"
             placeholder="Search"
+            aria-label="Search sidebar"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className="w-full h-9 bg-primary-950/5 dark:bg-primary/5 border-none

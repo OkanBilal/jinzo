@@ -140,34 +140,38 @@ export function LinkResourcesModal({
     return (
       <div
         key={resource.id}
-        role="button"
-        tabIndex={0}
-        onClick={() => !saving && toggleResource(resource.id)}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (!saving) toggleResource(resource.id); } }}
-        className={`flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-all duration-150 dark:bg-primary-950/50 bg-primary ${
+        className={`flex items-center bg-primary transition-all duration-150 dark:bg-primary-950/50 ${
           selected
             ? ""
             : ""
         }`}
       >
-        <Text as="span" size="inherit" tone="subtle">{icon}</Text>
-        <div className="flex-1 min-w-0">
-          <div className="flex gap-2 items-center">
-            <Body weight="medium"
-            >
-              {resource.name || resource.externalId}
-            </Body>
-            {resource.externalId !== resource.name && (
-              <Caption className="truncate block mt-0.5">
-                {resource.externalId}
-              </Caption>
-            )}
+        <Button
+          variant="bare"
+          onClick={() => toggleResource(resource.id)}
+          disabled={saving}
+          className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3.5 text-left"
+        >
+          <Text as="span" size="inherit" tone="subtle">{icon}</Text>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <Body as="span" weight="medium">
+                {resource.name || resource.externalId}
+              </Body>
+              {resource.externalId !== resource.name && (
+                <Caption className="mt-0.5 block truncate">
+                  {resource.externalId}
+                </Caption>
+              )}
+            </div>
           </div>
-        </div>
+        </Button>
         <Checkbox
           checked={selected}
           onChange={() => toggleResource(resource.id)}
           disabled={saving}
+          aria-label={`Link ${resource.name || resource.externalId}`}
+          className="mr-4"
         />
       </div>
     );

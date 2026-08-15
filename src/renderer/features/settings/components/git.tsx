@@ -68,7 +68,11 @@ export default function GitSettings() {
           title="Worktrees"
           description="Work in an isolated copy of your repo, so you can work on multiple tasks at the same time. When disabled, Mains uses the active branch directly."
         >
-          <Toggle enabled={enableWorktrees} onChange={handleWorktreeToggle} />
+          <Toggle
+            enabled={enableWorktrees}
+            aria-label="Enable worktrees"
+            onChange={handleWorktreeToggle}
+          />
         </SettingsRow>
 
         <SettingsDivider />
@@ -108,5 +112,4 @@ export default function GitSettings() {
     </SettingsPageShell>
   );
 }
-
 

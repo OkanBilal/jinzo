@@ -1,4 +1,11 @@
-import { Body, Caption, Checkbox, Text } from "@/components/ui";
+import {
+  Body,
+  Caption,
+  Checkbox,
+  Input,
+  NativeSelect,
+  Text,
+} from "@/components/ui";
 
 /**
  * A single input derived from an MCP elicitation's `requestedSchema`.
@@ -183,7 +190,8 @@ export function ElicitationForm({
               onChange={(checked: boolean) => onChange(field.name, checked)}
             />
           ) : field.type === "enum" ? (
-            <select
+            <NativeSelect
+              variant="bare"
               value={typeof values[field.name] === "string" ? (values[field.name] as string) : ""}
               onChange={(e) => onChange(field.name, e.target.value)}
               className={inputClass}
@@ -194,9 +202,10 @@ export function ElicitationForm({
                   {option}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           ) : (
-            <input
+            <Input
+              variant="bare"
               type={field.isSecret ? "password" : field.type === "number" ? "number" : "text"}
               autoComplete={field.isSecret ? "new-password" : undefined}
               value={typeof values[field.name] === "string" ? (values[field.name] as string) : ""}

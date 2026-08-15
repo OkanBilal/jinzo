@@ -958,11 +958,13 @@ export function GitActionsSection({
                   <Text as="span" size="xs" tone="faint" className="shrink-0">
                     github.com/
                   </Text>
-                  <input
+                  <Input
+                    variant="bare"
                     type="text"
                     value={publishOwnerRepo || defaultOwnerRepo}
                     onChange={(e) => setPublishOwnerRepo(e.target.value)}
                     placeholder="owner/repo"
+                    aria-label="Repository owner and name"
                     spellCheck={false}
                     autoCapitalize="off"
                     autoCorrect="off"

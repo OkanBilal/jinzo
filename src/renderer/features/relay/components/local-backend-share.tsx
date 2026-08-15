@@ -115,6 +115,7 @@ export function LocalBackendShare() {
         </div>
         <Toggle
           enabled={remoteOn}
+          aria-label="Allow remote access"
           onChange={(v) =>
             run("remote", window.api.localBackend.setRemoteAccess(v))
           }
@@ -157,6 +158,7 @@ export function LocalBackendShare() {
             </div>
             <Toggle
               enabled={lanOn}
+              aria-label="Allow network access on LAN"
               onChange={(v) => {
                 if (v) setConfirmLan(true);
                 else void run("lan", window.api.localBackend.setLanAccess(false));
@@ -195,6 +197,7 @@ export function LocalBackendShare() {
         </div>
         <Toggle
           enabled={tailscaleOn}
+          aria-label="Enable Tailscale HTTPS"
           onChange={(v) =>
             run(
               "tailscale",

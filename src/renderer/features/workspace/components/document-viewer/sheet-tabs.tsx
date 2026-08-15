@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui";
+
 /** Bottom tab bar for multi-sheet XLSX workbooks. Light DOM (lives outside the
  * render host's shadow root) so it picks up the app's Tailwind styles. */
 export function SheetTabs({
@@ -13,9 +15,8 @@ export function SheetTabs({
   return (
     <div className="flex items-center gap-1 overflow-x-auto border-t border-primary-200/60 dark:border-primary-800/50 bg-primary dark:bg-primary-950 px-2 py-1">
       {sheetNames.map((name) => (
-        <button
+        <Button
           key={name}
-          type="button"
           onClick={() => onSelect(name)}
           className={`shrink-0 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
             active === name
@@ -25,7 +26,7 @@ export function SheetTabs({
           title={name}
         >
           {name}
-        </button>
+        </Button>
       ))}
     </div>
   );

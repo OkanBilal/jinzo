@@ -157,6 +157,12 @@ const variantPresets: Record<TextVariant, VariantPreset> = {
 
   // Control labels take their colour from the control, so it can restyle them
   // on hover, focus, and disabled without fighting a colour set here.
+  //
+  // `s` — not `sm` — because that is what `Button`'s base styles ship. The two
+  // are adjacent steps (13px vs 14px), so a mismatch here does not look like a
+  // bug at the call site; it just renders one button a notch off from every
+  // other one, and `cn`'s tailwind-merge cannot catch it because the label is a
+  // child element rather than a class on the button itself.
   button: { size: "sm", tone: "inherit", weight: "medium", as: "span" },
   buttonSmall: { size: "xs", tone: "inherit", weight: "medium", as: "span" },
 

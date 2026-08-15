@@ -13,6 +13,7 @@ import {
   DropdownMenu,
   DropdownMenuItem,
   DropdownMenuSub,
+  Input,
   SquareSpinner,
   Tooltip,
 } from "@/components/ui";
@@ -247,7 +248,8 @@ export default function WorkspaceItem({
                 </Muted>
               ) : null}
               {isRenamingBranch && (
-                <input
+                <Input
+                  variant="bare"
                   ref={renameInputRef}
                   value={renameBranchValue}
                   onChange={(e) => setRenameBranchValue(e.target.value)}
@@ -258,7 +260,8 @@ export default function WorkspaceItem({
                   }}
                   onBlur={handleRenameBranchConfirm}
                   onClick={(e) => e.stopPropagation()}
-                  className="text-xs bg-primary/20 dark:bg-primary/10 text-primary-800 dark:text-primary-200 rounded px-1 py-0.5 outline-none border border-primary/30 dark:border-primary/20 w-full max-w-35"
+                  aria-label="Branch name"
+                  className="text-xs bg-primary/20 dark:bg-primary/10 text-primary-800 dark:text-primary-200 rounded-md px-1 py-0.5 outline-none glass-input w-full max-w-35"
                 />
               )}
               {/* {branch && updatedAt && (

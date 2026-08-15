@@ -51,7 +51,12 @@ function PreferenceRow({
           </Text>
         )}
       </div>
-      <Toggle enabled={enabled} onChange={onChange} className="shrink-0 py-0" />
+      <Toggle
+        enabled={enabled}
+        onChange={onChange}
+        aria-label={title}
+        className="shrink-0 py-0"
+      />
     </div>
   );
 }

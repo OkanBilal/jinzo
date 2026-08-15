@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Components } from "react-markdown";
 
 import Text from "@/components/ui/text";
+import { Button } from "@/components/ui/button";
 import { CODE_FONT_SIZE_CSS } from "@/lib/appearance-fonts";
 import { proxiedImageSrc } from "@/lib/proxied-image-src";
 import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
@@ -47,8 +48,7 @@ function MarkdownLink({ href, children }: { href?: string; children?: ReactNode 
         ? basename.slice(dotIdx + 1)
         : undefined;
     return (
-      <button
-        type="button"
+      <Button
         onClick={() => openFileInEditor(target.path)}
         title={href}
         className="inline-flex align-middle items-center gap-1 px-1.5 mb-0.5 h-6 mx-0.5 rounded-lg text-xs font-medium leading-none select-none bg-primary-50 dark:bg-primary-300/10 text-primary-800 dark:text-primary-200 cursor-pointer hover:bg-primary-200/60 dark:hover:bg-primary-300/20 transition-colors"
@@ -59,13 +59,12 @@ function MarkdownLink({ href, children }: { href?: string; children?: ReactNode 
           className="size-3.5 shrink-0"
         />
         <span className="leading-none truncate max-w-60">{children}</span>
-      </button>
+      </Button>
     );
   }
 
   return (
-    <button
-      type="button"
+    <Button
       onClick={() => {
         if (href) {
           window.api.shell.openExternal(href);
@@ -74,7 +73,7 @@ function MarkdownLink({ href, children }: { href?: string; children?: ReactNode 
       className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 underline cursor-pointer inline"
     >
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -108,8 +107,7 @@ function MarkdownImage({ src, alt }: { src?: string; alt?: string }) {
       // Unparseable URL — show it verbatim so the user can judge it.
     }
     return (
-      <button
-        type="button"
+      <Button
         onClick={() => setLoadApproved(true)}
         title={src}
         className="my-2 flex w-fit max-w-full items-center gap-2 rounded-lg border border-dashed border-primary-300 px-3 py-2 text-xs text-primary-500 transition-colors hover:border-primary-400 hover:text-primary-700 dark:border-primary-700 dark:hover:border-primary-500 dark:hover:text-primary-300"
@@ -120,7 +118,7 @@ function MarkdownImage({ src, alt }: { src?: string; alt?: string }) {
         <Text as="span" size="inherit" tone="inherit" weight="medium" className="shrink-0">
           Load
         </Text>
-      </button>
+      </Button>
     );
   }
 
