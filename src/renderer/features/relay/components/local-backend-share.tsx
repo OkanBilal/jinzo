@@ -173,6 +173,7 @@ export function LocalBackendShare() {
             description="Plain ws:// — the pairing token and all traffic are unencrypted, and the token grants full control of this machine. Prefer Tailscale HTTPS or SSH."
             primaryButtonText="Enable anyway"
             secondaryButtonText="Cancel"
+            primaryButtonVariant="danger"
             isPrimaryLoading={busy === "lan"}
             onPrimary={() =>
               void run("lan", window.api.localBackend.setLanAccess(true)).finally(

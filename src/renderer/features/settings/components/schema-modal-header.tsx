@@ -4,6 +4,7 @@ import { Body, Button, SegmentedTabs } from "@/components/ui";
 type Tab = "schemas" | "editor";
 
 interface SchemaModalHeaderProps {
+  titleId: string;
   activeTab: Tab;
   editingId: string | null;
   onTabChange: (tab: Tab) => void;
@@ -11,6 +12,7 @@ interface SchemaModalHeaderProps {
 }
 
 export function SchemaModalHeader({
+  titleId,
   activeTab,
   editingId,
   onTabChange,
@@ -19,7 +21,9 @@ export function SchemaModalHeader({
   return (
     <div className="flex items-center justify-between p-6">
       <div className="flex items-center gap-4">
-        <Body>Structured outputs</Body>
+        <Body as="h2" id={titleId}>
+          Structured outputs
+        </Body>
         <SegmentedTabs
           value={activeTab}
           onChange={onTabChange}

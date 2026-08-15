@@ -1,4 +1,4 @@
-import { useReducer } from "react";
+import { useId, useReducer } from "react";
 import {
   useGetProviderByIdQuery,
 } from "@/lib/redux/api";
@@ -45,6 +45,7 @@ export function StructuredOutputsModal({
   providerId,
   enableFlag = false,
 }: StructuredOutputsModalProps) {
+  const titleId = useId();
   const { data: provider } = useGetProviderByIdQuery(providerId);
   const config = (provider?.config ?? {}) as Record<string, unknown>;
 
@@ -120,59 +121,61 @@ export function StructuredOutputsModal({
   return (
     <Modal
       isOpen
-      // Escape/backdrop dismiss the nested delete confirm first, then the modal.
+      // Keep any fallback dismissal scoped to the nested confirmation first.
       onClose={
         deleteTargetId ? () => updateState({ deleteTargetId: null }) : onClose
       }
+      aria-labelledby={titleId}
       className="w-full max-w-180 h-120 rounded-3xl"
     >
-        <SchemaModalHeader
-          activeTab={activeTab}
-          editingId={editingId}
-          onTabChange={(tab) => updateState({ activeTab: tab })}
-          onClose={onClose}
+      <SchemaModalHeader
+        titleId={titleId}
+        activeTab={activeTab}
+        editingId={editingId}
+        onTabChange={(tab) => updateState({ activeTab: tab })}
+        onClose={onClose}
+      />
+
+      {activeTab === "schemas" && (
+        <SchemaListTab
+          sortedEntries={sortedEntries}
+          selectedId={selectedId}
+          renamingId={state.renamingId}
+          renameValue={state.renameValue}
+          onSelectSchema={crud.handleSelectSchema}
+          onOpenNewEditor={crud.openNewEditor}
+          onOpenEditEditor={crud.openEditEditor}
+          onDuplicate={crud.handleDuplicateSchema}
+          onRequestDelete={(id) => updateState({ deleteTargetId: id })}
+          onRenameChange={(value) => updateState({ renameValue: value })}
+          onRenameConfirm={crud.handleRenameConfirm}
+          onRenameCancel={() => updateState({ renamingId: null })}
         />
+      )}
 
-        {activeTab === "schemas" && (
-          <SchemaListTab
-            sortedEntries={sortedEntries}
-            selectedId={selectedId}
-            renamingId={state.renamingId}
-            renameValue={state.renameValue}
-            onSelectSchema={crud.handleSelectSchema}
-            onOpenNewEditor={crud.openNewEditor}
-            onOpenEditEditor={crud.openEditEditor}
-            onDuplicate={crud.handleDuplicateSchema}
-            onRequestDelete={(id) => updateState({ deleteTargetId: id })}
-            onRenameChange={(value) => updateState({ renameValue: value })}
-            onRenameConfirm={crud.handleRenameConfirm}
-            onRenameCancel={() => updateState({ renamingId: null })}
-          />
-        )}
+      {activeTab === "editor" && (
+        <SchemaEditorTab
+          editorName={editorName}
+          editorProperties={editorProperties}
+          editingId={editingId}
+          isSaving={isSaving}
+          canSave={canSave}
+          onNameChange={(name) => updateState({ editorName: name })}
+          onAddProperty={crud.handleAddProperty}
+          onUpdateProperty={crud.handleUpdateProperty}
+          onRemoveProperty={crud.handleRemoveProperty}
+          onReset={() => updateState({ editorProperties: [] })}
+          onSave={crud.handleSaveSchema}
+        />
+      )}
 
-        {activeTab === "editor" && (
-          <SchemaEditorTab
-            editorName={editorName}
-            editorProperties={editorProperties}
-            editingId={editingId}
-            isSaving={isSaving}
-            canSave={canSave}
-            onNameChange={(name) => updateState({ editorName: name })}
-            onAddProperty={crud.handleAddProperty}
-            onUpdateProperty={crud.handleUpdateProperty}
-            onRemoveProperty={crud.handleRemoveProperty}
-            onReset={() => updateState({ editorProperties: [] })}
-            onSave={crud.handleSaveSchema}
-          />
-        )}
-
-        {deleteTargetId && (
-          <SchemaDeleteDialog
-            schemaName={entries[deleteTargetId]?.name ?? ""}
-            onCancel={() => updateState({ deleteTargetId: null })}
-            onConfirm={crud.handleConfirmDelete}
-          />
-        )}
+      {deleteTargetId && (
+        <SchemaDeleteDialog
+          schemaName={entries[deleteTargetId]?.name ?? ""}
+          onCancel={() => updateState({ deleteTargetId: null })}
+          onConfirm={crud.handleConfirmDelete}
+        />
+      )}
     </Modal>
   );
 }

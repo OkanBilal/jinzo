@@ -24,6 +24,7 @@ export function RevokeConfirmModal({
       description={description || defaultDescription}
       primaryButtonText="Revoke"
       secondaryButtonText="Cancel"
+      primaryButtonVariant="danger"
       onPrimary={onConfirm}
       onSecondary={onCancel}
       isPrimaryLoading={loading}

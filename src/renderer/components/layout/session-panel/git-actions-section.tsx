@@ -1071,6 +1071,7 @@ export function GitActionsSection({
         } will come along to ${confirmBranch ?? ""}. Git refuses the switch outright if that branch touches the same files.`}
         primaryButtonText="Switch"
         secondaryButtonText="Cancel"
+        primaryButtonVariant="primary"
         onPrimary={() => confirmBranch && runBranchSwitch(confirmBranch)}
         onSecondary={() => setConfirmBranch(null)}
         isPrimaryLoading={switchingBranch !== null}
@@ -1085,6 +1086,7 @@ export function GitActionsSection({
         }
         primaryButtonText="Revert"
         secondaryButtonText="Cancel"
+        primaryButtonVariant="danger"
         onPrimary={() => confirmDiscard && handleDiscard(confirmDiscard)}
         onSecondary={() => setConfirmDiscard(null)}
         isPrimaryLoading={discarding !== null}

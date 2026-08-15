@@ -244,6 +244,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
         description={`This will permanently delete "${project.name}", all its workspaces, and remove any worktree files from disk. This action cannot be undone.`}
         primaryButtonText="Remove"
         secondaryButtonText="Cancel"
+        primaryButtonVariant="danger"
         onPrimary={handleRemove}
         onSecondary={() => setShowRemoveAlert(false)}
         isPrimaryLoading={removing}

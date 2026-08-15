@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useId } from "react";
 import { useNavigate } from "react-router-dom";
 import { Body, Button, Caption, Checkbox, Heading3, Modal, Text, toast } from "@/components/ui";
 import { extractErrorMessage } from "@/lib/extract-error-message";
@@ -24,6 +24,7 @@ export function LinkResourcesModal({
   onClose,
 }: LinkResourcesModalProps) {
   const navigate = useNavigate();
+  const titleId = useId();
 
   const goToApps = useCallback(() => {
     onClose();
@@ -181,11 +182,12 @@ export function LinkResourcesModal({
     <Modal
       isOpen
       onClose={handleCancel}
+      aria-labelledby={titleId}
       className="w-full max-w-xl rounded-3xl"
     >
       {/* Header */}
       <div className="px-6 pt-6 pb-4">
-        <Heading3>
+        <Heading3 id={titleId}>
           Link Resources
         </Heading3>
       </div>

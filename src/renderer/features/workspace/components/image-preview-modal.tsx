@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useId,
   useRef,
   useState,
   type PointerEvent,
@@ -23,6 +24,7 @@ function clampScale(value: number): number {
 }
 
 export function ImagePreviewModal({ name, src, onClose }: ImagePreviewModalProps) {
+  const titleId = useId();
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
@@ -153,10 +155,17 @@ export function ImagePreviewModal({ name, src, onClose }: ImagePreviewModalProps
       isOpen
       onClose={onClose}
       backdrop="media"
+      aria-labelledby={titleId}
       className="w-fit min-w-80 max-w-[92vw]"
     >
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-primary-200 dark:border-primary-800  shrink-0">
-        <Text as="span" size="xs" tone="subtle" className="font-mono truncate">
+        <Text
+          as="span"
+          id={titleId}
+          size="xs"
+          tone="subtle"
+          className="font-mono truncate"
+        >
           {name}
         </Text>
         <div className="flex items-center gap-1 ml-3 shrink-0 glass-surface p-1 rounded-full">
