@@ -4,7 +4,7 @@ import { setSessionPanelOpen } from "@/lib/redux/slices/appSettingsSlice";
 import { usePanelAnimation } from "@/hooks/use-panel-animation";
 import { useIsMobile } from "@/lib/platform";
 import { LAYOUT_PANEL_ANIM_MS, SESSION_PANEL_GUTTER } from "@/lib/layout";
-import { GitActionsSection } from "./git-actions-section";
+import { GitActionsSection } from "./git-actions";
 
 /** Overshoots slightly past full size — the "pop" as the box inflates. */
 const POP_EASE = "cubic-bezier(0.34, 1.56, 0.64, 1)";

@@ -1,23 +1,9 @@
 import { useState } from "react";
-import type {
-  ContextIssue,
-  ContextSignal,
-  ContextSkill,
-  ContextBrowserSelection,
-} from "@/lib/redux/slices/workspaceSlice";
+import type { ContextBrowserSelection } from "@/features/workspace/lib/composer-context";
+import { useComposerContext } from "@/features/workspace/hooks/use-composer-context";
 import { Close, Web } from "@/components/ui/icons";
 import { ProviderIcon } from "./provider-icon";
 import { Body, Button, Modal, ModalHeader, Text } from "@/components/ui";
-
-interface ContextChipsProps {
-  contextIssues: ContextIssue[];
-  contextSignals?: ContextSignal[];
-  contextSkills?: ContextSkill[];
-  contextBrowserSelections?: ContextBrowserSelection[];
-  onRemoveContextIssue?: (entityId: string) => void;
-  onRemoveContextSignal?: (entityId: string) => void;
-  onRemoveContextBrowserSelection?: (id: string) => void;
-}
 
 function hostname(url: string) {
   try {
@@ -119,23 +105,25 @@ function BrowserSelectionPreview({
   );
 }
 
-export function ContextChips({
-  contextIssues,
-  contextSignals = [],
-  contextSkills = [],
-  contextBrowserSelections = [],
-  onRemoveContextIssue,
-  onRemoveContextSignal,
-  onRemoveContextBrowserSelection,
-}: ContextChipsProps) {
+/**
+ * The chip row above the composer. Reads its own context rather than taking it
+ * as props: it renders exactly what is attached, so threading four lists and
+ * three removers through the input only gave them a chance to disagree.
+ *
+ * Skills and code selections are absent by design — those render as inline
+ * chips inside the prompt itself.
+ */
+export function ContextChips() {
+  const { issues, signals, skills, browserSelections, remove } =
+    useComposerContext();
   const [previewId, setPreviewId] = useState<string | null>(null);
-  const previewSel = contextBrowserSelections.find((s) => s.id === previewId) ?? null;
+  const previewSel = browserSelections.find((s) => s.id === previewId) ?? null;
 
   const hasContext =
-    contextIssues.length > 0 ||
-    contextSignals.length > 0 ||
-    contextSkills.length > 0 ||
-    contextBrowserSelections.length > 0;
+    issues.length > 0 ||
+    signals.length > 0 ||
+    skills.length > 0 ||
+    browserSelections.length > 0;
 
   return (
     <>
@@ -144,44 +132,40 @@ export function ContextChips({
       >
         <div className="overflow-hidden min-h-0">
           <div className="flex flex-wrap gap-2 px-4 pt-3 pb-1">
-            {contextIssues.map((issue) => (
+            {issues.map((issue) => (
               <div
                 key={issue.entityId}
                 className={`flex items-center glass-button gap-1.5 px-2 py-1.5 rounded-full text-xs  dark:text-primary-300 text-primary-700`}
               >
                 <ProviderIcon provider={issue.provider} className="size-4" fallback="text" />
                 <span className="truncate max-w-37.5">{issue.title}</span>
-                {onRemoveContextIssue && (
-                  <Button
-                    onClick={() => onRemoveContextIssue(issue.entityId)}
-                    className=" flex items-center glass-button justify-center rounded-full p-0.5  transition-colors"
-                    title="Remove from context"
-                  >
-                    <Close className="size-3" />
-                  </Button>
-                )}
+                <Button
+                  onClick={() => remove(issue)}
+                  className=" flex items-center glass-button justify-center rounded-full p-0.5  transition-colors"
+                  title="Remove from context"
+                >
+                  <Close className="size-3" />
+                </Button>
               </div>
             ))}
 
-            {contextSignals.map((signal) => (
+            {signals.map((signal) => (
               <div
                 key={signal.entityId}
                 className={`flex items-center glass-button gap-1.5 px-2 py-1.5 rounded-full text-xs dark:text-primary-300 text-primary-700`}
               >
                 <ProviderIcon provider={signal.source} className="w-3 h-3" fallback="text" />
                 <span className="truncate max-w-37.5">{signal.title}</span>
-                {onRemoveContextSignal && (
-                  <Button
-                    onClick={() => onRemoveContextSignal(signal.entityId)}
-                    className="w-4 h-4 flex items-center justify-center glass-button rounded-full p-0.5 transition-colors"
-                    title="Remove from context"
-                  >
-                    <Close className="size-3" />
-                  </Button>
-                )}
+                <Button
+                  onClick={() => remove(signal)}
+                  className="w-4 h-4 flex items-center justify-center glass-button rounded-full p-0.5 transition-colors"
+                  title="Remove from context"
+                >
+                  <Close className="size-3" />
+                </Button>
               </div>
             ))}
-            {contextBrowserSelections.map((sel) => {
+            {browserSelections.map((sel) => {
               const thumbName =
                 sel.screenshotCaptureName || sel.surroundingScreenshotCaptureName;
               const thumb = thumbName ? `mains-capture://cap/${thumbName}` : undefined;
@@ -212,18 +196,16 @@ export function ContextChips({
                     <Text as="span" size="inherit" tone="inherit" weight="medium">{summary}</Text>
                     <span className="opacity-60"> · {hostname(sel.url)}</span>
                   </span>
-                  {onRemoveContextBrowserSelection && (
-                    <Button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRemoveContextBrowserSelection(sel.id);
-                      }}
-                      className=" flex items-center justify-center glass-button rounded-full p-0.5 hover:bg-primary/20 dark:hover:bg-primary/10 transition-colors"
-                      title="Remove from context"
-                    >
-                      <Close className="size-3" />
-                    </Button>
-                  )}
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      remove(sel);
+                    }}
+                    className=" flex items-center justify-center glass-button rounded-full p-0.5 hover:bg-primary/20 dark:hover:bg-primary/10 transition-colors"
+                    title="Remove from context"
+                  >
+                    <Close className="size-3" />
+                  </Button>
                 </div>
               );
             })}

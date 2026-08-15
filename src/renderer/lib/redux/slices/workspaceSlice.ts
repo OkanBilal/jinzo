@@ -2,81 +2,18 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import type { FileNode, FileContentResponse } from "@/features/workspace/types/file-explorer";
 import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
 import type { SignalWithEntity } from "@/lib/redux/api/signalsApi";
+import {
+  contextItemKey,
+  isSameContextItem,
+  type ContextItem,
+  type ContextKind,
+} from "@/features/workspace/lib/composer-context";
 import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 
 export interface ReviewTab {
   id: string;
   title: string;
   status: string;
-}
-
-export interface ContextIssue {
-  entityId: string;
-  title: string;
-  body: string | null;
-  provider: string;
-  number: number | null;
-  labels: string | null;
-}
-
-export interface ContextSignal {
-  entityId: string;
-  title: string;
-  body: string | null;
-  source: string;
-  level: string;
-  category: string;
-  stackTrace: string | null;
-  eventCount: number;
-}
-
-export interface ContextSkill {
-  name: string;
-  path?: string;
-  description?: string;
-  displayName?: string;
-  shortDescription?: string;
-  iconSmall?: string;
-  iconLarge?: string;
-  brandColor?: string;
-  scope?: string;
-}
-
-export interface ContextCodeSelection {
-  id: string;
-  /** Absolute path of the file the selection was made in. */
-  filePath: string;
-  /** Basename shown on the chip. */
-  fileName: string;
-  /** 1-based inclusive line range. */
-  startLine: number;
-  endLine: number;
-  text: string;
-}
-
-export interface ContextBrowserSelection {
-  id: string;
-  url: string;
-  title: string;
-  selector: string;
-  tagName: string;
-  text: string;
-  styles: Record<string, string>;
-  rect: { x: number; y: number; width: number; height: number };
-  pageRect: { x: number; y: number; width: number; height: number };
-  scroll: { x: number; y: number };
-  viewport: { width: number; height: number };
-  devicePixelRatio: number;
-  componentName?: string;
-  sourceFile?: string;
-  timestamp: string;
-  /** Absolute path to the PNG on disk (main-process userData/browser-captures). */
-  screenshotPath?: string;
-  /** Basename used for `mains-capture://<name>` in `<img src>`. */
-  screenshotCaptureName?: string;
-  surroundingScreenshotPath?: string;
-  surroundingScreenshotCaptureName?: string;
-  screenshotMimeType: string;
 }
 
 export interface WorkspaceState {
@@ -98,12 +35,13 @@ export interface WorkspaceState {
   activeTab: "editor" | string;
   /** Tab that was active before "editor" was opened — used to restore on editor close. */
   previousNonEditorTab: string | null;
-  contextFiles: FileNode[];
-  contextIssues: ContextIssue[];
-  contextSignals: ContextSignal[];
-  contextSkills: ContextSkill[];
-  contextBrowserSelections: ContextBrowserSelection[];
-  contextCodeSelections: ContextCodeSelection[];
+  /**
+   * What the next message carries besides its text — files, issues, signals,
+   * skills, and browser/code selections in one insertion-ordered list. See
+   * `features/workspace/lib/composer-context.ts` for the union and its identity
+   * rules; read it through `useComposerContext()`.
+   */
+  contextItems: ContextItem[];
   openIssueTabs: IssueWithEntity[];
   openSignalTabs: SignalWithEntity[];
   openNoteTabs: ReviewTab[];
@@ -136,12 +74,7 @@ const initialState: WorkspaceState = {
   explorerExpandedPaths: [],
   activeTab: "editor",
   previousNonEditorTab: null,
-  contextFiles: [],
-  contextIssues: [],
-  contextSignals: [],
-  contextSkills: [],
-  contextBrowserSelections: [],
-  contextCodeSelections: [],
+  contextItems: [],
   openIssueTabs: [],
   openSignalTabs: [],
   openNoteTabs: [],
@@ -249,81 +182,28 @@ const workspaceSlice = createSlice({
       }
       state.activeTab = action.payload;
     },
-    addContextFile: (state, action: PayloadAction<FileNode>) => {
-      // Don't add duplicates
-      if (!state.contextFiles.some(f => f.fullPath === action.payload.fullPath)) {
-        state.contextFiles.push(action.payload);
+    /** Attach an item, unless the same one is already attached. */
+    addContextItem: (state, action: PayloadAction<ContextItem>) => {
+      const incoming = action.payload;
+      if (!state.contextItems.some((item) => isSameContextItem(item, incoming))) {
+        state.contextItems.push(incoming);
       }
     },
-    removeContextFile: (state, action: PayloadAction<string>) => {
-      state.contextFiles = state.contextFiles.filter(f => f.fullPath !== action.payload);
-    },
-    clearContextFiles: (state) => {
-      state.contextFiles = [];
-    },
-    addContextIssue: (state, action: PayloadAction<ContextIssue>) => {
-      if (!state.contextIssues.some(i => i.entityId === action.payload.entityId)) {
-        state.contextIssues.push(action.payload);
-      }
-    },
-    removeContextIssue: (state, action: PayloadAction<string>) => {
-      state.contextIssues = state.contextIssues.filter(i => i.entityId !== action.payload);
-    },
-    clearContextIssues: (state) => {
-      state.contextIssues = [];
-    },
-    addContextSignal: (state, action: PayloadAction<ContextSignal>) => {
-      if (!state.contextSignals.some(s => s.entityId === action.payload.entityId)) {
-        state.contextSignals.push(action.payload);
-      }
-    },
-    removeContextSignal: (state, action: PayloadAction<string>) => {
-      state.contextSignals = state.contextSignals.filter(s => s.entityId !== action.payload);
-    },
-    clearContextSignals: (state) => {
-      state.contextSignals = [];
-    },
-    addContextSkill: (state, action: PayloadAction<ContextSkill>) => {
-      if (!state.contextSkills.some(s => s.name === action.payload.name)) {
-        state.contextSkills.push(action.payload);
-      }
-    },
-    removeContextSkill: (state, action: PayloadAction<string>) => {
-      state.contextSkills = state.contextSkills.filter(s => s.name !== action.payload);
-    },
-    clearContextSkills: (state) => {
-      state.contextSkills = [];
-    },
-    addContextBrowserSelection: (state, action: PayloadAction<ContextBrowserSelection>) => {
-      if (!state.contextBrowserSelections.some(b => b.id === action.payload.id)) {
-        state.contextBrowserSelections.push(action.payload);
-      }
-    },
-    removeContextBrowserSelection: (state, action: PayloadAction<string>) => {
-      state.contextBrowserSelections = state.contextBrowserSelections.filter(
-        b => b.id !== action.payload,
+    /**
+     * Detach by kind + key rather than by object identity: the caller usually
+     * holds a copy from a render, not the instance in the store.
+     */
+    removeContextItem: (
+      state,
+      action: PayloadAction<{ kind: ContextKind; key: string }>,
+    ) => {
+      const { kind, key } = action.payload;
+      state.contextItems = state.contextItems.filter(
+        (item) => item.kind !== kind || contextItemKey(item) !== key,
       );
     },
-    clearContextBrowserSelections: (state) => {
-      state.contextBrowserSelections = [];
-    },
-    addContextCodeSelection: (state, action: PayloadAction<ContextCodeSelection>) => {
-      const p = action.payload;
-      if (
-        !state.contextCodeSelections.some(
-          s => s.filePath === p.filePath && s.startLine === p.startLine && s.endLine === p.endLine && s.text === p.text,
-        )
-      ) {
-        state.contextCodeSelections.push(p);
-      }
-    },
-    removeContextCodeSelection: (state, action: PayloadAction<string>) => {
-      state.contextCodeSelections = state.contextCodeSelections.filter(
-        s => s.id !== action.payload,
-      );
-    },
-    clearContextCodeSelections: (state) => {
-      state.contextCodeSelections = [];
+    clearContextItems: (state) => {
+      state.contextItems = [];
     },
     openIssueTab: (state, action: PayloadAction<IssueWithEntity>) => {
       const entityId = action.payload.issue.entityId;
@@ -427,24 +307,9 @@ export const {
   expandExplorerPaths,
   collapseAllExplorerPaths,
   setActiveTab,
-  addContextFile,
-  removeContextFile,
-  clearContextFiles,
-  addContextIssue,
-  removeContextIssue,
-  clearContextIssues,
-  addContextSignal,
-  removeContextSignal,
-  clearContextSignals,
-  addContextSkill,
-  removeContextSkill,
-  clearContextSkills,
-  addContextBrowserSelection,
-  removeContextBrowserSelection,
-  clearContextBrowserSelections,
-  addContextCodeSelection,
-  removeContextCodeSelection,
-  clearContextCodeSelections,
+  addContextItem,
+  removeContextItem,
+  clearContextItems,
   openIssueTab,
   closeIssueTab,
   clearIssueTabs,

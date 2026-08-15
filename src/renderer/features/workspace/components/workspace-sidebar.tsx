@@ -9,7 +9,7 @@ import {
 import {
   setSelectedFile,
   setActiveTab,
-  addContextFile,
+  addContextItem,
   toggleExplorerPath,
   expandExplorerPaths,
   collapseAllExplorerPaths,
@@ -107,7 +107,7 @@ export function WorkspaceSidebar() {
   const handleAddToContext = useCallback(
     (node: FileNode) => {
       // Add file to context for the input
-      dispatch(addContextFile(node));
+      dispatch(addContextItem({ kind: "file", ...node }));
     },
     [dispatch],
   );

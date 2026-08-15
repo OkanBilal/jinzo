@@ -6,10 +6,8 @@ import {
   useRef,
   useState,
 } from "react";
-import {
-  addContextBrowserSelection,
-  type ContextBrowserSelection,
-} from "@/lib/redux/slices/workspaceSlice";
+import { addContextItem } from "@/lib/redux/slices/workspaceSlice";
+import type { ContextBrowserSelection } from "@/features/workspace/lib/composer-context";
 import { Button, Input, Text, toast } from "@/components/ui";
 import {
   ChevronLeft,
@@ -206,7 +204,7 @@ export function BrowserPanel() {
       setSelectMode(enabled),
     );
     const offSel = api.onSelection((sel) => {
-      dispatch(addContextBrowserSelection(sel));
+      dispatch(addContextItem({ kind: "browser", ...sel }));
       toast.success("Added browser selection to chat context");
     });
     api.getNavState().then((res: any) => {

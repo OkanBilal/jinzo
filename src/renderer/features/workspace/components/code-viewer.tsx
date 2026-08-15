@@ -6,7 +6,7 @@ import type { CreateEditor, FileContents } from "@pierre/diffs/react";
 import { Editor, type EditorOptions } from "@pierre/diffs/edit";
 import {
   setSelectedFileContent,
-  addContextCodeSelection,
+  addContextItem,
 } from "@/lib/redux/slices/workspaceSlice";
 import { useResyncWorkspaceDiffMutation } from "@/lib/redux/api";
 import { DIFF_TYPOGRAPHY_STYLE, diffSurfaceOptions } from "@/lib/diff-style";
@@ -205,7 +205,8 @@ export function CodeViewer({
         const endLine =
           end.character === 0 && end.line > start.line ? end.line - 1 : end.line;
         dispatch(
-          addContextCodeSelection({
+          addContextItem({
+            kind: "code",
             id: crypto.randomUUID(),
             filePath,
             fileName: filename ?? filePath.split("/").pop() ?? filePath,

@@ -224,6 +224,7 @@ Core tables:
 - Deterministic commit / push / PR orchestration for the UI git-actions panel: `getStatus`, `generateCommitMessage`, `generatePrBody`, `commit`, `push`, `createPr`, `publish`, `getPublishPreflight`
 - Also the shared building blocks the mains tools (`CommitChanges` / `CreatePR`) delegate to, so git work lives in one place
 - Stages with `simple-git`, generates messages via a one-shot headless `adapter.generateText` call, creates PRs with `gh`
+- Renderer side: `components/layout/session-panel/git-actions/` — one component per row (changes / branch / commit / pr / publish), each owning its own form state. `useGitActionsPanel` holds only what several rows share: the status query + `refreshStatus`, the accordion, and the single `pending` action. Publish replaces PR when the repo has no remote. See CONTEXT.md for the rules.
 
 **Remote Backend** (`src/main/modules/localBackend/`, `ssh/`, `tailscale/`, `backendAuth/`)
 - `localBackend` — turns the running desktop app into a backend other clients can drive (phone browser, LAN device, another mains over SSH), via an in-process WS host on a fixed port over the same handler registry + DB. Two access paths: network bind (token-gated) and Tailscale HTTPS.
@@ -343,7 +344,17 @@ iconutil -c icns icon.iconset -o icon.icns
 
 - `features/workspace/lib/transcript-rows.ts` — pure (React-free) layout plan for the run transcript. Public: `buildTurnRenderRows(groups)` and `matchTurnsToGroups(...)`; everything else is an internal seam. Keep turn-grouping / accordion / session-bar math out of `workspace-events.tsx`.
 - `features/workspace/lib/run-cache.ts` — `createRunCache()` factory owning the retained-run LRU, incremental-sync cursors, loaded/finalized sets, and in-flight dedup behind `use-workspace-runs.ts`. Cursors are monotonic (`Math.max`); `touch(runId)` prunes evicted runs' cursors.
+- `use-workspace-runs.ts` holds run state + loading and delegates two subjects: `use-run-operations.ts` (execute / continue / fork / review / canResume, plus the `isLoading` + `error` they drive) and `use-run-sync.ts` (transcript push, status push, polling fallback, `finalizeRun`). Both reach back through exactly three callbacks — `registerNewRun`, `loadRunDetails`, `onRunUpdated` — never raw setters.
 - **Structural plan snapshots** arrive as `plan_update` adapter events and are merged into `run_turns.metadata.codexPlan`, so `TodoSummaryBar` recovers state after reload — not stored as fake tool calls.
+
+### Composer Context (renderer)
+
+Everything the composer attaches to the next message — files, issues, signals, skills, browser selections, code selections — is one tagged union, not six parallel lists. See CONTEXT.md for the vocabulary.
+
+- `features/workspace/lib/composer-context.ts` — the `ContextItem` union plus its identity rules (`contextItemKey` for removal, `isSameContextItem` for dedupe) and `groupContextItems` for the per-kind views. The only home for these types.
+- `features/workspace/hooks/use-composer-context.ts` — the read path (`items`, the grouped views, `add` / `remove` / `clear`). Components read it directly; never pass context lists or `onRemoveContextX` down as props. A component that only attaches dispatches `addContextItem` instead of subscribing.
+- `features/workspace/lib/run-context-payload.ts` — `buildRunContextPayload(items, uploads)` shapes context for `runs:execute` / `runs:continue`. `executeRun` / `continueRun` take one `ContextItem[]`, never per-kind parameters.
+- Store side: a single `workspace.contextItems` array behind `addContextItem` / `removeContextItem` / `clearContextItems`.
 
 ### Code Style
 
