@@ -20,6 +20,7 @@ import {
   Caption,
   Checkbox,
   Input,
+  Text,
   Textarea,
   toast,
 } from "@/components/ui";
@@ -58,6 +59,35 @@ type Section = "changes" | "branch" | "commit" | "pr" | "publish";
 interface DiscardRequest {
   key: string;
   files: ChangedFile[];
+}
+
+/**
+ * A checkbox with its label. Six of these sit across the commit, PR, and
+ * publish forms; giving them one component is what keeps them one size and one
+ * colour, instead of six chances to drift apart.
+ */
+function CheckboxOption({
+  checked,
+  onChange,
+  className,
+  children,
+}: {
+  checked: boolean;
+  onChange: () => void;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Text
+      as="label"
+      size="xs"
+      tone="subtle"
+      className={`flex cursor-pointer select-none items-center gap-2 ${className ?? ""}`}
+    >
+      <Checkbox checked={checked} onChange={onChange} />
+      {children}
+    </Text>
+  );
 }
 
 /**
@@ -651,10 +681,16 @@ export function GitActionsSection({
         trailing={
           // Animated digits so a count ticking up mid-run reads as movement
           // rather than a silent swap — same treatment as the diff summary bar.
-          <span className="flex items-center gap-1 font-medium text-xxs">
+          <Text
+            as="span"
+            size="xxs"
+            tone="inherit"
+            weight="medium"
+            className="flex items-center gap-1"
+          >
             <NumberFlow value={additions} prefix="+" className={DIFF_ADDED_TEXT} />
             <NumberFlow value={deletions} prefix="-" className={DIFF_REMOVED_TEXT} />
-          </span>
+          </Text>
         }
       />
       <PanelCollapse isOpen={isSectionOpen("changes")}>
@@ -700,7 +736,9 @@ export function GitActionsSection({
             <PanelItem
               icon={<Refresh className="size-4 animate-spin" />}
               label={
-                <span className="font-normal text-primary-500">Loading…</span>
+                <Text as="span" size="inherit" tone="faint" weight="normal">
+                  Loading…
+                </Text>
               }
             />
           ) : (
@@ -773,13 +811,13 @@ export function GitActionsSection({
               )}
             </Button>
           </div>
-          <label className="mt-1 mb-2 flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-400">
-            <Checkbox
-              checked={includeUnstaged}
-              onChange={() => setIncludeUnstaged((v) => !v)}
-            />
+          <CheckboxOption
+            checked={includeUnstaged}
+            onChange={() => setIncludeUnstaged((v) => !v)}
+            className="mt-1 mb-2"
+          >
             Include unstaged changes
-          </label>
+          </CheckboxOption>
         </div>
         <PanelItem
               icon={<Commit className="size-4" />}
@@ -869,13 +907,13 @@ export function GitActionsSection({
                   )}
                 </Button>
               </div>
-              <label className="mb-1 -mt-1 flex cursor-pointer select-none items-center gap-2 text-s text-primary-600 dark:text-primary-400">
-                <Checkbox
-                  checked={prDraft}
-                  onChange={() => setPrDraft((v) => !v)}
-                />
+              <CheckboxOption
+                checked={prDraft}
+                onChange={() => setPrDraft((v) => !v)}
+                className="mb-1 -mt-1"
+              >
                 Create as draft
-              </label>
+              </CheckboxOption>
             </div>
             <PanelItem
               icon={<PullRequest className="size-4" />}
@@ -900,21 +938,26 @@ export function GitActionsSection({
           <PanelCollapse isOpen={isSectionOpen("publish")}>
             <div className={`space-y-2 pt-2 pb-1 ${PANEL_ROW_X}`}>
               {!preflightFetching && preflight && !preflight.ghReady && (
-                <div className="rounded-lg bg-primary px-3 py-2 text-xs text-warning dark:bg-warning/10">
+                <Text
+                  as="div"
+                  size="xs"
+                  tone="warning"
+                  className="rounded-lg bg-primary px-3 py-2 dark:bg-warning/10"
+                >
                   {preflight.notReadyReason ??
                     "Sign in with the GitHub CLI first."}
-                </div>
+                </Text>
               )}
 
               <div>
-                <Caption className="mb-1 block text-xs text-primary-500">
+                <Caption tone="faint" className="mb-1 block">
                   Repository
                 </Caption>
                 <div className="flex items-center gap-1.5 rounded-lg bg-primary-100/40 px-2.5 dark:bg-primary-800/40">
                   <Github className="size-3.5 shrink-0 text-primary-500" />
-                  <span className="shrink-0 text-xs text-primary-500">
+                  <Text as="span" size="xs" tone="faint" className="shrink-0">
                     github.com/
-                  </span>
+                  </Text>
                   <input
                     type="text"
                     value={publishOwnerRepo || defaultOwnerRepo}
@@ -929,25 +972,23 @@ export function GitActionsSection({
               </div>
 
               <div>
-                <Caption className="mb-1 block text-xs text-primary-500">
+                <Caption tone="faint" className="mb-1 block">
                   Visibility
                 </Caption>
                 <div className="flex items-center gap-4">
-                  <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-400">
-                    <Checkbox
-                      checked={publishPrivate}
-                      onChange={() => setPublishPrivate(true)}
-                    />
+                  <CheckboxOption
+                    checked={publishPrivate}
+                    onChange={() => setPublishPrivate(true)}
+                  >
                     <Lock className="size-3.5 text-primary-500" />
                     Private
-                  </label>
-                  <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-400">
-                    <Checkbox
-                      checked={!publishPrivate}
-                      onChange={() => setPublishPrivate(false)}
-                    />
+                  </CheckboxOption>
+                  <CheckboxOption
+                    checked={!publishPrivate}
+                    onChange={() => setPublishPrivate(false)}
+                  >
                     Public
-                  </label>
+                  </CheckboxOption>
                 </div>
               </div>
 
@@ -973,7 +1014,7 @@ export function GitActionsSection({
                 <div className="min-h-0 overflow-hidden">
                   <div className="space-y-2 pt-1">
                     <div>
-                      <Caption className="mb-1 block text-xs text-primary-500">
+                      <Caption tone="faint" className="mb-1 block">
                         Remote
                       </Caption>
                       <Input
@@ -985,24 +1026,22 @@ export function GitActionsSection({
                       />
                     </div>
                     <div>
-                      <Caption className="mb-1 block text-xs text-primary-500">
+                      <Caption tone="faint" className="mb-1 block">
                         Protocol
                       </Caption>
                       <div className="flex items-center gap-4">
-                        <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-400">
-                          <Checkbox
-                            checked={publishSsh}
-                            onChange={() => setPublishSsh(true)}
-                          />
+                        <CheckboxOption
+                          checked={publishSsh}
+                          onChange={() => setPublishSsh(true)}
+                        >
                           SSH
-                        </label>
-                        <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-400">
-                          <Checkbox
-                            checked={!publishSsh}
-                            onChange={() => setPublishSsh(false)}
-                          />
+                        </CheckboxOption>
+                        <CheckboxOption
+                          checked={!publishSsh}
+                          onChange={() => setPublishSsh(false)}
+                        >
                           HTTPS
-                        </label>
+                        </CheckboxOption>
                       </div>
                     </div>
                   </div>
@@ -1093,14 +1132,20 @@ function ChangedFileRow({
         </span>
       }
       trailing={
-        <span className="flex items-center gap-1 font-medium text-xxs">
+        <Text
+          as="span"
+          size="xxs"
+          tone="inherit"
+          weight="medium"
+          className="flex items-center gap-1"
+        >
           {file.additions > 0 && (
             <span className={DIFF_ADDED_TEXT}>+{file.additions}</span>
           )}
           {file.deletions > 0 && (
             <span className={DIFF_REMOVED_TEXT}>-{file.deletions}</span>
           )}
-        </span>
+        </Text>
       }
       hoverAction={{
         icon: <Undo className="size-3.5" />,

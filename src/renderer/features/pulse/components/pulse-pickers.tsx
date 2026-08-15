@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import Text from "@/components/ui/text";
 import {
   ArrowUp,
   Bot,
@@ -110,6 +111,24 @@ function PickerTrigger({
   );
 }
 
+/** Stand-in for an empty option list — every picker shows the same shape. */
+function PickerEmpty({ children }: { children: ReactNode }) {
+  return (
+    <Text as="div" size="xs" tone="faint" className="px-3 py-2">
+      {children}
+    </Text>
+  );
+}
+
+/** Caption over a field inside the schedule popover. */
+function FieldLabel({ children }: { children: ReactNode }) {
+  return (
+    <Text as="div" size="xxs" tone="faint" className="tracking-wide mb-0.5">
+      {children}
+    </Text>
+  );
+}
+
 function PickerOption({
   selected,
   onSelect,
@@ -191,12 +210,15 @@ function WorkspacePickRows({
         {w.name}
       </div>
       {currentBranch ? (
-        <div
-          className="truncate text-xxs text-primary-600 dark:text-primary-400"
+        <Text
+          as="div"
+          size="xxs"
+          tone="subtle"
+          className="truncate"
           title={currentBranch}
         >
           {currentBranch}
-        </div>
+        </Text>
       ) : null}
     </div>
   );
@@ -268,9 +290,9 @@ export function WorkspacePicker({
       </PickerTrigger>
       <DropdownWrapper isOpen={open} minWidth="min-w-44">
         {active.length === 0 && (
-          <div className="px-3 py-2 text-xs text-primary-500">
+          <PickerEmpty>
             No active workspaces
-          </div>
+          </PickerEmpty>
         )}
         <div className="max-h-64 overflow-auto noscrollbar">
           {active.map((w) => (
@@ -323,9 +345,9 @@ export function ProviderPicker({
       </PickerTrigger>
       <DropdownWrapper isOpen={open} minWidth="min-w-44">
         {eligible.length === 0 && (
-          <div className="px-3 py-2 text-xs text-primary-500">
+          <PickerEmpty>
             No enabled providers
-          </div>
+          </PickerEmpty>
         )}
         {eligible.map((p) => (
           <PickerOption
@@ -387,9 +409,9 @@ export function ModelPicker({
       </PickerTrigger>
       <DropdownWrapper isOpen={open} minWidth="min-w-56">
         {models.length === 0 && (
-          <div className="px-3 py-2 text-xs text-primary-500">
+          <PickerEmpty>
             {providerId ? "Loading models…" : "Select a provider first"}
-          </div>
+          </PickerEmpty>
         )}
         <div className="max-h-64 overflow-auto noscrollbar">
           {selectableModels.map((m) => {
@@ -474,9 +496,9 @@ export function SchedulePicker({
         <div className="p-3 space-y-3">
           {/* Frequency */}
           <div>
-            <div className="text-xxs tracking-wide text-primary-500 mb-0.5">
+            <FieldLabel>
               Frequency
-            </div>
+            </FieldLabel>
             <Select<PulseFrequency>
               value={frequency}
               options={FREQUENCY_OPTIONS}
@@ -487,9 +509,9 @@ export function SchedulePicker({
           {/* Day of week — only for weekly */}
           {frequency === "weekly" && (
             <div>
-              <div className="text-xxs tracking-wide text-primary-500 mb-0.5">
+              <FieldLabel>
                 Day
-              </div>
+              </FieldLabel>
               <Select<string>
                 value={String(dayOfWeek ?? 1)}
                 options={DAY_OPTIONS}
@@ -501,9 +523,9 @@ export function SchedulePicker({
           {/* Time — hourly fires on the hour, no minute picker */}
           {frequency !== "hourly" && (
             <div>
-              <div className="text-xxs tracking-wide text-primary-500 mb-0.5">
+              <FieldLabel>
                 Time
-              </div>
+              </FieldLabel>
               <Select<string>
                 value={`${hour}:${minute}`}
                 options={TIME_OPTIONS}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button } from "@/components/ui";
+import { Button, Text } from "@/components/ui";
 import { Edit, Trash, Stop, Play, Check, Close, Goal } from "@/components/ui/icons";
 import { useCodexGoal } from "../hooks/use-codex-goal";
 import type { GoalInfo } from "@/lib/redux/api/providersApi";
@@ -108,13 +108,13 @@ export function GoalSummaryBar({ providerId, runId, isRunning, enabled, rootPath
             ) : (
               <Goal className={`size-3.5 shrink-0 ${iconColor}`} />
             )}
-            <span className="shrink-0 text-xs font-medium text-primary-700 dark:text-primary-300">
+            <Text as="span" size="xs" tone="muted" weight="medium" className="shrink-0">
               {statusLabel(goal.status, isRunning)}
-            </span>
+            </Text>
             {usage && (
-              <span className="shrink-0 text-xs text-primary-600 dark:text-primary-400">
+              <Text as="span" size="xs" tone="subtle" className="shrink-0">
                 {usage}
-              </span>
+              </Text>
             )}
           </div>
           <div className="flex shrink-0 items-center gap-0.5">

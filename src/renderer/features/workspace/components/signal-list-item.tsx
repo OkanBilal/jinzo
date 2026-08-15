@@ -1,7 +1,7 @@
 import { Plus } from "@/components/ui/icons";
 import { ProviderIcon } from "./provider-icon";
 import type { SignalWithEntity } from "@/lib/redux/api";
-import { Button } from "@/components/ui";
+import { Button, Text } from "@/components/ui";
 
 interface SignalListItemProps {
   signal: SignalWithEntity;
@@ -63,18 +63,18 @@ export function SignalListItem({
 
       {/* Content - title on top, labels below */}
       <div className="flex-1 min-w-0 flex flex-col justify-center">
-        <span className="text-s text-primary-900 dark:text-primary-100 font-medium truncate">
+        <Text as="span" size="s" tone="default" weight="medium" className="truncate">
           {title}
-        </span>
+        </Text>
 
         <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-          <span className="inline-block capitalize px-1.5 py-0 text-xxs font-medium rounded-full bg-primary-200 dark:bg-primary-600 text-primary-600 dark:text-primary-400">
+          <Text as="span" size="xxs" tone="subtle" weight="medium" className="inline-block capitalize px-1.5 py-0 rounded-full bg-primary-200 dark:bg-primary-600">
             {levelLabels[sig.level] ?? sig.level}
-          </span>
+          </Text>
           {sig.eventCount > 1 && (
-            <span className="inline-block px-1.5 py-0 text-xxs font-medium rounded-full bg-primary-200 dark:bg-primary-400 text-primary-600 dark:text-primary-400 tabular-nums">
+            <Text as="span" size="xxs" tone="subtle" weight="medium" className="inline-block px-1.5 py-0 rounded-full bg-primary-200 dark:bg-primary-400 tabular-nums">
               {sig.eventCount}x
-            </span>
+            </Text>
           )}
         </div>
       </div>

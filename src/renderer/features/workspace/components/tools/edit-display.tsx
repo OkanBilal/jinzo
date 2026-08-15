@@ -6,7 +6,7 @@ import { DIFF_TYPOGRAPHY_STYLE, patchDiffOptions } from "@/lib/diff-style";
 import { normalizePatchForPatchDiff } from "../../utils/patch-utils";
 import { useOpenFileInEditor } from "../../hooks/use-open-file-in-editor";
 import { FileIconComponent } from "../file-explorer/components/file-icon";
-import { ToolHeader, ToolCollapse } from "./_shared";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader } from "./_shared";
 
 export interface EditParams {
   // Claude params
@@ -74,7 +74,7 @@ export function EditDisplay({
             e.stopPropagation();
             openFile(filePath);
           }}
-          className={`inline-flex items-center gap-1 min-w-0 text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary ${filePath ? "cursor-pointer hover:underline hover:text-primary-950 hover:dark:text-primary" : ""}`}
+          className={`inline-flex items-center gap-1 min-w-0 ${filePath ? "cursor-pointer hover:underline hover:text-primary-950 hover:dark:text-primary" : ""} ${TOOL_ROW_TEXT}`}
         >
           {filePath && (
             <FileIconComponent
@@ -86,15 +86,15 @@ export function EditDisplay({
           <span className="truncate">{fileName}</span>
         </span>
         {/* {(added > 0 || removed > 0) && (
-          <span className="text-primary-500 text-xs shrink-0 group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className={`text-xs shrink-0 ${TOOL_ROW_TEXT}`}>
             {added > 0 && (
-              <span className="text-success">
+              <Text as="span" size="inherit" tone="success">
                 +{added}
-              </span>
+              </Text>
             )}
             {added > 0 && removed > 0 && " "}
             {removed > 0 && (
-              <span className="text-danger">-{removed}</span>
+              <Text as="span" size="inherit" tone="danger">-{removed}</Text>
             )}
           </span>
         )} */}

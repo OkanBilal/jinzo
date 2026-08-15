@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { Text } from "@/components/ui";
 import { SendMessage } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse, ToolOutputBody } from "./_shared";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader, ToolOutputBody } from "./_shared";
 import { toolOutputText } from "../../utils/parse-tool-content";
 
 /**
@@ -101,11 +102,11 @@ export function SendMessageDisplay({
         isCompact={isCompact}
       >
         {recipient && (
-          <span className="shrink-0 max-w-40 truncate font-medium text-primary-600 dark:text-primary-400">
+          <Text as="span" size="inherit" tone="subtle" weight="medium" className="shrink-0 max-w-40 truncate">
             {recipient}
-          </span>
+          </Text>
         )}
-        <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+        <span className={`truncate ${TOOL_ROW_TEXT}`}>
           {headline}
         </span>
       </ToolHeader>
@@ -115,7 +116,7 @@ export function SendMessageDisplay({
           <ToolOutputBody as="div" className="text-s font-sans space-y-2">
             {protocol && (
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-medium">{protocolLabel}</span>
+                <Text as="span" size="inherit" tone="inherit" weight="medium">{protocolLabel}</Text>
                 {protocol.approve !== undefined && (
                   <span
                     className={`rounded px-1.5 py-px text-t font-medium ${
@@ -131,9 +132,9 @@ export function SendMessageDisplay({
             )}
 
             {protocol && (protocol.feedback || protocol.reason) && (
-              <p className="whitespace-pre-wrap text-primary-600 dark:text-primary-400">
+              <Text as="p" size="inherit" tone="subtle" className="whitespace-pre-wrap">
                 {protocol.feedback || protocol.reason}
-              </p>
+              </Text>
             )}
 
             {body && (
@@ -143,17 +144,17 @@ export function SendMessageDisplay({
             )}
 
             {(receiptText || receipt.resumedAgentId) && (
-              <div className="pt-1 border-t border-primary-100 dark:border-primary/10 space-y-0.5 text-t text-primary-600 dark:text-primary-400">
+              <Text as="div" size="t" tone="subtle" className="pt-1 border-t border-primary-100 dark:border-primary/10 space-y-0.5">
                 {receiptText && (
                   <p className="whitespace-pre-wrap wrap-break-word">{receiptText}</p>
                 )}
                 {receipt.resumedAgentId && (
                   <div className="font-mono">
-                    <span className="text-primary-600 dark:text-primary-400">Resumed</span>{" "}
+                    <Text as="span" size="inherit" tone="subtle">Resumed</Text>{" "}
                     {receipt.resumedAgentId}
                   </div>
                 )}
-              </div>
+              </Text>
             )}
           </ToolOutputBody>
         </ToolCollapse>

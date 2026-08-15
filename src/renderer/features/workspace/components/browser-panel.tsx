@@ -10,7 +10,7 @@ import {
   addContextBrowserSelection,
   type ContextBrowserSelection,
 } from "@/lib/redux/slices/workspaceSlice";
-import { Button, Input, toast } from "@/components/ui";
+import { Button, Input, Text, toast } from "@/components/ui";
 import {
   ChevronLeft,
   Close,
@@ -268,9 +268,9 @@ export function BrowserPanel() {
         className="fixed top-0 bottom-0 right-0 z-(--z-overlay) flex items-center justify-center  bg-primary-50 dark:bg-primary-950 border-l border-primary-200 dark:border-primary-800"
         style={{ width: "var(--browser-panel-width)" }}
       >
-        <div className="text-primary-800 dark:text-primary-200 text-sm">
+        <Text as="div" size="sm" tone="secondary">
           Browser panel is unavailable in this build.
-        </div>
+        </Text>
       </div>
     );
   }
@@ -377,9 +377,9 @@ export function BrowserPanel() {
       </div>
 
       {/* Title bar */}
-      <div className="px-3 py-1 text-xxs -mb-px text-primary-600 dark:text-primary-400 truncate border-b border-primary-200/40 dark:border-primary-800/40">
+      <Text as="div" size="xxs" tone="subtle" className="px-3 py-1 -mb-px truncate border-b border-primary-200/40 dark:border-primary-800/40">
         {nav.title || nav.url || "New tab"}
-      </div>
+      </Text>
 
       {/* Viewport */}
       <div
@@ -387,9 +387,9 @@ export function BrowserPanel() {
         className="relative flex-1 overflow-hidden mb-px"
       >
         {!nav.url && (
-          <div className="absolute inset-0 flex items-center justify-center text-primary-600 dark:text-primary-400 text-xs pointer-events-none">
+          <Text as="div" size="xs" tone="subtle" className="absolute inset-0 flex items-center justify-center pointer-events-none">
             Enter a URL above to get started
-          </div>
+          </Text>
         )}
         {selectMode && (
           <div className="absolute left-1/2 top-2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-primary-500/90 text-primary-100 text-t font-medium shadow pointer-events-none">

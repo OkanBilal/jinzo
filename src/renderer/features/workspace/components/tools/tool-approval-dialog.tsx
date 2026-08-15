@@ -197,6 +197,39 @@ const RISK_LEVEL_STYLES: Record<string, string> = {
   low: "bg-success/15 text-success",
 };
 
+/** The small uppercase line over a request's question. */
+function Eyebrow({ children }: { children: React.ReactNode }) {
+  return (
+    <Text
+      as="div"
+      size="xxs"
+      tone="subtle"
+      weight="semibold"
+      className="uppercase tracking-wide"
+    >
+      {children}
+    </Text>
+  );
+}
+
+/** One `label: value` line in the tool's parameter list. */
+function ParamRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex gap-3">
+      <Text as="div" size="inherit" tone="subtle" className="w-28 shrink-0">
+        {label}
+      </Text>
+      <Text
+        as="div"
+        size="inherit"
+        className="min-w-0 flex-1 whitespace-pre-wrap wrap-break-word"
+      >
+        {value}
+      </Text>
+    </div>
+  );
+}
+
 export function ToolApprovalDialog({
   request,
   onRespond,
@@ -296,19 +329,19 @@ export function ToolApprovalDialog({
           <div className="flex gap-3 px-3.5 pb-2 pt-3.5 sm:px-4 sm:pt-4">
             <Question className="mt-0.5 size-4 shrink-0 text-primary-600 dark:text-primary-400" />
             <div className="min-w-0 flex-1 space-y-2">
-              <div className="text-xxs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">
+              <Eyebrow>
                 {request.header || `${request.serverName ?? "MCP"} needs input`}
-              </div>
-              <Body className="leading-snug font-medium">
+              </Eyebrow>
+              <Body weight="medium" className="leading-snug">
                 {request.question || "An MCP server is requesting input."}
               </Body>
               {request.description && (
-                <Caption className="block text-primary-500">
+                <Caption tone="faint" className="block">
                   {request.description}
                 </Caption>
               )}
               {isUrlMode && (
-                <Caption className="block truncate font-mono text-primary-500">
+                <Caption tone="faint" className="block truncate font-mono">
                   {request.url}
                 </Caption>
               )}
@@ -324,7 +357,7 @@ export function ToolApprovalDialog({
           )}
 
           {elicitMissing.length > 0 && (
-            <Caption className="block px-3.5 pb-2 text-danger sm:px-4">
+            <Caption tone="danger" className="block px-3.5 pb-2 sm:px-4">
               Required: {elicitMissing.join(", ")}
             </Caption>
           )}
@@ -363,18 +396,24 @@ export function ToolApprovalDialog({
             <Question className="mt-0.5 size-4 shrink-0 text-primary-600 dark:text-primary-400" />
             <div className="min-w-0 flex-1 space-y-2">
               {request.header && (
-                <div className="text-xxs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">
+                <Eyebrow>
                   {request.header}
-                </div>
+                </Eyebrow>
               )}
               {request.multiSelect && (
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-lg bg-primary-100/50 px-1.5 py-0.5 text-xxs font-medium text-primary-600 dark:bg-primary-900/40 dark:text-primary-400">
+                  <Text
+                    as="span"
+                    size="xxs"
+                    tone="subtle"
+                    weight="medium"
+                    className="rounded-lg bg-primary-100/50 px-1.5 py-0.5 dark:bg-primary-900/40"
+                  >
                     Multi-select
-                  </span>
+                  </Text>
                 </div>
               )}
-              <Body className="leading-snug font-medium">
+              <Body weight="medium" className="leading-snug">
                 {request.question || "The agent is asking a question."}
               </Body>
             </div>
@@ -404,23 +443,22 @@ export function ToolApprovalDialog({
                       aria-hidden
                     >
                       {isSelected && (
-                        <span className="text-t font-bold leading-none text-primary">
+                        <Text as="span" size="t" tone="inherit" weight="bold" className="leading-none">
                           ✓
-                        </span>
+                        </Text>
                       )}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <span
-                        className={`font-semibold ${
-                          isSelected
-                            ? "text-success"
-                            : "text-primary-800 dark:text-primary-200"
-                        }`}
+                      <Text
+                        as="span"
+                        size="inherit"
+                        tone={isSelected ? "success" : "secondary"}
+                        weight="semibold"
                       >
                         {opt.label}
-                      </span>
+                      </Text>
                       {opt.description && (
-                        <Text className="mt-1 text-xxs leading-relaxed text-primary-600 dark:text-primary-400">
+                        <Text size="xxs" tone="subtle" className="mt-1 leading-relaxed">
                           {opt.description}
                         </Text>
                       )}
@@ -520,12 +558,12 @@ export function ToolApprovalDialog({
     <div className="mr-auto mb-1 max-w-210">
       <div className="overflow-hidden rounded-2xl glass-surface">
         <div className="flex items-center gap-2 px-4 pb-1 pt-3.5">
-          <span className="text-primary-600 dark:text-primary-400">
+          <Text as="span" size="inherit" tone="subtle">
             {headerIcon}
-          </span>
-          <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
+          </Text>
+          <Text as="span" tone="muted" weight="medium">
             {header.label}
-          </span>
+          </Text>
           {riskLevel && RISK_LEVEL_STYLES[riskLevel] && (
             <span
               className={`ml-auto rounded-full px-2 py-0.5 text-xxs font-medium capitalize ${RISK_LEVEL_STYLES[riskLevel]}`}
@@ -536,7 +574,7 @@ export function ToolApprovalDialog({
         </div>
 
         <div className="px-4 pb-3 pt-0.5">
-          <Body className="font-medium leading-snug">
+          <Body weight="medium" className="leading-snug">
             {message}
           </Body>
           {subtitle && (
@@ -554,16 +592,13 @@ export function ToolApprovalDialog({
                 toolInput={request.toolInput}
               />
             ) : (
-              <div className="space-y-1.5 text-xs">
+              <Text as="div" size="xs" tone="inherit" className="space-y-1.5">
                 {initialParamEntries.map((entry, idx) => (
-                  <div key={`${entry.label}-${idx}`} className="flex gap-3">
-                    <div className="w-28 shrink-0 text-primary-600 dark:text-primary-400">
-                      {entry.label}
-                    </div>
-                    <div className="min-w-0 flex-1 whitespace-pre-wrap wrap-break-word text-primary-900 dark:text-primary-100">
-                      {formatParamValue(entry.value)}
-                    </div>
-                  </div>
+                  <ParamRow
+                    key={`${entry.label}-${idx}`}
+                    label={entry.label}
+                    value={formatParamValue(entry.value)}
+                  />
                 ))}
                 {extraParamEntries.length > 0 && (
                   <div
@@ -575,17 +610,11 @@ export function ToolApprovalDialog({
                     <div className="min-h-0 overflow-hidden">
                       <div className="space-y-1.5 pt-0">
                         {extraParamEntries.map((entry, idx) => (
-                          <div
+                          <ParamRow
                             key={`${entry.label}-${idx + VISIBLE_PARAMS_INITIAL}`}
-                            className="flex gap-3"
-                          >
-                            <div className="w-28 shrink-0 text-primary-600 dark:text-primary-400">
-                              {entry.label}
-                            </div>
-                            <div className="min-w-0 flex-1 whitespace-pre-wrap wrap-break-word text-primary-900 dark:text-primary-100">
-                              {formatParamValue(entry.value)}
-                            </div>
-                          </div>
+                            label={entry.label}
+                            value={formatParamValue(entry.value)}
+                          />
                         ))}
                       </div>
                     </div>
@@ -610,20 +639,25 @@ export function ToolApprovalDialog({
                     />
                   </Button>
                 )}
-              </div>
+              </Text>
             )}
           </div>
         )}
 
         <div className="flex items-center justify-between gap-3 px-4 py-2">
           {isCodex ? (
-            <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-400 mb-2">
+            <Text
+              as="label"
+              size="xs"
+              tone="subtle"
+              className="flex cursor-pointer select-none items-center gap-2 mb-2"
+            >
               <Checkbox
                 checked={allowForSession}
                 onChange={() => setAllowForSession((v) => !v)}
               />
               Allow for this run
-            </label>
+            </Text>
           ) : (
             <span />
           )}

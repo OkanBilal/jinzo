@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { MainLayout } from "@/components/layout/main";
-import { Button } from "@/components/ui";
+import { Button, Text } from "@/components/ui";
 import { ChevronUp } from "@/components/ui/icons";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
@@ -115,9 +115,14 @@ export function OnboardingScreen() {
           <StepIndicator count={STEPS.length} current={stepIndex} />
           {/* Agents + preferences steps change real settings — reassure it's not final */}
           {stepIndex > 0 && (
-            <span className="absolute left-1/2 -translate-x-1/2 text-xs text-primary-600 dark:text-primary-400">
+            <Text
+              as="span"
+              size="xs"
+              tone="subtle"
+              className="absolute left-1/2 -translate-x-1/2"
+            >
               You can change these later in Settings.
-            </span>
+            </Text>
           )}
           <div className="flex items-center gap-2">
             {stepIndex > 0 && (
@@ -137,12 +142,15 @@ export function OnboardingScreen() {
             >
               {isLastStep ? "Get Started" : "Continue"}
               {isLastStep ? (
-                <kbd
-                  className="ml-0.5 flex h-4.5 items-center px-1 font-sans text-xxs leading-none"
+                <Text
+                  as="kbd"
+                  size="xxs"
+                  tone="inherit"
+                  className="ml-0.5 flex h-4.5 items-center px-1 font-sans leading-none"
                   aria-hidden
                 >
                   ⏎
-                </kbd>
+                </Text>
               ) : (
                 <ChevronUp className="w-4 h-4 rotate-90" />
               )}

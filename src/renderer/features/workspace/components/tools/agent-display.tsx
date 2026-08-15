@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { Text } from "@/components/ui";
 import { Bot } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse } from "./_shared";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader } from "./_shared";
 
 export interface AgentParams {
   subagent_type?: string;
@@ -22,16 +23,16 @@ export function AgentDisplay({ params, isCompact = false }: { params: AgentParam
         onToggle={() => setIsExpanded((v) => !v)}
         isCompact={isCompact}
       >
-        <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+        <span className={`truncate ${TOOL_ROW_TEXT}`}>
           {params.description || "Subagent task"}
         </span>
       </ToolHeader>
 
       {hasPrompt && (
         <ToolCollapse isExpanded={isExpanded}>
-          <div className="noscrollbar text-s text-primary-950 dark:text-primary whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-lg p-3 max-h-48 overflow-y-auto">
+          <Text as="div" size="s" tone="contrast" className="noscrollbar whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-lg p-3 max-h-48 overflow-y-auto">
             {params.prompt}
-          </div>
+          </Text>
         </ToolCollapse>
       )}
     </div>

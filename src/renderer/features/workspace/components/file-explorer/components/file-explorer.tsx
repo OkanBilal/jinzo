@@ -3,7 +3,7 @@ import { appApi } from "@/lib/transport";
 import type { FileNode, DirEntry, ServiceResponse } from "@/features/workspace/types/file-explorer";
 import { FileTreeNode } from "./file-tree-node";
 import { FileIconComponent } from "./file-icon";
-import { Button, Caption } from "@/components/ui";
+import { Button, Caption, Text } from "@/components/ui";
 import { Close, CollapseAll, Plus, Refresh, Search } from "@/components/ui/icons";
 
 interface FileExplorerProps {
@@ -317,9 +317,9 @@ export const FileExplorer = memo(function FileExplorer({
   if (error) {
     return (
       <div className={`flex items-center justify-center h-full ${className}`}>
-        <div className="flex flex-col items-center gap-2 text-danger px-4 text-center">
-          <span className="text-sm">{error}</span>
-        </div>
+        <Text as="div" size="inherit" tone="danger" align="center" className="flex flex-col items-center gap-2 px-4">
+          <Text as="span" size="sm" tone="inherit">{error}</Text>
+        </Text>
       </div>
     );
   }
@@ -327,9 +327,9 @@ export const FileExplorer = memo(function FileExplorer({
   if (!tree) {
     return (
       <div className={`flex items-center justify-center h-full ${className}`}>
-        <span className="text-sm text-primary-600 dark:text-primary-400">
+        <Text as="span" size="sm" tone="subtle">
           No files found
-        </span>
+        </Text>
       </div>
     );
   }
@@ -388,11 +388,11 @@ export const FileExplorer = memo(function FileExplorer({
           className="flex-1 overflow-auto py-1 space-y-0.5 noscrollbar"
         >
           {searchError ? (
-            <div className="px-2 py-2 text-xs text-primary-600 dark:text-primary-400">{searchError}</div>
+            <Text as="div" size="xs" tone="subtle" className="px-2 py-2">{searchError}</Text>
           ) : searchEntries.length === 0 ? (
-            <div className="px-2 py-2 text-xs text-primary-600 dark:text-primary-400">
+            <Text as="div" size="xs" tone="subtle" className="px-2 py-2">
               {searchLoading ? "Searching…" : "No matches"}
-            </div>
+            </Text>
           ) : (
             <>
               {searchEntries.map((entry, index) => {
@@ -427,9 +427,9 @@ export const FileExplorer = memo(function FileExplorer({
                     />
                     <span className="truncate shrink-0 max-w-[60%]">{entry.name}</span>
                     {dir && (
-                      <span className="truncate ml-2 text-xs text-primary-600 dark:text-primary-400">
+                      <Text as="span" size="xs" tone="subtle" className="truncate ml-2">
                         {dir}
-                      </span>
+                      </Text>
                     )}
                     {onAddToContext && (
                       <Button
@@ -444,9 +444,9 @@ export const FileExplorer = memo(function FileExplorer({
                 );
               })}
               {searchEntries.length >= MAX_SEARCH_MATCHES && (
-                <div className="px-2 pt-1 text-xxs text-primary-600 dark:text-primary-400">
+                <Text as="div" size="xxs" tone="subtle" className="px-2 pt-1">
                   Showing first {MAX_SEARCH_MATCHES} matches — narrow your search for more.
-                </div>
+                </Text>
               )}
             </>
           )}

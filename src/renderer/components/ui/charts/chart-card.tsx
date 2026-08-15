@@ -1,6 +1,6 @@
 import type { ComponentType, ReactNode } from "react";
 import { cn } from "@/lib/cn";
-import { Caption } from "../text";
+import Text, { Caption } from "../text";
 
 interface ChartCardProps {
   title?: string;
@@ -47,14 +47,14 @@ export default function ChartCard({
         )
       )}
       {isEmpty ? (
-        <div
-          className={cn(
-            "flex items-center justify-center text-xs text-primary-600 dark:text-primary-400",
-            emptyHeight,
-          )}
+        <Text
+          as="div"
+          size="xs"
+          tone="subtle"
+          className={cn("flex items-center justify-center", emptyHeight)}
         >
           {emptyMessage}
-        </div>
+        </Text>
       ) : (
         children
       )}

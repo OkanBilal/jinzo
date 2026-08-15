@@ -4,7 +4,7 @@ import { useListWorkspaceActivityQuery } from "@/lib/redux/api";
 import type { WorkspaceActivity } from "@/lib/redux/api";
 import { openNoteTab } from "@/lib/redux/slices/workspaceSlice";
 import { Note, PullRequest, Diff, Commit, CircleDot, ArrowUp } from "@/components/ui/icons";
-import { Button, Caption } from "@/components/ui";
+import { Button, Caption, Text } from "@/components/ui";
 import { formatDate } from "@/lib/format-date";
 
 interface ActivitySectionProps {
@@ -75,7 +75,7 @@ export function ActivitySection({ workspaceId }: ActivitySectionProps) {
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <span className="text-xs text-primary-700 dark:text-primary-300">Loading...</span>
+        <Text as="span" size="xs" tone="muted">Loading...</Text>
       </div>
     );
   }
@@ -141,14 +141,14 @@ export function ActivitySection({ workspaceId }: ActivitySectionProps) {
                 }`}
               >
                 <div className="flex-1 min-w-0">
-                  <span className="text-s text-primary-900 dark:text-primary-100 truncate max-w-full text-left block">
+                  <Text as="span" size="s" tone="default" align="left" className="truncate max-w-full block">
                     {activity.type === "commit" ? (
                       <>
                         You committed changes
                         {activity.refId && (
-                          <span className="ml-1 text-primary-600 dark:text-primary-400 font-mono text-xxs">
+                          <Text as="span" size="xxs" tone="subtle" className="ml-1 font-mono">
                             {activity.refId.slice(0, 7)}
-                          </span>
+                          </Text>
                         )}
                       </>
                     ) : activity.type === "finding" && (activity.metadata as any)?.count ? (
@@ -156,10 +156,10 @@ export function ActivitySection({ workspaceId }: ActivitySectionProps) {
                     ) : (
                       activity.title
                     )}
-                    <span className="text-primary-700 dark:text-primary-300 text-xxs font-normal">
+                    <Text as="span" size="xxs" tone="muted" weight="normal">
                       {" "}&middot; {formatDate(activity.createdAt)}
-                    </span>
-                  </span>
+                    </Text>
+                  </Text>
                   {detail && (
                     <div
                       className={`grid transition-[grid-template-rows] duration-200 ease-out ${
@@ -167,9 +167,9 @@ export function ActivitySection({ workspaceId }: ActivitySectionProps) {
                       }`}
                     >
                       <div className="overflow-hidden">
-                        <span className="text-t text-primary-700 dark:text-primary-300 text-left block mt-1 whitespace-pre-wrap">
+                        <Text as="span" size="t" tone="muted" align="left" className="block mt-1 whitespace-pre-wrap">
                           {detail}
-                        </span>
+                        </Text>
                       </div>
                     </div>
                   )}

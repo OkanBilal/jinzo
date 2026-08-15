@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { Text } from "@/components/ui";
 import { Workflow } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse, ToolOutputBody } from "./_shared";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader, ToolOutputBody } from "./_shared";
 import { coerceToolOutput } from "../../utils/parse-tool-content";
 
 /**
@@ -75,11 +76,11 @@ export function WorkflowDisplay({
         onToggle={() => setIsExpanded((v) => !v)}
         isCompact={isCompact}
       >
-        <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+        <span className={`truncate ${TOOL_ROW_TEXT}`}>
           {title}
         </span>
         {meta.phases.length > 0 && (
-          <span className="text-primary-500 shrink-0 group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className={`shrink-0 ${TOOL_ROW_TEXT}`}>
             {meta.phases.length} phase{meta.phases.length !== 1 ? "s" : ""}
           </span>
         )}
@@ -89,25 +90,25 @@ export function WorkflowDisplay({
         <ToolCollapse isExpanded={isExpanded}>
           <ToolOutputBody as="div" className="text-s font-sans space-y-2">
             {description && (
-              <p className="whitespace-pre-wrap text-primary-600 dark:text-primary-400">
+              <Text as="p" size="inherit" tone="subtle" className="whitespace-pre-wrap">
                 {description}
-              </p>
+              </Text>
             )}
 
             {meta.phases.length > 0 && (
               <ol className="space-y-1">
                 {meta.phases.map((phase, i) => (
                   <li key={`${phase.title}-${i}`} className="flex gap-2">
-                    <span className="shrink-0 mt-px flex size-4 items-center justify-center rounded bg-primary-100 dark:bg-primary/10 text-t font-medium tabular-nums">
+                    <Text as="span" size="t" tone="inherit" weight="medium" className="shrink-0 mt-px flex size-4 items-center justify-center rounded bg-primary-100 dark:bg-primary/10 tabular-nums">
                       {i + 1}
-                    </span>
+                    </Text>
                     <span className="min-w-0">
-                      <span className="font-medium">{phase.title}</span>
+                      <Text as="span" size="inherit" tone="inherit" weight="medium">{phase.title}</Text>
                       {phase.detail && (
-                        <span className="text-primary-600 dark:text-primary-400">
+                        <Text as="span" size="inherit" tone="subtle">
                           {" — "}
                           {phase.detail}
-                        </span>
+                        </Text>
                       )}
                     </span>
                   </li>
@@ -116,27 +117,27 @@ export function WorkflowDisplay({
             )}
 
             {(result.runId || result.taskId || params.scriptPath) && (
-              <div className="pt-1 border-t border-primary-100 dark:border-primary/10 space-y-0.5 text-t font-mono text-primary-600 dark:text-primary-400">
+              <Text as="div" size="t" tone="subtle" className="pt-1 border-t border-primary-100 dark:border-primary/10 space-y-0.5 font-mono">
                 {result.launched && <div>Launched in background</div>}
                 {result.runId && (
                   <div>
-                    <span className="text-primary-600 dark:text-primary-400">Run</span>{" "}
+                    <Text as="span" size="inherit" tone="subtle">Run</Text>{" "}
                     {result.runId}
                   </div>
                 )}
                 {result.taskId && (
                   <div>
-                    <span className="text-primary-600 dark:text-primary-400">Task</span>{" "}
+                    <Text as="span" size="inherit" tone="subtle">Task</Text>{" "}
                     {result.taskId}
                   </div>
                 )}
                 {params.resumeFromRunId && (
                   <div>
-                    <span className="text-primary-600 dark:text-primary-400">Resumed from</span>{" "}
+                    <Text as="span" size="inherit" tone="subtle">Resumed from</Text>{" "}
                     {params.resumeFromRunId}
                   </div>
                 )}
-              </div>
+              </Text>
             )}
           </ToolOutputBody>
         </ToolCollapse>

@@ -1,4 +1,4 @@
-import { Body, Caption, Checkbox } from "@/components/ui";
+import { Body, Caption, Checkbox, Text } from "@/components/ui";
 
 /**
  * A single input derived from an MCP elicitation's `requestedSchema`.
@@ -164,15 +164,15 @@ export function ElicitationForm({
       {fields.map((field) => (
         <label key={field.name} className="block min-w-0">
           <div className="mb-1 flex items-baseline gap-1.5">
-            <Body className="text-xs font-medium">{field.label}</Body>
+            <Body size="xs" weight="medium">{field.label}</Body>
             {field.required && (
-              <span className="text-xxs text-danger" aria-hidden>
+              <Text as="span" size="xxs" tone="danger" aria-hidden>
                 *
-              </span>
+              </Text>
             )}
           </div>
           {field.description && (
-            <Caption className="mb-1 block text-primary-500">
+            <Caption tone="faint" className="mb-1 block">
               {field.description}
             </Caption>
           )}

@@ -324,13 +324,13 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
                 <div className="flex items-center gap-2 text-accent">
                   <Codex className="size-3.5 shrink-0" />
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-accent">
+                    <Text as="span" size="xs" tone="inherit">
                       {targetLabel}
-                    </span>
+                    </Text>
                   </div>
                 </div>
                 {message && (
-                  <Text className="text-xs  text-accent mt-1.5">
+                  <Text size="xs" tone="inherit" className="text-accent mt-1.5">
                     {message}
                   </Text>
                 )}
@@ -408,9 +408,9 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
                     title={file.fullPath}
                   >
                     <Code className="size-3 dark:text-primary-300 text-primary-700" />
-                    <span className="text-primary-700 dark:text-primary-300">
+                    <Text as="span" size="inherit" tone="muted">
                       {file.displayName}
-                    </span>
+                    </Text>
                   </div>
                 ))}
                 {attachments.map((att) => {
@@ -433,9 +433,9 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
                         alt={att.name}
                         className="h-6 w-6 rounded-lg object-cover  border border-primary-200/60 dark:border-primary-700/40"
                       />
-                      <span className="text-primary-700 dark:text-primary-300 truncate max-w-40">
+                      <Text as="span" size="inherit" tone="muted" className="truncate max-w-40">
                         {att.name}
-                      </span>
+                      </Text>
                     </Button>
                   ) : (
                     <div
@@ -448,9 +448,9 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
                       ) : (
                         <Document className="size-3 dark:text-primary-300 text-primary-700" />
                       )}
-                      <span className="text-primary-700 dark:text-primary-300">
+                      <Text as="span" size="inherit" tone="muted">
                         {att.name}
-                      </span>
+                      </Text>
                     </div>
                   );
                 })}
@@ -560,10 +560,10 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
   }
 
   return (
-    <div className=" py-1.5 flex items-start gap-2 text-sm">
-      <span className="text-primary-600 dark:text-primary-400">
+    <div className="py-1.5 flex items-start gap-2">
+      <Text as="span" tone="subtle">
         {event.content}
-      </span>
+      </Text>
     </div>
   );
 }
@@ -647,9 +647,9 @@ function ImageArtifact({
         </DropdownMenuItem>
       )}
       {isFetching ? (
-        <div className="px-3 py-2 text-xs text-primary-600 dark:text-primary-400">
+        <Text as="div" size="xs" tone="subtle" className="px-3 py-2">
           Loading applications…
-        </div>
+        </Text>
       ) : (
         handlerApps.map((app) => (
           <DropdownMenuItem
@@ -701,7 +701,9 @@ function ImageArtifact({
           </div>
         </Button>
         <div className="absolute inset-x-0 bottom-0 px-2.5 pb-2 pt-6 bg-linear-to-t from-black/60 to-transparent opacity-0 group-hover/image-tile:opacity-100 transition-opacity pointer-events-none">
-          <span className="block text-xs text-white truncate">{fileName}</span>
+          <Text as="span" size="xs" tone="inherit" className="block text-white truncate">
+            {fileName}
+          </Text>
         </div>
         <Button
           ref={openBtnRef}
@@ -748,12 +750,12 @@ function ImageArtifact({
         onClick={openInMains}
         className="flex-1 min-w-0 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary-400 rounded-md"
       >
-        <div className="text-sm font-medium text-primary-950 dark:text-primary truncate">
+        <Text as="div" tone="contrast" weight="medium" className="truncate">
           {fileName}
-        </div>
-        <div className="text-xs text-primary-600 dark:text-primary-400 mt-0.5">
+        </Text>
+        <Text as="div" size="xs" tone="subtle" className="mt-0.5">
           Image{ext ? ` · ${ext}` : ""}
-        </div>
+        </Text>
       </Button>
       <Button
         ref={openBtnRef}

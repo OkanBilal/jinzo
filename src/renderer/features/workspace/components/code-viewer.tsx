@@ -10,7 +10,7 @@ import {
 } from "@/lib/redux/slices/workspaceSlice";
 import { useResyncWorkspaceDiffMutation } from "@/lib/redux/api";
 import { DIFF_TYPOGRAPHY_STYLE, diffSurfaceOptions } from "@/lib/diff-style";
-import { Button } from "@/components/ui";
+import { Button, Text } from "@/components/ui";
 import type {
   FileContentResponse,
   ServiceResponse,
@@ -330,12 +330,15 @@ export function CodeViewer({
         <div className="absolute top-1 right-2 z-10 flex items-center gap-1.5 rounded-lg px-2 py-1 bg-primary/20 dark:bg-primary-950/50 backdrop-blur-sm">
           {saveState === "error" ? (
             <>
-              <span
-                className="text-xs text-danger max-w-100 truncate"
+              <Text
+                as="span"
+                size="xs"
+                tone="danger"
+                className="max-w-100 truncate"
                 title={saveError ?? undefined}
               >
                 {saveError}
-              </span>
+              </Text>
               {conflict ? (
                 <>
                   <Button

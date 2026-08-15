@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { appEvents } from "@/lib/transport";
-import { Toggle, Button, toast, Select } from "@/components/ui";
+import { Button, Select, Text, Toggle, toast } from "@/components/ui";
 import {
   SettingsSection,
   SettingsRow,
@@ -225,7 +225,9 @@ export default function CodexSettings() {
             title="Update required"
             description={`Mains requires Codex CLI ${cli.minimumVersion ?? "0.146.0"} or newer.`}
           >
-            <span className="text-xs font-medium text-danger">Unsupported</span>
+            <Text as="span" size="xs" tone="danger" weight="medium">
+              Unsupported
+            </Text>
           </SettingsRow>
         )}
         {cli?.compatibility === "newer" && (
@@ -233,7 +235,9 @@ export default function CodexSettings() {
             title="Newer CLI detected"
             description={`This CLI is newer than the tested app-server contract (${cli.testedProtocolVersion ?? "unknown"}). Forward-compatible mode is active.`}
           >
-            <span className="text-xs font-medium text-warning">Untested</span>
+            <Text as="span" size="xs" tone="warning" weight="medium">
+              Untested
+            </Text>
           </SettingsRow>
         )}
       </ProviderCliSection>
@@ -338,9 +342,9 @@ export default function CodexSettings() {
           description="Define JSON Schemas to constrain the agent's output format"
         >
           <div className="flex items-center gap-3">
-            <span className="text-sm text-primary-600 dark:text-primary-400">
+            <Text as="span" tone="subtle">
               {selectedSchemaName}
-            </span>
+            </Text>
             <Button
               variant="primary"
               onClick={() => setIsStructuredOutputsModalOpen(true)}

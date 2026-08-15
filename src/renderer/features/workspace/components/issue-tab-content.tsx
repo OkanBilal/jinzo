@@ -5,7 +5,7 @@ import rehypeSanitize from "rehype-sanitize";
 import { markdownComponents } from "@/components/markdown-components";
 import { markdownSanitizeSchema } from "@/lib/markdown-sanitize";
 import type { IssueWithEntity } from "@/lib/redux/api";
-import { Heading2, Caption } from "@/components/ui";
+import { Caption, Heading2, Text } from "@/components/ui";
 
 interface IssueTabContentProps {
   issue: IssueWithEntity;
@@ -39,12 +39,12 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
           {/* State badge */}
           <div className="flex items-center gap-3 flex-wrap">
             {iss.assignee && (
-              <span className="text-sm text-primary-600 dark:text-primary-400">
+              <Text as="span" size="sm" tone="subtle">
                 Assigned to{" "}
-                <span className="font-medium text-primary-700 dark:text-primary-300">
+                <Text as="span" size="inherit" tone="muted" weight="medium">
                   {iss.assignee}
-                </span>
-              </span>
+                </Text>
+              </Text>
             )}
             <span
               className={`inline-flex capitalize items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${

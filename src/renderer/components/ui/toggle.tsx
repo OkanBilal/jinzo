@@ -1,5 +1,6 @@
 import { cn } from "../../lib/cn";
 import { Button } from "./button";
+import Text from "./text";
 
 interface ToggleProps {
   enabled: boolean;
@@ -14,9 +15,7 @@ export function Toggle({ enabled, onChange, label, className, disabled }: Toggle
     <div className={cn("flex items-center justify-between py-2", className)}>
       {label && (
         <div className="flex flex-col">
-          <span className="text-sm text-primary-900 dark:text-primary">
-            {label}
-          </span>
+          <Text as="span">{label}</Text>
         </div>
       )}
       <Button

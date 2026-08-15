@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button } from "@/components/ui";
+import { Button, Text } from "@/components/ui";
 import {
   getProviderVariant,
   type ProviderVariant,
@@ -40,7 +40,7 @@ export function ProviderAuthNotice({
       className={`px-3 py-2.5 mb-2 rounded-2xl text-warning bg-warning/10 dark:bg-warning/10 text-xs flex items-center justify-between gap-3 ${className}`}
     >
       <span className="min-w-0">
-        <span className="font-medium">{title}</span>
+        <Text as="span" size="inherit" tone="inherit" weight="medium">{title}</Text>
         {message ? <span className="opacity-80"> — {message}</span> : null}
       </span>
       <span className="flex items-center gap-2 shrink-0">
@@ -109,7 +109,7 @@ export function ProviderCliUpdateNotice({
       className={`px-3 py-2.5 mb-2 rounded-2xl text-warning bg-warning/10 dark:bg-warning/10 text-xs flex items-center justify-between gap-3 ${className}`}
     >
       <span className="min-w-0">
-        <span className="font-medium">Update required</span>
+        <Text as="span" size="inherit" tone="inherit" weight="medium">Update required</Text>
         <span className="opacity-80"> — {failure ?? message}</span>
       </span>
       <Button

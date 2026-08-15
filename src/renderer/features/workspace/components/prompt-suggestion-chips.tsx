@@ -1,4 +1,5 @@
 import { LazyMotion, m, domAnimation, MotionConfig } from "motion/react";
+import { Text } from "@/components/ui";
 
 interface PromptSuggestionChipsProps {
   suggestions: string[];
@@ -31,12 +32,11 @@ export function PromptSuggestionChips({
         >
           <span className="spark" />
           <span className="spark-backdrop rounded-2xl" />
-          <span className="relative z-10 flex items-start gap-2 px-4 py-2.5 text-sm
-            text-primary-900 dark:text-primary-100">
+          <Text as="span" size="sm" tone="default" className="relative z-10 flex items-start gap-2 px-4 py-2.5">
             {/* Wraps rather than truncates: a suggestion you can't read is one
                 you can't judge before sending it. */}
             <span className="wrap-break-word">{suggestion}</span>
-          </span>
+          </Text>
         </m.button>
         <m.span
           initial={{ opacity: 0 }}

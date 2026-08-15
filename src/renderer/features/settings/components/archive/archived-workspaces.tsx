@@ -9,6 +9,7 @@ import {
   Muted,
   SegmentedTabs,
   toast,
+  Text,
 } from "@/components/ui";
 import {
   Archive,
@@ -175,7 +176,7 @@ function ArchivedWorkspacesPanel({
               onChange={setRemoveWorktree}
               aria-label="Also remove the worktree from disk"
             />
-            <Caption className="text-primary-900 dark:text-primary-100">
+            <Caption tone="default">
               Also remove the worktree from disk
             </Caption>
           </label>
@@ -289,9 +290,15 @@ function ArchivedRunsPanel({ runs }: { runs: ArchivedRun[] }) {
                 {group.runs.length} run{group.runs.length === 1 ? "" : "s"}
               </Caption>
               {group.workspaceArchived && (
-                <span className="rounded-full bg-warning/10 px-2 py-0.5 text-t font-medium text-warning">
+                <Text
+                  as="span"
+                  size="t"
+                  tone="warning"
+                  weight="medium"
+                  className="rounded-full bg-warning/10 px-2 py-0.5"
+                >
                   Workspace archived
-                </span>
+                </Text>
               )}
             </div>
 
@@ -351,10 +358,15 @@ function ArchivedWorkspaceRow({
           <Body className="truncate">{workspace.name}</Body>
           {branch && <Body className="truncate opacity-70">• {branch}</Body>}
           {!workspace.pathExists && (
-            <span className="flex shrink-0 items-center gap-1 rounded-full bg-warning/10 px-1.5 py-0.5 text-warning">
+            <Text
+              as="span"
+              size="t"
+              tone="warning"
+              className="flex shrink-0 items-center gap-1 rounded-full bg-warning/10 px-1.5 py-0.5"
+            >
               <Danger className="size-3" />
-              <span className="text-t">Folder missing</span>
-            </span>
+              Folder missing
+            </Text>
           )}
         </div>
 

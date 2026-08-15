@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { Text } from "@/components/ui";
 import { ExitPlan } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse } from "./_shared";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader } from "./_shared";
 
 export interface ExitPlanParams {
   plan?: string;
@@ -23,16 +24,16 @@ export function ExitPlanDisplay({ params }: { params: ExitPlanParams }) {
         isExpanded={isExpanded}
         onToggle={() => setIsExpanded((v) => !v)}
       >
-        <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+        <span className={`truncate ${TOOL_ROW_TEXT}`}>
           {charCount > 0 ? `(${charCount} chars)` : "No plan content"}
         </span>
       </ToolHeader>
 
       {hasPlan && (
         <ToolCollapse isExpanded={isExpanded}>
-          <div className="noscrollbar text-sm text-primary-950 dark:text-primary whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-3 max-h-80 overflow-y-auto">
+          <Text as="div" size="sm" tone="contrast" className="noscrollbar whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-3 max-h-80 overflow-y-auto">
             {plan}
-          </div>
+          </Text>
         </ToolCollapse>
       )}
     </div>

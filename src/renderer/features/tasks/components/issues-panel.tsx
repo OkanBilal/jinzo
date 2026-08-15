@@ -2,9 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useGetIssuesInboxQuery, type IssueWithEntity } from "@/lib/redux/api";
 import { IssueListItem } from "@/features/workspace/components/issue-list-item";
 import { ProviderIcon } from "@/features/workspace/components/provider-icon";
-import { Button, DropdownWrapper, Input, SegmentedTabs } from "@/components/ui";
+import { Body, Button, DropdownWrapper, Input, SegmentedTabs, Text } from "@/components/ui";
 import { Close, Layers, Search, Trash } from "@/components/ui/icons";
-import { Body } from "@/components/ui/text";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { parseLabels } from "@/lib/label-colors";
 import { FilterSection, sortedEntries } from "./filter-section";
@@ -251,9 +250,9 @@ export function IssuesPanel({ activeEntityId, onSelectIssue }: IssuesPanelProps)
               <DropdownWrapper isOpen={filterOpen} minWidth="min-w-80">
               <div className="max-h-80 overflow-y-auto noscrollbar pb-1.5">
                 {!hasFilterOptions && activeFilterCount === 0 && (
-                  <div className="px-3 py-3 text-xs text-primary-600 dark:text-primary-400 -mb-1.5">
+                  <Text as="div" size="xs" tone="subtle" className="px-3 py-3 -mb-1.5">
                     Nothing to filter — this list is empty.
-                  </div>
+                  </Text>
                 )}
                 <FilterSection
                   title="Connection"
@@ -321,17 +320,19 @@ export function IssuesPanel({ activeEntityId, onSelectIssue }: IssuesPanelProps)
       <div className="flex-1 min-h-0 overflow-y-auto noscrollbar px-6 pt-3 pb-16 mask-[linear-gradient(to_bottom,transparent,black_1.75rem)]">
         {isLoading || (isFetching && issues.length === 0) ? (
           <div className="flex items-center justify-center py-10">
-            <span className="text-xs shine-text">Loading issues...</span>
+            <Text as="span" size="xs" tone="inherit" className="shine-text">
+              Loading issues...
+            </Text>
           </div>
         ) : filteredIssues.length === 0 ? (
           <div className="flex flex-col items-center gap-1 py-12 text-center">
-            <Body className="text-s text-primary-800 dark:text-primary-200">
+            <Body size="s" tone="secondary">
               {text.trim() || activeFilterCount > 0
                 ? "No issues match these filters."
                 : `No ${stateFilter === "all" ? "" : stateFilter + " "}issues synced yet.`}
             </Body>
             {!text.trim() && activeFilterCount === 0 && (
-              <Body className="text-xs text-primary-600 dark:text-primary-400">
+              <Body size="xs" tone="subtle">
                 Issues arrive from your connections (GitHub, Linear, Jira, ...)
                 via sync.
               </Body>

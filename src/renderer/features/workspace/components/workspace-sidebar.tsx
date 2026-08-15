@@ -21,7 +21,7 @@ import { FolderIcon } from "@/components/ui/icons/file-icons";
 import { DiffSection } from "@/features/workspace/components/diff-section";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import { useOpenDiffInEditor } from "@/features/workspace/hooks/use-open-diff-in-editor";
-import { Button } from "@/components/ui";
+import { Button, Text } from "@/components/ui";
 import { ActivitySection } from "./activity-section";
 
 type SidebarTab = "files" | "changes" | "reviews";
@@ -125,10 +125,10 @@ export function WorkspaceSidebar() {
     return (
       <div className="flex-1 flex flex-col h-[calc(100%-1rem)] mt-2 -pb-4 rounded-xl overflow-hidden">
         <div className="flex-1 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-3 text-primary-700 dark:text-primary-300">
+          <Text as="div" size="inherit" tone="muted" className="flex flex-col items-center gap-3">
             <FolderIcon className="size-10" />
-            <span className="text-xs font-medium">No workspace selected</span>
-          </div>
+            <Text as="span" size="xs" tone="inherit" weight="medium">No workspace selected</Text>
+          </Text>
         </div>
       </div>
     );

@@ -72,7 +72,7 @@ export default function CloneRepoModal({
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
-        <Body className="mb-2 font-medium">
+        <Body weight="medium" className="mb-2">
           Clone Repository
         </Body>
 

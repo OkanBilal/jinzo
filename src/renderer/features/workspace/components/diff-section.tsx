@@ -17,7 +17,7 @@ import {
   Chat,
   Codex,
 } from "@/components/ui/icons";
-import { Button, Caption } from "@/components/ui";
+import { Button, Caption, Text } from "@/components/ui";
 import { DIFF_ADDED_TEXT, DIFF_REMOVED_TEXT, SEVERITY_TEXT } from "../lib/severity";
 import { buildSyntheticDiff } from "../utils/expand-diff";
 import {
@@ -40,7 +40,7 @@ function DiffStats({ stats }: { stats: WorkspaceDiff["stats"] }) {
   const deletions = stats.shortstat.match(/(\d+) deletion/)?.[1];
 
   return (
-    <div className="flex items-center gap-1.5 text-xxs tabular-nums">
+    <Text as="div" size="xxs" tone="inherit" className="flex items-center gap-1.5 tabular-nums">
       {insertions && (
         <span className={DIFF_ADDED_TEXT}>
           +{insertions}
@@ -49,7 +49,7 @@ function DiffStats({ stats }: { stats: WorkspaceDiff["stats"] }) {
       {deletions && (
         <span className={DIFF_REMOVED_TEXT}>-{deletions}</span>
       )}
-    </div>
+    </Text>
   );
 }
 
@@ -111,7 +111,7 @@ function FileStatusLetter({
 /** Finding severity indicator dots */
 function FindingBadges({ counts }: { counts: Record<FindingSeverity, number> }) {
   return (
-    <div className="flex items-center gap-1 text-t tabular-nums shrink-0">
+    <Text as="div" size="t" tone="inherit" className="flex items-center gap-1 tabular-nums shrink-0">
       {counts.critical > 0 && (
         <span className="flex items-center gap-0.5">
           <CircleDot className={`size-2 ${SEVERITY_TEXT.critical}`} />
@@ -130,7 +130,7 @@ function FindingBadges({ counts }: { counts: Record<FindingSeverity, number> }) 
           <span className={SEVERITY_TEXT.info}>{counts.info}</span>
         </span>
       )}
-    </div>
+    </Text>
   );
 }
 
@@ -236,9 +236,9 @@ export function DiffSection({
   if (isFetching) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <span className="text-xs text-primary-600 dark:text-primary-400">
+        <Text as="span" size="xs" tone="subtle">
           Loading changes...
-        </span>
+        </Text>
       </div>
     );
   }
@@ -272,9 +272,9 @@ export function DiffSection({
       {/* Stats header */}
       {diff && diff.files && diff.files.length > 0 && (
         <div className="shrink-0 flex items-center justify-between px-1 py-1.5 mb-1">
-          <span className="text-xxs text-primary-900 dark:text-primary-100">
+          <Text as="span" size="xxs" tone="default">
             {diff.files.length} file{diff.files.length !== 1 ? "s" : ""} changed
-          </span>
+          </Text>
           <DiffStats stats={diff.stats} />
         </div>
       )}
@@ -314,21 +314,25 @@ export function DiffSection({
                 className={`w-4 h-4 shrink-0 ${isDeleted ? "opacity-50" : ""}`}
               />
               <div className="flex items-baseline gap-1.5 min-w-0 flex-1">
-                <span
+                <Text
+                  as="span"
+                  size="xs"
+                  weight="medium"
+                  tone={isDeleted ? "muted" : "default"}
                   // shrink-[0.25]: both children may truncate, but the path —
                   // longer and less identifying — gives up room first.
-                  className={`min-w-0 shrink-[0.25] truncate text-xs font-medium ${
+                  className={`min-w-0 shrink-[0.25] truncate ${
                     isDeleted
-                      ? "line-through decoration-primary-800/50 dark:decoration-primary/50 text-primary-700 dark:text-primary-300"
-                      : "text-primary-900 dark:text-primary-100"
+                      ? "line-through decoration-primary-800/50 dark:decoration-primary/50"
+                      : ""
                   }`}
                 >
                   {fileName}
-                </span>
+                </Text>
                 {dirPath && (
-                  <span className="min-w-0 truncate text-xxs text-primary-600 dark:text-primary-400">
+                  <Text as="span" size="xxs" tone="subtle" className="min-w-0 truncate">
                     {dirPath}
-                  </span>
+                  </Text>
                 )}
               </div>
               {findingsByFile[filePath] && (
@@ -368,13 +372,13 @@ export function DiffSection({
                 className="w-4 h-4 shrink-0"
               />
               <div className="flex items-baseline gap-1.5 min-w-0 flex-1">
-                <span className="min-w-0 shrink-[0.25] truncate text-xs font-medium text-primary-900 dark:text-primary-100">
+                <Text as="span" size="xs" tone="default" weight="medium" className="min-w-0 shrink-[0.25] truncate">
                   {fileName}
-                </span>
+                </Text>
                 {dirPath && (
-                  <span className="min-w-0 truncate text-xxs text-primary-600 dark:text-primary-400">
+                  <Text as="span" size="xxs" tone="subtle" className="min-w-0 truncate">
                     {dirPath}
-                  </span>
+                  </Text>
                 )}
               </div>
               {findingsByFile[filePath] && (

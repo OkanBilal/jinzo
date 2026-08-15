@@ -140,10 +140,9 @@ export function LocalBackendShare() {
             </div>
           )}
           {!status.webUiAvailable && (
-            <Caption className="text-warning block">
-              Web UI not built — run{" "}
-              <code className="text-xs">npm run build:web</code> once so browsers
-              can load the interface.
+            <Caption tone="warning" className="block">
+              Web UI not built — run <code>npm run build:web</code> once so
+              browsers can load the interface.
             </Caption>
           )}
 

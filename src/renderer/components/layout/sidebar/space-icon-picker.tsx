@@ -8,7 +8,7 @@ import {
   DEFAULT_ICON_COLOR,
   ICON_COLORS,
 } from "@/lib/icon-registry";
-import { Button } from "@/components/ui";
+import { Button, Text } from "@/components/ui";
 import { Close, SelectOption } from "@/components/ui/icons";
 
 function CurrentIcon({
@@ -159,14 +159,22 @@ export default function SpaceIconPicker({
                 />
                 <EmojiPicker.Viewport className="h-64 overflow-y-auto w-full noscrollbar">
                   <EmojiPicker.Loading>
-                    <div className="flex items-center justify-center py-8 text-sm text-primary-600 dark:text-primary-400">
+                    <Text
+                      as="div"
+                      tone="subtle"
+                      className="flex items-center justify-center py-8"
+                    >
                       Loading emojis...
-                    </div>
+                    </Text>
                   </EmojiPicker.Loading>
                   <EmojiPicker.Empty>
-                    <div className="flex items-center justify-center py-8 text-sm text-primary-600 dark:text-primary-400">
+                    <Text
+                      as="div"
+                      tone="subtle"
+                      className="flex items-center justify-center py-8"
+                    >
                       No emoji found.
-                    </div>
+                    </Text>
                   </EmojiPicker.Empty>
                   <EmojiPicker.List
                     className="select-none pb-1.5"

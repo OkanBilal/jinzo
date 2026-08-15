@@ -5,7 +5,7 @@ import rehypeSanitize from "rehype-sanitize";
 import { markdownComponents } from "@/components/markdown-components";
 import { markdownSanitizeSchema } from "@/lib/markdown-sanitize";
 import { useGetReviewQuery } from "@/lib/redux/api";
-import { Body, Heading2 } from "@/components/ui";
+import { Body, Heading2, Text } from "@/components/ui";
 
 interface NoteTabContentProps {
   reviewId: string;
@@ -18,7 +18,7 @@ export function NoteTabContent({ reviewId }: NoteTabContentProps) {
   if (isLoading) {
     return (
       <div className="h-full flex items-center justify-center">
-        <span className="text-sm text-primary-400">Loading...</span>
+        <Text as="span" tone="subtle">Loading...</Text>
       </div>
     );
   }
@@ -26,7 +26,7 @@ export function NoteTabContent({ reviewId }: NoteTabContentProps) {
   if (!review) {
     return (
       <div className="h-full flex items-center justify-center">
-        <span className="text-sm text-primary-400">Review not found</span>
+        <Text as="span" tone="subtle">Review not found</Text>
       </div>
     );
   }
@@ -51,13 +51,13 @@ export function NoteTabContent({ reviewId }: NoteTabContentProps) {
               {config.label}
             </span> */}
             {updatedAt && (
-              <span className="text-xs text-primary-600 dark:text-primary-400">
+              <Text as="span" size="xs" tone="subtle">
                 Created in {updatedAt.toLocaleDateString(undefined, {
                   month: "short",
                   day: "numeric",
                   year: "numeric",
                 })}
-              </span>
+              </Text>
             )}
           </div>
         </div>

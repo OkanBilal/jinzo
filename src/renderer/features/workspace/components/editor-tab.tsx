@@ -1,4 +1,5 @@
 import Code from "@/components/ui/icons/space/code";
+import { Text } from "@/components/ui";
 import { BaseTab } from "./base-tab";
 
 interface EditorTabProps {
@@ -20,10 +21,15 @@ export function EditorTab({ isActive, isFirst, onClick, hasFile, fileName, onClo
       tooltip={fileName || "Editor"}
       icon={<Code className="size-4 shrink-0 text-primary-800 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-100 " />}
       label={
-        <span className="text-xs tracking-tight font-medium truncate text-primary-900 dark:text-primary-100 hover:text-primary-900 dark:hover:text-primary-100  flex-1">
+        <Text
+          as="span"
+          size="xs"
+          weight="medium"
+          className="tracking-tight truncate flex-1"
+        >
           {fileName || "Editor"}
-          {hasFile && <span className="ml-1 ">*</span>}
-        </span>
+          {hasFile && <span className="ml-1">*</span>}
+        </Text>
       }
     />
   );

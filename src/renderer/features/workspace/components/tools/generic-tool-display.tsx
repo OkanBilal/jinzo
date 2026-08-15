@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
-import { ToolHeader, ToolCollapse, ToolOutputBody, useToolStatus } from "./_shared";
+import { Text } from "@/components/ui";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader, ToolOutputBody, useToolStatus } from "./_shared";
 import { toolOutputText, previewParams } from "../../utils/parse-tool-content";
 
 /** Guardrail so a huge param blob (a 200 KB `Write`) never lands in the DOM. */
@@ -82,7 +83,7 @@ export function GenericToolDisplay({
         isCompact={isCompact}
       >
         {headerText && (
-          <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className={`truncate ${TOOL_ROW_TEXT}`}>
             {headerText}
           </span>
         )}
@@ -93,12 +94,12 @@ export function GenericToolDisplay({
           <ToolOutputBody as="div" className="text-s font-sans space-y-2 max-h-64">
             {inputJson && (
               <div className="space-y-1">
-                <div className="text-t font-medium text-primary-600 dark:text-primary-400">
+                <Text as="div" size="t" tone="subtle" weight="medium">
                   Input
-                </div>
-                <pre className="noscrollbar whitespace-pre-wrap wrap-break-word font-mono text-t">
+                </Text>
+                <Text as="pre" size="t" tone="inherit" className="noscrollbar whitespace-pre-wrap wrap-break-word font-mono">
                   {inputJson}
-                </pre>
+                </Text>
               </div>
             )}
 
@@ -108,9 +109,9 @@ export function GenericToolDisplay({
                   inputJson ? "pt-1 border-t border-primary-100 dark:border-primary/10" : ""
                 }`}
               >
-                <div className="text-t font-medium text-primary-600 dark:text-primary-400">
+                <Text as="div" size="t" tone="subtle" weight="medium">
                   {status === "error" ? "Error" : "Output"}
-                </div>
+                </Text>
                 <pre
                   className={`noscrollbar whitespace-pre-wrap wrap-break-word font-mono text-t ${
                     status === "error" ? "text-danger" : ""

@@ -1,4 +1,4 @@
-import { Muted, ErrorText, Body, Button, Checkbox } from "@/components/ui";
+import { Body, Button, Checkbox, ErrorText, Muted, Text } from "@/components/ui";
 
 interface SelectableResource {
   id: string | number;
@@ -86,9 +86,15 @@ export function SelectResourcesStep<T extends SelectableResource>({
       {title && <Muted>{title}</Muted>}
       {!title && (
         <Muted>
-          <span className="mr-1 font-semibold dark:text-primary text-primary-950">
+          <Text
+            as="span"
+            size="inherit"
+            tone="contrast"
+            weight="semibold"
+            className="mr-1"
+          >
             {selectedCount}
-          </span>
+          </Text>
           selected.
         </Muted>
       )}

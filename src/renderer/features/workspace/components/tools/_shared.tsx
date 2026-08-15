@@ -181,6 +181,15 @@ export function toPresentTense(label: string): string {
   return label;
 }
 
+/**
+ * The quiet text on a tool row: faint at rest, full contrast once the row is
+ * hovered. Two colours across two states, so it is outside the `Text` tone
+ * scale — a tone is one colour. It lives here as one named string rather than
+ * being retyped in each of the thirty-odd tool displays.
+ */
+export const TOOL_ROW_TEXT =
+  "text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary";
+
 /** Muted-until-hover text treatment for the icon/verb slots of a tool header. */
 const headerSlotClass =
   "shrink-0 text-primary-600 dark:text-primary-400 group-hover:text-primary-950 group-hover:dark:text-primary";
@@ -246,9 +255,7 @@ export function ToolHeader({
       {children}
       {hasDetails && (
         <ArrowUp
-          className={`size-4 shrink-0 text-primary-500 opacity-100 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${
-            isExpanded ? "rotate-180" : "rotate-90"
-          }`}
+          className={`size-4 shrink-0 opacity-100 transition-all duration-200 group-hover:opacity-100 ${ isExpanded ? "rotate-180" : "rotate-90" } ${TOOL_ROW_TEXT}`}
         />
       )}
     </Button>

@@ -75,7 +75,7 @@ export function AutoSyncSection({
           <Body>
             Auto Sync
           </Body>
-          <Muted className="text-xs">
+          <Muted size="xs">
             Automatically sync {providerLabel} data on a schedule
           </Muted>
         </div>

@@ -1,4 +1,4 @@
-import { Tooltip } from "@/components/ui";
+import { Text, Tooltip } from "@/components/ui";
 import type { ContextUsageSnapshot } from "../hooks/use-context-usage";
 
 
@@ -39,16 +39,16 @@ function MetricRow({
 }) {
   return (
     <div className="flex items-baseline justify-between gap-4">
-      <span className="text-primary-600 dark:text-primary-400">{label}</span>
-      <span
-        className={`tabular-nums ${
-          emphasis
-            ? "font-medium text-primary-900 dark:text-primary-100"
-            : "text-primary-600 dark:text-primary-400"
-        }`}
+      <Text as="span" size="inherit" tone="subtle">{label}</Text>
+      <Text
+        as="span"
+        size="inherit"
+        tone={emphasis ? "default" : "subtle"}
+        weight={emphasis ? "medium" : undefined}
+        className="tabular-nums"
       >
         {value}
-      </span>
+      </Text>
     </div>
   );
 }
@@ -85,11 +85,11 @@ export function ContextUsageRing({ usage }: ContextUsageRingProps) {
   const dash = (circumference * pct) / 100;
 
   const tooltip = (
-    <div className="flex w-49 flex-col gap-2 text-xs">
+    <Text as="div" size="xs" tone="inherit" className="flex w-49 flex-col gap-2">
       <div className="flex items-baseline justify-between gap-3">
-        <span className="text-t font-medium uppercase tracking-wider text-primary-600 dark:text-primary-400">
+        <Text as="span" size="t" tone="subtle" weight="medium" className="uppercase tracking-wider">
           Context window
-        </span>
+        </Text>
         <span className={`text-s font-semibold tabular-nums ${toneText}`}>
           {pct.toFixed(0)}%
         </span>
@@ -115,16 +115,16 @@ export function ContextUsageRing({ usage }: ContextUsageRingProps) {
       </div>
 
       {(usage.model || thresholdPct != null) && (
-        <div className="flex items-center justify-between gap-3 border-t border-primary-950/10 pt-1.5 text-xxs text-primary-600 dark:border-primary-100/10 dark:text-primary-400">
+        <Text as="div" size="xxs" tone="subtle" className="flex items-center justify-between gap-3 border-t border-primary-950/10 pt-1.5 dark:border-primary-100/10">
           {usage.model && <span className="min-w-0 truncate">{usage.model}</span>}
           {thresholdPct != null && (
             <span className="shrink-0 tabular-nums">
               compacts at {thresholdPct.toFixed(0)}%
             </span>
           )}
-        </div>
+        </Text>
       )}
-    </div>
+    </Text>
   );
 
   return (
@@ -158,9 +158,9 @@ export function ContextUsageRing({ usage }: ContextUsageRingProps) {
             className={`${arcClass} transition-[stroke-dasharray] duration-300`}
           />
         </svg>
-        <span className="absolute text-xxs font-medium tabular-nums text-primary-600 dark:text-primary-400">
+        <Text as="span" size="xxs" tone="subtle" weight="medium" className="absolute tabular-nums">
           {pct.toFixed(0)}
-        </span>
+        </Text>
       </div>
     </Tooltip>
   );

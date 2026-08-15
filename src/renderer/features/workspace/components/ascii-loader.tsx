@@ -1,4 +1,5 @@
 import { useEffect, useReducer } from "react";
+import { Text } from "@/components/ui";
 export { AsciiSpinner } from "@/components/ui/ascii-spinner";
 
 const ASCII_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
@@ -72,9 +73,9 @@ export function AsciiLoader({
   return (
     <div className={`flex items-center gap-2 ${className || ""}`}>
 
-      <span className="shine-text text-sm truncate max-w-120">
+      <Text as="span" size="sm" tone="inherit" className="shine-text truncate max-w-120">
         {thinkingText ? stripMarkdown(thinkingText) : `${state.word}`}
-      </span>
+      </Text>
     </div>
   );
 }

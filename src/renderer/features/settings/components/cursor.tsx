@@ -1,4 +1,4 @@
-import { Select } from "@/components/ui";
+import { Select, Text } from "@/components/ui";
 import { SettingsSection, SettingsRow } from "./settings-layout";
 import {
   ProviderAccountSection,
@@ -62,7 +62,9 @@ export default function CursorSettings(
             title="Update recommended"
             description="This CLI is too old for model effort controls. Update to enable them."
           >
-            <span className="text-xs text-warning">Outdated</span>
+            <Text as="span" size="xs" tone="warning">
+              Outdated
+            </Text>
           </SettingsRow>
         )}
       </ProviderCliSection>

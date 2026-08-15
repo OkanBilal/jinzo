@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import { toast, Button, Input, Textarea } from "@/components/ui";
+import { Button, Input, Text, Textarea, toast } from "@/components/ui";
 import { useGetAccountQuery, useUpdateAccountMutation } from "@/lib/redux/api";
 import { extractErrorMessage } from "@/lib/extract-error-message";
 import {
@@ -206,11 +206,11 @@ function PersonalizationForm({ initialValues, lastSavedAt, saving, loading, onSu
           </SettingsSection>
 
           <div className="flex items-center justify-between pt-2">
-            <div className="text-xs text-primary-600 dark:text-primary-400">
+            <Text as="div" size="xs" tone="subtle">
               {lastSavedLabel
                 ? `Last saved: ${lastSavedLabel}`
                 : "Not saved yet"}
-            </div>
+            </Text>
             <div className="flex items-center gap-3">
               <Button
                 type="button"

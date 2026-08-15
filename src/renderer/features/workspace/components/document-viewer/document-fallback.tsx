@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Button } from "@/components/ui";
+import { Button, Text } from "@/components/ui";
 import { Document } from "@/components/ui/icons";
 import { useLazyGetAppsForFileQuery } from "@/lib/redux/api";
 import { DOC_VIEWER_LABELS } from "@/lib/document-viewer";
@@ -23,9 +23,9 @@ export function DocumentFallback({ doc }: { doc: DocumentViewerDoc }) {
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center bg-primary dark:bg-primary-900">
       <Document className="size-10 text-primary-400" />
-      <div className="text-sm text-primary-700">
+      <Text as="div" tone="muted">
         Inline preview isn’t available for this {label}.
-      </div>
+      </Text>
       <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
         {handlerApps.slice(0, 3).map((app) => (
           <Button

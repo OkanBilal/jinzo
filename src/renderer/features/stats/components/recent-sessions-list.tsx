@@ -48,12 +48,15 @@ export default function RecentSessionsList({ sessions }: RecentSessionsListProps
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-3 shrink-0 text-primary-600 dark:text-primary-400">
+            {/* Metadata, so it sits a stop below the run's own title. The tone
+                belongs on each `Caption` — one on this row would never reach
+                them, since `Caption` colours itself. */}
+            <div className="flex items-center gap-3 shrink-0">
               {s.durationMs !== null && (
-                <Caption>{formatDurationMs(s.durationMs)}</Caption>
+                <Caption tone="subtle">{formatDurationMs(s.durationMs)}</Caption>
               )}
               {s.totalCostUsd !== null && s.totalCostUsd > 0 && (
-                <Caption>{formatCostUSD(s.totalCostUsd)}</Caption>
+                <Caption tone="subtle">{formatCostUSD(s.totalCostUsd)}</Caption>
               )}
             </div>
           </div>

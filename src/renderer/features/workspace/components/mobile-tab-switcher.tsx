@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
 import DropdownWrapper from "@/components/ui/dropdown-wrapper";
-import { Button } from "@/components/ui";
+import { Button, Text } from "@/components/ui";
 import { ArrowUp, Check, Close, Plus } from "@/components/ui/icons";
 import { useClickOutside } from "@/hooks/use-click-outside";
 
@@ -58,9 +58,9 @@ export function MobileTabSwitcher({
           {active?.label ?? "Tabs"}
         </span>
         {tabs.length > 1 && (
-          <span className="shrink-0 rounded-full bg-primary-200/60 px-1.5 py-0.5 text-xxs text-primary-600 dark:bg-primary-800/60 dark:text-primary-400">
+          <Text as="span" size="xxs" tone="subtle" className="shrink-0 rounded-full bg-primary-200/60 px-1.5 py-0.5 dark:bg-primary-800/60">
             {tabs.length}
-          </span>
+          </Text>
         )}
         <ArrowUp className="size-3.5 shrink-0 rotate-180" />
       </Button>
@@ -72,9 +72,9 @@ export function MobileTabSwitcher({
             if (items.length === 0) return null;
             return (
               <div key={group}>
-                <div className="px-2.5 pt-2.5 pb-1 text-xxs uppercase tracking-wide text-primary-600 dark:text-primary-400">
+                <Text as="div" size="xxs" tone="subtle" className="px-2.5 pt-2.5 pb-1 uppercase tracking-wide">
                   {group}
-                </div>
+                </Text>
                 {items.map((t) => {
                   const isActive = t.id === activeTab;
                   return (

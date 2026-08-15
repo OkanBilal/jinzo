@@ -34,7 +34,7 @@ import { classifyRunErrorKind } from "../../../../shared/run-errors";
 import { ArrowUp, Fork } from "@/components/ui/icons";
 import { useGetAppSettingsQuery } from "@/lib/redux/api";
 import { isDocumentRenderImage } from "@/lib/document-viewer";
-import { Button, CopyButton, Tooltip } from "@/components/ui";
+import { Button, CopyButton, Text, Tooltip } from "@/components/ui";
 import { formatCostFromMicros, formatDurationMs } from "@/lib/format";
 import { PromptSuggestionChips } from "./prompt-suggestion-chips";
 
@@ -47,10 +47,10 @@ function formatNumber(n: number): string {
 function ModelUsageBlock({ modelName, usage }: { modelName: string; usage: ModelUsageEntry }) {
   return (
     <div className="space-y-0.5">
-      <div className="text-xxs opacity-70 flex justify-between gap-4">
+      <Text as="div" size="xxs" tone="inherit" className="opacity-70 flex justify-between gap-4">
         <span>{modelName}</span>
         <span>${usage.costUSD.toFixed(4)}</span>
-      </div>
+      </Text>
       <div className="flex justify-between gap-4">
         <span className="opacity-60">Input</span>
         <span>{formatNumber(usage.inputTokens)}</span>
@@ -81,7 +81,7 @@ function UsageTooltipContent({ turn }: { turn: RunTurn }) {
   const hasPerModel = modelEntries.length > 0;
 
   return (
-    <div className="text-xs  space-y-1 min-w-44">
+    <Text as="div" size="xs" tone="inherit" className="space-y-1 min-w-44">
 
       {hasPerModel ? (
         <>
@@ -95,7 +95,7 @@ function UsageTooltipContent({ turn }: { turn: RunTurn }) {
       ) : (
         <>
           {turn.model && (
-            <div className="text-xxs opacity-70 mb-1">{turn.model}</div>
+            <Text as="div" size="xxs" tone="inherit" className="opacity-70 mb-1">{turn.model}</Text>
           )}
           <div className="border-t border-current/15 pt-1 space-y-0.5">
             {turn.inputTokens != null && (
@@ -126,12 +126,12 @@ function UsageTooltipContent({ turn }: { turn: RunTurn }) {
         </>
       )}
       {turn.costMicros != null && (
-        <div className="border-t border-current/15 pt-1 flex justify-between gap-4 font-medium">
+        <Text as="div" size="inherit" tone="inherit" weight="medium" className="border-t border-current/15 pt-1 flex justify-between gap-4">
           <span className="opacity-60">Total</span>
           <span>{formatCostFromMicros(turn.costMicros)}</span>
-        </div>
+        </Text>
       )}
-    </div>
+    </Text>
   );
 }
 
@@ -155,7 +155,7 @@ function SessionTimeBar({
   const hasUsage = turn && (turn.inputTokens || turn.outputTokens || turn.cacheReadTokens || turn.cacheWriteTokens || turn.costMicros);
 
   return (
-    <div className="flex items-center gap-2 text-s text-primary-700 dark:text-primary-300  -mt-1">
+    <Text as="div" size="s" tone="muted" className="flex items-center gap-2 -mt-1">
       {hasUsage ? (
         <Tooltip
           content={<UsageTooltipContent turn={turn} />}
@@ -189,7 +189,7 @@ function SessionTimeBar({
           </Button>
         </>
       )}
-    </div>
+    </Text>
   );
 }
 
@@ -609,7 +609,7 @@ export function WorkspaceEvents({
   const showEmpty = isRunTabActive && currentEvents.length === 0;
 
   return (
-    <div className=" text-sm h-full flex flex-col">
+    <Text as="div" size="sm" tone="inherit" className="h-full flex flex-col">
       {/* Content area */}
       <div className="flex-1 min-h-0 overflow-hidden relative">
         {isNewRunActive && (
@@ -700,6 +700,6 @@ export function WorkspaceEvents({
           </>
         )}
       </div>
-    </div>
+    </Text>
   );
 }

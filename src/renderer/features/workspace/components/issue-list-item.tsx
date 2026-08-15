@@ -1,7 +1,7 @@
 import { Plus } from "@/components/ui/icons";
 import { parseLabels } from "@/lib/label-colors";
 import { ProviderIcon } from "./provider-icon";
-import { Button } from "@/components/ui";
+import { Button, Text } from "@/components/ui";
 
 interface IssueData {
   issue: {
@@ -62,9 +62,9 @@ export function IssueListItem({
 
       {/* Content - title on top, labels below */}
       <div className="flex-1 min-w-0 flex flex-col justify-center">
-        <span className="text-s text-primary-900 dark:text-primary-100 font-medium truncate">
+        <Text as="span" size="s" tone="default" weight="medium" className="truncate">
           {title}
-        </span>
+        </Text>
 
         {labels.length > 0 && (
           <div className="flex items-center gap-1 mt-0.5 flex-wrap">

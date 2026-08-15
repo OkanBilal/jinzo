@@ -1,4 +1,5 @@
 import { Apps, Asana, Gitlab, Jira, Trello } from "@/components/ui/icons";
+import { Text } from "@/components/ui";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
 import Sentry from "@/components/ui/icons/sentry";
@@ -34,9 +35,9 @@ export function ProviderIcon({
   if (!Icon) {
     if (fallback === "text") {
       return (
-        <span className="text-xs font-medium uppercase shrink-0">
+        <Text as="span" size="xs" tone="inherit" weight="medium" className="uppercase shrink-0">
           {provider.slice(0, 2)}
-        </span>
+        </Text>
       );
     }
     return (

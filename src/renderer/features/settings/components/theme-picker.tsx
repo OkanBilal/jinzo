@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Button, Select } from "@/components/ui";
+import { Button, Select, Text } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { defaultTheme } from "@/lib/theme";
 import { useActiveSpace } from "@/hooks/use-active-space";
@@ -133,16 +133,19 @@ export function ThemePreviewCard({
           </div>
         )}
       </div>
-      <span
+      <Text
+        as="span"
+        size="s"
+        weight="medium"
+        tone={isSelected ? "default" : "subtle"}
         className={cn(
-          "text-s font-medium transition-colors",
-          isSelected
-            ? "text-primary-900 dark:text-primary-100"
-            : "text-primary-600 dark:text-primary-400 group-hover:text-primary-700 dark:group-hover:text-primary-300",
+          "transition-colors",
+          !isSelected &&
+            "group-hover:text-primary-700 dark:group-hover:text-primary-300",
         )}
       >
         {label}
-      </span>
+      </Text>
     </Button>
   );
 }

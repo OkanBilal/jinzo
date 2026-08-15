@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Search } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse, ToolOutputBody } from "./_shared";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader, ToolOutputBody } from "./_shared";
 import { coerceToolOutput } from "../../utils/parse-tool-content";
 
 export interface ToolSearchParams {
@@ -25,7 +25,7 @@ export function ToolSearchDisplay({ output, isCompact = false }: { params: ToolS
         isCompact={isCompact}
       >
         {matches.length > 0 && (
-          <span className="text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className={TOOL_ROW_TEXT}>
             {matches.length} match{matches.length !== 1 ? "es" : ""}
             {total > 0 && ` / ${total} total`}
           </span>

@@ -4,6 +4,7 @@ import {
   Heading3,
   Body,
   Muted,
+  Text,
   Button,
   CopyButton,
   toast,
@@ -213,7 +214,9 @@ function InstalledPluginShelf({
 
   return (
     <section className="mb-8" aria-label="Installed plugins">
-      <Body className="font-medium mb-3">Installed</Body>
+      <Body weight="medium" className="mb-3">
+        Installed
+      </Body>
       <HorizontalFadeScroller contentClassName="flex gap-3 w-max px-0.5 pr-10">
         {isLoading
           ? Array.from({ length: 7 }, (_, index) => (
@@ -325,28 +328,43 @@ function PluginCard({
       <PluginLogo plugin={plugin} size="md" />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-sm font-medium text-primary-900 dark:text-primary-100 truncate">
+          <Text as="span" weight="medium" className="truncate">
             {name}
-          </span>
+          </Text>
           {plugin.installed && !plugin.enabled && (
-            <span className="shrink-0 text-t px-1.5 py-0.5 rounded-full bg-primary-200/60 dark:bg-primary-800/40 text-primary-600 dark:text-primary-400">
+            <Text
+              as="span"
+              size="t"
+              tone="subtle"
+              className="shrink-0 px-1.5 py-0.5 rounded-full bg-primary-200/60 dark:bg-primary-800/40"
+            >
               Disabled
-            </span>
+            </Text>
           )}
           {plugin.updateAvailable && (
-            <span className="shrink-0 text-t px-1.5 py-0.5 rounded-full bg-warning/15 text-warning">
+            <Text
+              as="span"
+              size="t"
+              tone="warning"
+              className="shrink-0 px-1.5 py-0.5 rounded-full bg-warning/15"
+            >
               Update
-            </span>
+            </Text>
           )}
         </div>
-        <div className="flex items-center gap-2 text-xs text-primary-600 dark:text-primary-400 min-w-0">
+        <Text
+          as="div"
+          size="xs"
+          tone="subtle"
+          className="flex items-center gap-2 min-w-0"
+        >
           <span className="truncate">{description}</span>
           {typeof plugin.installs === "number" && plugin.installs > 0 && (
             <span className="shrink-0 tabular-nums opacity-70">
               {formatInstalls(plugin.installs)} installs
             </span>
           )}
-        </div>
+        </Text>
       </div>
       <Button
         type="button"
@@ -578,34 +596,44 @@ function PluginDetail({
             {groupAppsByCategory(detail.apps).map(({ category, apps: categoryApps }) => (
               <Fragment key={category ?? "uncategorized"}>
                 {category && (
-                  <div className="px-4 pt-2.5 pb-1 text-xs font-medium text-primary-600 dark:text-primary-400">
+                  <Text
+                    as="div"
+                    size="xs"
+                    tone="subtle"
+                    weight="medium"
+                    className="px-4 pt-2.5 pb-1"
+                  >
                     {category}
-                  </div>
+                  </Text>
                 )}
                 {categoryApps.map((app) => (
                   <div key={app.id} className="flex items-center gap-3 px-4 py-3">
                     <AppIncludeIcon app={app} />
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-primary-900 dark:text-primary-100">
-                        {app.name || name}{" "}
-                        <span className="text-xs font-normal text-primary-600 dark:text-primary-400 ml-1">
-                          App
-                        </span>
-                      </div>
-                      {app.description && (
-                        <div className="text-xs text-primary-600 dark:text-primary-400 truncate">
-                          {app.description}
-                        </div>
-                      )}
+                      <IncludeText
+                        name={app.name || name}
+                        kind="App"
+                        description={app.description}
+                      />
                     </div>
                 {app.isEnabled === false ? (
-                  <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-primary-200/60 dark:bg-primary-800/20 text-primary-600 dark:text-primary-400">
+                  <Text
+                    as="span"
+                    size="xs"
+                    tone="subtle"
+                    className="shrink-0 px-2 py-0.5 rounded-full bg-primary-200/60 dark:bg-primary-800/20"
+                  >
                     Disabled
-                  </span>
+                  </Text>
                 ) : app.isAccessible === true ? (
-                  <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-success/15 text-success">
+                  <Text
+                    as="span"
+                    size="xs"
+                    tone="success"
+                    className="shrink-0 px-2 py-0.5 rounded-full bg-success/15"
+                  >
                     Connected
-                  </span>
+                  </Text>
                 ) : app.installUrl ? (
                   <Button
                     variant="icon"
@@ -630,34 +658,23 @@ function PluginDetail({
                   <Sparkles className="size-4 text-primary-800 dark:text-primary" />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-sm font-medium text-primary-900 dark:text-primary-100">
-                    {skill.displayName || formatIncludeName(skill.name)}{" "}
-                    <span className="text-xs font-normal text-primary-600 dark:text-primary-400 ml-1">
-                      Skill
-                    </span>
-                  </div>
-                  {(skill.shortDescription || skill.description) && (
-                    <div className="text-xs text-primary-600 dark:text-primary-400 truncate">
-                      {skill.shortDescription || skill.description}
-                    </div>
-                  )}
+                  <IncludeText
+                    name={skill.displayName || formatIncludeName(skill.name)}
+                    kind="Skill"
+                    description={skill.shortDescription || skill.description}
+                  />
                 </div>
               </div>
             ))}
             {detail.mcpServers.map((server) => (
               <div key={server} className="flex items-center gap-3 px-4 py-3">
                 <div className="size-8 rounded-lg bg-primary-200/50 dark:bg-primary-700/30 flex items-center justify-center shrink-0">
-                  <span className="text-xs text-primary-600 dark:text-primary-400">
+                  <Text as="span" size="xs" tone="subtle">
                     MCP
-                  </span>
+                  </Text>
                 </div>
                 <div className="min-w-0">
-                  <div className="text-sm font-medium text-primary-900 dark:text-primary-100">
-                    {server}{" "}
-                    <span className="text-xs font-normal text-primary-600 dark:text-primary-400 ml-1">
-                      MCP Server
-                    </span>
-                  </div>
+                  <IncludeText name={server} kind="MCP Server" />
                 </div>
               </div>
             ))}
@@ -671,12 +688,16 @@ function PluginDetail({
           <Heading3 className="mb-3">Capabilities</Heading3>
           <div className="flex flex-wrap gap-2">
             {iface.capabilities.map((cap) => (
-              <span
+              <Text
                 key={cap}
-                className="px-3 py-1 rounded-full text-xs font-medium bg-primary-200/50 dark:bg-primary-700/30 text-primary-700 dark:text-primary-300"
+                as="span"
+                size="xs"
+                tone="muted"
+                weight="medium"
+                className="px-3 py-1 rounded-full bg-primary-200/50 dark:bg-primary-700/30"
               >
                 {cap}
-              </span>
+              </Text>
             ))}
           </div>
         </div>
@@ -776,12 +797,43 @@ function ExternalLinkValue({ url, label }: { url: string; label?: string }) {
   );
 }
 
+/**
+ * One entry in a plugin's "Includes" list. Apps, skills, and MCP servers each
+ * rendered this by hand; the name, its kind, and the description are one
+ * typographic decision, not three.
+ */
+function IncludeText({
+  name,
+  kind,
+  description,
+}: {
+  name: string;
+  kind: string;
+  description?: string | null;
+}) {
+  return (
+    <>
+      <Text as="div" weight="medium">
+        {name}{" "}
+        <Text as="span" size="xs" tone="subtle" weight="normal" className="ml-1">
+          {kind}
+        </Text>
+      </Text>
+      {description && (
+        <Text as="div" size="xs" tone="subtle" className="truncate">
+          {description}
+        </Text>
+      )}
+    </>
+  );
+}
+
 function PromptRow({ prompt }: { prompt: string }) {
   return (
     <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-100/50 dark:bg-primary-800/30 group">
-      <span className="flex-1 text-sm text-primary-700 dark:text-primary-300">
+      <Text as="span" tone="muted" className="flex-1">
         {prompt}
-      </span>
+      </Text>
       <CopyButton
         text={prompt}
         tooltip="Copy"
@@ -796,12 +848,12 @@ function PromptRow({ prompt }: { prompt: string }) {
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between px-4 py-3">
-      <span className="text-sm text-primary-600 dark:text-primary-400">
+      <Text as="span" tone="subtle">
         {label}
-      </span>
-      <span className="text-sm font-medium text-primary-900 dark:text-primary-100">
+      </Text>
+      <Text as="span" weight="medium">
         {value}
-      </span>
+      </Text>
     </div>
   );
 }
@@ -1134,7 +1186,7 @@ export default function ProviderPlugins({
       {/* Featured / Popular — horizontal rail in curated order */}
       {highlight.length > 0 && !categoryFilter && (
         <div className="my-12">
-          <Body className=" font-medium mb-3">
+          <Body weight="medium" className="mb-3">
             {highlightLabel}
           </Body>
           <HorizontalFadeScroller contentClassName="grid grid-rows-2 grid-flow-col gap-3 w-max">
@@ -1159,7 +1211,7 @@ export default function ProviderPlugins({
       {/* Grouped by category */}
       {grouped.map(([category, plugins]) => (
         <div key={category} className="mb-12">
-          <Body className=" font-medium mb-3">
+          <Body weight="medium" className="mb-3">
             {formatCategory(category)}
           </Body>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-8">

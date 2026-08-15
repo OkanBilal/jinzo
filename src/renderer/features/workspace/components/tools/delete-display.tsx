@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Trash } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse, ToolOutputBody } from "./_shared";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader, ToolOutputBody } from "./_shared";
 import { coerceToolOutput } from "../../utils/parse-tool-content";
 import { shortFileName } from "../../utils/path-utils";
 
@@ -63,7 +63,7 @@ export function DeleteDisplay({
         onToggle={() => setIsExpanded((v) => !v)}
         isCompact={isCompact}
       >
-        <code className="text-primary-500 font-sans truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+        <code className={`font-sans truncate ${TOOL_ROW_TEXT}`}>
           {displayPath || fullPath || "file"}
         </code>
       </ToolHeader>

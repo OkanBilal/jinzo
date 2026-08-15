@@ -6,7 +6,7 @@ import { DIFF_TYPOGRAPHY_STYLE, patchDiffOptions } from "@/lib/diff-style";
 import { normalizePatchForPatchDiff } from "../../utils/patch-utils";
 import { useOpenFileInEditor } from "../../hooks/use-open-file-in-editor";
 import { FileIconComponent } from "../file-explorer/components/file-icon";
-import { ToolHeader, ToolCollapse } from "./_shared";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader } from "./_shared";
 
 export interface ApplyPatchParams {
   /** Copilot CLI's apply_patch passes the whole `*** Begin Patch …` envelope as a string. */
@@ -83,7 +83,7 @@ export function ApplyPatchDisplay({
             e.stopPropagation();
             openFile(filePath);
           }}
-          className={`inline-flex items-center gap-1 min-w-0 text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary ${filePath ? "cursor-pointer hover:underline hover:text-primary-950 hover:dark:text-primary" : ""}`}
+          className={`inline-flex items-center gap-1 min-w-0 ${filePath ? "cursor-pointer hover:underline hover:text-primary-950 hover:dark:text-primary" : ""} ${TOOL_ROW_TEXT}`}
         >
           {filePath && (
             <FileIconComponent

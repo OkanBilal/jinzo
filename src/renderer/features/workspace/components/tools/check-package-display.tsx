@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Mains } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse } from "./_shared";
-import { Tiny } from "@/components/ui";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader } from "./_shared";
+import { Text, Tiny } from "@/components/ui";
 
 interface PackageInfo {
   name: string;
@@ -47,16 +47,16 @@ export function CheckPackageDisplay({
         isCompact={isCompact}
       >
         {blockedCount > 0 && (
-          <span className="text-danger text-xs font-medium shrink-0">
+          <Text as="span" size="xs" tone="danger" weight="medium" className="shrink-0">
             {blockedCount} blocked
-          </span>
+          </Text>
         )}
         {allPassed && (
-          <span className="text-success text-xs font-medium shrink-0">
+          <Text as="span" size="xs" tone="success" weight="medium" className="shrink-0">
             passed
-          </span>
+          </Text>
         )}
-        <span className="text-primary-600 dark:text-primary-400 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+        <span className={`truncate ${TOOL_ROW_TEXT}`}>
           {summaryText}
         </span>
       </ToolHeader>
@@ -75,16 +75,16 @@ export function CheckPackageDisplay({
                   }`}
                 >
                   <span>{r.blocked ? "✘" : "✔"}</span>
-                  <span className="font-medium">{r.name}</span>
+                  <Text as="span" size="inherit" tone="inherit" weight="medium">{r.name}</Text>
                   {r.score && (
-                    <span className="text-primary-600 dark:text-primary-400">
+                    <Text as="span" size="inherit" tone="subtle">
                       score: {r.score}
-                    </span>
+                    </Text>
                   )}
                   {r.reason && (
-                    <span className="text-primary-600 dark:text-primary-400 truncate">
+                    <Text as="span" size="inherit" tone="subtle" className="truncate">
                       {r.reason}
-                    </span>
+                    </Text>
                   )}
                 </div>
               ))

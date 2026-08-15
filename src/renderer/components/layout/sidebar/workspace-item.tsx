@@ -8,6 +8,7 @@ import {
 import NumberFlow from "@number-flow/react";
 import {
   Muted,
+  Text,
   Button,
   DropdownMenu,
   DropdownMenuItem,
@@ -197,11 +198,9 @@ export default function WorkspaceItem({
                 {projectIcon ?? (
                   <Branch className="size-3.5 text-primary-800 dark:text-primary-200" />
                 )}
-              </span><span
-                className="truncate text-s text-primary-950  dark:text-primary"
-              >
+              </span><Text as="span" size="s" tone="contrast" className="truncate">
                   {name}
-                </span></>
+                </Text></>
             )}
 
           </div>
@@ -231,14 +230,18 @@ export default function WorkspaceItem({
                   position="top"
                 >
                   <Muted
-                    className={`text-xs text-warning truncate ${grouping === "status" ? "-ml-1.5" : ""}`}
+                    size="xs"
+                    tone="warning"
+                    className={`truncate ${grouping === "status" ? "-ml-1.5" : ""}`}
                   >
                     Folder missing
                   </Muted>
                 </Tooltip>
               ) : branch && !isRenamingBranch ? (
                 <Muted
-                  className={`text-xs text-primary-800 dark:text-primary-200 truncate ${grouping === "status" ? "-ml-1.5" : ""}`}
+                  size="xs"
+                  tone="secondary"
+                  className={`truncate ${grouping === "status" ? "-ml-1.5" : ""}`}
                 >
                   {branch}
                 </Muted>
@@ -276,7 +279,12 @@ export default function WorkspaceItem({
       {/* Diff stats (visible by default, hidden on hover) / Options button (hidden by default, visible on hover) */}
       <div className="absolute right-1.5 top-1/2 -translate-y-1/2 z-(--z-base)">
         {(insertions || deletions) && (
-          <span className="flex items-center gap-1 text-t font-mono tabular-nums group-hover:opacity-0 transition-opacity pointer-events-none">
+          <Text
+            as="span"
+            size="t"
+            tone="inherit"
+            className="flex items-center gap-1 font-mono tabular-nums group-hover:opacity-0 transition-opacity pointer-events-none"
+          >
             {insertions && (
               <NumberFlow
                 value={parseInt(insertions)}
@@ -291,7 +299,7 @@ export default function WorkspaceItem({
                 className="text-danger"
               />
             )}
-          </span>
+          </Text>
         )}
         <Button
           tooltip="More options"

@@ -11,13 +11,14 @@ import {
   type PullRequestSummary,
 } from "@/lib/redux/api";
 import {
+  Body,
   Button,
   DropdownWrapper,
   Input,
   SegmentedTabs,
+  Text,
 } from "@/components/ui";
 import { Close, Layers, Search, Trash } from "@/components/ui/icons";
-import { Body } from "@/components/ui/text";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import {
   FilterChoiceSection,
@@ -205,7 +206,9 @@ export function PullRequestsPanel({
   if (availabilityLoading) {
     return (
       <div className="flex items-center justify-center py-16 px-6">
-        <span className="text-xs shine-text">Checking GitHub access...</span>
+        <Text as="span" size="xs" tone="inherit" className="shine-text">
+          Checking GitHub access...
+        </Text>
       </div>
     );
   }
@@ -213,11 +216,11 @@ export function PullRequestsPanel({
   if (!availability?.connected || availability.error) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-16 px-6 text-center">
-        <Body className="text-s text-primary-900 dark:text-primary-100 font-medium">
+        <Body size="s" weight="medium">
           {availability?.error ?? "GitHub is not connected"}
         </Body>
         {!availability?.error && (
-          <Body className="text-xs text-primary-700 dark:text-primary-300 max-w-90">
+          <Body size="xs" tone="muted" className="max-w-90">
             Connect GitHub to see pull requests you authored, are reviewing, or
             were asked to review.
           </Body>
@@ -332,7 +335,7 @@ export function PullRequestsPanel({
       <div className="flex-1 min-h-0 overflow-y-auto noscrollbar px-6 pt-3 pb-16 mask-[linear-gradient(to_bottom,transparent,black_1.75rem)]">
         {isError ? (
           <div className="flex flex-col items-center gap-2 py-10">
-            <Body className="text-xs text-primary-800 dark:text-primary-200">
+            <Body size="xs" tone="secondary">
               Unable to load pull requests.
             </Body>
             <Button variant="subtle" onClick={() => refetch()}>
@@ -341,11 +344,13 @@ export function PullRequestsPanel({
           </div>
         ) : isFetching && items.length === 0 ? (
           <div className="flex items-center justify-center py-10">
-            <span className="text-xs shine-text">Loading pull requests...</span>
+            <Text as="span" size="xs" tone="inherit" className="shine-text">
+              Loading pull requests...
+            </Text>
           </div>
         ) : items.length === 0 ? (
           <div className="flex items-center justify-center py-10">
-            <Body className="text-xs text-primary-800 dark:text-primary-200">
+            <Body size="xs" tone="secondary">
               No pull requests match these filters.
             </Body>
           </div>

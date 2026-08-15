@@ -1,4 +1,5 @@
 import { coerceToolOutput } from "../../utils/parse-tool-content";
+import { Text } from "@/components/ui";
 
 interface ToolInputPreviewProps {
   toolName: string;
@@ -80,25 +81,25 @@ function str(val: unknown, maxLen = 300): string {
 
 function Mono({ children }: { children: React.ReactNode }) {
   return (
-    <span className="font-mono text-primary-700 dark:text-primary-300 break-all">
+    <Text as="span" size="inherit" tone="muted" className="font-mono break-all">
       {children}
-    </span>
+    </Text>
   );
 }
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <span className="text-primary-600 dark:text-primary-400 text-xs capitalize tracking-wide">
+    <Text as="span" size="xs" tone="subtle" className="capitalize tracking-wide">
       {children}
-    </span>
+    </Text>
   );
 }
 
 function CodeBlock({ children }: { children: React.ReactNode }) {
   return (
-    <pre className="text-primary-700 dark:text-primary-300 whitespace-pre-wrap break-all px-3 py-2 mt-1">
+    <Text as="pre" size="inherit" tone="muted" className="whitespace-pre-wrap break-all px-3 py-2 mt-1">
       {children}
-    </pre>
+    </Text>
   );
 }
 
@@ -122,7 +123,7 @@ function DiffView({ diff, oldStr, newStr }: { diff?: string; oldStr?: string; ne
   if (lines.length === 0) return null;
 
   return (
-    <div className="text-xs leading-relaxed font-mono   max-h-40 overflow-y-auto noscrollbar">
+    <Text as="div" size="xs" tone="inherit" className="leading-relaxed font-mono max-h-40 overflow-y-auto noscrollbar">
       {lines.map((l, lineNum) => (
         <div
           key={`${lineNum}:${l.type}`}
@@ -137,7 +138,7 @@ function DiffView({ diff, oldStr, newStr }: { diff?: string; oldStr?: string; ne
           {l.prefix}{l.text}
         </div>
       ))}
-    </div>
+    </Text>
   );
 }
 
@@ -149,15 +150,15 @@ const RENDERERS: Record<string, Renderer> = {
   Bash: (input) => (
     <>
       {!!input.description && (
-        <div className="px-3 pt-2 text-primary-600 dark:text-primary-400 leading-relaxed whitespace-pre-wrap wrap-break-word">
+        <Text as="div" size="inherit" tone="subtle" className="px-3 pt-2 leading-relaxed whitespace-pre-wrap wrap-break-word">
           {str(input.description, 500)}
-        </div>
+        </Text>
       )}
       <CodeBlock>{str(input.command, 1200)}</CodeBlock>
       {!!input.timeout && (
-        <div className="px-3 pb-2 text-primary-500 text-xxs">
+        <Text as="div" size="xxs" tone="faint" className="px-3 pb-2">
           timeout: {String(input.timeout)}ms
-        </div>
+        </Text>
       )}
     </>
   ),
@@ -169,11 +170,11 @@ const RENDERERS: Record<string, Renderer> = {
         <Mono>{basenameDisplay(str(input.file_path))}</Mono>
       </div>
       {!!(input.offset || input.limit) && (
-        <div className="text-primary-500 text-xxs">
+        <Text as="div" size="xxs" tone="faint">
           {input.offset ? `from line ${input.offset}` : ""}
           {input.offset && input.limit ? ", " : ""}
           {input.limit ? `${input.limit} lines` : ""}
-        </div>
+        </Text>
       )}
     </>
   ),
@@ -250,9 +251,9 @@ const RENDERERS: Record<string, Renderer> = {
   Sql: (input) => (
     <>
       {!!input.description && (
-        <div className="px-3 pt-2 text-primary-600 dark:text-primary-400 leading-relaxed whitespace-pre-wrap wrap-break-word">
+        <Text as="div" size="inherit" tone="subtle" className="px-3 pt-2 leading-relaxed whitespace-pre-wrap wrap-break-word">
           {str(input.description, 300)}
-        </div>
+        </Text>
       )}
       <CodeBlock>{str(input.query, 1200)}</CodeBlock>
     </>
@@ -305,9 +306,9 @@ const RENDERERS: Record<string, Renderer> = {
           </div>
         )}
         {!!input.output_mode && (
-          <div className="text-primary-500 text-xxs">
+          <Text as="div" size="xxs" tone="faint">
             {str(input.output_mode)}
-          </div>
+          </Text>
         )}
       </>
     );
@@ -333,9 +334,9 @@ const RENDERERS: Record<string, Renderer> = {
         <Label>url</Label> <Mono>{str(input.url)}</Mono>
       </div>
       {!!input.prompt && (
-        <div className="text-primary-600 dark:text-primary-400 mt-1">
+        <Text as="div" size="inherit" tone="subtle" className="mt-1">
           {str(input.prompt)}
-        </div>
+        </Text>
       )}
     </>
   ),
@@ -352,15 +353,15 @@ const RENDERERS: Record<string, Renderer> = {
       {!!input.subagent_type && (
         <div>
           <Label>agent</Label>{" "}
-          <span className="text-primary-700 dark:text-primary-300">
+          <Text as="span" size="inherit" tone="muted">
             {str(input.subagent_type)}
-          </span>
+          </Text>
         </div>
       )}
       {!!input.description && (
-        <div className="text-primary-600 dark:text-primary-400">
+        <Text as="div" size="inherit" tone="subtle">
           {str(input.description)}
-        </div>
+        </Text>
       )}
     </>
   ),
@@ -368,33 +369,33 @@ const RENDERERS: Record<string, Renderer> = {
    Plan: (input) => (
     <div className="px-3 py-2 space-y-1">
       {!!input.name && (
-        <div className="text-primary-800 dark:text-primary-200 font-medium text-sm">
+        <Text as="div" size="sm" tone="secondary" weight="medium">
           {str(input.name)}
-        </div>
+        </Text>
       )}
       {!!input.overview && (
-        <div className="text-primary-600 dark:text-primary-400">
+        <Text as="div" size="inherit" tone="subtle">
           {str(input.overview, 500)}
-        </div>
+        </Text>
       )}
       {!!input.plan && (
-        <pre className="text-primary-700 dark:text-primary-300 whitespace-pre-wrap wrap-break-word leading-relaxed mt-1">
+        <Text as="pre" size="inherit" tone="muted" className="whitespace-pre-wrap wrap-break-word leading-relaxed mt-1">
           {str(input.plan, 2000)}
-        </pre>
+        </Text>
       )}
     </div>
   ),
 
   AskUser: (input) => (
-    <div className="px-3 py-2 text-primary-700 dark:text-primary-300">
+    <Text as="div" size="inherit" tone="muted" className="px-3 py-2">
       {str(input.question, 500)}
-    </div>
+    </Text>
   ),
 
   Ask_user: (input) => (
-    <div className="px-3 py-2 text-primary-700 dark:text-primary-300">
+    <Text as="div" size="inherit" tone="muted" className="px-3 py-2">
       {str(input.question, 500)}
-    </div>
+    </Text>
   ),
 
   NotebookEdit: (input) => (
@@ -406,9 +407,9 @@ const RENDERERS: Record<string, Renderer> = {
       {!!input.edit_mode && (
         <div>
           <Label>mode</Label>{" "}
-          <span className="text-primary-700 dark:text-primary-300">
+          <Text as="span" size="inherit" tone="muted">
             {str(input.edit_mode)}
-          </span>
+          </Text>
         </div>
       )}
       {!!input.new_source && (
@@ -458,9 +459,9 @@ function renderFallback(input: Record<string, unknown>): React.ReactNode {
   try {
     const s = JSON.stringify(input, null, 2);
     return (
-      <pre className="text-primary-600 dark:text-primary-400 whitespace-pre-wrap break-all">
+      <Text as="pre" size="inherit" tone="subtle" className="whitespace-pre-wrap break-all">
         {s.length > 500 ? s.slice(0, 500) + "\n…" : s}
-      </pre>
+      </Text>
     );
   } catch {
     return null;

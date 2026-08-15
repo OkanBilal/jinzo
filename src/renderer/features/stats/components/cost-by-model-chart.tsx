@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ChartCard } from "@/components/ui";
+import { ChartCard, Text } from "@/components/ui";
 import { Cost } from "@/components/ui/icons";
 import type { CostByModel } from "@/lib/redux/api";
 
@@ -54,9 +54,14 @@ export default function CostByModelChart({ data }: CostByModelChartProps) {
           const pct = maxCost > 0 ? (d.costUsd / maxCost) * 100 : 0;
           return (
             <div key={d.model} className="flex items-center gap-3" title={`${d.model}: $${d.costUsd.toFixed(2)} · ${d.runs} runs`}>
-              <span className="text-xs text-primary-600 dark:text-primary-400 w-34 shrink-0 truncate">
+              <Text
+                as="span"
+                size="xs"
+                tone="subtle"
+                className="w-34 shrink-0 truncate"
+              >
                 {displayModel(d.model)}
-              </span>
+              </Text>
               <div className="flex-1 h-5 rounded-sm overflow-hidden">
                 <div
                   className="h-full rounded-sm transition-[width] ease-out"
@@ -68,15 +73,19 @@ export default function CostByModelChart({ data }: CostByModelChartProps) {
                   }}
                 />
               </div>
-              <span
-                className="text-xs text-primary-600 dark:text-primary-400 w-16 text-right shrink-0 tabular-nums transition-opacity duration-300"
+              <Text
+                as="span"
+                size="xs"
+                tone="subtle"
+                align="right"
+                className="w-16 shrink-0 tabular-nums transition-opacity duration-300"
                 style={{
                   opacity: animated ? 1 : 0,
                   transitionDelay: `${i * 80 + 200}ms`,
                 }}
               >
                 ${d.costUsd.toFixed(2)}
-              </span>
+              </Text>
             </div>
           );
         })}

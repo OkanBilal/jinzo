@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Body, Button, Caption, DropdownMenu, DropdownMenuItem, Text } from "@/components/ui";
+import { Button, Caption, DropdownMenu, DropdownMenuItem, Text } from "@/components/ui";
 
 interface NewButtonProps {
   onClick: () => void;
@@ -75,12 +75,11 @@ export default function NewButton({
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
         {icon}
-        <Body className="text-s font-normal">
+        {/* Size comes from `Button` (`text-s`); only the weight is overridden. */}
+        <Text as="span" size="inherit" weight="normal">
           {actionPrefix} {title}
-        </Body>
-        <Caption className="ml-auto">
-          ⌘ N
-        </Caption>
+        </Text>
+        <Caption className="ml-auto">⌘ N</Caption>
       </Button>
 
       {dropdownItems && (
@@ -99,12 +98,10 @@ export default function NewButton({
               }}
             >
               {item.icon}
-              <Text className="flex-1 text-left text-s">{item.label}</Text>
-              {item.shortcutLabel && (
-                <Caption className="">
-                  {item.shortcutLabel}
-                </Caption>
-              )}
+              {/* `DropdownMenuItem` owns the row's size, colour, and hover
+                  colour — the label inherits all three. */}
+              <span className="flex-1 text-left">{item.label}</span>
+              {item.shortcutLabel && <Caption>{item.shortcutLabel}</Caption>}
             </DropdownMenuItem>
           ))}
         </DropdownMenu>

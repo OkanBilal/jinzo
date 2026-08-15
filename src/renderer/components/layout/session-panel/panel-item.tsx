@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { ArrowUp, Refresh } from "@/components/ui/icons";
-import { Button } from "@/components/ui";
+import { Button, Text } from "@/components/ui";
 
 /**
  * One row of the session panel. Every line in the panel — the change summary,
@@ -78,11 +78,23 @@ export function PanelItem({
       {loading ? <Refresh className="size-4 animate-spin" /> : icon}
     </span>
   );
-  const labelSlot = <span className="flex-1 truncate font-medium">{label}</span>;
+  // Size and colour come from the row (`ROW_TEXT`); the label only decides that
+  // it is the emphasised half of the row.
+  const labelSlot = (
+    <Text
+      as="span"
+      size="inherit"
+      tone="inherit"
+      weight="medium"
+      className="flex-1 truncate"
+    >
+      {label}
+    </Text>
+  );
   const trailingSlot = trailing ? (
-    <span className="shrink-0 text-xs text-primary-400 tabular-nums">
+    <Text as="span" size="xs" tone="subtle" className="shrink-0 tabular-nums">
       {trailing}
-    </span>
+    </Text>
   ) : null;
   const chevronSlot = expandable ? (
     <ArrowUp
@@ -134,13 +146,16 @@ export function PanelItem({
           // Stacked rather than swapped: the action sits over the trailing
           // content, so revealing it can't resize the row under the cursor.
           <span className={`relative flex shrink-0 items-center ${ROW_Y}`}>
-            <span
-              className={`text-xs text-primary-400 tabular-nums transition-opacity ${
+            <Text
+              as="span"
+              size="xs"
+              tone="subtle"
+              className={`tabular-nums transition-opacity ${
                 hoverAction.pending ? "opacity-0" : "group-hover:opacity-0"
               }`}
             >
               {trailing}
-            </span>
+            </Text>
             <Button
               onClick={hoverAction.onClick}
               disabled={hoverAction.pending}

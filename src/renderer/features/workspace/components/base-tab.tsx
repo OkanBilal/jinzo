@@ -1,4 +1,4 @@
-import { Button, Tooltip } from "@/components/ui";
+import { Button, Text, Tooltip } from "@/components/ui";
 import { Close } from "@/components/ui/icons";
 import { useAppSelector } from "@/lib/redux/hooks";
 
@@ -70,15 +70,19 @@ export function BaseTab({
       }`}>
         {icon}
       </span>
-      <span className={`relative min-w-0 flex-1 mb-0.5 truncate transition-colors duration-150 ${
-        isActive ? "text-primary-900 dark:text-primary-100" : "text-primary-900 dark:text-primary-100 hover:text-primary-900 dark:hover:text-primary-100"
-      }`}>
+      {/* Active and idle resolved to the same colour, so the label just takes
+          the default tone. */}
+      <Text
+        as="span"
+        size="inherit"
+        className="relative min-w-0 flex-1 mb-0.5 truncate transition-colors duration-150"
+      >
         {typeof label === "string" ? (
-          <span className="text-xs font-medium tracking-tight">{label}</span>
+          <Text as="span" size="xs" tone="inherit" weight="medium" className="tracking-tight">{label}</Text>
         ) : (
           label
         )}
-      </span>
+      </Text>
       {onClose && (
         <CloseOverlay isActive={isActive} onClose={onClose} closeIcon={closeIcon} />
       )}

@@ -1,4 +1,4 @@
-import { ChartCard, BarChart, BarLabels } from "@/components/ui";
+import { ChartCard, BarChart, BarLabels, Text } from "@/components/ui";
 import { Clock } from "@/components/ui/icons";
 import type { HourDistribution } from "@/lib/redux/api";
 
@@ -50,9 +50,9 @@ export default function HourHeatmap({ data }: HourHeatmapProps) {
         labels={full.map((d) => ({
           key: d.hour,
           content: LABEL_HOURS.includes(d.hour) ? (
-            <span className="text-xt text-primary-600 dark:text-primary-400">
+            <Text as="span" size="xt" tone="subtle">
               {d.hour}
-            </span>
+            </Text>
           ) : null,
         }))}
       />

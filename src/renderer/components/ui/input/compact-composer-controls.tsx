@@ -1,7 +1,8 @@
 import { formatEffortLevel } from "@/lib/format";
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import DropdownWrapper from "../dropdown-wrapper";
 import { Button } from "../button";
+import Text from "../text";
 import { ArrowUp, Brain, BoltFill, Check } from "../icons";
 import { Bolt } from "../icons/space";
 import { useClickOutside } from "@/hooks/use-click-outside";
@@ -32,8 +33,18 @@ interface CompactComposerControlsProps {
   supportsFastMode: boolean;
 }
 
-const SECTION =
-  "px-2.5 pt-2.5 pb-1 text-xxs uppercase tracking-wide text-primary-600 dark:text-primary-400";
+/** A heading between groups of rows in the menu. */
+const Section = ({ children }: { children: ReactNode }) => (
+  <Text
+    as="div"
+    size="xxs"
+    tone="subtle"
+    className="px-2.5 pt-2.5 pb-1 uppercase tracking-wide"
+  >
+    {children}
+  </Text>
+);
+
 const ROW =
   "w-full flex items-center gap-2 text-left px-2.5 py-2 text-sm cursor-pointer transition-colors";
 const ROW_ACTIVE =
@@ -108,7 +119,7 @@ export function CompactComposerControls({
         <div className="max-h-[60vh] overflow-auto noscrollbar py-1">
           {modelList.length > 0 && (
             <>
-              <div className={SECTION}>Model</div>
+              <Section>Model</Section>
               {modelList.map((m) => {
                 const name = formatModelDisplayName(m, variant);
                 const active = model === m;
@@ -133,7 +144,7 @@ export function CompactComposerControls({
 
           {hasEffortLevels ? (
             <>
-              <div className={SECTION}>Reasoning</div>
+              <Section>Reasoning</Section>
               {variant !== "codex" && (
                 <Button
                   type="button"
@@ -198,7 +209,7 @@ export function CompactComposerControls({
             </>
           ) : variant === "claude" ? (
             <>
-              <div className={SECTION}>Thinking</div>
+              <Section>Thinking</Section>
               <Button
                 type="button"
                 onClick={() => {
@@ -216,7 +227,7 @@ export function CompactComposerControls({
 
           {supportsFastMode && (
             <>
-              <div className={SECTION}>Speed</div>
+              <Section>Speed</Section>
               <Button
                 type="button"
                 onClick={() => {

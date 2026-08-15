@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { Text } from "@/components/ui";
 import { Infinite } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse, ToolOutputBody, useToolStatus } from "./_shared";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader, ToolOutputBody, useToolStatus } from "./_shared";
 import { toolOutputText } from "../../utils/parse-tool-content";
 
 /**
@@ -63,15 +64,13 @@ export function MonitorDisplay({
         onToggle={() => setIsExpanded((v) => !v)}
         isCompact={isCompact}
       >
-        <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+        <span className={`truncate ${TOOL_ROW_TEXT}`}>
           {params.description || source || "watch"}
         </span>
         {limit && (
           <span
             className={`shrink-0 text-t tabular-nums ${
-              isRunning && params.persistent
-                ? "text-success"
-                : "text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary"
+              isRunning && params.persistent ? "text-success" : TOOL_ROW_TEXT
             }`}
           >
             {limit}
@@ -84,25 +83,25 @@ export function MonitorDisplay({
           <ToolOutputBody as="div" className="text-s font-sans space-y-2">
             {source && (
               <div className="space-y-1">
-                <div className="text-t font-medium text-primary-600 dark:text-primary-400">
+                <Text as="div" size="t" tone="subtle" weight="medium">
                   {wsUrl ? "WebSocket" : "Command"}
-                </div>
-                <pre className="noscrollbar whitespace-pre-wrap break-all font-mono text-t overflow-x-auto">
+                </Text>
+                <Text as="pre" size="t" tone="inherit" className="noscrollbar whitespace-pre-wrap break-all font-mono overflow-x-auto">
                   {source}
-                </pre>
+                </Text>
                 {protocols.length > 0 && (
-                  <div className="text-t font-mono text-primary-600 dark:text-primary-400">
+                  <Text as="div" size="t" tone="subtle" className="font-mono">
                     {protocols.join(", ")}
-                  </div>
+                  </Text>
                 )}
               </div>
             )}
 
             {result && (
               <div className="pt-1 border-t border-primary-100 dark:border-primary/10">
-                <div className="text-t font-medium text-primary-600 dark:text-primary-400 mb-1">
+                <Text as="div" size="t" tone="subtle" weight="medium" className="mb-1">
                   {status === "error" ? "Error" : "Events"}
-                </div>
+                </Text>
                 <pre
                   className={`noscrollbar whitespace-pre-wrap text-t font-mono max-h-40 overflow-y-auto ${
                     status === "error" ? "text-danger" : ""

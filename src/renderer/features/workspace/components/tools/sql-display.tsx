@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Layers } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse, ToolOutputBody } from "./_shared";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader, ToolOutputBody } from "./_shared";
 import { coerceToolOutput } from "../../utils/parse-tool-content";
 
 export interface SqlParams {
@@ -33,7 +33,7 @@ export function SqlDisplay({
         onToggle={() => setIsExpanded((v) => !v)}
         isCompact={isCompact}
       >
-        <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+        <span className={`truncate ${TOOL_ROW_TEXT}`}>
           {summary}
         </span>
       </ToolHeader>

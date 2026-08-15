@@ -11,6 +11,7 @@ import { FileIconComponent } from "@/features/workspace/components/file-explorer
 import { Sparkles } from "@/components/ui/icons";
 import { applySignedSrc } from "@/lib/local-image-url";
 import { useIsMobile, isWeb } from "@/lib/platform";
+import Text from "../text";
 
 const sparklesIconMarkup = renderToStaticMarkup(<Sparkles className="w-3 h-3 shrink-0" />);
 
@@ -651,14 +652,23 @@ export const RichInputForm = forwardRef<RichInputFormHandle, RichInputFormProps>
             dark:text-primary-300 text-primary-700"
         />
         {isEmpty && placeholder && (
-          <div className="pointer-events-none absolute left-5 top-4 text-sm text-primary-600 dark:text-primary-400">
+          <Text
+            as="div"
+            tone="subtle"
+            className="pointer-events-none absolute left-5 top-4"
+          >
             {placeholder}
-          </div>
+          </Text>
         )}
         {showFocusHint && (
-          <kbd className="absolute cursor-default right-3 top-3 px-1.5 py-0.5 text-xxs font-sans text-primary-700 dark:text-primary-300">
+          <Text
+            as="kbd"
+            size="xxs"
+            tone="muted"
+            className="absolute cursor-default right-3 top-3 px-1.5 py-0.5 font-sans"
+          >
             ⌘ P to focus
-          </kbd>
+          </Text>
         )}
       </div>
     );

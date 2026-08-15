@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type MouseEvent } from "react";
-import { Button, DropdownMenu, DropdownMenuItem } from "@/components/ui";
+import { Button, DropdownMenu, DropdownMenuItem, Text } from "@/components/ui";
 import { ArrowUp, Finder, Mains } from "@/components/ui/icons";
 import { useLazyGetAppsForFileQuery } from "@/lib/redux/api";
 import { useDocumentViewer } from "@/hooks/use-document-viewer";
@@ -77,13 +77,13 @@ export function DocumentArtifact({
         onClick={openInMains}
         className="flex-1 min-w-0 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary-400 rounded-md"
       >
-        <div className="text-sm font-medium text-primary-950 dark:text-primary truncate">
+        <Text as="div" size="sm" tone="contrast" weight="medium" className="truncate">
           {fileName}
-        </div>
-        <div className="text-xs text-primary-600 dark:text-primary-400 mt-0.5">
+        </Text>
+        <Text as="div" size="xs" tone="subtle" className="mt-0.5">
           {DOC_VIEWER_LABELS[docType]}
           {ext ? ` · ${ext}` : ""}
-        </div>
+        </Text>
       </Button>
       <Button
         ref={openBtnRef}
@@ -112,9 +112,9 @@ export function DocumentArtifact({
           </DropdownMenuItem>
         )}
         {isFetching ? (
-          <div className="px-3 py-2 text-xs text-primary-600 dark:text-primary-400">
+          <Text as="div" size="xs" tone="subtle" className="px-3 py-2">
             Loading applications…
-          </div>
+          </Text>
         ) : (
           handlerApps.map((app) => (
             <DropdownMenuItem key={app.bundleId} onClick={() => openWithBundle(app.bundleId)}>

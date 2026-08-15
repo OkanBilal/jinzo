@@ -5,7 +5,7 @@ import {
   useState,
   type PointerEvent,
 } from "react";
-import { Modal, Button } from "@/components/ui";
+import { Button, Modal, Text } from "@/components/ui";
 import { Close, Download, Plus, Minus } from "@/components/ui/icons";
 
 interface ImagePreviewModalProps {
@@ -156,9 +156,9 @@ export function ImagePreviewModal({ name, src, onClose }: ImagePreviewModalProps
       className="w-fit min-w-80 max-w-[92vw]"
     >
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-primary-200 dark:border-primary-800  shrink-0">
-        <span className="text-xs font-mono text-primary-600 dark:text-primary-400 truncate">
+        <Text as="span" size="xs" tone="subtle" className="font-mono truncate">
           {name}
-        </span>
+        </Text>
         <div className="flex items-center gap-1 ml-3 shrink-0 glass-surface p-1 rounded-full">
           <Button
             onClick={handleDownload}

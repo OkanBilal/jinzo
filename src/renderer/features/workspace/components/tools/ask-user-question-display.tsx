@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { Text } from "@/components/ui";
 import { Question, Check } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse, ToolOutputBody } from "./_shared";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader, ToolOutputBody } from "./_shared";
 import { coerceToolOutput } from "../../utils/parse-tool-content";
 
 interface QuestionOption {
@@ -64,7 +65,7 @@ export function AskUserQuestionDisplay({
         onToggle={() => setIsExpanded((v) => !v)}
         isCompact={isCompact}
       >
-        <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary min-w-0">
+        <span className={`truncate min-w-0 ${TOOL_ROW_TEXT}`}>
           {header}
         </span>
       </ToolHeader>
@@ -77,9 +78,9 @@ export function AskUserQuestionDisplay({
 
               return (
                 <div key={qi} className="space-y-2">
-                  <div className="font-medium text-primary-700 dark:text-primary-300">
+                  <Text as="div" size="inherit" tone="muted" weight="medium">
                     {q.question}
-                  </div>
+                  </Text>
 
                   {q.options && q.options.length > 0 && (
                     <div className="space-y-1.5">
@@ -102,19 +103,18 @@ export function AskUserQuestionDisplay({
                               <Check className="size-3 mt-0.5 text-success shrink-0" />
                             )}
                             <div className="min-w-0">
-                              <span
-                                className={
-                                  isSelected
-                                    ? "font-medium text-success"
-                                    : "font-medium text-primary-700 dark:text-primary-300"
-                                }
+                              <Text
+                                as="span"
+                                size="inherit"
+                                weight="medium"
+                                tone={isSelected ? "success" : "muted"}
                               >
                                 {opt.label}
-                              </span>
+                              </Text>
                               {opt.description && (
-                                <span className="text-primary-500 ml-1">
+                                <Text as="span" size="inherit" tone="faint" className="ml-1">
                                   — {opt.description}
-                                </span>
+                                </Text>
                               )}
                             </div>
                           </div>
@@ -127,11 +127,11 @@ export function AskUserQuestionDisplay({
                     String(selectedAnswer).trim() !== "" && (
                     <div className="flex items-start gap-2 rounded px-2 py-1.5 bg-primary/80 dark:bg-success/10">
                       <Check className="size-3 mt-0.5 text-success shrink-0" />
-                      <span className="font-medium text-success min-w-0 wrap-break-word">
+                      <Text as="span" size="inherit" tone="success" weight="medium" className="min-w-0 wrap-break-word">
                         {Array.isArray(selectedAnswer)
                           ? selectedAnswer.join(", ")
                           : String(selectedAnswer)}
-                      </span>
+                      </Text>
                     </div>
                   )}
                 </div>

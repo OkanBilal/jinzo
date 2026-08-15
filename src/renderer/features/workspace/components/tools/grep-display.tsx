@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Grep } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse, ToolOutputBody } from "./_shared";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader, ToolOutputBody } from "./_shared";
 import { coerceToolOutput } from "../../utils/parse-tool-content";
 import { shortPath } from "../../utils/path-utils";
 
@@ -35,13 +35,13 @@ export function GrepDisplay({ params, output, isCompact = false }: { params: Gre
         onToggle={() => setIsExpanded((v) => !v)}
         isCompact={isCompact}
       >
-        <code className="text-primary-500 font-sans truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+        <code className={`font-sans truncate ${TOOL_ROW_TEXT}`}>
           {params.pattern || params.query || params.regex || ""}
         </code>
         {hasStats && (
           // shrink-0 + nowrap: the pattern beside it truncates, the stats never
           // wrap onto a second line (matches GlobDisplay's stats span).
-          <span className="shrink-0 whitespace-nowrap text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className={`shrink-0 whitespace-nowrap ${TOOL_ROW_TEXT}`}>
             ({[
               totalMatches > 0 ? `${totalMatches} matches` : null,
               showLines ? `${numLines} lines` : null,

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import NumberFlow from "@number-flow/react";
-import { Body } from "./text";
+import Text from "./text";
 
 interface SliderProps {
   value: number;
@@ -108,7 +108,7 @@ export function Slider({
             handful of positions, which reads as stuttering rather than
             tracking; a short duration keeps it attached to the cursor. */}
         <div
-          className={`absolute inset-y-0 left-0 rounded-lg bg-primary-950/12 dark:bg-primary/10 transition-[width] ease-out ${isDragging ? "duration-100" : "duration-150"}`}
+          className={`absolute inset-y-0 left-0 rounded-lg bg-primary-950/10 dark:bg-primary/10 transition-[width] ease-out ${isDragging ? "duration-100" : "duration-150"}`}
           style={{ width: `${percentage}%` }}
         >
           {/* Vertical line inside percentage bar */}
@@ -119,7 +119,12 @@ export function Slider({
         </div>
 
         {showValue && (
-          <div className="absolute inset-y-0 right-2 flex items-center text-xs font-medium text-primary-900 dark:text-primary tabular-nums">
+          <Text
+            as="div"
+            size="xs"
+            weight="medium"
+            className="absolute inset-y-0 right-2 flex items-center tabular-nums"
+          >
             {typeof displayValue === "number" ? (
               <NumberFlow
                 value={displayValue}
@@ -128,7 +133,7 @@ export function Slider({
             ) : (
               displayValue
             )}
-          </div>
+          </Text>
         )}
 
         <input
@@ -146,16 +151,8 @@ export function Slider({
       </div>
       {(minLabel || maxLabel) && (
         <div className="flex justify-between">
-          {minLabel && (
-            <Body className="text-xs">
-              {minLabel}
-            </Body>
-          )}
-          {maxLabel && (
-            <Body className="text-xs">
-              {maxLabel}
-            </Body>
-          )}
+          {minLabel && <Text size="xs">{minLabel}</Text>}
+          {maxLabel && <Text size="xs">{maxLabel}</Text>}
         </div>
       )}
     </div>

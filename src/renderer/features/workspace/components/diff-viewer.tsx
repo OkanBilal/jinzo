@@ -15,7 +15,7 @@ import { ImagePreviewModal } from "./image-preview-modal";
 import { useLocalImageUrl } from "@/hooks/use-local-image-url";
 import { useIsDarkMode } from "@/hooks/use-is-dark-mode";
 import { DIFF_TYPOGRAPHY_STYLE, patchDiffOptions } from "@/lib/diff-style";
-import { Button } from "@/components/ui";
+import { Button, Text } from "@/components/ui";
 import type { FindingSeverity } from "@/lib/redux/api";
 import {
   asFindingSeverity,
@@ -41,11 +41,11 @@ function ImageDiffView({ absPath, fileName }: { absPath: string; fileName: strin
     <div className="h-full overflow-auto px-2  ">
       <div className="mx-auto ">
         {error ? (
-          <div className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-xs text-danger break-all">
-            <div className="font-medium mb-1">Image failed to load</div>
+          <Text as="div" size="xs" tone="danger" className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 break-all">
+            <Text as="div" size="inherit" tone="inherit" weight="medium" className="mb-1">Image failed to load</Text>
             <div className="opacity-70">{error}</div>
             <div className="mt-1 font-mono opacity-60">{absPath}</div>
-          </div>
+          </Text>
         ) : url ? (
           <Button
             type="button"
@@ -310,7 +310,7 @@ export function DiffViewer({
   return (
     <div className={`h-full overflow-auto ${className}`}>
       {!expandedDiff.trim() ? (
-        <div className="px-4 py-3 text-xs text-primary-600 dark:text-primary-400">No diff content to display.</div>
+        <Text as="div" size="xs" tone="subtle" className="px-4 py-3">No diff content to display.</Text>
       ) : (
         <PatchDiff
           patch={expandedDiff}

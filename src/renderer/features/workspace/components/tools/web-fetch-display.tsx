@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Web } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse, ToolOutputBody } from "./_shared";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader, ToolOutputBody } from "./_shared";
 import { coerceToolOutput } from "../../utils/parse-tool-content";
 
 export interface WebFetchParams {
@@ -39,11 +39,11 @@ export function WebFetchDisplay({ params, output, isCompact = false }: { params:
         onToggle={() => setIsExpanded((v) => !v)}
         isCompact={isCompact}
       >
-        <code className="text-primary-500 font-sans truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+        <code className={`font-sans truncate ${TOOL_ROW_TEXT}`}>
           {truncateUrl(target)}
         </code>
         {typeof params.max_length === "number" && (
-          <span className="text-primary-500 shrink-0 group-hover:text-primary-950 group-hover:dark:text-primary">(max {params.max_length})</span>
+          <span className={`shrink-0 ${TOOL_ROW_TEXT}`}>(max {params.max_length})</span>
         )}
       </ToolHeader>
 

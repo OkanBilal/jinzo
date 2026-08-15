@@ -10,7 +10,7 @@ import {
 } from "@/lib/layout";
 import { AgentGlyph } from "@/components/ui/agent-glyph";
 import { Check, Close, Minimize, Stop } from "@/components/ui/icons";
-import { Button, Caption } from "@/components/ui";
+import { Button, Caption, Text } from "@/components/ui";
 import { SubagentDetail } from "@/features/workspace/components/subagent-detail";
 import { useSessionSubagents } from "@/features/workspace/hooks/use-session-subagents";
 import {
@@ -281,9 +281,9 @@ function CollapsedPill({
           />
         );
       })}
-      <span className="text-s tabular-nums font-medium text-primary-700 dark:text-primary-300">
+      <Text as="span" size="s" tone="muted" weight="medium" className="tabular-nums">
         {running > 0 ? `${running}/${subagents.length}` : subagents.length}
-      </span>
+      </Text>
     </Button>
   );
 }
@@ -311,7 +311,7 @@ function SubagentList({
       <div
         className={`flex items-center justify-between gap-2 py-2 ${PANEL_ROW_X}`}
       >
-        <Caption className="text-s font-medium text-primary-700 dark:text-primary-300">
+        <Caption size="s" weight="medium">
           Subagents ({subagents.length})
         </Caption>
 
@@ -372,9 +372,9 @@ function SubagentList({
         <PanelItem
           icon={<span className="block size-4" />}
           label={
-            <span className="text-xs text-primary-500">
+            <Text as="span" size="xs" tone="faint">
               {isExpandedList ? "Show less" : `Show ${hiddenCount} more`}
-            </span>
+            </Text>
           }
           onClick={onToggleExpandedList}
         />

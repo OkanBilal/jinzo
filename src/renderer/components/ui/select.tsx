@@ -9,7 +9,7 @@ import { createPortal } from "react-dom";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { isAppReady } from "@/lib/app-ready";
 import { Button } from "./button";
-import { Caption } from "./text";
+import Text, { Caption } from "./text";
 import { SelectOption } from "./icons";
 
 interface SelectOption<T extends string = string> {
@@ -138,17 +138,19 @@ export default function Select<T extends string = string>({
       >
         <div className="flex items-center gap-2">
           {selectedOption?.icon}
-          <span
-            className={
-              selectedOption ? "" : "text-primary-900 dark:text-primary"
-            }
+          {/* A placeholder reads a stop below a real value; a chosen label
+              takes the trigger's own colour. */}
+          <Text
+            as="span"
+            size="inherit"
+            tone={selectedOption ? "inherit" : "subtle"}
           >
             {selectedOption?.label || placeholder}
-          </span>
+          </Text>
         </div>
         <Caption
-          className="text-primary-900 dark:text-primary-100
-                absolute right-8 top-1/2 -translate-y-1/2 text-xs"
+          tone="default"
+          className="absolute right-8 top-1/2 -translate-y-1/2"
         >
           {title}
         </Caption>
@@ -197,9 +199,15 @@ export default function Select<T extends string = string>({
                 <div className="flex flex-col min-w-0">
                   <span className="truncate my-0.5">{option.label}</span>
                   {option.description && (
-                    <span className="text-xxs tracking-tight text-primary-600 dark:text-primary-400 font-normal truncate">
+                    <Text
+                      as="span"
+                      size="xxs"
+                      tone="subtle"
+                      weight="normal"
+                      className="tracking-tight truncate"
+                    >
                       {option.description}
-                    </span>
+                    </Text>
                   )}
                 </div>
               </Button>

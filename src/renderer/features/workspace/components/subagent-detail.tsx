@@ -7,7 +7,7 @@ import { markdownComponents } from "@/components/markdown-components";
 import { markdownSanitizeSchema } from "@/lib/markdown-sanitize";
 import { Check, Close, Minimize, Stop } from "@/components/ui/icons";
 import { AgentGlyph } from "@/components/ui/agent-glyph";
-import { Button } from "@/components/ui";
+import { Button, Text } from "@/components/ui";
 import {
   useGetRunArtifactsQuery,
   useGetToolCallsByRunQuery,
@@ -137,13 +137,13 @@ export function SubagentDetail({
           active={state === "running"}
           className="size-4"
         />
-        <span className="min-w-0 flex-1 truncate text-sm font-medium text-primary-700 dark:text-primary-300">
+        <Text as="span" size="sm" tone="muted" weight="medium" className="min-w-0 flex-1 truncate">
           {display.name}
-        </span>
+        </Text>
         {workedMs !== undefined && (
-          <span className="shrink-0 text-xs tabular-nums text-primary-700 dark:text-primary-300">
+          <Text as="span" size="xs" tone="muted" className="shrink-0 tabular-nums">
             {formatWorkedFor(workedMs)}
-          </span>
+          </Text>
         )}
         <StateBadge state={state} />
         <Button
@@ -158,23 +158,23 @@ export function SubagentDetail({
 
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 noscrollbar">
         {display.detail && (
-          <span className="block text-xs text-primary-600 dark:text-primary-400">
+          <Text as="span" size="xs" tone="subtle" className="block">
             {display.detail}
-          </span>
+          </Text>
         )}
 
         {meta.prompt && (
-          <div className="rounded-xl bg-primary-50 px-3 py-2.5 text-sm whitespace-pre-wrap text-primary-700 dark:bg-primary/5 dark:text-primary-300">
+          <Text as="div" size="sm" tone="muted" className="rounded-xl bg-primary-50 px-3 py-2.5 whitespace-pre-wrap dark:bg-primary/5">
             {meta.prompt}
-          </div>
+          </Text>
         )}
 
         {flow.length === 0 && !resultText && !meta.error && (
-          <p className="text-sm text-primary-400">
+          <Text as="p" tone="subtle">
             {state === "running"
               ? "No activity recorded yet."
               : "No activity was recorded for this agent."}
-          </p>
+          </Text>
         )}
 
         <div className="space-y-1">
@@ -232,7 +232,7 @@ export function SubagentDetail({
           </div>
         )}
 
-        {meta.error && <p className="text-sm text-danger">{meta.error}</p>}
+        {meta.error && <Text as="p" size="sm" tone="danger">{meta.error}</Text>}
       </div>
     </div>
   );

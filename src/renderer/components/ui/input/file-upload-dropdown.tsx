@@ -9,7 +9,27 @@ import {
 import { Attach, Picture, Document, Close } from "../icons";
 import DropdownWrapper from "../dropdown-wrapper";
 import { Button } from "../button";
+import Text from "../text";
 import { cn } from "@/lib/cn";
+
+/**
+ * A filename, wherever it appears — the collapsed chip, a dropdown row, the
+ * standalone preview. Eight sites rendered this by hand; one component is what
+ * keeps them one size and one colour.
+ */
+function FileLabel({
+  className,
+  children,
+}: {
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Text as="span" size="xs" tone="contrast" className={cn("truncate", className)}>
+      {children}
+    </Text>
+  );
+}
 
 export interface UploadedFile {
   file: File;
@@ -135,9 +155,9 @@ function ImageGroupChip({
             </div>
           ))}
         </div>
-        <span className="max-w-24 truncate pr-0.5 text-xs text-primary-950 dark:text-primary">
+        <FileLabel className="max-w-24 pr-0.5">
           {count} images
-        </span>
+        </FileLabel>
       </Button>
 
       <DropdownWrapper
@@ -165,9 +185,9 @@ function ImageGroupChip({
                     className="h-full w-full object-cover"
                   />
                 </div>
-                <span className="min-w-0 flex-1 truncate text-left text-xs text-primary-950 dark:text-primary">
+                <FileLabel className="min-w-0 flex-1 text-left">
                   {uploadedFile.file.name}
-                </span>
+                </FileLabel>
                 <Button
                   type="button"
                   onClick={() => rowRemove(index)}
@@ -252,9 +272,9 @@ function DocumentGroupChip({
             </div>
           ))}
         </div>
-        <span className="max-w-24 truncate pr-0.5 text-xs text-primary-950 dark:text-primary">
+        <FileLabel className="max-w-24 pr-0.5">
           {count} documents
-        </span>
+        </FileLabel>
       </Button>
 
       <DropdownWrapper
@@ -278,9 +298,9 @@ function DocumentGroupChip({
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-primary-200/40 ring-2 ring-primary-200 dark:bg-primary-700/50 dark:ring-primary-700/60">
                   <Document className="size-4 text-primary-950 dark:text-primary" />
                 </div>
-                <span className="min-w-0 flex-1 truncate text-left text-xs text-primary-950 dark:text-primary">
+                <FileLabel className="min-w-0 flex-1 text-left">
                   {uploadedFile.file.name}
-                </span>
+                </FileLabel>
                 <Button
                   type="button"
                   onClick={() => rowRemove(index)}
@@ -331,16 +351,16 @@ export function FileUploadDropdown({
               aria-label="Remove document"
             >
               <Close className="h-4 w-4 text-primary-600 dark:text-primary-400" />
-              <span className="max-w-25 truncate text-xs text-primary-950 dark:text-primary">
+              <FileLabel className="max-w-25">
                 {uploadedFile.file.name}
-              </span>
+              </FileLabel>
             </Button>
           ) : (
             <>
               <Document className="h-4 w-4 text-primary-950 dark:text-primary" />
-              <span className="max-w-25 truncate text-xs text-primary-950 dark:text-primary">
+              <FileLabel className="max-w-25">
                 {uploadedFile.file.name}
-              </span>
+              </FileLabel>
             </>
           )}
         </div>
@@ -376,9 +396,9 @@ export function FileUploadDropdown({
               </Button>
             )}
           </div>
-          <span className="max-w-25 truncate text-xs text-primary-950 dark:text-primary">
+          <FileLabel className="max-w-25">
             {uploadedFile.file.name}
-          </span>
+          </FileLabel>
         </div>
       </div>
     );
@@ -407,9 +427,9 @@ export function FileUploadDropdown({
               <Close className="h-4 w-4 text-primary-600 dark:text-primary-400" />
             </Button>
           </div>
-          <span className="max-w-25 truncate text-xs text-primary-950 dark:text-primary">
+          <FileLabel className="max-w-25">
             {uploadedFile.file.name}
-          </span>
+          </FileLabel>
         </div>
       </div>
     );

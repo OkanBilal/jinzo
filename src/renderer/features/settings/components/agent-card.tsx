@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { Button } from "@/components/ui";
+import { Button, Text } from "@/components/ui";
 import { Check, Plus } from "@/components/ui/icons";
 import { cn } from "@/lib/cn";
 import {
@@ -47,7 +47,15 @@ export function AgentCard({
     >
       <div className="flex flex-row items-center justify-center gap-1 px-4 min-w-24 py-2">
         <Icon className="size-3.5 shrink-0" />
-        <span className="text-xs font-medium leading-tight truncate">{label}</span>
+        <Text
+          as="span"
+          size="xs"
+          tone="inherit"
+          weight="medium"
+          className="leading-tight truncate"
+        >
+          {label}
+        </Text>
       </div>
       <div
         className={cn(

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ToolSubGroup } from "../../utils/group-tool-calls";
 import { ToolCallItem } from "./tool-call-item";
-import { ToolHeader, ToolCollapse, ToolStatusProvider, aggregateToolStatus } from "./_shared";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader, ToolStatusProvider, aggregateToolStatus } from "./_shared";
 
 interface ToolSubGroupAccordionProps {
   subGroup: ToolSubGroup;
@@ -29,7 +29,7 @@ export function ToolSubGroupAccordion({ subGroup }: ToolSubGroupAccordionProps) 
           isExpanded={isExpanded}
           onToggle={() => setIsExpanded((v) => !v)}
         >
-          <span className="text-primary-500 text-xs group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className={`text-xs ${TOOL_ROW_TEXT}`}>
             ({subGroup.events.length})
           </span>
         </ToolHeader>

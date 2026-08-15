@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Input, Body, Caption, Muted, toast } from "@/components/ui";
+import { Button, Input, Body, Caption, Muted, Text, toast } from "@/components/ui";
 import {
   SettingsPageShell,
   SettingsSection,
@@ -191,9 +191,9 @@ function AddBackendForm({
                     key={alias}
                     className="flex items-center justify-between gap-2 px-3 py-1.5"
                   >
-                    <span className="truncate text-sm text-primary-900 dark:text-primary-100">
+                    <Text as="span" className="truncate">
                       {alias}
-                    </span>
+                    </Text>
                     <Button
                       type="button"
                       variant="ghost"

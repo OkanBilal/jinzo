@@ -7,6 +7,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "../button";
+import Text from "../text";
 import DropdownWrapper from "../dropdown-wrapper";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import {
@@ -392,7 +393,9 @@ export function ModelSelectDropdown({
         >
           {isLoading && !displayModel ? (
             <span className="inline-flex items-center gap-1.5">
-              <span className="shine-text text-sm">Loading models...</span>
+              <Text as="span" tone="inherit" className="shine-text">
+                Loading models...
+              </Text>
             </span>
           ) : noModels ? (
             <span>No models found</span>
@@ -501,20 +504,24 @@ export function ModelSelectDropdown({
                 : "thinking mode"
             }`}
           >
-            <div
+            <Text
+              as="div"
               ref={effortMenuHeaderRef}
-              className="flex items-center gap-1.5 px-3 pb-1.5 pt-2 text-xxs font-medium tracking-wide"
+              size="xxs"
+              tone="subtle"
+              weight="medium"
+              className="flex items-center gap-1.5 px-3 pb-1.5 pt-2 tracking-wide"
             >
-              <span className="shrink-0 text-primary-600 dark:text-primary-400">
+              <span className="shrink-0">
                 {getModelIcon(hoveredModelDisplayName, variant)}
               </span>
-              <span className="min-w-0 flex-1 truncate text-primary-600 dark:text-primary-400">
+              <span className="min-w-0 flex-1 truncate">
                 {hoveredModelDisplayName}
               </span>
-              <span className="shrink-0 text-primary-600 dark:text-primary-400">
+              <span className="shrink-0">
                 {hoveredModelEffortLevels.length > 0 ? "Effort" : "Thinking"}
               </span>
-            </div>
+            </Text>
 
             {hoveredModelEffortLevels.length > 0 ? (
               <>

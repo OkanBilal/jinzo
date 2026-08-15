@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Body, Label } from "./text";
+import { Body, Muted } from "./text";
 import { Button } from "@/components/ui/button";
 import { Enter } from "./icons";
 import { useSuppressBrowserView } from "@/hooks/use-suppress-browser-view";
@@ -36,7 +36,7 @@ const EnterHint = () => (
 );
 
 const EscHint = () => (
-  <kbd className="rounded-md border border-current/50 px-0.5 py-px font-sans text-[8px] font-medium  opacity-60">
+  <kbd className="rounded-md border border-current/50 px-0.5 py-px font-sans text-xt font-medium leading-4 opacity-60">
     ESC
   </kbd>
 );
@@ -96,12 +96,12 @@ export default function Alert({
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
-        <Body className="mb-2 font-medium">
+        <Body weight="medium" className="mb-2">
           {title}
         </Body>
-        <Label className="font-normal text-s ">
-          {description}
-        </Label>
+        {/* Prose, not a form label — it names no control, so it must not be a
+            `<label>` element. */}
+        <Muted size="s">{description}</Muted>
         {children && <div className="mt-4">{children}</div>}
         <div className="flex gap-3 mt-6">
           <Button
@@ -113,7 +113,7 @@ export default function Alert({
             {isPrimaryLoading ? (
               "Loading..."
             ) : (
-              <span className="flex items-center justify-center gap-1.5">
+              <span className="flex items-center justify-center gap-1">
                 {primaryButtonText}
                 <EnterHint />
               </span>
@@ -125,7 +125,7 @@ export default function Alert({
             onClick={onSecondary}
             disabled={isPrimaryLoading}
           >
-            <span className="flex items-center justify-center gap-2">
+            <span className="flex items-center justify-center gap-1">
               {secondaryButtonText}
               <EscHint />
             </span>

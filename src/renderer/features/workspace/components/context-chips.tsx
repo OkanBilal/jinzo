@@ -7,7 +7,7 @@ import type {
 } from "@/lib/redux/slices/workspaceSlice";
 import { Close, Web } from "@/components/ui/icons";
 import { ProviderIcon } from "./provider-icon";
-import { Button, Modal, ModalHeader } from "@/components/ui";
+import { Button, Modal, ModalHeader, Text } from "@/components/ui";
 import { Body } from "@/components/ui/text";
 
 interface ContextChipsProps {
@@ -55,10 +55,10 @@ function BrowserSelectionPreview({
       <ModalHeader onClose={onClose}>
         <Web className="w-3.5 h-3.5 shrink-0 text-primary-800 dark:text-primary-200" />
         <div className="min-w-0">
-          <Body className="text-xs">
+          <Body size="xs">
             {summary}
           </Body>
-          <Body className="text-xs opacity-60">
+          <Body size="xs" className="opacity-60">
             {hostname(sel.url)}
           </Body>
         </div>
@@ -91,21 +91,26 @@ function BrowserSelectionPreview({
           />
         </div>
       ) : (
-        <div className="flex items-center justify-center h-32 bg-primary-100 dark:bg-primary-900 text-primary-400 text-xs">
+        <Text
+          as="div"
+          size="xs"
+          tone="subtle"
+          className="flex items-center justify-center h-32 bg-primary-100 dark:bg-primary-900"
+        >
           No screenshot available
-        </div>
+        </Text>
       )}
 
       {/* Metadata */}
       {(sel.text || sel.sourceFile) && (
         <div className="px-4 py-2.5 border-t border-primary-200 dark:border-primary-800 space-y-1">
           {sel.sourceFile && (
-            <Body className="text-xs">
+            <Body size="xs">
               {sel.sourceFile}
             </Body>
           )}
           {sel.text && (
-            <Body className="text-xs">
+            <Body size="xs">
               {sel.text}
             </Body>
           )}
@@ -205,7 +210,7 @@ export function ContextChips({
                     <Web className="size-3" />
                   )}
                   <span className="truncate max-w-44">
-                    <span className="font-medium">{summary}</span>
+                    <Text as="span" size="inherit" tone="inherit" weight="medium">{summary}</Text>
                     <span className="opacity-60"> · {hostname(sel.url)}</span>
                   </span>
                   {onRemoveContextBrowserSelection && (

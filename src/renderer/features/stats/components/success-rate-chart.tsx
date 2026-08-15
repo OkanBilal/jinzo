@@ -1,4 +1,4 @@
-import { ChartCard, BarChart, BarLabels, Heading2 } from "@/components/ui";
+import { ChartCard, BarChart, BarLabels, Heading2, Text } from "@/components/ui";
 import { Check } from "@/components/ui/icons";
 import type { StatusBreakdown } from "@/lib/redux/api";
 
@@ -55,9 +55,9 @@ export default function SuccessRateChart({ data }: SuccessRateChartProps) {
       emptyMessage="No status data yet"
       headerRight={
         total > 0 ? (
-          <span className="text-xs font-medium text-primary-600 dark:text-primary-400">
+          <Text as="span" size="xs" tone="subtle" weight="medium">
             {total} runs this week
-          </span>
+          </Text>
         ) : undefined
       }
     >
@@ -88,9 +88,9 @@ export default function SuccessRateChart({ data }: SuccessRateChartProps) {
         labels={paddedDays.map((day, i) => ({
           key: day.date || i,
           content: (
-            <span className="text-t text-primary-600 dark:text-primary-400">
+            <Text as="span" size="t" tone="subtle">
               {day.dayLabel}
-            </span>
+            </Text>
           ),
         }))}
       />
@@ -103,12 +103,12 @@ export default function SuccessRateChart({ data }: SuccessRateChartProps) {
               className="w-2.5 h-2.5 rounded-full"
               style={{ backgroundColor: item.color }}
             />
-            <span className="text-xs text-primary-600 dark:text-primary-400">
+            <Text as="span" size="xs" tone="subtle">
               {item.label}
-            </span>
-            <span className="text-xs font-medium text-primary-700 dark:text-primary-300">
+            </Text>
+            <Text as="span" size="xs" tone="muted" weight="medium">
               {item.count}
-            </span>
+            </Text>
           </div>
         ))}
       </div>

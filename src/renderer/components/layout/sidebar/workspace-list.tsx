@@ -28,7 +28,7 @@ import type { Project } from "@/lib/redux/api/projectsApi";
 import { toast } from "@/components/ui";
 import { ProjectIcon } from "./project-icon";
 import { WorkspaceGroupDropdown, type GroupingMode } from "./workspace-group-dropdown";
-import { Body } from "@/components/ui/text";
+import Text from "@/components/ui/text";
 
 type WorkspaceGroup = {
   key: string;
@@ -98,13 +98,18 @@ function WorkspaceGroupSection({
         className="group/section w-full flex items-center gap-1.5 px-2 py-1 mb-px rounded-lg cursor-pointer hover:bg-primary/50 dark:hover:bg-primary/5 transition-colors"
       >
         {group.icon && <span className="shrink-0 text-xs">{group.icon}</span>}
-        <span className="text-s  text-primary-950 dark:text-primary truncate">
+        <Text as="span" size="s" tone="contrast" className="truncate">
           {group.label}
-        </span>
+        </Text>
         <div className="ml-auto flex items-center gap-1.5">
-          <span className="text-xxs text-primary-800 dark:text-primary-200 tabular-nums group-hover/section:hidden">
+          <Text
+            as="span"
+            size="xxs"
+            tone="secondary"
+            className="tabular-nums group-hover/section:hidden"
+          >
             {group.workspaces.length}
-          </span>
+          </Text>
           {onCreateWorktree && (
             <Button
               tooltip="Create new worktree"
@@ -192,9 +197,7 @@ export default function WorkspacesList({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-16">
-        <Body className="text-xs">
-          Loading...
-        </Body>
+        <Text size="xs">Loading...</Text>
       </div>
     );
   }
@@ -202,9 +205,7 @@ export default function WorkspacesList({
   if (workspaces.length === 0) {
     return (
       <div className="flex items-center justify-center h-16">
-        <Body className="text-xs">
-          No projects yet
-        </Body>
+        <Text size="xs">No projects yet</Text>
       </div>
     );
   }
@@ -389,9 +390,9 @@ export default function WorkspacesList({
         // onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setIsExpanded(!isExpanded); } }}
         className="w-full flex items-center justify-between transition-all duration-200 bg-transparent px-2 py-1 "
       >
-        <Body className="text-s tracking-tight text-primary-800 dark:text-primary-200">
+        <Text size="s" tone="secondary" className="tracking-tight">
           Workspaces
-        </Body>
+        </Text>
         <div className="flex items-center ">
           <div className="-mr-1" role="presentation" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
             <WorkspaceGroupDropdown

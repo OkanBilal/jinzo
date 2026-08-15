@@ -26,7 +26,7 @@ export function TerminalSection({
       <div className="flex items-center justify-between px-3 py-1.5">
         <div className="flex items-center gap-1">
           <Bash className="size-4 text-primary-600 dark:text-primary-400" />
-          <Body className="font-medium text-s text-primary-700 dark:text-primary-300">
+          <Body size="s" tone="muted" weight="medium">
             Terminal
           </Body>
         </div>

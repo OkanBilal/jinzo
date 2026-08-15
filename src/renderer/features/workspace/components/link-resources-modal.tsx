@@ -1,14 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Caption,
-  Heading3,
-  Button,
-  Checkbox,
-  toast,
-  Body,
-  Modal,
-} from "@/components/ui";
+import { Body, Button, Caption, Checkbox, Heading3, Modal, Text, toast } from "@/components/ui";
 import { extractErrorMessage } from "@/lib/extract-error-message";
 import {
   useListAvailableResourcesQuery,
@@ -158,10 +150,10 @@ export function LinkResourcesModal({
             : ""
         }`}
       >
-        <span className="text-primary-600 dark:text-primary-400">{icon}</span>
+        <Text as="span" size="inherit" tone="subtle">{icon}</Text>
         <div className="flex-1 min-w-0">
           <div className="flex gap-2 items-center">
-            <Body className="font-medium"
+            <Body weight="medium"
             >
               {resource.name || resource.externalId}
             </Body>
@@ -202,15 +194,15 @@ export function LinkResourcesModal({
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="flex items-center gap-2">
-                <span className="text-sm shine-text">
+                <Text as="span" size="sm" tone="inherit" className="shine-text">
                   Loading resources...
-                </span>
+                </Text>
               </div>
             </div>
           ) : resources.length === 0 ? (
             <div className="p-8 text-center flex flex-col items-center">
               <Connect className="size-6 mb-3 text-primary-600 dark:text-primary-400" />
-              <Body className="font-medium">
+              <Body weight="medium">
                 No resources available
               </Body>
               <Caption className="mt-1 block">

@@ -20,7 +20,14 @@ export {
   Caption,
   Tiny,
 } from "./text";
-export type { TextProps, TextVariant } from "./text";
+export type {
+  TextProps,
+  TextVariant,
+  TextSize,
+  TextTone,
+  TextWeight,
+  TextAlign,
+} from "./text";
 
 // Input (primitives)
 export { Input, Textarea } from "./input";

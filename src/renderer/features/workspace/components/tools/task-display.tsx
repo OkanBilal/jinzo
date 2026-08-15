@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Task } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse, ToolOutputBody } from "./_shared";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader, ToolOutputBody } from "./_shared";
 
 export interface TaskParams {
   description?: string;
@@ -22,7 +22,7 @@ export function TaskDisplay({ params, isCompact = false }: { params: TaskParams;
         onToggle={() => setIsExpanded((v) => !v)}
         isCompact={isCompact}
       >
-        <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+        <span className={`truncate ${TOOL_ROW_TEXT}`}>
           {params.description || "Subagent task"}
         </span>
       </ToolHeader>

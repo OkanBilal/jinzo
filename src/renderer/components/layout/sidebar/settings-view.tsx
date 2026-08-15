@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Body, Button } from "@/components/ui";
+import { Body, Button, Text } from "@/components/ui";
 import { ChevronUp, ProjectFolder } from "@/components/ui/icons";
 import { useListProjectsQuery } from "@/lib/redux/api";
 import { useAppDispatch } from "@/lib/redux/hooks";
@@ -49,9 +49,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
       }}
     >
       <div className="flex flex-col items-start pt-12 pb-1 px-4">
-        <Body className="text-left ">
-          Settings
-        </Body>
+        <Body align="left">Settings</Body>
       </div>
 
       <div className="flex-1 px-3 mb-1 mt-2 overflow-y-auto noscrollbar">
@@ -86,9 +84,9 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
         {projects.length > 0 && (
           <div className="mt-2">
             <div className="px-3 mb-1">
-              <span className="text-xs  text-primary-900 dark:text-primary-100">
+              <Text as="span" size="xs">
                 Projects
-              </span>
+              </Text>
             </div>
             <div className="space-y-0.5">
               {projects.map((project) => {
@@ -154,9 +152,9 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
           style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
         >
           <ChevronUp className="size-4 rotate-270 text-primary-900 dark:text-primary-100" />
-          <Body className="font-normal text-s">
+          <Text as="span" size="s" weight="normal">
             Back
-          </Body>
+          </Text>
         </Button>
       </div>
     </div>

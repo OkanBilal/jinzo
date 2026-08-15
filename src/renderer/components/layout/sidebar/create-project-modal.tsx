@@ -74,13 +74,13 @@ export default function CreateProjectModal({
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
-        <Body className="mb-2 font-medium">
+        <Body weight="medium" className="mb-2">
           Create New Project
         </Body>
 
         <div className="space-y-4">
           <div>
-            <Caption className=" mb-1.5 block">
+            <Caption className="mb-1.5 block">
               Project Name
             </Caption>
             <input

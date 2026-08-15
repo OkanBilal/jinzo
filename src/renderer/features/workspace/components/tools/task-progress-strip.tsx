@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Text } from "@/components/ui";
 import {
   subagentStateOf,
   type SubagentLifecycleMeta,
@@ -7,7 +8,7 @@ import {
 } from "../../utils/subagent-identity";
 import { Bot, Clock, Document, Stop } from "@/components/ui/icons";
 import { SquareSpinner } from "@/components/ui/square-spinner";
-import { ToolCollapse, ToolOutputBody } from "./_shared";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolOutputBody } from "./_shared";
 
 /**
  * `metadata.task` — written by `run-session.ts` from the provider's task
@@ -178,12 +179,12 @@ export function TaskProgressStrip({
           <span className={`shrink-0 font-medium ${TONE_TEXT[tone]}`}>{label}</span>
         )}
         {description && (
-          <span className="truncate text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className={`truncate ${TOOL_ROW_TEXT}`}>
             {description}
           </span>
         )}
         {context && (
-          <span className="shrink-0 text-primary-600 dark:text-primary-400">{context}</span>
+          <Text as="span" size="inherit" tone="subtle" className="shrink-0">{context}</Text>
         )}
       </button>
 
@@ -193,10 +194,10 @@ export function TaskProgressStrip({
             {detail}
           </ToolOutputBody>
           {outputFile && (
-            <div className="flex items-center gap-1 pt-1 text-s text-primary-600 dark:text-primary-400">
+            <Text as="div" size="s" tone="subtle" className="flex items-center gap-1 pt-1">
               <Document className="size-3 shrink-0" />
               <span className="truncate font-mono">{outputFile}</span>
-            </div>
+            </Text>
           )}
         </ToolCollapse>
       )}
@@ -204,10 +205,10 @@ export function TaskProgressStrip({
       {/* No body to expand, but the captured output still has a location worth
           surfacing — a backgrounded command's real stdout lives only there. */}
       {!hasDetail && outputFile && (
-        <div className="flex items-center gap-1 py-0.5 text-s text-primary-600 dark:text-primary-400">
+        <Text as="div" size="s" tone="subtle" className="flex items-center gap-1 py-0.5">
           <Document className="size-3 shrink-0" />
           <span className="truncate font-mono">{outputFile}</span>
-        </div>
+        </Text>
       )}
     </div>
   );

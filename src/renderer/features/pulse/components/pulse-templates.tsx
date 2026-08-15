@@ -1,4 +1,4 @@
-import { Body } from "@/components/ui";
+import { Body, Text } from "@/components/ui";
 import { PULSE_CATEGORIES, PULSE_TEMPLATES, type PulseTemplate } from "../templates";
 
 export function PulseTemplates({
@@ -13,7 +13,7 @@ export function PulseTemplates({
         if (items.length === 0) return null;
         return (
           <section key={cat.id}>
-            <Body className=" font-medium mb-3">
+            <Body weight="medium" className="mb-3">
               {cat.label}
             </Body>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-8">
@@ -32,12 +32,12 @@ export function PulseTemplates({
                     {tpl.emoji}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-primary-900 dark:text-primary-100 truncate mb-1">
+                    <Text as="div" weight="medium" className="truncate mb-1">
                       {tpl.title}
-                    </div>
-                    <div className="text-xs text-primary-600 dark:text-primary-400 line-clamp-2">
+                    </Text>
+                    <Text as="div" size="xs" tone="subtle" className="line-clamp-2">
                       {tpl.description}
-                    </div>
+                    </Text>
                   </div>
                 </div>
               ))}

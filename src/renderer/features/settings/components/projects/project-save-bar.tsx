@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui";
+import { Button, Text } from "@/components/ui";
 
 interface ProjectSaveBarProps {
   lastSavedLabel: string | null;
@@ -12,9 +12,9 @@ interface ProjectSaveBarProps {
 export function ProjectSaveBar({ lastSavedLabel, isDirty, saving, isLoading, onRefresh, onSave }: ProjectSaveBarProps) {
   return (
     <div className="flex items-center justify-between pt-2 mb-8">
-      <div className="text-xs text-primary-600 dark:text-primary-400">
+      <Text as="div" size="xs" tone="subtle">
         {lastSavedLabel ? `Last saved: ${lastSavedLabel}` : "Not saved yet"}
-      </div>
+      </Text>
       <div className="flex items-center gap-3">
         <Button
           tooltip="Refresh project details"

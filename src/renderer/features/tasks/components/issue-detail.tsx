@@ -1,7 +1,7 @@
 import type { IssueWithEntity } from "@/lib/redux/api";
 import { IssueTabContent } from "@/features/workspace/components/issue-tab-content";
 import { ProviderIcon } from "@/features/workspace/components/provider-icon";
-import { Button } from "@/components/ui";
+import { Button, Text } from "@/components/ui";
 import { External } from "@/components/ui/icons";
 
 /**
@@ -15,13 +15,13 @@ export function IssueDetail({ issue }: { issue: IssueWithEntity }) {
     <div className="flex flex-col h-full min-h-0">
       <div className="flex items-center gap-1.5 px-8 py-2.5 border-b border-primary/20 dark:border-primary/10">
         <ProviderIcon provider={iss.provider} className="size-4.5 shrink-0 text-primary-800 dark:text-primary-200" />
-        <span className="text-sm text-primary-700 dark:text-primary-300 truncate">
+        <Text as="span" tone="muted" className="truncate">
           {iss.repo ?? ""}
-        </span>
+        </Text>
         {iss.number != null && (
-          <span className="text-sm text-primary-600 dark:text-primary-400">
+          <Text as="span" tone="subtle">
             #{iss.number}
-          </span>
+          </Text>
         )}
         <div className="ml-auto flex items-center gap-1">
           {entity.url && (

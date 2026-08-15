@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Text } from "@/components/ui";
 import type { RunEvent } from "../../types";
 import { parseToolContent, type ParsedToolContent } from "../../utils/parse-tool-content";
 import { resolveTool } from "../../utils/resolve-tool";
@@ -32,7 +33,7 @@ import { SkillDisplay, type SkillParams } from "./skill-display";
 import { AskUserQuestionDisplay, type AskUserQuestionParams } from "./ask-user-question-display";
 import { WebFetchDisplay, type WebFetchParams } from "./web-fetch-display";
 import { GenericToolDisplay } from "./generic-tool-display";
-import { ToolStatusProvider, eventToolStatus } from "./_shared";
+import { TOOL_ROW_TEXT, ToolStatusProvider, eventToolStatus } from "./_shared";
 import {
   TaskProgressStrip,
   type SubagentMetadata,
@@ -307,22 +308,22 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
   if (isEmptyTool) {
     if (isCompact) {
       return wrap(
-        <div className="flex items-center gap-1 px-1 text-s font-sans">
-          <span className="text-primary-600 shrink-0" />
-        </div>,
+        <Text as="div" size="s" tone="inherit" className="flex items-center gap-1 px-1 font-sans">
+          <span className="text-primary-500 shrink-0" />
+        </Text>,
       );
     }
     return wrap(
       <div className=" ">
-        <div className="flex items-center gap-1 text-s font-sans">
-          <span className="text-primary-500 group-hover:text-primary-900 group-hover:dark:text-primary-100">
+        <Text as="div" size="s" tone="inherit" className="flex items-center gap-1 font-sans">
+          <span className={TOOL_ROW_TEXT}>
             {toolIcon}
           </span>
-          <span className="text-primary-500 group-hover:text-primary-900 group-hover:dark:text-primary-100 font-medium">
+          <span className={`font-medium ${TOOL_ROW_TEXT}`}>
             {resolved.displayName}
           </span>
           <span className="text-primary-500 italic truncate" />
-        </div>
+        </Text>
       </div>,
     );
   }

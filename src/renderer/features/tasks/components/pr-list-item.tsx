@@ -1,4 +1,5 @@
 import { PullRequest } from "@/components/ui/icons";
+import { Text } from "@/components/ui";
 import { proxiedImageSrc } from "@/lib/proxied-image-src";
 import { formatDate } from "@/lib/format-date";
 import type { PullRequestSummary } from "@/lib/redux/api";
@@ -64,16 +65,27 @@ export function PrListItem({
 
       {/* Title + repo/branch line */}
       <div className="flex-1 min-w-0 flex gap-1.5 flex-col justify-center">
-        <span className="text-s text-primary-900 dark:text-primary-100 font-medium truncate">
+        <Text as="span" size="s" weight="medium" className="truncate">
           {pr.title}
           <span className="ml-1"> #{pr.number}</span>
           {pr.isDraft && (
-            <span className="ml-1.5 text-xxs font-normal text-primary-600 dark:text-primary-400">
+            <Text
+              as="span"
+              size="xxs"
+              tone="subtle"
+              weight="normal"
+              className="ml-1.5"
+            >
               Draft
-            </span>
+            </Text>
           )}
-        </span>
-        <span className="flex items-center gap-1.5 min-w-0 text-xs text-primary-700 dark:text-primary-300">
+        </Text>
+        <Text
+          as="span"
+          size="xs"
+          tone="muted"
+          className="flex items-center gap-1.5 min-w-0"
+        >
           {avatarSrc && (
             <img
               src={avatarSrc}
@@ -87,24 +99,34 @@ export function PrListItem({
             <span className="mx-1">·</span>
             {pr.headRefName}
           </span>
-        </span>
+        </Text>
       </div>
 
       {/* Diff stats + time (author avatar lives on the meta line) */}
       <div
         className={`shrink-0 items-center gap-2.5 ${compact ? "hidden" : "flex"}`}
       >
-        <span className="text-xxs tabular-nums whitespace-nowrap">
-          <span className="text-success">
+        <Text
+          as="span"
+          size="xxs"
+          tone="inherit"
+          className="tabular-nums whitespace-nowrap"
+        >
+          <Text as="span" size="inherit" tone="success">
             +{pr.additions}
-          </span>{" "}
-          <span className="text-danger">
+          </Text>{" "}
+          <Text as="span" size="inherit" tone="danger">
             -{pr.deletions}
-          </span>
-        </span>
-        <span className="text-xxs text-primary-700 dark:text-primary-300 whitespace-nowrap">
+          </Text>
+        </Text>
+        <Text
+          as="span"
+          size="xxs"
+          tone="muted"
+          className="whitespace-nowrap"
+        >
           {formatDate(pr.updatedAt)}
-        </span>
+        </Text>
       </div>
     </div>
   );

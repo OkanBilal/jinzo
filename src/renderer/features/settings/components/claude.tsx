@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Select } from "@/components/ui";
+import { Button, Select, Text } from "@/components/ui";
 import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout";
 import { useCapabilities } from "@/lib/platform";
 import {
@@ -126,9 +126,9 @@ export default function ClaudeSettings(
           }
         >
           <div className="flex items-center gap-3">
-            <span className="text-sm text-primary-600 dark:text-primary-400">
+            <Text as="span" tone="subtle">
               {selectedSchemaName}
-            </span>
+            </Text>
             <Button
               variant="primary"
               onClick={() => setIsStructuredOutputsModalOpen(true)}

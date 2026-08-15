@@ -32,7 +32,7 @@ import { useScriptNotifications } from "@/hooks/use-script-notifications";
 import { useSidebarSpaceSwipe } from "@/hooks/use-sidebar-space-swipe";
 import { UpdateBanner } from "./update-banner";
 import { Button } from "@/components/ui/button";
-import { Body, Tooltip } from "@/components/ui";
+import { Text, Tooltip } from "@/components/ui";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { useAppSelector, useAppDispatch } from "@/lib/redux/hooks";
 import { setSidebarWidth } from "@/lib/redux/slices/appSettingsSlice";
@@ -249,15 +249,14 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                       : "text-primary-900 dark:text-primary-100"
                   }`}
                 />
-                <Body
-                  className={`text-s font-normal ${
-                    isTasksRoute
-                      ? "text-primary-950 dark:text-primary"
-                      : "text-primary-900 dark:text-primary-100"
-                  }`}
+                <Text
+                  as="span"
+                  size="s"
+                  weight="normal"
+                  tone={isTasksRoute ? "contrast" : "default"}
                 >
                   Tasks
-                </Body>
+                </Text>
               </Button>
             </div>
             <div className="px-3 mb-px">
@@ -279,15 +278,14 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                       : "text-primary-900 dark:text-primary-100"
                   }`}
                 />
-                <Body
-                  className={`text-s font-normal ${
-                    isPulseRoute
-                      ? "text-primary-950 dark:text-primary"
-                      : "text-primary-900 dark:text-primary-100"
-                  }`}
+                <Text
+                  as="span"
+                  size="s"
+                  weight="normal"
+                  tone={isPulseRoute ? "contrast" : "default"}
                 >
                   Pulse
-                </Body>
+                </Text>
               </Button>
             </div>
             <div className="px-3 mb-px ">
@@ -315,15 +313,16 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                             : "text-primary-900 dark:text-primary-100"
                         }`}
                       />
-                      <Body
-                        className={`text-s flex-1 font-normal text-left ${
-                          isPluginsRoute
-                            ? "text-primary-950 dark:text-primary"
-                            : "text-primary-900 dark:text-primary-100"
-                        }`}
+                      <Text
+                        as="span"
+                        size="s"
+                        weight="normal"
+                        tone={isPluginsRoute ? "contrast" : "default"}
+                        align="left"
+                        className="flex-1"
                       >
                         Plugins
-                      </Body>
+                      </Text>
                     </Button>
                   </span>
                 </Tooltip>
@@ -348,15 +347,16 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                         : "text-primary-900 dark:text-primary-100"
                     }`}
                   />
-                  <Body
-                    className={`text-s font-normal flex-1 text-left ${
-                      isPluginsRoute
-                        ? "text-primary-950 dark:text-primary"
-                        : "text-primary-900 dark:text-primary-100"
-                    }`}
+                  <Text
+                    as="span"
+                    size="s"
+                    weight="normal"
+                    tone={isPluginsRoute ? "contrast" : "default"}
+                    align="left"
+                    className="flex-1"
                   >
                     Plugins
-                  </Body>
+                  </Text>
                 </Button>
               )}
             </div>
@@ -380,15 +380,16 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                       : "text-primary-900 dark:text-primary-100"
                   }`}
                 />
-                <Body
-                  className={`text-s font-normal flex-1 text-left ${
-                    isRelayRoute
-                      ? "text-primary-950 dark:text-primary"
-                      : "text-primary-900 dark:text-primary-100"
-                  }`}
+                <Text
+                  as="span"
+                  size="s"
+                  weight="normal"
+                  tone={isRelayRoute ? "contrast" : "default"}
+                  align="left"
+                  className="flex-1"
                 >
                   Relay
-                </Body>
+                </Text>
                 <span
                   className={`shrink-0 text-t -mr-1 uppercase px-1.5 py-px rounded-md ${
                     isRelayRoute

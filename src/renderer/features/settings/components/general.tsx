@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Select, Slider, Toggle, toast } from "@/components/ui";
+import { Button, Select, Slider, Text, Toggle, toast } from "@/components/ui";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import {
   setCodeFontSize,
@@ -74,9 +74,15 @@ function UpdateButton({
     case "error":
       return (
         <div className="flex items-center gap-3">
-          <span className="text-xs text-danger dark:text-danger/80 leading-relaxed text-right line-clamp-2 max-w-48">
+          <Text
+            as="span"
+            size="xs"
+            tone="danger"
+            align="right"
+            className="leading-relaxed line-clamp-2 max-w-48"
+          >
             {state.error}
-          </span>
+          </Text>
           <Button type="button" variant="ghost" onClick={onCheck}>
             Retry
           </Button>
@@ -85,9 +91,9 @@ function UpdateButton({
     case "not-available":
       return (
         <div className="flex items-center gap-2">
-          <span className="text-xs text-primary-600 dark:text-primary-400">
+          <Text as="span" size="xs" tone="subtle">
             Up to date
-          </span>
+          </Text>
           <Button type="button" variant="ghost" onClick={onCheck}>
             Check Again
           </Button>
