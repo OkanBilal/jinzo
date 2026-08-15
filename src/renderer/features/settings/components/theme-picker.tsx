@@ -198,6 +198,7 @@ export function ThemeSelect({
   return (
     <Select
       value={theme}
+      aria-label="Theme"
       options={THEME_OPTIONS}
       onChange={(value) => {
         setTheme(value);

@@ -85,6 +85,8 @@ function usePickerState() {
 function PickerTrigger({
   tooltip,
   onClick,
+  expanded,
+  popupRole = "menu",
   disabled = false,
   className = "",
   chevronClassName = "size-3.5 rotate-180",
@@ -92,6 +94,8 @@ function PickerTrigger({
 }: {
   tooltip: string;
   onClick: () => void;
+  expanded: boolean;
+  popupRole?: "menu" | "dialog";
   disabled?: boolean;
   className?: string;
   chevronClassName?: string;
@@ -103,6 +107,8 @@ function PickerTrigger({
       tooltip={tooltip}
       disabled={disabled}
       onClick={onClick}
+      aria-haspopup={popupRole}
+      aria-expanded={expanded}
       className={`${triggerClass} ${className}`}
     >
       {children}
@@ -143,6 +149,8 @@ function PickerOption({
   return (
     <Button
       type="button"
+      role="menuitemradio"
+      aria-checked={selected}
       onClick={onSelect}
       className={`w-full flex items-center gap-2 text-left px-2.5 py-1.5 text-sm cursor-pointer transition-colors first:rounded-t-xl last:rounded-b-xl ${
         selected
@@ -275,7 +283,7 @@ export function WorkspacePicker({
 
   return (
     <div className="relative" ref={ref}>
-      <PickerTrigger tooltip="Select workspace" onClick={toggle}>
+      <PickerTrigger tooltip="Select workspace" onClick={toggle} expanded={open}>
         {selected ? (
           <div className="flex items-center gap-2">
             {workspaceProjectIcon(selected, projectDataMap)}
@@ -288,7 +296,11 @@ export function WorkspacePicker({
           </>
         )}
       </PickerTrigger>
-      <DropdownWrapper isOpen={open} minWidth="min-w-44">
+      <DropdownWrapper
+        isOpen={open}
+        aria-label="Workspace"
+        minWidth="min-w-44"
+      >
         {active.length === 0 && (
           <PickerEmpty>
             No active workspaces
@@ -335,7 +347,7 @@ export function ProviderPicker({
 
   return (
     <div className="relative" ref={ref}>
-      <PickerTrigger tooltip="Select provider" onClick={toggle}>
+      <PickerTrigger tooltip="Select provider" onClick={toggle} expanded={open}>
         {selected ? (
           <ProviderIcon id={selected.id} className="size-4" />
         ) : (
@@ -343,7 +355,11 @@ export function ProviderPicker({
         )}
         <span>{selected ? providerLabel(selected.id, selected.displayName) : "Provider"}</span>
       </PickerTrigger>
-      <DropdownWrapper isOpen={open} minWidth="min-w-44">
+      <DropdownWrapper
+        isOpen={open}
+        aria-label="Provider"
+        minWidth="min-w-44"
+      >
         {eligible.length === 0 && (
           <PickerEmpty>
             No enabled providers
@@ -394,6 +410,7 @@ export function ModelPicker({
     <div className="relative" ref={ref}>
       <PickerTrigger
         tooltip="Select model"
+        expanded={open}
         disabled={!providerId}
         onClick={toggle}
         className={!providerId ? "opacity-40 cursor-not-allowed" : ""}
@@ -407,7 +424,11 @@ export function ModelPicker({
           {selectedDisplay ?? "Model"}
         </span>
       </PickerTrigger>
-      <DropdownWrapper isOpen={open} minWidth="min-w-56">
+      <DropdownWrapper
+        isOpen={open}
+        aria-label="Model"
+        minWidth="min-w-56"
+      >
         {models.length === 0 && (
           <PickerEmpty>
             {providerId ? "Loading models…" : "Select a provider first"}
@@ -484,6 +505,8 @@ export function SchedulePicker({
     <div className="relative" ref={ref}>
       <PickerTrigger
         tooltip="Schedule"
+        expanded={open}
+        popupRole="dialog"
         onClick={toggle}
         chevronClassName="size-3.5 rotate-180 opacity-60"
       >
@@ -492,7 +515,12 @@ export function SchedulePicker({
           {formatSchedule({ frequency, hour, minute, dayOfWeek })}
         </span>
       </PickerTrigger>
-      <DropdownWrapper isOpen={open} minWidth="min-w-44">
+      <DropdownWrapper
+        isOpen={open}
+        role="dialog"
+        aria-label="Schedule settings"
+        minWidth="min-w-44"
+      >
         <div className="p-3 space-y-3">
           {/* Frequency */}
           <div>
@@ -501,6 +529,7 @@ export function SchedulePicker({
             </FieldLabel>
             <Select<PulseFrequency>
               value={frequency}
+              aria-label="Frequency"
               options={FREQUENCY_OPTIONS}
               onChange={(val) => update({ frequency: val })}
             />
@@ -514,6 +543,7 @@ export function SchedulePicker({
               </FieldLabel>
               <Select<string>
                 value={String(dayOfWeek ?? 1)}
+                aria-label="Day of week"
                 options={DAY_OPTIONS}
                 onChange={(val) => update({ dayOfWeek: Number(val) })}
               />
@@ -528,6 +558,7 @@ export function SchedulePicker({
               </FieldLabel>
               <Select<string>
                 value={`${hour}:${minute}`}
+                aria-label="Time"
                 options={TIME_OPTIONS}
                 onChange={(val) => {
                   const [h, m] = val.split(":").map(Number);
@@ -594,6 +625,8 @@ export function PulseEffortPicker({
         type="button"
         tooltip="Thinking & Effort"
         onClick={toggle}
+        aria-haspopup="menu"
+        aria-expanded={open}
         className={`flex items-center px-2 py-1 gap-1 rounded-xl text-s transition-all cursor-pointer hover:bg-primary-200/30 dark:hover:bg-primary-800 ${
           thinkingMode
             ? "gap-1 text-primary-700 dark:text-primary-300"
@@ -606,7 +639,11 @@ export function PulseEffortPicker({
         </span>
         <ArrowUp className="size-3.5 rotate-180" />
       </Button>
-      <DropdownWrapper isOpen={open} minWidth="min-w-32">
+      <DropdownWrapper
+        isOpen={open}
+        aria-label="Thinking effort"
+        minWidth="min-w-32"
+      >
         {variant !== "codex" && (
           <PickerOption
             selected={!thinkingMode}

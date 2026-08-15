@@ -93,7 +93,7 @@ export function CompactComposerControls({
         tooltip="Model & thinking"
         onClick={() => setIsOpen((o) => !o)}
         className="flex items-center gap-1 px-2 py-1 rounded-full text-sm cursor-pointer text-primary-950 dark:text-primary hover:bg-primary-200/30 dark:hover:bg-primary-800 transition-colors"
-        aria-haspopup="true"
+        aria-haspopup="menu"
         aria-expanded={isOpen}
       >
         {getModelIcon(displayModel, variant)}
@@ -115,7 +115,12 @@ export function CompactComposerControls({
         <ArrowUp className="size-3.5 rotate-180" />
       </Button>
 
-      <DropdownWrapper isOpen={isOpen} openUpward minWidth="min-w-52">
+      <DropdownWrapper
+        isOpen={isOpen}
+        aria-label="Composer controls"
+        openUpward
+        minWidth="min-w-52"
+      >
         <div className="max-h-[60vh] overflow-auto noscrollbar py-1">
           {modelList.length > 0 && (
             <>
@@ -127,6 +132,8 @@ export function CompactComposerControls({
                   <Button
                     key={m}
                     type="button"
+                    role="menuitemradio"
+                    aria-checked={active}
                     onClick={() => {
                       onModelChange(m);
                       setIsOpen(false);
@@ -148,6 +155,8 @@ export function CompactComposerControls({
               {variant !== "codex" && (
                 <Button
                   type="button"
+                  role="menuitemradio"
+                  aria-checked={!thinkingMode}
                   onClick={() => {
                     onEffortLevelChange("");
                     setIsOpen(false);
@@ -164,6 +173,8 @@ export function CompactComposerControls({
                   <Button
                     key={level}
                     type="button"
+                    role="menuitemradio"
+                    aria-checked={active}
                     onClick={() => {
                       onEffortLevelChange(level);
                       setIsOpen(false);
@@ -179,6 +190,8 @@ export function CompactComposerControls({
               {supportsUltracode && variant === "claude" && (
                 <Button
                   type="button"
+                  role="menuitemradio"
+                  aria-checked={thinkingMode && effortLevel === "ultracode"}
                   onClick={() => {
                     onEffortLevelChange("ultracode");
                     setIsOpen(false);
@@ -212,6 +225,8 @@ export function CompactComposerControls({
               <Section>Thinking</Section>
               <Button
                 type="button"
+                role="menuitemcheckbox"
+                aria-checked={thinkingMode}
                 onClick={() => {
                   onThinkingModeToggle();
                   setIsOpen(false);
@@ -230,6 +245,8 @@ export function CompactComposerControls({
               <Section>Speed</Section>
               <Button
                 type="button"
+                role="menuitemcheckbox"
+                aria-checked={fastMode}
                 onClick={() => {
                   onFastModeToggle();
                   setIsOpen(false);

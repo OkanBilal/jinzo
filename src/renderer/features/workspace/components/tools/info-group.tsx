@@ -631,6 +631,7 @@ function ImageArtifact({
   const menu = (
     <DropdownMenu
       isOpen={menuOpen}
+      aria-label="Image actions"
       position={menuPos}
       onClose={() => setMenuOpen(false)}
       minWidth={240}
@@ -709,6 +710,8 @@ function ImageArtifact({
           ref={openBtnRef}
           type="button"
           onClick={openMenu}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
           className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-white bg-black/50 hover:bg-black/70 opacity-0 group-hover/image-tile:opacity-100 transition-opacity cursor-pointer"
         >
           Open
@@ -761,6 +764,8 @@ function ImageArtifact({
         ref={openBtnRef}
         type="button"
         onClick={openMenu}
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
         className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium text-primary-800 dark:text-primary-200  bg-primary-100/80 dark:bg-primary-800/40 hover:bg-primary-200/60 dark:hover:bg-primary-700/35 transition-colors cursor-pointer"
       >
         Open

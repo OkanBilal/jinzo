@@ -41,7 +41,10 @@ export function WorkspaceGroupDropdown({
         ref={buttonRef}
         tooltip="Group workspaces"
         tooltipPosition="top"
+        aria-label="Group workspaces"
         onClick={handleClick}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
         className={` ${grouping !== "none" ? "bg-primary-100/80 dark:bg-primary/5" : " "} p-1 rounded-md cursor-pointer hover:bg-primary-100/80 dark:hover:bg-primary/10 transition-colors`}
       >
         <Layers
@@ -52,6 +55,7 @@ export function WorkspaceGroupDropdown({
 
       <DropdownMenu
         isOpen={isOpen}
+        aria-label="Workspace grouping"
         position={position}
         onClose={() => setIsOpen(false)}
         minWidth={140}

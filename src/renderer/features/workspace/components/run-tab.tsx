@@ -131,6 +131,7 @@ export function RunTab({ run, isActive, isFirst, onClick, onClose, onRename, tit
       />
       <DropdownMenu
         isOpen={isDropdownOpen}
+        aria-label="Run actions"
         position={dropdownPosition}
         onClose={() => setIsDropdownOpen(false)}
         minWidth={140}

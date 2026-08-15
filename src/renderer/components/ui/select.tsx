@@ -1,6 +1,7 @@
 import {
   ReactNode,
   useEffect,
+  useId,
   useLayoutEffect,
   useRef,
   useState,
@@ -9,17 +10,19 @@ import { createPortal } from "react-dom";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { isAppReady } from "@/lib/app-ready";
 import { Button } from "./button";
+import { focusNextFrom } from "./focus-navigation";
 import Text, { Caption } from "./text";
-import { SelectOption } from "./icons";
+import { SelectOption as SelectOptionIcon } from "./icons";
 
-interface SelectOption<T extends string = string> {
+export interface SelectOption<T extends string = string> {
   value: T;
   label: string;
   icon?: ReactNode;
   description?: string;
 }
 
-interface SelectProps<T extends string = string> {
+interface SelectBaseProps<T extends string = string> {
+  id?: string;
   value: T;
   options: SelectOption<T>[];
   onChange: (value: T) => void;
@@ -27,35 +30,50 @@ interface SelectProps<T extends string = string> {
   title?: string;
 }
 
+export type SelectProps<T extends string = string> = SelectBaseProps<T> &
+  (
+    | { "aria-label": string; "aria-labelledby"?: string }
+    | { "aria-label"?: undefined; "aria-labelledby": string }
+  );
+
 export default function Select<T extends string = string>({
+  id,
   value,
   options,
   onChange,
   placeholder = "Select an option",
   title,
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
 }: SelectProps<T>) {
+  const generatedId = useId();
+  const triggerId = id ?? `${generatedId}-trigger`;
+  const listboxId = `${generatedId}-listbox`;
   const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const [animateIn, setAnimateIn] = useState(false);
   const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const initialFocusIndex = useRef(-1);
   const [dropdownPosition, setDropdownPosition] = useState({
     top: 0,
     left: 0,
     width: 0,
   });
 
-  // Reset enter animation when the menu closes or opens so the double-RAF ramp
-  // always starts from prewarm (avoids sync setState in an effect).
-  // Pre-`app-ready` the ramp is skipped entirely: animations are globally
-  // forced to 0s and the startup-loaded main thread would starve the two rAFs,
-  // holding the menu invisible — latch straight to the (instant) final state.
+  // Reset enter animation on each open. Before the app-ready latch animations
+  // are globally disabled, so render the final state immediately.
   if (isOpen !== prevIsOpen) {
     setPrevIsOpen(isOpen);
-    if (!isOpen || (isOpen && !prevIsOpen)) {
-      setAnimateIn(isOpen && !isAppReady());
-    }
+    setAnimateIn(isOpen && !isAppReady());
   }
+
+  const selectedIndex = options.findIndex((option) => option.value === value);
+  const selectedOption =
+    selectedIndex >= 0 ? options[selectedIndex] : undefined;
 
   const updateDropdownPosition = () => {
     if (!containerRef.current) return;
@@ -63,9 +81,116 @@ export default function Select<T extends string = string>({
     setDropdownPosition({ top: rect.bottom, left: rect.left, width: rect.width });
   };
 
+  const openMenu = (preferredIndex: number) => {
+    const nextIndex =
+      options.length === 0
+        ? -1
+        : Math.min(options.length - 1, Math.max(0, preferredIndex));
+    initialFocusIndex.current = nextIndex;
+    setActiveIndex(nextIndex);
+    setIsOpen(true);
+  };
+
+  const closeMenu = (restoreTriggerFocus: boolean) => {
+    setIsOpen(false);
+    if (restoreTriggerFocus) {
+      requestAnimationFrame(() => triggerRef.current?.focus());
+    }
+  };
+
+  const focusOption = (index: number) => {
+    if (options.length === 0) return;
+    const nextIndex = (index + options.length) % options.length;
+    setActiveIndex(nextIndex);
+    optionRefs.current[nextIndex]?.focus({ preventScroll: true });
+    optionRefs.current[nextIndex]?.scrollIntoView({ block: "nearest" });
+  };
+
+  const selectOption = (option: SelectOption<T>) => {
+    onChange(option.value);
+    closeMenu(true);
+  };
+
+  const handleTriggerKeyDown = (
+    event: React.KeyboardEvent<HTMLButtonElement>,
+  ) => {
+    switch (event.key) {
+      case "ArrowDown":
+        event.preventDefault();
+        openMenu(selectedIndex >= 0 ? selectedIndex : 0);
+        break;
+      case "ArrowUp":
+        event.preventDefault();
+        openMenu(selectedIndex >= 0 ? selectedIndex : options.length - 1);
+        break;
+      case "Home":
+        event.preventDefault();
+        openMenu(0);
+        break;
+      case "End":
+        event.preventDefault();
+        openMenu(options.length - 1);
+        break;
+      case "Enter":
+      case " ":
+        event.preventDefault();
+        if (isOpen) closeMenu(true);
+        else openMenu(selectedIndex >= 0 ? selectedIndex : 0);
+        break;
+      case "Escape":
+        if (isOpen) {
+          event.preventDefault();
+          closeMenu(true);
+        }
+        break;
+    }
+  };
+
+  const handleListboxKeyDown = (
+    event: React.KeyboardEvent<HTMLDivElement>,
+  ) => {
+    switch (event.key) {
+      case "ArrowDown":
+        event.preventDefault();
+        focusOption(activeIndex + 1);
+        break;
+      case "ArrowUp":
+        event.preventDefault();
+        focusOption(activeIndex - 1);
+        break;
+      case "Home":
+        event.preventDefault();
+        focusOption(0);
+        break;
+      case "End":
+        event.preventDefault();
+        focusOption(options.length - 1);
+        break;
+      case "Escape":
+        event.preventDefault();
+        event.stopPropagation();
+        closeMenu(true);
+        break;
+      case "Tab":
+        // Continue from the trigger rather than from a portaled option, which
+        // would otherwise disappear before the browser resolves its next stop.
+        event.preventDefault();
+        setIsOpen(false);
+        requestAnimationFrame(() =>
+          focusNextFrom(triggerRef.current, event.shiftKey),
+        );
+        break;
+    }
+  };
+
   useLayoutEffect(() => {
     if (!isOpen) return;
     updateDropdownPosition();
+    const index = initialFocusIndex.current;
+    if (index >= 0) {
+      optionRefs.current[index]?.focus({ preventScroll: true });
+      optionRefs.current[index]?.scrollIntoView({ block: "nearest" });
+    }
   }, [isOpen]);
 
   useEffect(() => {
@@ -90,9 +215,6 @@ export default function Select<T extends string = string>({
     };
   }, [isOpen]);
 
-  // Defer animation by two frames so React commit + first paint of children
-  // happen before the GPU starts the keyframe — prevents first-open jank.
-  // (No-op pre-`app-ready`: the latch above already set animateIn.)
   useEffect(() => {
     if (!isOpen) return;
     let raf2 = 0;
@@ -113,37 +235,41 @@ export default function Select<T extends string = string>({
     dropdownRef,
   );
 
-  const selectedOption = options.find((opt) => opt.value === value);
-
   return (
     <div ref={containerRef} className="relative">
-      {/* Trigger Button */}
       <Button
+        ref={triggerRef}
+        id={triggerId}
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        variant="bare"
+        aria-label={ariaLabel}
+        aria-labelledby={ariaLabelledBy}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-controls={listboxId}
+        onClick={() => {
+          if (isOpen) closeMenu(false);
+          else openMenu(selectedIndex >= 0 ? selectedIndex : 0);
+        }}
+        onKeyDown={handleTriggerKeyDown}
         className={`
-          w-full px-2.5 py-2
-          min-w-52
+          w-full min-w-52 px-2.5 py-2
           glass-button
           text-primary-900 dark:text-primary
-          text-sm focus:outline-none cursor-pointer
+          text-sm cursor-pointer
           flex items-center justify-between
-          transition-colors
-          ${
-            isOpen
-              ? "rounded-t-xl shadow-lg"
-              : "rounded-xl"
-          }
+          transition-[color,background-color,border-radius,box-shadow]
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2
+          ${isOpen ? "rounded-t-xl shadow-lg" : "rounded-xl"}
         `}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           {selectedOption?.icon}
-          {/* A placeholder reads a stop below a real value; a chosen label
-              takes the trigger's own colour. */}
           <Text
             as="span"
             size="inherit"
             tone={selectedOption ? "inherit" : "subtle"}
+            className="truncate"
           >
             {selectedOption?.label || placeholder}
           </Text>
@@ -154,68 +280,79 @@ export default function Select<T extends string = string>({
         >
           {title}
         </Caption>
-        <SelectOption
-          className={`size-3 text-primary-900 dark:text-primary-100`}
+        <SelectOptionIcon
+          aria-hidden="true"
+          className={`size-3 shrink-0 text-primary-900 transition-transform duration-200 dark:text-primary-100`}
         />
       </Button>
 
-      {createPortal(
-        <div
-          ref={dropdownRef}
-          onMouseDown={(e) => e.stopPropagation()}
-          className={`fixed z-(--z-modal-critical)
-            border border-t-0 border-primary-950/10 dark:border-primary/10
-            rounded-b-xl shadow-lg overflow-hidden
-            ${isOpen && animateIn ? "animate-dropdown-in" : "dropdown-prewarm"}
-            origin-top
-            bg-linear-to-b from-primary to-primary-50 dark:from-primary-900 dark:to-primary-950`}
-          style={{
-            top: dropdownPosition.top,
-            left: dropdownPosition.left,
-            width: dropdownPosition.width,
-          }}
-        >
-          <div className="max-h-60 overflow-auto noscrollbar">
-            {options.map((option) => (
-              <Button
-                type="button"
-                key={option.value}
-                onClick={() => {
-                  onChange(option.value);
-                  setIsOpen(false);
-                }}
-                className={`
-                  w-full cursor-pointer text-left
-                  transition-colors px-3 py-1
-                  text-s flex items-center gap-2
-                  ${
-                    value === option.value
-                      ? "bg-primary-950/5 dark:bg-primary/10 text-primary-900 dark:text-primary "
-                      : "hover:bg-primary-950/5 dark:hover:bg-primary/5 text-primary-900 dark:text-primary"
-                  }
-                `}
-              >
-                {option.icon}
-                <div className="flex flex-col min-w-0">
-                  <span className="truncate my-0.5">{option.label}</span>
-                  {option.description && (
-                    <Text
-                      as="span"
-                      size="xxs"
-                      tone="subtle"
-                      weight="normal"
-                      className="tracking-tight truncate"
-                    >
-                      {option.description}
-                    </Text>
-                  )}
-                </div>
-              </Button>
-            ))}
-          </div>
-        </div>,
-        document.body,
-      )}
+      {isOpen &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            id={listboxId}
+            role="listbox"
+            aria-labelledby={triggerId}
+            onKeyDown={handleListboxKeyDown}
+            onMouseDown={(event) => event.stopPropagation()}
+            className={`fixed z-(--z-modal-critical)
+              overflow-hidden rounded-b-xl border border-t-0 border-primary-950/10 shadow-lg dark:border-primary/10
+              ${animateIn ? "animate-dropdown-in" : "dropdown-prewarm"}
+              origin-top
+              bg-linear-to-b from-primary to-primary-50 dark:from-primary-900 dark:to-primary-950`}
+            style={{
+              top: dropdownPosition.top,
+              left: dropdownPosition.left,
+              width: dropdownPosition.width,
+            }}
+          >
+            <div className="max-h-60 overflow-auto noscrollbar">
+              {options.map((option, index) => {
+                const isSelected = value === option.value;
+                const isActive = activeIndex === index;
+                return (
+                  <Button
+                    ref={(element) => {
+                      optionRefs.current[index] = element;
+                    }}
+                    id={`${listboxId}-option-${index}`}
+                    type="button"
+                    variant="bare"
+                    role="option"
+                    aria-selected={isSelected}
+                    tabIndex={-1}
+                    key={option.value}
+                    onFocus={() => setActiveIndex(index)}
+                    onClick={() => selectOption(option)}
+                    className={`
+                      flex w-full cursor-pointer items-center gap-2 px-3 py-1 text-left text-s
+                      text-primary-900 transition-colors focus:outline-none dark:text-primary
+                      hover:bg-primary-950/5 focus:bg-primary-950/5 dark:hover:bg-primary/5 dark:focus:bg-primary/5
+                      ${isSelected || isActive ? "bg-primary-950/5 dark:bg-primary/10" : ""}
+                    `}
+                  >
+                    {option.icon}
+                    <div className="flex min-w-0 flex-col">
+                      <span className="my-0.5 truncate">{option.label}</span>
+                      {option.description && (
+                        <Text
+                          as="span"
+                          size="xxs"
+                          tone="subtle"
+                          weight="normal"
+                          className="truncate tracking-tight"
+                        >
+                          {option.description}
+                        </Text>
+                      )}
+                    </div>
+                  </Button>
+                );
+              })}
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

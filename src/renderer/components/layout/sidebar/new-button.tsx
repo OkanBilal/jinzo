@@ -70,6 +70,8 @@ export default function NewButton({
         variant="subtle"
         tooltipShortcut="⌘N"
         onClick={handleClick}
+        aria-haspopup={dropdownItems ? "menu" : undefined}
+        aria-expanded={dropdownItems ? menuState.isOpen : undefined}
         fullWidth
         className="justify-start cursor-pointer transition-transform duration-200 px-2 rounded-xl"
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
@@ -85,6 +87,7 @@ export default function NewButton({
       {dropdownItems && (
         <DropdownMenu
           isOpen={menuState.isOpen}
+          aria-label={`${actionPrefix} ${title}`}
           position={menuState.position}
           onClose={handleCloseMenu}
           minWidth={180}

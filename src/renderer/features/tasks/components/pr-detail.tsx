@@ -351,6 +351,7 @@ export function PrDetail({ pr }: PrDetailProps) {
                     disabled={!canMerge || isMerging}
                     onClick={() => setMergeMenuOpen((open) => !open)}
                     aria-label="Choose merge method"
+                    aria-haspopup="menu"
                     aria-expanded={mergeMenuOpen}
                     className="rounded-l-none px-2 bg-accent  hover:bg-[#2868f1]! text-primary!"
                   >
@@ -359,11 +360,17 @@ export function PrDetail({ pr }: PrDetailProps) {
                     />
                   </Button>
                 </div>
-                <DropdownWrapper isOpen={mergeMenuOpen} minWidth="min-w-56">
+                <DropdownWrapper
+                  isOpen={mergeMenuOpen}
+                  aria-label="Merge method"
+                  minWidth="min-w-56"
+                >
                   <div className="py-1.5">
                     {MERGE_METHODS.map((m) => (
                       <Button
                         key={m.value}
+                        role="menuitemradio"
+                        aria-checked={mergeMethod === m.value}
                         onClick={() => {
                           setMergeMethod(m.value);
                           setMergeMenuOpen(false);
@@ -452,6 +459,7 @@ export function PrDetail({ pr }: PrDetailProps) {
                   <div className="relative" ref={checksDropdownRef}>
                     <Button
                       onClick={() => setChecksOpen((open) => !open)}
+                      aria-expanded={checksOpen}
                       className="flex items-center gap-1 cursor-pointer text-s text-primary-900 dark:text-primary-100 hover:text-primary-700 dark:hover:text-primary-300"
                     >
                       {checksSummary}
@@ -459,7 +467,12 @@ export function PrDetail({ pr }: PrDetailProps) {
                         className={`w-3 h-3 transition-transform rotate-180 `}
                       />
                     </Button>
-                    <DropdownWrapper isOpen={checksOpen} minWidth="min-w-56">
+                    <DropdownWrapper
+                      isOpen={checksOpen}
+                      role="region"
+                      aria-label="CI checks"
+                      minWidth="min-w-56"
+                    >
                       <div className="py-2 px-3 space-y-1.5">
                         {detail.checks.map((check, i) => (
                           <div

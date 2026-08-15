@@ -162,6 +162,7 @@ function ImageGroupChip({
 
       <DropdownWrapper
         isOpen={menuOpen}
+        aria-label="Attached images"
         openUpward={openUpward}
         minWidth="min-w-56"
         usePortal
@@ -279,6 +280,7 @@ function DocumentGroupChip({
 
       <DropdownWrapper
         isOpen={menuOpen}
+        aria-label="Attached documents"
         openUpward={openUpward}
         minWidth="min-w-56"
         usePortal
@@ -511,6 +513,7 @@ export function FileUploadDropdown({
         onClick={onToggle}
         className="shrink-0 cursor-pointer rounded-full p-2 transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800"
         aria-label="Upload file"
+        aria-haspopup="menu"
         aria-expanded={isOpen}
       >
         <Attach className="text-primary-950 dark:text-primary size-4" />
@@ -527,6 +530,7 @@ export function FileUploadDropdown({
 
       <DropdownWrapper
         isOpen={isOpen}
+        aria-label="Upload type"
         openUpward={openUpward}
       >
         {[

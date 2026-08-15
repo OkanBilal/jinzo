@@ -387,7 +387,7 @@ export function ModelSelectDropdown({
               ? "text-primary-600 dark:text-primary-400 cursor-not-allowed"
               : "cursor-pointer text-primary-950 dark:text-primary"
           }`}
-          aria-haspopup="true"
+          aria-haspopup="menu"
           aria-expanded={isOpen}
           disabled={noModels || (isLoading && !displayModel)}
         >
@@ -422,6 +422,7 @@ export function ModelSelectDropdown({
 
       <DropdownWrapper
         isOpen={isOpen}
+        aria-label="Model selection"
         openUpward={openUpward}
         minWidth="min-w-48"
         dropdownRef={mainMenuRef}

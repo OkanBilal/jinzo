@@ -753,7 +753,7 @@ export function WorkspaceInput({
                 onClick={() => setTargetMenuOpen((open) => !open)}
                 className="flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-full glass-button text-xs dark:text-primary-300 text-primary-700 cursor-pointer"
                 title="Choose which chat this message is sent to"
-                aria-haspopup="true"
+                aria-haspopup="menu"
                 aria-expanded={targetMenuOpen}
               >
                 {sendTarget.runId ? (
@@ -765,6 +765,7 @@ export function WorkspaceInput({
               </Button>
               <DropdownWrapper
                 isOpen={targetMenuOpen}
+                aria-label="Send message to"
                 openUpward
                 minWidth="min-w-60"
               >

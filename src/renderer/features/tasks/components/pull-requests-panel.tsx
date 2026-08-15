@@ -286,6 +286,7 @@ export function PullRequestsPanel({
                 onClick={() => setRepoFilterOpen((open) => !open)}
                 tooltip="Filter pull requests"
                 aria-label="Filter pull requests"
+                aria-haspopup="dialog"
                 aria-expanded={repoFilterOpen}
                 className={`p-1.5 rounded-xl cursor-pointer transition-colors ${
                   repoFilterOpen || activeFilterCount > 0
@@ -297,6 +298,8 @@ export function PullRequestsPanel({
               </Button>
               <DropdownWrapper
                 isOpen={repoFilterOpen}
+                role="dialog"
+                aria-label="Pull request filters"
                 minWidth="min-w-80"
                 position="right"
               >

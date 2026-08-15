@@ -43,6 +43,7 @@ function PropertyRow({
       <div className="w-51.5 shrink-0">
         <Select
           value={property.type}
+          aria-label="Property type"
           options={typeOptions}
           onChange={(val) => onUpdate({ type: val as SchemaProperty["type"] })}
           placeholder="Type"

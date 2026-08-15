@@ -50,7 +50,7 @@ export function MobileTabSwitcher({
         type="button"
         onClick={() => setIsOpen((o) => !o)}
         className="inline-flex max-w-[50vw] items-center gap-2 px-2.5 py-2 rounded-xl text-s cursor-pointer text-primary-950 dark:text-primary hover:bg-primary/10 transition-colors"
-        aria-haspopup="true"
+        aria-haspopup="menu"
         aria-expanded={isOpen}
       >
         <span className="shrink-0 flex items-center">{active?.icon}</span>
@@ -65,7 +65,12 @@ export function MobileTabSwitcher({
         <ArrowUp className="size-3.5 shrink-0 rotate-180" />
       </Button>
 
-      <DropdownWrapper isOpen={isOpen} openUpward={false} minWidth="min-w-64">
+      <DropdownWrapper
+        isOpen={isOpen}
+        aria-label="Open tabs"
+        openUpward={false}
+        minWidth="min-w-64"
+      >
         <div className="max-h-[60vh] overflow-auto noscrollbar py-1">
           {GROUP_ORDER.map((group) => {
             const items = tabs.filter((t) => t.group === group);
@@ -80,39 +85,37 @@ export function MobileTabSwitcher({
                   return (
                     <div
                       key={t.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => {
-                        t.onSelect();
-                        setIsOpen(false);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          t.onSelect();
-                          setIsOpen(false);
-                        }
-                      }}
-                      className={`flex items-center gap-2 px-2.5 py-2 text-sm cursor-pointer transition-colors ${
+                      className={`flex items-center transition-colors ${
                         isActive
                           ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-950 dark:text-primary"
                           : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
                       }`}
                     >
-                      <span className="shrink-0 flex items-center">
-                        {t.icon}
-                      </span>
-                      <span className="flex-1 truncate">{t.label}</span>
-                      {isActive && <Check className="size-3.5 shrink-0" />}
+                      <Button
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={isActive}
+                        onClick={() => {
+                          t.onSelect();
+                          setIsOpen(false);
+                        }}
+                        className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 px-2.5 py-2 text-sm"
+                      >
+                        <span className="flex shrink-0 items-center">
+                          {t.icon}
+                        </span>
+                        <span className="flex-1 truncate text-left">{t.label}</span>
+                        {isActive && <Check className="size-3.5 shrink-0" />}
+                      </Button>
                       {t.onClose && (
                         <Button
                           type="button"
+                          role="menuitem"
                           aria-label="Close tab"
                           onClick={(e) => {
-                            e.stopPropagation();
                             t.onClose!(e);
                           }}
-                          className="shrink-0 rounded p-0.5 hover:bg-primary-300/40 dark:hover:bg-primary-700/40"
+                          className="mr-2 shrink-0 rounded p-0.5 hover:bg-primary-300/40 dark:hover:bg-primary-700/40"
                         >
                           <Close className="size-3" />
                         </Button>
@@ -127,6 +130,7 @@ export function MobileTabSwitcher({
           <div className="mt-1 border-t border-primary-200/60 pt-1 dark:border-primary-800/30">
             <Button
               type="button"
+              role="menuitem"
               onClick={() => {
                 onNewRun();
                 setIsOpen(false);

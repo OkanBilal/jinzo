@@ -21,6 +21,7 @@ export default function HelpMenu({ isOpen, position, onClose }: HelpMenuProps) {
   return (
     <DropdownMenu
       isOpen={isOpen}
+      aria-label="Help"
       position={adjustedPosition}
       onClose={onClose}
       minWidth={200}

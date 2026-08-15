@@ -415,6 +415,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
               onSpaceChange={handleSpaceChange}
               onSettingsClick={handleOpenSettings}
               onHelpClick={handleOpenHelpMenu}
+              helpMenuOpen={helpMenuState.isOpen}
             />
           </div>
         )}

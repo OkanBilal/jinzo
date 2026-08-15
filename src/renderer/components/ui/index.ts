@@ -53,6 +53,7 @@ export { PermissionModeDropdown } from "./input/permission-mode-dropdown";
 
 // Select (custom dropdown)
 export { default as Select } from "./select";
+export type { SelectOption, SelectProps } from "./select";
 
 // Checkbox
 export { Checkbox } from "./checkbox";
@@ -78,9 +79,15 @@ export { Modal, ModalHeader } from "./modal";
 
 // Dropdown Menu
 export { DropdownMenu, DropdownMenuSub, DropdownMenuItem } from "./dropdown-menu";
+export type {
+  DropdownMenuItemProps,
+  DropdownMenuProps,
+  DropdownMenuSubProps,
+} from "./dropdown-menu";
 
 // Dropdown Wrapper
 export { default as DropdownWrapper } from "./dropdown-wrapper";
+export type { DropdownWrapperProps } from "./dropdown-wrapper";
 
 // Animated Title
 export { AnimatedTitle } from "./animated-title";

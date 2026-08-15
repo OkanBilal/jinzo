@@ -262,6 +262,7 @@ function CliInstallBadge({
       <Button
         ref={triggerRef}
         onClick={() => setOpen((o) => !o)}
+        aria-haspopup="dialog"
         aria-expanded={open}
         className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-warning/15 px-3 py-1 text-sm font-medium text-warning transition-colors hover:bg-warning/25"
       >
@@ -270,6 +271,8 @@ function CliInstallBadge({
       </Button>
       <DropdownWrapper
         isOpen={open}
+        role="dialog"
+        aria-label={`${name} CLI setup`}
         usePortal
         triggerRef={triggerRef}
         dropdownRef={panelRef}

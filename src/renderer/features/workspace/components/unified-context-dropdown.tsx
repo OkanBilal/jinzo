@@ -147,6 +147,7 @@ function RowButton({
   return (
     <Button
       type="button"
+      role="menuitem"
       data-dropdown-active={active ? "true" : undefined}
       onMouseEnter={onHover}
       onClick={onSelect}
@@ -534,6 +535,7 @@ export function UnifiedContextDropdown({
     <div ref={dropdownRef}>
       <DropdownWrapper
         isOpen={isOpen}
+        aria-label="Context suggestions"
         openUpward={true}
         minWidth="min-w-[22rem]"
       >

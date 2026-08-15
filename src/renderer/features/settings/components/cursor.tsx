@@ -73,6 +73,7 @@ export default function CursorSettings(
         <SettingsRow title="Mode" description="How Cursor operates during runs">
           <Select
             value={mode}
+            aria-label="Cursor mode"
             onChange={(value) =>
               updateConfig({ mode: value as CursorAdapterConfig["mode"] })
             }

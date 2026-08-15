@@ -498,6 +498,7 @@ function PluginDetail({
                   {supportsScope && (
                     <Select<PluginScope>
                       value={installScope}
+                      aria-label="Plugin install scope"
                       onChange={onScopeChange}
                       title="Select Scope"
                       options={[

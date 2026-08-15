@@ -139,6 +139,7 @@ function RunDetailSelect() {
   return (
     <Select
       value={value}
+      aria-label="Run detail"
       options={RUN_DETAIL_OPTIONS}
       onChange={(val) => {
         setShowToolCalls(val === "steps_with_tool_calls");

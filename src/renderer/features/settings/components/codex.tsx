@@ -249,6 +249,7 @@ export default function CodexSettings() {
         >
           <Select
             value={approvalMode}
+            aria-label="Approval policy"
             options={APPROVAL_OPTIONS}
             onChange={(value) => {
               updateConfig({ approvalMode: value });
@@ -265,6 +266,7 @@ export default function CodexSettings() {
         >
           <Select
             value={sandboxMode}
+            aria-label="Sandbox mode"
             options={SANDBOX_OPTIONS}
             onChange={(value) => {
               updateConfig({ sandboxMode: value });
@@ -297,6 +299,7 @@ export default function CodexSettings() {
         >
           <Select
             value={personality}
+            aria-label="Personality"
             options={PERSONALITY_OPTIONS}
             onChange={(value) => {
               updateConfig({ personality: value });

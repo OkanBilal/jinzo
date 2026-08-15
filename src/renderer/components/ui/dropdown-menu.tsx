@@ -1,20 +1,85 @@
-import { useRef, useEffect, useState, useCallback, createContext, useContext, ReactNode } from "react";
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../../lib/cn";
-import { useEscapeKey } from "@/hooks/use-escape-key";
 import { ArrowUp, Selected } from "./icons";
 import { Button } from "./button";
+import { focusNextFrom } from "./focus-navigation";
 
-// Context to let parent DropdownMenu know about submenu portals
+const MENU_ITEM_SELECTOR = [
+  '[role="menuitem"]',
+  '[role="menuitemradio"]',
+  '[role="menuitemcheckbox"]',
+].join(",");
+
+function getEnabledMenuItems(container: HTMLElement | null): HTMLElement[] {
+  if (!container) return [];
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(MENU_ITEM_SELECTOR),
+  ).filter(
+    (item) =>
+      item.getAttribute("aria-disabled") !== "true" &&
+      !(item instanceof HTMLButtonElement && item.disabled),
+  );
+}
+
+function moveMenuFocus(
+  event: KeyboardEvent<HTMLElement>,
+  container: HTMLElement | null,
+): boolean {
+  if (
+    event.key !== "ArrowDown" &&
+    event.key !== "ArrowUp" &&
+    event.key !== "Home" &&
+    event.key !== "End"
+  ) {
+    return false;
+  }
+
+  const items = getEnabledMenuItems(container);
+  if (items.length === 0) return true;
+
+  const currentIndex = items.indexOf(document.activeElement as HTMLElement);
+  let nextIndex = currentIndex;
+
+  if (event.key === "Home") nextIndex = 0;
+  else if (event.key === "End") nextIndex = items.length - 1;
+  else if (event.key === "ArrowDown") {
+    nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % items.length;
+  } else {
+    nextIndex =
+      currentIndex < 0
+        ? items.length - 1
+        : (currentIndex - 1 + items.length) % items.length;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  items[nextIndex]?.focus();
+  return true;
+}
+
+// Parent menus register portaled submenus so clicks inside either surface do
+// not count as outside clicks.
 const DropdownContext = createContext<{
-  registerSubmenu: (el: HTMLElement) => void;
-  unregisterSubmenu: (el: HTMLElement) => void;
+  registerSubmenu: (element: HTMLElement) => void;
+  unregisterSubmenu: (element: HTMLElement) => void;
 }>({
-  registerSubmenu: () => {},
-  unregisterSubmenu: () => {},
+  registerSubmenu: () => undefined,
+  unregisterSubmenu: () => undefined,
 });
 
-interface DropdownMenuProps {
+interface DropdownMenuBaseProps {
   isOpen: boolean;
   position: { x: number; y: number };
   onClose: () => void;
@@ -24,6 +89,12 @@ interface DropdownMenuProps {
   origin?: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "auto";
 }
 
+export type DropdownMenuProps = DropdownMenuBaseProps &
+  (
+    | { "aria-label": string; "aria-labelledby"?: string }
+    | { "aria-label"?: undefined; "aria-labelledby": string }
+  );
+
 export function DropdownMenu({
   isOpen,
   position,
@@ -32,47 +103,88 @@ export function DropdownMenu({
   minWidth = 144,
   className = "",
   origin = "auto",
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
 }: DropdownMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const submenuRefs = useRef<Set<HTMLElement>>(new Set());
+  const previouslyFocused = useRef<HTMLElement | null>(null);
+  const shouldRestoreFocus = useRef(true);
 
-  const registerSubmenu = useCallback((el: HTMLElement) => {
-    submenuRefs.current.add(el);
+  const registerSubmenu = useCallback((element: HTMLElement) => {
+    submenuRefs.current.add(element);
   }, []);
 
-  const unregisterSubmenu = useCallback((el: HTMLElement) => {
-    submenuRefs.current.delete(el);
+  const unregisterSubmenu = useCallback((element: HTMLElement) => {
+    submenuRefs.current.delete(element);
   }, []);
 
-  // Click-outside stays inline — the submenu Set requires per-event iteration,
-  // which the single-/dual-ref useClickOutside doesn't cover.
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    previouslyFocused.current = document.activeElement as HTMLElement | null;
+    shouldRestoreFocus.current = true;
+    getEnabledMenuItems(menuRef.current)[0]?.focus();
+
+    return () => {
+      const target = previouslyFocused.current;
+      if (shouldRestoreFocus.current && target?.isConnected) {
+        requestAnimationFrame(() => target.focus());
+      }
+    };
+  }, [isOpen]);
+
   useEffect(() => {
     if (!isOpen) return;
+
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (menuRef.current && menuRef.current.contains(target)) return;
-      for (const sub of submenuRefs.current) {
-        if (sub.contains(target)) return;
+      if (menuRef.current?.contains(target)) return;
+      for (const submenu of submenuRefs.current) {
+        if (submenu.contains(target)) return;
       }
+      shouldRestoreFocus.current = false;
       onClose();
     };
+
+    const handleDocumentKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      event.preventDefault();
+      onClose();
+    };
+
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleDocumentKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleDocumentKeyDown);
+    };
   }, [isOpen, onClose]);
 
-  useEscapeKey(() => {
-    if (isOpen) onClose();
-  });
+  const handleMenuKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (moveMenuFocus(event, menuRef.current)) return;
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      onClose();
+    } else if (event.key === "Tab") {
+      // Menu items use roving focus and are not part of the page tab sequence.
+      // Continue from the trigger so a portaled menu cannot dump focus on body.
+      event.preventDefault();
+      shouldRestoreFocus.current = false;
+      const anchor = previouslyFocused.current;
+      onClose();
+      requestAnimationFrame(() => focusNextFrom(anchor, event.shiftKey));
+    }
+  };
 
   if (!isOpen) return null;
 
-  // Adjust position to keep menu on screen
   const adjustedPosition = {
     x: Math.max(8, Math.min(position.x, window.innerWidth - minWidth - 8)),
     y: Math.max(8, Math.min(position.y, window.innerHeight - 125)),
   };
 
-  // Calculate transform origin based on position or explicit origin
   const getTransformOrigin = () => {
     if (origin !== "auto") {
       const originMap = {
@@ -84,13 +196,12 @@ export function DropdownMenu({
       return originMap[origin];
     }
 
-    // Auto-detect based on position relative to viewport
     const isRight = position.x > window.innerWidth / 2;
     const isBottom = position.y > window.innerHeight / 2;
 
     if (isBottom && isRight) return "bottom right";
-    if (isBottom && !isRight) return "bottom left";
-    if (!isBottom && isRight) return "top right";
+    if (isBottom) return "bottom left";
+    if (isRight) return "top right";
     return "top left";
   };
 
@@ -98,8 +209,12 @@ export function DropdownMenu({
     <DropdownContext.Provider value={{ registerSubmenu, unregisterSubmenu }}>
       <div
         ref={menuRef}
+        role="menu"
+        aria-label={ariaLabel}
+        aria-labelledby={ariaLabelledBy}
+        onKeyDown={handleMenuKeyDown}
         className={cn(
-          "fixed z-(--z-dropdown) rounded-2xl overflow-hidden glass-surface animate-dropdown-in",
+          "fixed z-(--z-dropdown) overflow-hidden rounded-2xl glass-surface animate-dropdown-in",
           className,
         )}
         style={{
@@ -116,9 +231,9 @@ export function DropdownMenu({
   );
 }
 
-interface DropdownMenuSubProps {
+export interface DropdownMenuSubProps {
   label: ReactNode;
-  children: ReactNode;
+  children?: ReactNode;
   className?: string;
 }
 
@@ -128,86 +243,142 @@ export function DropdownMenuSub({
   className = "",
 }: DropdownMenuSubProps) {
   const { registerSubmenu, unregisterSubmenu } = useContext(DropdownContext);
-  const triggerRef = useRef<HTMLDivElement>(null);
-  const submenuElRef = useRef<HTMLDivElement | null>(null);
+  const generatedId = useId();
+  const triggerId = `${generatedId}-trigger`;
+  const submenuId = `${generatedId}-menu`;
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const submenuElementRef = useRef<HTMLDivElement | null>(null);
+  const focusSubmenuOnOpen = useRef(false);
   const [isOpen, setIsOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [submenuPosition, setSubmenuPosition] = useState({ top: 0, left: 0 });
 
-  const submenuRefCallback = useCallback((el: HTMLDivElement | null) => {
-    if (submenuElRef.current) {
-      unregisterSubmenu(submenuElRef.current);
-    }
-    submenuElRef.current = el;
-    if (el) {
-      registerSubmenu(el);
-    }
-  }, [registerSubmenu, unregisterSubmenu]);
+  const submenuRefCallback = useCallback(
+    (element: HTMLDivElement | null) => {
+      if (submenuElementRef.current) {
+        unregisterSubmenu(submenuElementRef.current);
+      }
+      submenuElementRef.current = element;
+      if (element) registerSubmenu(element);
+    },
+    [registerSubmenu, unregisterSubmenu],
+  );
 
   const clearCloseTimer = useCallback(() => {
-    if (closeTimer.current) {
-      clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
+    if (!closeTimer.current) return;
+    clearTimeout(closeTimer.current);
+    closeTimer.current = null;
   }, []);
+
+  const closeSubmenu = useCallback(
+    (restoreTriggerFocus = false) => {
+      clearCloseTimer();
+      setIsOpen(false);
+      if (restoreTriggerFocus) triggerRef.current?.focus();
+    },
+    [clearCloseTimer],
+  );
+
+  const openSubmenu = useCallback(
+    (moveFocusInside: boolean) => {
+      clearCloseTimer();
+      if (triggerRef.current) {
+        const rect = triggerRef.current.getBoundingClientRect();
+        const submenuWidth = 180;
+        const opensRight =
+          rect.right + 4 + submenuWidth <= window.innerWidth - 8;
+        setSubmenuPosition({
+          top: Math.max(8, Math.min(rect.top, window.innerHeight - 160)),
+          left: opensRight
+            ? rect.right + 4
+            : Math.max(8, rect.left - submenuWidth - 4),
+        });
+      }
+      focusSubmenuOnOpen.current = moveFocusInside;
+      setIsOpen(true);
+    },
+    [clearCloseTimer],
+  );
 
   const startCloseTimer = useCallback(() => {
     clearCloseTimer();
     closeTimer.current = setTimeout(() => setIsOpen(false), 150);
   }, [clearCloseTimer]);
 
-  const [submenuPos, setSubmenuPos] = useState({ top: 0, left: 0 });
+  useLayoutEffect(() => {
+    if (!isOpen || !focusSubmenuOnOpen.current) return;
+    focusSubmenuOnOpen.current = false;
+    getEnabledMenuItems(submenuElementRef.current)[0]?.focus();
+  }, [isOpen]);
 
-  const handleTriggerEnter = () => {
-    clearCloseTimer();
-    if (triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      setSubmenuPos({ top: rect.top, left: rect.right + 4 });
+  useEffect(() => () => clearCloseTimer(), [clearCloseTimer]);
+
+  const handleTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      event.stopPropagation();
+      openSubmenu(true);
+    } else if (event.key === "Escape" && isOpen) {
+      event.preventDefault();
+      event.stopPropagation();
+      closeSubmenu(true);
     }
-    setIsOpen(true);
   };
 
-  const handleTriggerLeave = () => {
-    startCloseTimer();
+  const handleSubmenuKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (moveMenuFocus(event, submenuElementRef.current)) return;
+    if (event.key === "ArrowLeft" || event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      closeSubmenu(true);
+    }
   };
-
-  const handleSubmenuEnter = () => {
-    clearCloseTimer();
-  };
-
-  const handleSubmenuLeave = () => {
-    startCloseTimer();
-  };
-
-  useEffect(() => {
-    return () => clearCloseTimer();
-  }, [clearCloseTimer]);
 
   return (
     <>
-      <div
+      <Button
         ref={triggerRef}
-        onMouseEnter={handleTriggerEnter}
-        onMouseLeave={handleTriggerLeave}
+        id={triggerId}
+        type="button"
+        variant="bare"
+        role="menuitem"
+        tabIndex={-1}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        aria-controls={submenuId}
+        onClick={() => openSubmenu(true)}
+        onKeyDown={handleTriggerKeyDown}
+        onMouseEnter={() => openSubmenu(false)}
+        onMouseLeave={startCloseTimer}
         className={cn(
-          "w-full flex items-center gap-3 px-3 py-2 text-s cursor-pointer",
-          "text-primary-700 dark:text-primary-300 hover:text-primary-900 dark:hover:text-primary-100",
-          "hover:bg-primary-200/40 dark:hover:bg-primary/5 transition-colors",
+          "flex w-full cursor-pointer items-center gap-3 px-3 py-2 text-s",
+          "text-primary-700 transition-colors hover:bg-primary-200/40 hover:text-primary-900",
+          "focus:bg-primary-200/40 focus:text-primary-900 focus:outline-none",
+          "dark:text-primary-300 dark:hover:bg-primary/5 dark:hover:text-primary-100",
+          "dark:focus:bg-primary/5 dark:focus:text-primary-100",
           className,
         )}
       >
         {label}
-        <ArrowUp className="rotate-90 size-3 ml-auto"/>
-      </div>
+        <ArrowUp
+          aria-hidden="true"
+          className="ml-auto size-3 rotate-90"
+        />
+      </Button>
       {isOpen &&
         createPortal(
           <div
             ref={submenuRefCallback}
-            onMouseEnter={handleSubmenuEnter}
-            onMouseLeave={handleSubmenuLeave}
-            className="fixed z-(--z-dropdown-sub) rounded-2xl overflow-hidden glass-surface animate-dropdown-sub-in"
+            id={submenuId}
+            role="menu"
+            aria-labelledby={triggerId}
+            onKeyDown={handleSubmenuKeyDown}
+            onMouseEnter={clearCloseTimer}
+            onMouseLeave={startCloseTimer}
+            className="fixed z-(--z-dropdown-sub) overflow-hidden rounded-2xl glass-surface animate-dropdown-sub-in"
             style={{
-              top: submenuPos.top,
-              left: submenuPos.left,
+              top: submenuPosition.top,
+              left: submenuPosition.left,
               minWidth: 180,
             }}
           >
@@ -219,9 +390,9 @@ export function DropdownMenuSub({
   );
 }
 
-interface DropdownMenuItemProps {
+export interface DropdownMenuItemProps {
   onClick: () => void;
-  children: ReactNode;
+  children?: ReactNode;
   variant?: "default" | "danger";
   className?: string;
   disabled?: boolean;
@@ -237,25 +408,35 @@ export function DropdownMenuItem({
   selected,
 }: DropdownMenuItemProps) {
   const variantClasses = {
-    default: "text-primary-700 dark:text-primary-300 hover:text-primary-900 dark:hover:text-primary-100",
+    default:
+      "text-primary-700 dark:text-primary-300 hover:text-primary-900 dark:hover:text-primary-100",
     danger: "text-danger dark:text-danger",
   };
 
   return (
     <Button
+      type="button"
+      variant="bare"
+      role={selected === undefined ? "menuitem" : "menuitemradio"}
+      aria-checked={selected}
+      aria-disabled={disabled || undefined}
+      tabIndex={-1}
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "w-full flex items-center gap-3 px-3 py-2 text-s",
-        "hover:bg-primary-200/40 dark:hover:bg-primary/5 transition-colors",
-        disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer",
+        "flex w-full items-center gap-3 px-3 py-2 text-s",
+        "transition-colors hover:bg-primary-200/40 focus:bg-primary-200/40 focus:outline-none",
+        "dark:hover:bg-primary/5 dark:focus:bg-primary/5",
+        disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
         variantClasses[variant],
         className,
       )}
     >
       {selected !== undefined && (
-        <Selected className={`" size-3 " ${selected ? "opacity-100": "opacity-0"} `} />
-
+        <Selected
+          aria-hidden="true"
+          className={cn("size-3", selected ? "opacity-100" : "opacity-0")}
+        />
       )}
       {children}
     </Button>

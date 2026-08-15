@@ -236,6 +236,7 @@ export function IssuesPanel({ activeEntityId, onSelectIssue }: IssuesPanelProps)
               }}
               tooltip="Filter issues"
               aria-label="Filter issues"
+              aria-haspopup="dialog"
               aria-expanded={filterOpen}
               className={`p-1.5 rounded-xl cursor-pointer transition-colors ${
                 filterOpen || activeFilterCount > 0
@@ -247,7 +248,12 @@ export function IssuesPanel({ activeEntityId, onSelectIssue }: IssuesPanelProps)
             </Button>
             {/* Positioned anchor so the menu opens under the active tab. */}
             <div className="absolute inset-y-0" style={{ left: menuLeft }}>
-              <DropdownWrapper isOpen={filterOpen} minWidth="min-w-80">
+              <DropdownWrapper
+                isOpen={filterOpen}
+                role="dialog"
+                aria-label="Issue filters"
+                minWidth="min-w-80"
+              >
               <div className="max-h-80 overflow-y-auto noscrollbar pb-1.5">
                 {!hasFilterOptions && activeFilterCount === 0 && (
                   <Text as="div" size="xs" tone="subtle" className="px-3 py-3 -mb-1.5">

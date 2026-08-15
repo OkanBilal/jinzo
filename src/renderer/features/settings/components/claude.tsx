@@ -104,6 +104,7 @@ export default function ClaudeSettings(
         >
           <Select
             value={permissionMode}
+            aria-label="Permission mode"
             options={SETTINGS_PERMISSION_MODES}
             onChange={handlePermissionModeChange}
           />
@@ -252,5 +253,4 @@ export default function ClaudeSettings(
     </ProviderSettingsLayout>
   );
 }
-
 

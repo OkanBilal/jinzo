@@ -308,6 +308,8 @@ export default function WorkspaceItem({
           tooltip="More options"
           ref={buttonRef}
           onClick={handleOptionClick}
+          aria-haspopup="menu"
+          aria-expanded={isDropdownOpen}
           className={`absolute right-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1 cursor-pointer rounded-md`}
           aria-label="Workspace options"
         >
@@ -318,6 +320,7 @@ export default function WorkspaceItem({
       {/* Dropdown Menu */}
       <DropdownMenu
         isOpen={isDropdownOpen}
+        aria-label="Workspace actions"
         position={dropdownPosition}
         onClose={() => setIsDropdownOpen(false)}
       >
