@@ -1,4 +1,4 @@
-import type { EventGroup } from "../utils/group-events";
+import type { EventGroup } from "./group-events";
 import { isUserPromptGroup } from "./transcript-rows";
 
 /** Longest reply excerpt kept for a marker's card; the card clamps the rest. */

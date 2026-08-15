@@ -12,8 +12,8 @@ import { extractErrorMessage } from "@/lib/extract-error-message";
 import { DIFF_ADDED_TEXT, DIFF_REMOVED_TEXT } from "@/features/workspace/lib/severity";
 import { useOpenFileInEditor } from "@/features/workspace/hooks/use-open-file-in-editor";
 import { useOpenDiffInEditor } from "@/features/workspace/hooks/use-open-diff-in-editor";
-import { parseFileDiffSegment } from "@/features/workspace/utils/parse-diff";
-import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
+import { parseFileDiffSegment } from "@/features/workspace/lib/parse-diff";
+import { FileIconComponent } from "@/components/ui/icons";
 import { PanelItem, PanelCollapse } from "../panel-item";
 import type { GitActionsPanel } from "./use-git-actions-panel";
 

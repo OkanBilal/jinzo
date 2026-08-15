@@ -15,7 +15,7 @@ import { useSessionSubagents } from "@/features/workspace/hooks/use-session-suba
 import {
   subagentDisplay,
   type SubagentLifecycleState,
-} from "@/features/workspace/utils/subagent-identity";
+} from "@/features/workspace/lib/subagent-identity";
 import { PanelItem, PANEL_ROW_X } from "../session-panel/panel-item";
 import { selectSessionRunId } from "../session-panel/select-session-run";
 import type { SessionSubagent } from "@/features/workspace/lib/select-subagents";

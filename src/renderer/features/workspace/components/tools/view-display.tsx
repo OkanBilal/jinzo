@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { View } from "@/components/ui/icons";
 import { useOpenFileInEditor } from "../../hooks/use-open-file-in-editor";
-import { FileIconComponent } from "../file-explorer/components/file-icon";
+import { FileIconComponent } from "@/components/ui/icons";
 import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader, ToolOutputBody } from "./_shared";
-import { coerceToolOutput } from "../../utils/parse-tool-content";
+import { coerceToolOutput } from "../../lib/parse-tool-content";
 
 export interface ViewParams {
   path?: string;

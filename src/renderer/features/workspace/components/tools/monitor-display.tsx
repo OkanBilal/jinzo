@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Text } from "@/components/ui";
 import { Infinite } from "@/components/ui/icons";
 import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader, ToolOutputBody, useToolStatus } from "./_shared";
-import { toolOutputText } from "../../utils/parse-tool-content";
+import { toolOutputText } from "../../lib/parse-tool-content";
 
 /**
  * Input to the `Monitor` tool — a background watch whose event stream is either

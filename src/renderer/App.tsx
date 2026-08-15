@@ -2,10 +2,10 @@ import { useEffect, useLayoutEffect } from "react";
 import { HashRouter as Router, useLocation } from "react-router-dom";
 import Sidebar from "./components/layout/sidebar";
 import RightPanel from "./components/layout/right-panel";
-import { SessionPanel } from "./components/layout/session-panel";
-import { SubagentPanel } from "./components/layout/subagent-panel/subagent-panel";
+import { SessionPanel } from "@/features/workspace/components/session-panel";
+import { SubagentPanel } from "@/features/workspace/components/subagent-panel/subagent-panel";
 import { useHasSessionSubagents } from "./features/workspace/hooks/use-session-subagents";
-import { selectSessionRunId } from "./components/layout/session-panel/select-session-run";
+import { selectSessionRunId } from "@/features/workspace/components/session-panel/select-session-run";
 import {
   MainRoutes,
   MainLayout,

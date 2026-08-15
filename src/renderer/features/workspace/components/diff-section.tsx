@@ -10,7 +10,7 @@ import {
 } from "@/lib/redux/api";
 import { setPendingGoal, setPendingAutoExecute, setPendingReviewTarget } from "@/lib/redux/slices/workspaceSlice";
 import { useWorkspaceVariant } from "@/hooks/use-workspace-variant";
-import { FileIconComponent } from "./file-explorer/components/file-icon";
+import { FileIconComponent } from "@/components/ui/icons";
 import {
   Diff,
   CircleDot,
@@ -19,13 +19,13 @@ import {
 } from "@/components/ui/icons";
 import { Button, Caption, Text } from "@/components/ui";
 import { DIFF_ADDED_TEXT, DIFF_REMOVED_TEXT, SEVERITY_TEXT } from "../lib/severity";
-import { buildSyntheticDiff } from "../utils/expand-diff";
+import { buildSyntheticDiff } from "../lib/expand-diff";
 import {
   parseFileDiffSegment,
   parsePerFileStats,
   type FileChangeStatus,
-} from "../utils/parse-diff";
-import { normalizePath, pathsMatch } from "../utils/path-utils";
+} from "../lib/parse-diff";
+import { normalizePath, pathsMatch } from "../lib/path-utils";
 
 interface DiffSectionProps {
   workspaceId: string;

@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { Text } from "@/components/ui";
 import type { RunEvent } from "../../types";
-import { parseToolContent, type ParsedToolContent } from "../../utils/parse-tool-content";
-import { resolveTool } from "../../utils/resolve-tool";
+import { parseToolContent, type ParsedToolContent } from "../../lib/parse-tool-content";
+import { resolveTool } from "../../lib/resolve-tool";
 import { usePluginLogoMap, renderPluginIcon, normalizeSlug } from "../../hooks";
 import { TaskDisplay, type TaskParams } from "./task-display";
 import { PlanDisplay } from "./plan-display";

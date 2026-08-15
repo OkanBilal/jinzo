@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Trash } from "@/components/ui/icons";
 import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader, ToolOutputBody } from "./_shared";
-import { coerceToolOutput } from "../../utils/parse-tool-content";
-import { shortFileName } from "../../utils/path-utils";
+import { coerceToolOutput } from "../../lib/parse-tool-content";
+import { shortFileName } from "../../lib/path-utils";
 
 /** Cursor ACP / agent delete file tool — often mirrors edit-style fields with empty `new_string`. */
 export interface DeleteParams {

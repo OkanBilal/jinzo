@@ -5,7 +5,7 @@ import { Components } from "react-markdown";
 import { Button, Text } from "@/components/ui";
 import { CODE_FONT_SIZE_CSS } from "@/lib/appearance-fonts";
 import { proxiedImageSrc } from "@/lib/proxied-image-src";
-import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
+import { FileIconComponent } from "@/components/ui/icons";
 import { useOpenFileInEditor } from "@/features/workspace/hooks/use-open-file-in-editor";
 
 /**

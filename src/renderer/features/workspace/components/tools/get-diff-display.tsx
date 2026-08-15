@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Text } from "@/components/ui";
 import { Mains } from "@/components/ui/icons";
 import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader } from "./_shared";
-import { coerceToolOutput } from "../../utils/parse-tool-content";
+import { coerceToolOutput } from "../../lib/parse-tool-content";
 
 export interface GetDiffParams {
   runId?: string;

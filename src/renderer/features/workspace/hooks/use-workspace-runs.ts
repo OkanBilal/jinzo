@@ -21,7 +21,7 @@ import type { RunTurn } from "@/lib/redux/api";
 import { toast } from "@/components/ui";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { workspaceApi, useArchiveRunMutation } from "@/lib/redux/api";
-import { mergeRunEvents } from "../utils/run-event-mappers";
+import { mergeRunEvents } from "../lib/run-event-mappers";
 import { createRunCache, pruneRunMap } from "../lib/run-cache";
 import { useRunOperations } from "./use-run-operations";
 import { useRunSync } from "./use-run-sync";

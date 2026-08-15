@@ -18,7 +18,7 @@ import {
   useToolApproval,
   PluginLogoProvider,
 } from "@/features/workspace/hooks";
-import { isFirstWorkspaceTabActive } from "@/features/workspace/utils/is-first-workspace-tab-active";
+import { isFirstWorkspaceTabActive } from "@/features/workspace/lib/is-first-workspace-tab-active";
 import {
   useAbortRunMutation,
   useGetProviderByIdQuery,

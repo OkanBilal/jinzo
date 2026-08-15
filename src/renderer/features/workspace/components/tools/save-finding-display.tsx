@@ -3,7 +3,7 @@ import { Mains } from "@/components/ui/icons";
 import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader } from "./_shared";
 import { Text, Tiny } from "@/components/ui";
 import { SEVERITY_TINT } from "../../lib/severity";
-import { shortPath } from "../../utils/path-utils";
+import { shortPath } from "../../lib/path-utils";
 
 interface Finding {
   severity?: string;

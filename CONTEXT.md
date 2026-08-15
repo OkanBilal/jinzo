@@ -156,6 +156,16 @@ _Avoid_: hand-writing a tool definition inside a driver instead of rendering it 
 
 `CheckPackage` is intentionally **absent** from Claude and Copilot: those drivers enforce package safety through a PreToolUse Bash hook that intercepts install commands, so they need no explicit tool. Codex and Cursor cannot hook that path, so they expose `CheckPackage` as a callable tool. This asymmetry is encoded in the tool's `providers` allowlist and is deliberate — not drift to be "fixed."
 
+## Renderer layering
+
+**components/ui**:
+Feature-agnostic primitives — buttons, inputs, modals, icons, spinners, toasts. They sit *below* every feature and may not import from `features/`: a primitive that reaches into a domain stops being reusable and drags that domain into everything that renders a button. Enforced by `no-restricted-imports` in `eslint.config.mjs`, alongside the existing rule that consumers import from the `@/components/ui` barrel (only `icons`, `icons/space`, and `icons/file-icons` are importable directly). When something generic is discovered inside a feature — as `FileIconComponent`, a pure filename→icon map, was inside the file explorer — it moves here rather than being imported across the boundary.
+_Avoid_: importing `@/features/…` from anything under `components/ui/`; deep-importing a primitive past the barrel.
+
+**components/layout**:
+The app shell that hosts whatever route is active: `main/` (route table), `sidebar/`, `right-panel/`, `page-shell`, `resize-handle`. A shell exists to compose features, so importing from `features/` is the *correct* direction here and is deliberately not linted. What does not belong is feature UI that merely happens to be positioned by the shell — the session panel (with its git actions) and the subagent panel both lived here and were only ever about the active workspace's run; they live under `features/workspace/components/` now, and the shell renders them from `App.tsx`.
+_Avoid_: adding a panel to `components/layout/` because that's where panels used to go — ask whether it renders anything outside its feature's state.
+
 ## Provider variants
 
 Renderer-side vocabulary for the workspace UI shared across the four agent providers, all hosted on the single `/code` route.
@@ -195,7 +205,7 @@ _Avoid_: re-introducing turn-grouping / accordion / session-bar math inside `wor
 ## Run cache
 
 **git actions panel**:
-The git menu inside the session panel, in `components/layout/session-panel/git-actions/`. Five rows — changes, branch, commit, PR, publish — each its own component owning its own form state, opening in place rather than swapping the panel's contents. `useGitActionsPanel` holds only what more than one row needs: the `getGitFlowStatus` query and the `refreshStatus` every mutation funnels through, the accordion (commit and PR are mutually exclusive; the rest stack), the single `pending` action that makes the others `busy`, and the working-tree facts defaulted in one place (`hasRemote` defaults to *true* until status loads, so a normal repo never flashes the Publish flow). A row that turns unusable closes its own accordion — `refreshStatus` re-checks each open section against the fresh status, because a disabled row can't be clicked shut. Publish replaces PR when the repo has no remote; push and PR are impossible until it does.
+The git menu inside the session panel, in `features/workspace/components/session-panel/git-actions/`. Five rows — changes, branch, commit, PR, publish — each its own component owning its own form state, opening in place rather than swapping the panel's contents. `useGitActionsPanel` holds only what more than one row needs: the `getGitFlowStatus` query and the `refreshStatus` every mutation funnels through, the accordion (commit and PR are mutually exclusive; the rest stack), the single `pending` action that makes the others `busy`, and the working-tree facts defaulted in one place (`hasRemote` defaults to *true* until status loads, so a normal repo never flashes the Publish flow). A row that turns unusable closes its own accordion — `refreshStatus` re-checks each open section against the fresh status, because a disabled row can't be clicked shut. Publish replaces PR when the repo has no remote; push and PR are impossible until it does.
 _Avoid_: putting a single row's form state in `useGitActionsPanel`; refetching status without going through `refreshStatus` (the accordion would keep a dead row open); adding a second in-flight action alongside `pending`.
 
 **run hook seams**:

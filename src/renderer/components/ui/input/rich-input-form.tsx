@@ -7,7 +7,7 @@ import {
   useState,
 } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
+import { FileIconComponent } from "@/components/ui/icons";
 import { Sparkles } from "@/components/ui/icons";
 import { applySignedSrc } from "@/lib/local-image-url";
 import { useIsMobile, isWeb } from "@/lib/platform";

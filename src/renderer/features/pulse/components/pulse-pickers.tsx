@@ -36,7 +36,7 @@ import {
   formatTime,
   FREQUENCY_OPTIONS,
   WEEK_DAYS,
-} from "../utils/format-schedule";
+} from "../lib/format-schedule";
 import type { PulseFrequency } from "@/lib/redux/api/pulseApi";
 import type { Workspace } from "@/lib/redux/api/workspaceApi";
 import {

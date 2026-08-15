@@ -1,4 +1,4 @@
-import { isRunTab } from "@/features/workspace/utils/repo-utils";
+import { isRunTab } from "@/features/workspace/lib/repo-utils";
 
 /** The slice fields the derivation reads — kept structural so tests can call it. */
 interface SessionTabState {

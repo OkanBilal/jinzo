@@ -9,8 +9,8 @@ import {
 } from "./elicitation-form";
 import type { ToolApprovalRequest } from "../../hooks";
 import { ToolInputPreview } from "./tool-input-preview";
-import { resolveTool } from "../../utils/resolve-tool";
-import { VENDORS } from "../../utils/tool-registry";
+import { resolveTool } from "../../lib/resolve-tool";
+import { VENDORS } from "../../lib/tool-registry";
 import {
   usePluginLogoMap,
   renderPluginIcon,

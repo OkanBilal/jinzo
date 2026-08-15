@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Text } from "@/components/ui";
-import { resolveTool } from "../../utils/resolve-tool";
+import { resolveTool } from "../../lib/resolve-tool";
 import { ToolHeader, ToolCollapse } from "./_shared";
 
 interface McpDisplayProps {

@@ -13,7 +13,7 @@ import {
   clampInterfaceFontSize,
 } from "@/lib/appearance-fonts";
 import type { DocType } from "@/lib/document-viewer";
-import { isNewRunTab } from "@/features/workspace/utils/repo-utils";
+import { isNewRunTab } from "@/features/workspace/lib/repo-utils";
 import { openNewRunTab, setActiveTab } from "./workspaceSlice";
 
 /** The document currently shown in the document viewer panel. */

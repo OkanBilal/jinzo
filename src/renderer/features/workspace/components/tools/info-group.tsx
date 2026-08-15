@@ -2,7 +2,7 @@ import { memo, useMemo, useState, useEffect, useRef, type MouseEvent } from "rea
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { markdownComponents } from "@/components/markdown-components";
-import type { EventGroup } from "../../utils/group-events";
+import type { EventGroup } from "../../lib/group-events";
 import { Code } from "@/components/ui/icons/space";
 import {
   Picture,
@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/icons";
 import { ProviderIcon } from "../provider-icon";
 import { ImagePreviewModal } from "../image-preview-modal";
-import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
+import { FileIconComponent } from "@/components/ui/icons";
 import {
   Body,
   Button,

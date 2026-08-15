@@ -2,7 +2,7 @@ import { Toggle, Terminal, TerminalOpen, ToggleClose, Web } from "@/components/u
 import { Button, toast } from "@/components/ui";
 import { useAppSelector } from "@/lib/redux/hooks";
 import { useCapabilities } from "@/lib/platform";
-import { SessionPanelTrigger } from "@/components/layout/session-panel";
+import { SessionPanelTrigger } from "@/features/workspace/components/session-panel";
 
 interface ToggleButtonProps {
   isOpen: boolean;

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Text } from "@/components/ui";
 import { SendMessage } from "@/components/ui/icons";
 import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader, ToolOutputBody } from "./_shared";
-import { toolOutputText } from "../../utils/parse-tool-content";
+import { toolOutputText } from "../../lib/parse-tool-content";
 
 /**
  * Protocol payload variant of `message`. Teammates negotiate shutdown and plan

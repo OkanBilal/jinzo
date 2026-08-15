@@ -5,7 +5,7 @@ import {
   type SubagentLifecycleMeta,
   type SubagentLifecycleState,
   type SubagentTaskMeta,
-} from "../../utils/subagent-identity";
+} from "../../lib/subagent-identity";
 import { Bot, Clock, Document, Stop } from "@/components/ui/icons";
 import { TOOL_ROW_TEXT, ToolCollapse, ToolOutputBody } from "./_shared";
 

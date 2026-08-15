@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Text } from "@/components/ui";
 import { Workflow } from "@/components/ui/icons";
 import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader, ToolOutputBody } from "./_shared";
-import { coerceToolOutput } from "../../utils/parse-tool-content";
+import { coerceToolOutput } from "../../lib/parse-tool-content";
 
 /**
  * Input to the `Workflow` tool. A run is launched either from an inline

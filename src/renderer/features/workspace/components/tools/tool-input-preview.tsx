@@ -1,4 +1,4 @@
-import { coerceToolOutput } from "../../utils/parse-tool-content";
+import { coerceToolOutput } from "../../lib/parse-tool-content";
 import { Text } from "@/components/ui";
 
 interface ToolInputPreviewProps {

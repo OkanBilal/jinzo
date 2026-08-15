@@ -14,13 +14,13 @@ import {
   clearPendingGoal,
   clearPendingReviewTarget,
 } from "@/lib/redux/slices/workspaceSlice";
-import { isRunTab, isNewRunTab } from "@/features/workspace/utils/repo-utils";
+import { isRunTab, isNewRunTab } from "@/features/workspace/lib/repo-utils";
 import { useComposerContext } from "./use-composer-context";
 import { useWorkspaceData } from "./use-workspace-data";
 import { useWorkspaceRuns } from "./use-workspace-runs";
 import { useFileContentLoader } from "./use-file-content-loader";
 import { useTabHandlers } from "./use-tab-handlers";
-import { serializeAttachments } from "@/features/workspace/utils/run-helpers";
+import { serializeAttachments } from "@/features/workspace/lib/run-helpers";
 
 export function useWorkspacePage(providerId: string) {
   const dispatch = useAppDispatch();

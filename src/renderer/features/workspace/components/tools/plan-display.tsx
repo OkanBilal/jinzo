@@ -6,7 +6,7 @@ import type { RunEvent } from "../../types";
 import { Plan, ArrowUp } from "@/components/ui/icons";
 import { useUpdateToolCallMutation } from "@/lib/redux/api/toolsApi";
 import { Button, Text } from "@/components/ui";
-import { coerceToolOutput } from "../../utils/parse-tool-content";
+import { coerceToolOutput } from "../../lib/parse-tool-content";
 import {
   getPersistedPlanStatus,
   shouldShowPlanActions,

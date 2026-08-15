@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { ToolSubGroup } from "../../utils/group-tool-calls";
+import type { ToolSubGroup } from "../../lib/group-tool-calls";
 import { ToolCallItem } from "./tool-call-item";
 import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader, ToolStatusProvider, aggregateToolStatus } from "./_shared";
 

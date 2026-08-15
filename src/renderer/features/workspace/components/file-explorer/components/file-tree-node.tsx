@@ -1,6 +1,6 @@
 import { memo, useState, useCallback, useEffect, useRef } from "react";
 import type { FileNode } from "@/features/workspace/types/file-explorer";
-import { FileIconComponent } from "./file-icon";
+import { FileIconComponent } from "@/components/ui/icons";
 import { ArrowUp, Plus } from "@/components/ui/icons";
 import { Button } from "@/components/ui";
 

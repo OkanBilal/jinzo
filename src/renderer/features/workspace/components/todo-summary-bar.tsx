@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { RunEvent } from "../types";
-import { resolveTool } from "../utils/resolve-tool";
+import { resolveTool } from "../lib/resolve-tool";
 import { Check } from "@/components/ui/icons";
 import {
   AsciiSpinner,

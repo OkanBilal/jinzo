@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Mains } from "@/components/ui/icons";
 import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader } from "./_shared";
 import { Text, Tiny } from "@/components/ui";
-import { shortPath } from "../../utils/path-utils";
+import { shortPath } from "../../lib/path-utils";
 
 export interface CommitParams {
   message?: string;

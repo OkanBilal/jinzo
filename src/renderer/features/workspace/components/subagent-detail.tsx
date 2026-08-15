@@ -12,7 +12,7 @@ import {
   useGetToolCallsByRunQuery,
 } from "@/lib/redux/api";
 import { useRunEventRefetch } from "../hooks/use-run-event-refetch";
-import { mapToolCallToEvent } from "../utils/run-event-mappers";
+import { mapToolCallToEvent } from "../lib/run-event-mappers";
 import { selectSubagentEntry } from "../lib/select-subagents";
 import {
   buildSubagentFlow,
@@ -24,7 +24,7 @@ import {
   type SubagentLifecycleMeta,
   type SubagentLifecycleState,
   type SubagentTaskMeta,
-} from "../utils/subagent-identity";
+} from "../lib/subagent-identity";
 import { ToolCallItem } from "./tools/tool-call-item";
 
 /** 88_000 → "1m 28s"; sub-minute → "42s". */

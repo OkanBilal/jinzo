@@ -7,9 +7,9 @@ import {
   useUpdateReviewFindingMutation,
 } from "@/lib/redux/api";
 import { setPendingGoal, setPendingAutoExecute } from "@/lib/redux/slices/workspaceSlice";
-import { expandDiffForFindings } from "../utils/expand-diff";
-import { normalizePatchForPatchDiff } from "../utils/patch-utils";
-import { normalizePath, pathsMatch } from "../utils/path-utils";
+import { expandDiffForFindings } from "../lib/expand-diff";
+import { normalizePatchForPatchDiff } from "../lib/patch-utils";
+import { normalizePath, pathsMatch } from "../lib/path-utils";
 import type { FileContentResponse, ServiceResponse } from "@/features/workspace/types/file-explorer";
 import { ImagePreviewModal } from "./image-preview-modal";
 import { useLocalImageUrl } from "@/hooks/use-local-image-url";

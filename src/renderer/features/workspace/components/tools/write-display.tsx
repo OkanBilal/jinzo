@@ -3,9 +3,9 @@ import { useIsDarkMode } from "@/hooks/use-is-dark-mode";
 import {  Write } from "@/components/ui/icons";
 import { PatchDiff } from "@pierre/diffs/react";
 import { DIFF_TYPOGRAPHY_STYLE, patchDiffOptions } from "@/lib/diff-style";
-import { normalizePatchForPatchDiff } from "../../utils/patch-utils";
+import { normalizePatchForPatchDiff } from "../../lib/patch-utils";
 import { useOpenFileInEditor } from "../../hooks/use-open-file-in-editor";
-import { FileIconComponent } from "../file-explorer/components/file-icon";
+import { FileIconComponent } from "@/components/ui/icons";
 import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader } from "./_shared";
 
 export interface WriteParams {

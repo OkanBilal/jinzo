@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildTurnMarkers } from "./turn-markers";
-import { groupEvents } from "../utils/group-events";
+import { groupEvents } from "./group-events";
 import type { RunEvent } from "../types";
 
 let seq = 0;

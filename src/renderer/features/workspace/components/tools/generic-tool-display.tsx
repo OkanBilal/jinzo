@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Text } from "@/components/ui";
 import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader, ToolOutputBody, useToolStatus } from "./_shared";
-import { toolOutputText, previewParams } from "../../utils/parse-tool-content";
+import { toolOutputText, previewParams } from "../../lib/parse-tool-content";
 
 /** Guardrail so a huge param blob (a 200 KB `Write`) never lands in the DOM. */
 const MAX_BODY_CHARS = 4000;

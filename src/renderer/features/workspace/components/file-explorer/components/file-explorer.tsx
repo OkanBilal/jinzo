@@ -2,7 +2,7 @@ import { memo, useState, useCallback, useEffect, useReducer, useRef } from "reac
 import { appApi } from "@/lib/transport";
 import type { FileNode, DirEntry, ServiceResponse } from "@/features/workspace/types/file-explorer";
 import { FileTreeNode } from "./file-tree-node";
-import { FileIconComponent } from "./file-icon";
+import { FileIconComponent } from "@/components/ui/icons";
 import { Button, Caption, Input, Text } from "@/components/ui";
 import { Close, CollapseAll, Plus, Refresh, Search } from "@/components/ui/icons";
 

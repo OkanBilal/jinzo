@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Web } from "@/components/ui/icons";
 import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader, ToolOutputBody } from "./_shared";
-import { coerceToolOutput } from "../../utils/parse-tool-content";
+import { coerceToolOutput } from "../../lib/parse-tool-content";
 
 export interface WebFetchParams {
   /** Copilot / Claude style */

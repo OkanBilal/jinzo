@@ -1,15 +1,15 @@
 import { memo, useState } from "react";
 import { TOOL_ROW_TEXT } from "./_shared";
 import { ArrowUp } from "@/components/ui/icons";
-import { groupConsecutiveToolCalls } from "../../utils/group-tool-calls";
-import { resolveTool } from "../../utils/resolve-tool";
+import { groupConsecutiveToolCalls } from "../../lib/group-tool-calls";
+import { resolveTool } from "../../lib/resolve-tool";
 import {
   normalizeSlug,
   renderPluginIcon,
   usePluginLogoMap,
 } from "../../hooks";
 import { ToolSubGroupAccordion } from "./tool-sub-group-accordion";
-import type { EventGroup } from "../../utils/group-events";
+import type { EventGroup } from "../../lib/group-events";
 import { Button } from "@/components/ui";
 
 interface ToolCallGroupProps {
@@ -129,4 +129,4 @@ export {
   isPlanToolCallGroup,
   toolEventPlanName,
   type EventGroup,
-} from "../../utils/group-events";
+} from "../../lib/group-events";

@@ -7,7 +7,7 @@ import {
   type Pulse,
 } from "@/lib/redux/api/pulseApi";
 import { useListWorkspacesQuery } from "@/lib/redux/api/workspaceApi";
-import { formatSchedule } from "../utils/format-schedule";
+import { formatSchedule } from "../lib/format-schedule";
 import { Body, Button, Text } from "@/components/ui";
 
 interface PulseListProps {
