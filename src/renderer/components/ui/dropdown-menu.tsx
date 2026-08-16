@@ -127,9 +127,17 @@ export function DropdownMenu({
 
     return () => {
       const target = previouslyFocused.current;
-      if (shouldRestoreFocus.current && target?.isConnected) {
-        requestAnimationFrame(() => target.focus());
-      }
+      if (!shouldRestoreFocus.current || !target?.isConnected) return;
+      // An item's action can hand focus to whatever it just opened — an inline
+      // editor, a modal. Those focus calls land in the same commit as this
+      // cleanup, so decide a frame later instead: reclaim the trigger only when
+      // nothing else claimed focus, or the restore would blur what the item
+      // opened (and blur-to-commit editors would close on the spot).
+      requestAnimationFrame(() => {
+        const active = document.activeElement;
+        if (active && active !== document.body) return;
+        if (target.isConnected) target.focus();
+      });
     };
   }, [isOpen]);
 
