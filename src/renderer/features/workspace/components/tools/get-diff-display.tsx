@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { Text } from "@/components/ui";
 import { Mains } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse } from "./_shared";
-import { coerceToolOutput } from "../../utils/parse-tool-content";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader } from "./_shared";
+import { coerceToolOutput } from "../../lib/parse-tool-content";
 
 export interface GetDiffParams {
   runId?: string;
@@ -38,12 +39,12 @@ export function GetDiffDisplay({
         isCompact={isCompact}
       >
         {files && files.length > 0 && (
-          <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className={`truncate ${TOOL_ROW_TEXT}`}>
             {files.length <= 3 ? files.map(shortName).join(", ") : `${shortName(files[0])} +${files.length - 1}`}
           </span>
         )}
         {!stats && !files?.length && (
-          <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className={`truncate ${TOOL_ROW_TEXT}`}>
             {params.runId ? `run: ${params.runId.slice(0, 8)}` : "workspace diff"}
           </span>
         )}
@@ -51,9 +52,9 @@ export function GetDiffDisplay({
 
       {hasContent && (
         <ToolCollapse isExpanded={isExpanded}>
-          <pre className="noscrollbar text-s font-mono text-primary-950 dark:text-primary whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-64 overflow-y-auto">
+          <Text as="pre" size="s" tone="contrast" className="noscrollbar font-mono whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-64 overflow-y-auto">
             {diffText}
-          </pre>
+          </Text>
         </ToolCollapse>
       )}
     </div>

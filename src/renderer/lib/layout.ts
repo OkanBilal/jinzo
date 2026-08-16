@@ -8,9 +8,15 @@ export function shouldHideRightPanel(pathname: string): boolean {
 
 /**
  * How long the sidebar / right-panel slide takes, in ms. The panels animate via
- * a Tailwind `duration-200` class, which can't read this constant — so any
- * change here must be mirrored in `sidebar.tsx` and `panel.tsx`. JS timers that
- * unmount a panel derive from this value so they never fire mid-transition.
+ * a Tailwind `duration-150` class, which can't read this constant — so any
+ * change here must be mirrored in `sidebar.tsx`, `panel.tsx`, and the
+ * `content-inset` utility in `index.css`. JS timers that unmount a panel derive
+ * from this value so they never fire mid-transition.
+ *
+ * Everything that moves when a panel toggles must land on this one clock —
+ * a panel edge is usually the sum of several offsets (content margin + header
+ * padding + a local inset), and mismatched durations make the pieces race each
+ * other and settle at different times.
  */
 export const LAYOUT_PANEL_ANIM_MS = 150;
 

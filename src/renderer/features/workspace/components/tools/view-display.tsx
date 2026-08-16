@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { View } from "@/components/ui/icons";
 import { useOpenFileInEditor } from "../../hooks/use-open-file-in-editor";
-import { FileIconComponent } from "../file-explorer/components/file-icon";
-import { ToolHeader, ToolCollapse, ToolOutputBody } from "./_shared";
-import { coerceToolOutput } from "../../utils/parse-tool-content";
+import { FileIconComponent } from "@/components/ui/icons";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader, ToolOutputBody } from "./_shared";
+import { coerceToolOutput } from "../../lib/parse-tool-content";
 
 export interface ViewParams {
   path?: string;
@@ -33,7 +33,7 @@ export function ViewDisplay({ params, output, isCompact = false }: { params: Vie
         isCompact={isCompact}
       >
         {numLines > 0 && (
-          <span className="text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className={TOOL_ROW_TEXT}>
             {numLines} lines
           </span>
         )}
@@ -45,7 +45,7 @@ export function ViewDisplay({ params, output, isCompact = false }: { params: Vie
             e.stopPropagation();
             openFile(filePath);
           }}
-          className={`inline-flex items-center gap-1 min-w-0 text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary ${filePath ? "cursor-pointer hover:underline hover:text-primary-950 hover:dark:text-primary" : ""}`}
+          className={`inline-flex items-center gap-1 min-w-0 ${filePath ? "cursor-pointer hover:underline hover:text-primary-950 hover:dark:text-primary" : ""} ${TOOL_ROW_TEXT}`}
         >
           {filePath && (
             <FileIconComponent

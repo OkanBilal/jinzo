@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Edit, Trash } from "@/components/ui/icons";
 import {
   useDeletePulseMutation,
@@ -8,8 +7,8 @@ import {
   type Pulse,
 } from "@/lib/redux/api/pulseApi";
 import { useListWorkspacesQuery } from "@/lib/redux/api/workspaceApi";
-import { formatSchedule } from "../utils/format-schedule";
-import { Body } from "@/components/ui";
+import { formatSchedule } from "../lib/format-schedule";
+import { Body, Button, Text } from "@/components/ui";
 
 interface PulseListProps {
   onEdit: (pulse: Pulse) => void;
@@ -24,7 +23,9 @@ export function PulseList({ onEdit }: PulseListProps) {
 
   if (isLoading) {
     return (
-      <div className="text-sm text-primary-500 px-1 py-3">Loading…</div>
+      <Text as="div" tone="faint" className="px-1 py-3">
+        Loading…
+      </Text>
     );
   }
 
@@ -34,7 +35,10 @@ export function PulseList({ onEdit }: PulseListProps) {
 
   return (
     <section>
-      <Body className=" font-medium mb-3 pb-2 border-b border-primary-200/40 dark:border-primary-800/60">
+      <Body
+        weight="medium"
+        className="mb-3 pb-2 border-b border-primary-200/40 dark:border-primary-800/60"
+      >
         Current
       </Body>
       <ul className="">
@@ -64,24 +68,29 @@ export function PulseList({ onEdit }: PulseListProps) {
               </Button>
 
               <div className="flex-1 min-w-0 flex items-baseline gap-2">
-                <span className="text-sm text-primary-900 dark:text-primary-100 truncate">
+                <Text as="span" className="truncate">
                   {pulse.title}
-                </span>
+                </Text>
                 {workspace && (
-                  <span className="text-xs text-primary-500 truncate">
+                  <Text as="span" size="xs" tone="faint" className="truncate">
                     {workspace.name}
-                  </span>
+                  </Text>
                 )}
               </div>
 
-              <span className="text-xs text-primary-500 whitespace-nowrap">
+              <Text
+                as="span"
+                size="xs"
+                tone="faint"
+                className="whitespace-nowrap"
+              >
                 {formatSchedule({
                   frequency: pulse.frequency,
                   hour: pulse.hour,
                   minute: pulse.minute,
                   dayOfWeek: pulse.dayOfWeek,
                 })}
-              </span>
+              </Text>
 
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Button

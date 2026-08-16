@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Mains } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse } from "./_shared";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader } from "./_shared";
 import { Text, Tiny } from "@/components/ui";
 import { SEVERITY_TINT } from "../../lib/severity";
-import { shortPath } from "../../utils/path-utils";
+import { shortPath } from "../../lib/path-utils";
 
 interface Finding {
   severity?: string;
@@ -63,13 +63,13 @@ export function SaveFindingDisplay({
         onToggle={() => setIsExpanded((v) => !v)}
         isCompact={isCompact}
       >
-        <span className="flex items-center gap-1.5 text-primary-500">
-          {critical > 0 && <span className="text-red-400">{critical} critical</span>}
-          {warning > 0 && <span className="text-yellow-400">{warning} warning</span>}
-          {info > 0 && <span className="text-blue-400">{info} info</span>}
-        </span>
+        <Text as="span" size="inherit" tone="faint" className="flex items-center gap-1.5">
+          {critical > 0 && <Text as="span" size="inherit" tone="danger">{critical} critical</Text>}
+          {warning > 0 && <Text as="span" size="inherit" tone="warning">{warning} warning</Text>}
+          {info > 0 && <Text as="span" size="inherit" tone="inherit" className="text-accent">{info} info</Text>}
+        </Text>
         {findings.length === 1 && findings[0].file && (
-          <span className="text-primary-500 truncate text-xs font-mono group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className={`truncate text-xs font-mono ${TOOL_ROW_TEXT}`}>
             {shortPath(findings[0].file)}
           </span>
         )}
@@ -80,24 +80,24 @@ export function SaveFindingDisplay({
           <div className="space-y-2">
             {findings.map((f) => (
               <div key={`${f.file ?? ""}:${f.lineStart ?? ""}:${f.severity ?? ""}`} className="bg-primary-50 dark:bg-primary/5 rounded-md p-2 space-y-1">
-                <div className="flex items-center gap-2 text-xs">
+                <Text as="div" size="xs" tone="inherit" className="flex items-center gap-2">
                   {f.severity && (
                     <span className={`px-1.5 py-0.5 rounded font-medium ${(SEVERITY_TINT as Record<string, string>)[f.severity] ?? "bg-primary-500/10 text-primary-500"}`}>
                       {f.severity}
                     </span>
                   )}
                   {f.file && (
-                    <span className="font-mono text-primary-950 dark:text-primary">
+                    <Text as="span" size="inherit" tone="contrast" className="font-mono">
                       {shortPath(f.file)}
                       {f.lineStart != null && `:${f.lineStart}${f.lineEnd != null && f.lineEnd !== f.lineStart ? `-${f.lineEnd}` : ""}`}
-                    </span>
+                    </Text>
                   )}
-                </div>
+                </Text>
                 {f.message && (
                   <Tiny as="div" className="whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2">{f.message}</Tiny>
                 )}
                 {f.suggestion && (
-                  <Text className="text-xs text-green-600 dark:text-green-400">{f.suggestion}</Text>
+                  <Text size="xs" tone="success">{f.suggestion}</Text>
                 )}
               </div>
             ))}

@@ -1,5 +1,6 @@
 import { forwardRef, useCallback, useEffect, useRef } from "react";
 import { useIsMobile, isWeb } from "@/lib/platform";
+import Text from "../text";
 
 interface InputFormProps {
   query: string;
@@ -62,12 +63,17 @@ export const InputForm = forwardRef<HTMLTextAreaElement, InputFormProps>(
           }}
           placeholder={placeholder}
           className="rounded-2xl w-full pl-5 pr-20 pt-4 text-sm placeholder:text-sm outline-none resize-none overflow-hidden
-          dark:text-primary-200 text-primary-700 placeholder:text-primary-500 dark:placeholder:text-primary-500"
+          dark:text-primary-300 text-primary-700 placeholder:text-primary-500 dark:placeholder:text-primary-500"
         />
         {showFocusHint && (
-          <kbd className="absolute cursor-default right-4 top-4 px-1.5 py-0.5 text-xxs font-sans text-primary-400 dark:text-primary-300 ">
+          <Text
+            as="kbd"
+            size="xxs"
+            tone="subtle"
+            className="absolute cursor-default right-4 top-4 px-1.5 py-0.5 font-sans"
+          >
             ⌘ P to focus
-          </kbd>
+          </Text>
         )}
       </form>
     );

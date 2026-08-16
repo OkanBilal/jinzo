@@ -23,7 +23,7 @@ export function DictationButton({
       aria-label={isRecording ? "Stop recording" : "Start voice input"}
       title={isRecording ? "Stop recording" : "Voice input"}
     >
-      <Microphone className="dark:text-primary-400 text-primary-500" isRecording={isRecording} />
+      <Microphone className="dark:text-primary-400 text-primary-600" isRecording={isRecording} />
     </Button>
   );
 }

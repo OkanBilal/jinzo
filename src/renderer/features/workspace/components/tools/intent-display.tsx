@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Notes } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse, ToolOutputBody } from "./_shared";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader, ToolOutputBody } from "./_shared";
 
 export interface IntentParams {
   intent?: string;
@@ -20,7 +20,7 @@ export function IntentDisplay({ params, isCompact = false }: { params: IntentPar
         onToggle={() => setIsExpanded((v) => !v)}
         isCompact={isCompact}
       >
-        <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+        <span className={`truncate ${TOOL_ROW_TEXT}`}>
           {params.intent || "Unknown intent"}
         </span>
       </ToolHeader>

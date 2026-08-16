@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Sparkles } from "@/components/ui/icons";
-import { ToolHeader } from "./_shared";
+import { TOOL_ROW_TEXT, ToolHeader } from "./_shared";
 
 export interface SkillParams {
   skill?: string;
@@ -30,11 +30,11 @@ export function SkillDisplay({
         onToggle={() => {}}
         isCompact={isCompact}
       >
-        <span className="text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
+        <span className={TOOL_ROW_TEXT}>
           /{skillName}
         </span>
         {params.args && (
-          <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className={`truncate ${TOOL_ROW_TEXT}`}>
             {params.args}
           </span>
         )}

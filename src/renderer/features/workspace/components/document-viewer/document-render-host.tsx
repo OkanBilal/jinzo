@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Text } from "@/components/ui";
 import { useLocalDocumentUrl } from "@/hooks/use-local-document-url";
 import { pickRenderer } from "@/lib/document-viewer";
 import type { DocumentViewerDoc } from "@/lib/redux/slices/appSettingsSlice";
@@ -165,9 +166,9 @@ export function DocumentRenderHost({
       <div className="relative flex-1 min-h-0 overflow-auto p-3">
         <div ref={hostRef} className="min-h-full" />
         {status === "loading" && (
-          <div className="absolute inset-0 flex items-center justify-center text-primary-500 text-xs pointer-events-none">
+          <Text as="div" size="xs" tone="faint" className="absolute inset-0 flex items-center justify-center pointer-events-none">
             Loading document…
-          </div>
+          </Text>
         )}
         {status === "error" && (
           <div className="absolute inset-0">

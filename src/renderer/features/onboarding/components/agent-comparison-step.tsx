@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, CopyButton, DropdownWrapper, Heading2 } from "@/components/ui";
+import {
+  Button,
+  CopyButton,
+  DropdownWrapper,
+  Heading2,
+  Text,
+} from "@/components/ui";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import {
   Download,
@@ -140,14 +146,9 @@ const ROW_BORDER = "border-t border-primary-700/10 dark:border-primary-200/10";
 
 function RowLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      className={cn(
-        ROW_BORDER,
-        "py-5 pr-4 text-sm font-medium text-primary-900 dark:text-primary-100",
-      )}
-    >
+    <Text as="div" weight="medium" className={cn(ROW_BORDER, "py-5 pr-4")}>
       {children}
-    </div>
+    </Text>
   );
 }
 
@@ -202,7 +203,7 @@ function EnableButton({
               showPreview && "hover:glass-danger hover:text-white",
             )
           : cn(
-              "bg-primary-500/10 text-primary-500 dark:text-primary-400",
+              "bg-primary-500/10 text-primary-600 dark:text-primary-400",
               showPreview && "hover:bg-success/15 hover:text-success",
             ),
       )}
@@ -261,6 +262,7 @@ function CliInstallBadge({
       <Button
         ref={triggerRef}
         onClick={() => setOpen((o) => !o)}
+        aria-haspopup="dialog"
         aria-expanded={open}
         className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-warning/15 px-3 py-1 text-sm font-medium text-warning transition-colors hover:bg-warning/25"
       >
@@ -269,6 +271,8 @@ function CliInstallBadge({
       </Button>
       <DropdownWrapper
         isOpen={open}
+        role="dialog"
+        aria-label={`${name} CLI setup`}
         usePortal
         triggerRef={triggerRef}
         dropdownRef={panelRef}
@@ -276,22 +280,27 @@ function CliInstallBadge({
         minWidth="min-w-100"
       >
         <div className="w-100 space-y-3 p-4 text-left">
-          <span className="block text-sm font-medium text-primary-900 dark:text-primary-100">
+          <Text as="span" weight="medium" className="block">
             Set up the {name} CLI
-          </span>
+          </Text>
           {install.sections.map((section) => (
             <div key={section.label} className="space-y-1.5">
-              <span className="block text-xs text-primary-500 dark:text-primary-400">
+              <Text as="span" size="xs" tone="subtle" className="block">
                 {section.label}
-              </span>
+              </Text>
               {section.commands.map((command) => (
                 <div
                   key={command}
                   className="flex items-center rounded-lg bg-primary-200/60 px-3 py-2 dark:bg-primary-800/40"
                 >
-                  <code className="flex-1 overflow-x-auto font-mono text-xs text-primary-800 dark:text-primary-200">
+                  <Text
+                    as="code"
+                    size="xs"
+                    tone="secondary"
+                    className="flex-1 overflow-x-auto font-mono"
+                  >
                     {command}
-                  </code>
+                  </Text>
                   <CopyButton text={command} />
                 </div>
               ))}
@@ -415,9 +424,9 @@ export function AgentComparisonStep() {
                 )}
               />
             </span>
-            <span className="text-base font-medium text-primary-900 dark:text-primary-50">
+            <Text as="span" size="base" weight="medium">
               {name}
-            </span>
+            </Text>
           </div>
         ))}
         {/* Coming-soon column: Gemini + Grok share one column */}
@@ -430,9 +439,9 @@ export function AgentComparisonStep() {
               <Grok className="size-5 text-primary-900 dark:text-primary-100" />
             </span>
           </div>
-          <span className="text-md font-semibold text-primary-900 dark:text-primary-50">
+          <Text as="span" size="base" weight="semibold">
             Gemini &amp; Grok
-          </span>
+          </Text>
         </div>
 
         {/* CLI status */}
@@ -444,34 +453,37 @@ export function AgentComparisonStep() {
               {detectedClis !== undefined && !installed ? (
                 <CliInstallBadge name={name} install={install} />
               ) : (
-                <span
+                <Text
+                  as="span"
+                  weight="medium"
+                  tone={detectedClis === undefined ? "subtle" : "success"}
                   className={cn(
-                    "inline-flex items-center rounded-full px-3 py-1 text-sm font-medium",
+                    "inline-flex items-center rounded-full px-3 py-1",
                     detectedClis === undefined
-                      ? "bg-primary-500/10 text-primary-500 dark:text-primary-400"
-                      : "bg-success/15 text-success",
+                      ? "bg-primary-500/10"
+                      : "bg-success/15",
                   )}
                 >
                   {detectedClis === undefined ? "Checking…" : "CLI detected"}
-                </span>
+                </Text>
               )}
             </RowCell>
           );
         })}
         {/* Spans every body row of the coming-soon column */}
         <RowCell className="row-span-4">
-          <span className="text-sm italic text-primary-600 dark:text-primary-300">
+          <Text as="span" tone="subtle" className="italic">
             Soon…
-          </span>
+          </Text>
         </RowCell>
 
         {/* How the agent is used — subscription today, API may come later */}
         <RowLabel>Works with</RowLabel>
         {AGENT_COLUMNS.map(({ slug, subscription }) => (
           <RowCell key={slug}>
-            <span className="text-s text-primary-700 dark:text-primary-200">
+            <Text as="span" size="s" tone="muted">
               {subscription}
-            </span>
+            </Text>
           </RowCell>
         ))}
 
@@ -480,12 +492,15 @@ export function AgentComparisonStep() {
         {AGENT_COLUMNS.map(({ slug, features }) => (
           <RowCell key={slug} className="justify-start gap-1.5">
             {features.map((feature) => (
-              <span
+              <Text
                 key={feature}
-                className="text-xs leading-snug text-primary-700 dark:text-primary-200"
+                as="span"
+                size="xs"
+                tone="muted"
+                className="leading-snug"
               >
                 {feature}
-              </span>
+              </Text>
             ))}
           </RowCell>
         ))}

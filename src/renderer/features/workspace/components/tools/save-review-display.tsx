@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Mains } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse } from "./_shared";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader } from "./_shared";
 import { Tiny } from "@/components/ui";
 
 export interface SaveReviewParams {
@@ -32,7 +32,7 @@ export function SaveReviewDisplay({
         onToggle={() => setIsExpanded((v) => !v)}
         isCompact={isCompact}
       >
-        <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+        <span className={`truncate ${TOOL_ROW_TEXT}`}>
           {params.title || "Untitled review"}
         </span>
       </ToolHeader>

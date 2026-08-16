@@ -224,6 +224,7 @@ Core tables:
 - Deterministic commit / push / PR orchestration for the UI git-actions panel: `getStatus`, `generateCommitMessage`, `generatePrBody`, `commit`, `push`, `createPr`, `publish`, `getPublishPreflight`
 - Also the shared building blocks the mains tools (`CommitChanges` / `CreatePR`) delegate to, so git work lives in one place
 - Stages with `simple-git`, generates messages via a one-shot headless `adapter.generateText` call, creates PRs with `gh`
+- Renderer side: `features/workspace/components/session-panel/git-actions/` — one component per row (changes / branch / commit / pr / publish), each owning its own form state. `useGitActionsPanel` holds only what several rows share: the status query + `refreshStatus`, the accordion, and the single `pending` action. Publish replaces PR when the repo has no remote. See CONTEXT.md for the rules.
 
 **Remote Backend** (`src/main/modules/localBackend/`, `ssh/`, `tailscale/`, `backendAuth/`)
 - `localBackend` — turns the running desktop app into a backend other clients can drive (phone browser, LAN device, another mains over SSH), via an in-process WS host on a fixed port over the same handler registry + DB. Two access paths: network bind (token-gated) and Tailscale HTTPS.
@@ -291,11 +292,13 @@ Core tables:
 ### Frontend Conventions
 
 - **Redux**: RTK Query with custom `ipcBaseQuery`, `baseApi.injectEndpoints()` per domain
-- **Redux API files** (`src/renderer/lib/redux/api/`): `accountApi`, `appSettingsApi`, `automationsApi`, `connectionsApi`, `entitiesApi`, `gitFlowApi`, `guardsApi`, `projectsApi`, `providersApi`, `pullRequestsApi`, `pulseApi`, `runsApi`, `shellApi`, `signalsApi`, `spaceApi`, `statsApi`, `syncApi`, `toolsApi`, `updatesApi`, `workspaceApi` — all built on `baseApi.ts`, re-exported via `index.ts`. Aggregate APIs use split RTK Query tag types (e.g. `workspaceApi`: `Workspace`, `WorkspaceActivity`, `WorkspaceDiff`, `WorkspaceReview`, `WorkspaceFinding`) so UI sections refresh independently.
+- **Redux API files** (`src/renderer/lib/redux/api/`): `accountApi`, `appSettingsApi`, `automationsApi`, `connectionsApi`, `entitiesApi`, `gitFlowApi`, `guardsApi`, `projectsApi`, `providersApi`, `pullRequestsApi`, `pulseApi`, `runsApi`, `shellApi`, `signalsApi`, `spaceApi`, `statsApi`, `syncApi`, `toolsApi`, `updatesApi`, `workspaceApi` — all built on `baseApi.ts`. The barrel is `export * from "./xApi"` per file — adding an endpoint is one edit, in the file that owns it; only `baseApi` itself is re-exported explicitly, since its IPC base query is not public. Aggregate APIs use split RTK Query tag types (e.g. `workspaceApi`: `Workspace`, `WorkspaceActivity`, `WorkspaceDiff`, `WorkspaceReview`, `WorkspaceFinding`) so UI sections refresh independently.
 - **Redux slices** (`src/renderer/lib/redux/slices/`): `appSettingsSlice`, `backendsSlice`, `workspaceSlice`
 - **Hooks**: `use-kebab-case.ts` filenames, `useCamelCase` export names
 - **Components**: `kebab-case.tsx` filenames in feature dirs under `src/renderer/features/{name}/components/`
 - **Feature dirs**: `onboarding`, `pulse`, `relay`, `settings`, `stats`, `tasks`, `workspace`
+- **Feature internals**: a feature dir holds `components/`, `hooks/`, `lib/`, and `types/`. Non-component logic goes in `lib/` — there is no separate `utils/` (`features/workspace` had both, with no rule telling them apart, and they imported each other). Tests sit next to the file under test.
+- **Layering**: `components/ui/` holds feature-agnostic primitives and may NOT import from `@/features/` (ESLint-enforced). `components/layout/` is the app shell — `main/`, `sidebar/`, `right-panel/`, `page-shell`, `resize-handle` — and composing features there is correct. Feature panels do not belong in `layout/`: the session panel (git actions) and subagent panel live under `features/workspace/components/` and are rendered from `App.tsx`.
 - **Shared input UI**: `src/renderer/components/ui/input/` (`input-form`, `rich-input-form`, `permission-mode-dropdown`, `model-select-dropdown`, `fast-mode-button`, `goal-button`, `dictation-button`, `file-upload-dropdown`, `compact-composer-controls`, `send-button`)
 - **Routing**: HashRouter — page components in `src/renderer/routes/`
 - **Settings Routing**: `/settings?section={id}` — section ids live in `src/renderer/features/settings/settings-sections.tsx`: `general`, `git`, `connections`, `backends`, `dashboard`, `archive`, `claude`, `codex`, `codex-plugins`, `copilot`, `cursor`, `notifications`, `personalization`, `schedules`, `security`, `projects`
@@ -343,7 +346,17 @@ iconutil -c icns icon.iconset -o icon.icns
 
 - `features/workspace/lib/transcript-rows.ts` — pure (React-free) layout plan for the run transcript. Public: `buildTurnRenderRows(groups)` and `matchTurnsToGroups(...)`; everything else is an internal seam. Keep turn-grouping / accordion / session-bar math out of `workspace-events.tsx`.
 - `features/workspace/lib/run-cache.ts` — `createRunCache()` factory owning the retained-run LRU, incremental-sync cursors, loaded/finalized sets, and in-flight dedup behind `use-workspace-runs.ts`. Cursors are monotonic (`Math.max`); `touch(runId)` prunes evicted runs' cursors.
+- `use-workspace-runs.ts` holds run state + loading and delegates two subjects: `use-run-operations.ts` (execute / continue / fork / review / canResume, plus the `isLoading` + `error` they drive) and `use-run-sync.ts` (transcript push, status push, polling fallback, `finalizeRun`). Both reach back through exactly three callbacks — `registerNewRun`, `loadRunDetails`, `onRunUpdated` — never raw setters.
 - **Structural plan snapshots** arrive as `plan_update` adapter events and are merged into `run_turns.metadata.codexPlan`, so `TodoSummaryBar` recovers state after reload — not stored as fake tool calls.
+
+### Composer Context (renderer)
+
+Everything the composer attaches to the next message — files, issues, signals, skills, browser selections, code selections — is one tagged union, not six parallel lists. See CONTEXT.md for the vocabulary.
+
+- `features/workspace/lib/composer-context.ts` — the `ContextItem` union plus its identity rules (`contextItemKey` for removal, `isSameContextItem` for dedupe) and `groupContextItems` for the per-kind views. The only home for these types.
+- `features/workspace/hooks/use-composer-context.ts` — the read path (`items`, the grouped views, `add` / `remove` / `clear`). Components read it directly; never pass context lists or `onRemoveContextX` down as props. A component that only attaches dispatches `addContextItem` instead of subscribing.
+- `features/workspace/lib/run-context-payload.ts` — `buildRunContextPayload(items, uploads)` shapes context for `runs:execute` / `runs:continue`. `executeRun` / `continueRun` take one `ContextItem[]`, never per-kind parameters.
+- Store side: a single `workspace.contextItems` array behind `addContextItem` / `removeContextItem` / `clearContextItems`.
 
 ### Code Style
 

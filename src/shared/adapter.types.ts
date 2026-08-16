@@ -3,6 +3,12 @@
 // Agent/work runtime oriented interfaces for code-writing flows
 // ─────────────────────────────────────────────────────────────
 
+import type { ClaudePermissionMode } from "./claude-permission-modes";
+import type {
+  PluginAvailability,
+  PluginDisabledReason,
+} from "./plugin-install-availability";
+
 /**
  * Context item provided to a work run
  */
@@ -248,9 +254,24 @@ export interface WorkRunContextUsageEvent {
   isAutoCompactEnabled?: boolean;
   /** Token count at which auto-compaction triggers, when known. */
   autoCompactThreshold?: number;
-  /** Per-category breakdown (name/tokens/color) for a detailed view. */
-  categories?: { name: string; tokens: number; color: string }[];
+  /**
+   * Per-category breakdown of the window, as the provider partitions it.
+   *
+   * `used` rows are the occupied portion, `free` is what remains, `buffer` is
+   * the compaction reserve, and `deferred` rows sit outside the window
+   * (out-of-context tool schemas) and are excluded from the usage math.
+   *
+   * Semantic only — the renderer owns presentation. Providers must not send
+   * colors or class names.
+   */
+  categories?: WorkRunContextUsageCategory[];
   ts?: number;
+}
+
+export interface WorkRunContextUsageCategory {
+  name: string;
+  tokens: number;
+  kind: "used" | "free" | "buffer" | "deferred";
 }
 
 export interface WorkRunPlanStep {
@@ -939,7 +960,7 @@ export interface ClaudeCodeAdapterConfig {
   /** Timeout in milliseconds */
   timeout?: number;
   /** Permission mode for tool access */
-  permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan" | "dontAsk" | "auto";
+  permissionMode?: ClaudePermissionMode;
   /**
    * Setting sources for loading skills and other filesystem settings.
    * - "user": Load from ~/.claude/skills/
@@ -1725,6 +1746,14 @@ export interface PluginInfo {
   installed: boolean;
   enabled: boolean;
   installPolicy: "NOT_AVAILABLE" | "AVAILABLE" | "INSTALLED_BY_DEFAULT";
+  /** App-server availability after account and organization policy checks. */
+  availability?: PluginAvailability;
+  /** Why the plugin is unavailable, when the backend provides a reason. */
+  disabledReason?: PluginDisabledReason | null;
+  /** Raw plan identifiers that are eligible to install this plugin. */
+  eligiblePlanTypes?: string[] | null;
+  /** Unix timestamp in seconds when the plugin was installed. */
+  installedAt?: number | null;
   authPolicy: "ON_INSTALL" | "ON_USE";
   interface: PluginInterface | null;
   /** Marketplace install count (popularity signal), when known. */

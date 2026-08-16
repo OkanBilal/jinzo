@@ -6,34 +6,23 @@ import {
   useState,
   useMemo,
 } from "react";
-import { useAppDispatch } from "@/lib/redux/hooks";
 import type { CommandInfo, SkillInfo } from "@/lib/redux/api/providersApi";
 import type { Run } from "../types";
 import type { FileNode } from "@/features/workspace/types/file-explorer";
-import type {
-  ContextIssue,
-  ContextSignal,
-  ContextSkill,
-  ContextBrowserSelection,
-  ContextCodeSelection,
-} from "@/lib/redux/slices/workspaceSlice";
+import type { ContextCodeSelection } from "@/features/workspace/lib/composer-context";
+import { useComposerContext } from "../hooks/use-composer-context";
 import {
-  addContextFile,
-  addContextIssue,
-  addContextSkill,
-  removeContextSkill,
-} from "@/lib/redux/slices/workspaceSlice";
-import type {
-  UploadedFile,
-  RichInputFormHandle,
-  RichSkillChipData,
-  RichFileChipData,
-  RichCodeChipData,
+  Button,
+  DropdownWrapper,
+  RichInputForm,
+  type UploadedFile,
+  type RichInputFormHandle,
+  type RichSkillChipData,
+  type RichFileChipData,
+  type RichCodeChipData,
 } from "@/components/ui";
 import { useSpaceProviderVariant } from "@/hooks/use-space-provider-variant";
 import { useIsMobile } from "@/lib/platform";
-import { RichInputForm, Button } from "@/components/ui";
-import DropdownWrapper from "@/components/ui/dropdown-wrapper";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { Chat, Check, Plus } from "@/components/ui/icons";
 import {
@@ -53,12 +42,6 @@ import { useProviderModels } from "../hooks/use-provider-models";
 import { getProviderVariantById } from "@/lib/provider-variants";
 import { useGetProviderAccountInfoQuery } from "@/lib/redux/api";
 
-const EMPTY_CONTEXT_FILES: FileNode[] = [];
-const EMPTY_CONTEXT_ISSUES: ContextIssue[] = [];
-const EMPTY_CONTEXT_SIGNALS: ContextSignal[] = [];
-const EMPTY_CONTEXT_SKILLS: ContextSkill[] = [];
-const EMPTY_CONTEXT_BROWSER: ContextBrowserSelection[] = [];
-const EMPTY_CONTEXT_CODE: ContextCodeSelection[] = [];
 const EMPTY_UPLOADED_FILES: UploadedFile[] = [];
 
 function looksLikeImageFile(file: File): boolean {
@@ -146,17 +129,6 @@ interface WorkspaceInputProps {
   providerId?: string;
   selectedModel?: string;
   onModelChange?: (model: string) => void;
-  contextFiles?: FileNode[];
-  onRemoveContextFile?: (filePath: string) => void;
-  contextIssues?: ContextIssue[];
-  onRemoveContextIssue?: (entityId: string) => void;
-  contextSignals?: ContextSignal[];
-  onRemoveContextSignal?: (entityId: string) => void;
-  contextSkills?: ContextSkill[];
-  contextBrowserSelections?: ContextBrowserSelection[];
-  onRemoveContextBrowserSelection?: (id: string) => void;
-  contextCodeSelections?: ContextCodeSelection[];
-  onRemoveContextCodeSelection?: (id: string) => void;
   /** When set, shows the send-target pill (editor tab): which chat the next send continues. */
   sendTarget?: ComposerSendTarget | null;
   onSendTargetChange?: (runId: string | null) => void;
@@ -181,17 +153,6 @@ export function WorkspaceInput({
   providerId,
   selectedModel: externalSelectedModel,
   onModelChange: externalOnModelChange,
-  contextFiles = EMPTY_CONTEXT_FILES,
-  onRemoveContextFile,
-  contextIssues = EMPTY_CONTEXT_ISSUES,
-  onRemoveContextIssue,
-  contextSignals = EMPTY_CONTEXT_SIGNALS,
-  onRemoveContextSignal,
-  contextSkills = EMPTY_CONTEXT_SKILLS,
-  contextBrowserSelections = EMPTY_CONTEXT_BROWSER,
-  onRemoveContextBrowserSelection,
-  contextCodeSelections = EMPTY_CONTEXT_CODE,
-  onRemoveContextCodeSelection,
   sendTarget = null,
   onSendTargetChange,
   workspacePath,
@@ -204,7 +165,13 @@ export function WorkspaceInput({
 }: WorkspaceInputProps) {
   const inputRef = useRef<RichInputFormHandle>(null);
   const unifiedContextDropdownRef = useRef<HTMLDivElement>(null);
-  const dispatch = useAppDispatch();
+  const {
+    files: contextFiles,
+    skills: contextSkills,
+    codeSelections: contextCodeSelections,
+    add: addContext,
+    remove: removeContext,
+  } = useComposerContext();
 
   const spaceProvider = useSpaceProviderVariant();
   const providerVariant = spaceProvider.variant;
@@ -364,19 +331,18 @@ export function WorkspaceInput({
     (skill: SkillInfo, trigger: UnifiedContextTrigger) => {
       if (trigger === "#") return; // the issues-only menu never lists skills
       updateUnifiedMenu({ visible: false, filter: "" });
-      dispatch(
-        addContextSkill({
-          name: skill.name,
-          path: skill.path,
-          description: skill.description,
-          displayName: skill.displayName,
-          shortDescription: skill.shortDescription,
-          iconSmall: skill.iconSmall,
-          iconLarge: skill.iconLarge,
-          brandColor: skill.brandColor,
-          scope: skill.scope,
-        }),
-      );
+      addContext({
+        kind: "skill",
+        name: skill.name,
+        path: skill.path,
+        description: skill.description,
+        displayName: skill.displayName,
+        shortDescription: skill.shortDescription,
+        iconSmall: skill.iconSmall,
+        iconLarge: skill.iconLarge,
+        brandColor: skill.brandColor,
+        scope: skill.scope,
+      });
       inputRef.current?.replaceTokenWithSkillChip(trigger, {
         name: skill.name,
         displayName: skill.displayName,
@@ -385,7 +351,7 @@ export function WorkspaceInput({
         brandColor: skill.brandColor,
       });
     },
-    [dispatch],
+    [addContext],
   );
 
   const handleUnifiedSkillSelect = useCallback(
@@ -493,45 +459,39 @@ export function WorkspaceInput({
     (keys: string[]) => {
       const present = new Set(keys);
       for (const sel of contextCodeSelectionsRef.current) {
-        if (!present.has(codeSelectionChipKey(sel))) {
-          onRemoveContextCodeSelection?.(sel.id);
-        }
+        if (!present.has(codeSelectionChipKey(sel))) removeContext(sel);
       }
     },
-    [onRemoveContextCodeSelection],
+    [removeContext],
   );
 
   const handleSkillChipsChange = useCallback(
     (names: string[]) => {
       const present = new Set(names);
       for (const skill of contextSkillsRef.current) {
-        if (!present.has(skill.name)) {
-          dispatch(removeContextSkill(skill.name));
-        }
+        if (!present.has(skill.name)) removeContext(skill);
       }
     },
-    [dispatch],
+    [removeContext],
   );
 
   const handleFileChipsChange = useCallback(
     (paths: string[]) => {
       const present = new Set(paths);
       for (const file of contextFilesRef.current) {
-        if (!present.has(file.fullPath)) {
-          onRemoveContextFile?.(file.fullPath);
-        }
+        if (!present.has(file.fullPath)) removeContext(file);
       }
     },
-    [onRemoveContextFile],
+    [removeContext],
   );
 
   const handleUnifiedFileSelect = useCallback(
     (node: FileNode) => {
       const t = unifiedMenu.trigger;
       if (t === "#" || t === "$") return; // only the combined @ / menu lists files
-      // Dispatch first so fileChipMap has the entry by the time the sync effect rebuilds the chip
+      // Attach first so fileChipMap has the entry by the time the sync effect rebuilds the chip
       // from a rewritten goal string in the dropdown-focus fallback path.
-      dispatch(addContextFile(node));
+      addContext({ kind: "file", ...node });
       const ok =
         inputRef.current?.replaceTokenWithFileChip(t, {
           path: node.fullPath,
@@ -548,7 +508,7 @@ export function WorkspaceInput({
       }
       updateUnifiedMenu({ visible: false, filter: "" });
     },
-    [dispatch, goal, onGoalChange, unifiedMenu.filter, unifiedMenu.trigger],
+    [addContext, goal, onGoalChange, unifiedMenu.filter, unifiedMenu.trigger],
   );
 
   const handleUnifiedIssueSelect = useCallback(
@@ -560,18 +520,17 @@ export function WorkspaceInput({
         if (next !== null) onGoalChange(next);
       }
       updateUnifiedMenu({ visible: false, filter: "" });
-      dispatch(
-        addContextIssue({
-          entityId: item.issue.entityId,
-          title: item.entity.title,
-          body: item.entity.body,
-          provider: item.issue.provider,
-          number: item.issue.number,
-          labels: item.issue.labels,
-        }),
-      );
+      addContext({
+        kind: "issue",
+        entityId: item.issue.entityId,
+        title: item.entity.title,
+        body: item.entity.body,
+        provider: item.issue.provider,
+        number: item.issue.number,
+        labels: item.issue.labels,
+      });
     },
-    [dispatch, goal, onGoalChange, unifiedMenu.filter, unifiedMenu.trigger],
+    [addContext, goal, onGoalChange, unifiedMenu.filter, unifiedMenu.trigger],
   );
 
   const handleUnifiedFileNavigate = useCallback(
@@ -751,9 +710,9 @@ export function WorkspaceInput({
               <Button
                 type="button"
                 onClick={() => setTargetMenuOpen((open) => !open)}
-                className="flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-full glass-button text-xs dark:text-primary-200 text-primary-700 cursor-pointer"
+                className="flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-full glass-button text-xs dark:text-primary-300 text-primary-700 cursor-pointer"
                 title="Choose which chat this message is sent to"
-                aria-haspopup="true"
+                aria-haspopup="menu"
                 aria-expanded={targetMenuOpen}
               >
                 {sendTarget.runId ? (
@@ -765,6 +724,7 @@ export function WorkspaceInput({
               </Button>
               <DropdownWrapper
                 isOpen={targetMenuOpen}
+                aria-label="Send message to"
                 openUpward
                 minWidth="min-w-60"
               >
@@ -804,14 +764,7 @@ export function WorkspaceInput({
             </div>
           </div>
         )}
-        <ContextChips
-          contextIssues={contextIssues}
-          contextSignals={contextSignals}
-          contextBrowserSelections={contextBrowserSelections}
-          onRemoveContextIssue={onRemoveContextIssue}
-          onRemoveContextSignal={onRemoveContextSignal}
-          onRemoveContextBrowserSelection={onRemoveContextBrowserSelection}
-        />
+        <ContextChips />
         <div className="relative">
           <RichInputForm
             ref={inputRef}

@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Body, Button } from "@/components/ui";
+import { Body, Button, Text } from "@/components/ui";
 import { ChevronUp, ProjectFolder } from "@/components/ui/icons";
 import { useListProjectsQuery } from "@/lib/redux/api";
 import { useAppDispatch } from "@/lib/redux/hooks";
@@ -49,9 +49,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
       }}
     >
       <div className="flex flex-col items-start pt-12 pb-1 px-4">
-        <Body className="text-left ">
-          Settings
-        </Body>
+        <Body align="left">Settings</Body>
       </div>
 
       <div className="flex-1 px-3 mb-1 mt-2 overflow-y-auto noscrollbar">
@@ -66,7 +64,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                 className={`w-full cursor-pointer text-left px-3 py-1.5 rounded-xl text-sm  transition-all flex items-center gap-2
                   ${
                     isActive
-                      ? " glass-outline bg-primary/80 dark:bg-primary/5 text-primary-950 dark:text-primary-100"
+                      ? " glass-outline bg-primary/80 dark:bg-primary/5 text-primary-900 dark:text-primary-100"
                       : "text-primary-800 dark:text-primary-200 bg-transparent hover:bg-primary/50 dark:hover:bg-primary/5"
                   }
                   `}
@@ -86,9 +84,9 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
         {projects.length > 0 && (
           <div className="mt-2">
             <div className="px-3 mb-1">
-              <span className="text-xs  text-primary-900 dark:text-primary-200">
+              <Text as="span" size="xs">
                 Projects
-              </span>
+              </Text>
             </div>
             <div className="space-y-0.5">
               {projects.map((project) => {
@@ -126,7 +124,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                       }
                       `}
                   >
-                    <div className="size-4 rounded-md flex items-center justify-center text-t text-primary-950 dark:text-primary-200 shrink-0">
+                    <div className="size-4 rounded-md flex items-center justify-center text-t text-primary-900 dark:text-primary-100 shrink-0">
                       {iconContent}
                     </div>
                     <span className="truncate ">{project.name}</span>
@@ -153,10 +151,10 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
           className="shrink-0 max-w-18 justify-start  glass-outline rounded-full flex items-center cursor-pointer px-2 py-1 gap-1 bg-transparent dark:bg-transparent transition-transform duration-200"
           style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
         >
-          <ChevronUp className="size-4 rotate-270 text-primary-900 dark:text-primary-200" />
-          <Body className="font-normal text-s">
+          <ChevronUp className="size-4 rotate-270 text-primary-900 dark:text-primary-100" />
+          <Text as="span" size="s" weight="normal">
             Back
-          </Body>
+          </Text>
         </Button>
       </div>
     </div>

@@ -2,7 +2,7 @@ import { Toggle, Terminal, TerminalOpen, ToggleClose, Web } from "@/components/u
 import { Button, toast } from "@/components/ui";
 import { useAppSelector } from "@/lib/redux/hooks";
 import { useCapabilities } from "@/lib/platform";
-import { SessionPanelTrigger } from "@/components/layout/session-panel";
+import { SessionPanelTrigger } from "@/features/workspace/components/session-panel";
 
 interface ToggleButtonProps {
   isOpen: boolean;
@@ -41,9 +41,9 @@ export function ToggleButton({
           tooltip={browserOpen ? "Close browser" : "Open browser"}
           tooltipPosition="left"
           onClick={onBrowserToggle}
-          className={`p-1.25 transition-all duration-300 ease-out rounded-full cursor-pointer  hover:bg-primary-100/80 dark:hover:bg-primary/10 ${
+          className={`p-1.25 transition-all duration-300 ease-out rounded-full cursor-pointer  hover:bg-primary-50 dark:hover:bg-primary/10 ${
             browserOpen
-              ? "text-primary-800 dark:text-primary-100"
+              ? "text-primary-800 dark:text-primary-200"
               : "text-primary-700 dark:text-primary-300"
           }`}
           aria-label={browserOpen ? "Close browser" : "Open browser"}
@@ -64,22 +64,22 @@ export function ToggleButton({
             onTerminalToggle();
           }}
           className={` p-1.25 transition-all duration-300 ease-out
-             rounded-full cursor-pointer hover:bg-primary-100/80 dark:hover:bg-primary/10
+             rounded-full cursor-pointer hover:bg-primary-50 dark:hover:bg-primary/10
            `}
           aria-label={terminalOpen ? "Close terminal" : "Open terminal"}
         >
-          {terminalOpen ? <TerminalOpen className="size-4 text-primary-800 dark:text-primary-100" /> : <Terminal className="size-4 text-primary-700 dark:text-primary-300" />}
+          {terminalOpen ? <TerminalOpen className="size-4 text-primary-800 dark:text-primary-200" /> : <Terminal className="size-4 text-primary-700 dark:text-primary-300" />}
         </Button>
       )}
       <Button
         tooltip={isOpen ? "Close right panel" : "Open right panel"}
         tooltipPosition="left"
         onClick={onClick}
-        className="rounded-full cursor-pointer hover:bg-primary-100 dark:hover:bg-primary/10 p-1  transition-all duration-300 ease-out"
+        className="rounded-full cursor-pointer hover:bg-primary-50 dark:hover:bg-primary/10 p-1  transition-all duration-300 ease-out"
         aria-label={isOpen ? "Close right panel" : "Open right panel"}
       >
         {isOpen ? (
-          <Toggle  className="size-4 text-primary-800 dark:text-primary-100" />
+          <Toggle  className="size-4 text-primary-800 dark:text-primary-200" />
         ) : (
           <ToggleClose  className="size-4 text-primary-700 dark:text-primary-300" />
         )}

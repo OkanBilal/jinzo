@@ -528,7 +528,10 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
       runId,
       kind: "log",
       content: event.message,
-      metadata: { level: event.level, ts: event.ts },
+      // The driver's own metadata rides along so the renderer can tell one log
+      // from another by what it is rather than by matching its wording; `level`
+      // and `ts` stay authoritative.
+      metadata: { ...event.metadata, level: event.level, ts: event.ts },
     });
     // Auto-generated title from provider (e.g. Codex CLI thread/name/updated)
     const threadTitle = (event.metadata as Record<string, unknown> | undefined)?.threadTitle as

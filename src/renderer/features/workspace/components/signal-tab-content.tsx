@@ -12,22 +12,22 @@ interface SignalTabContentProps {
 }
 
 const levelColors: Record<string, string> = {
-  fatal: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",
-  critical: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",
+  fatal: "bg-red-100 dark:bg-red-900/30 text-danger",
+  critical: "bg-red-100 dark:bg-red-900/30 text-danger",
   error:
-    "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400",
+    "bg-orange-100 dark:bg-orange-900/30 text-warning",
   warning:
-    "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400",
-  info: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400",
+    "bg-yellow-100 dark:bg-yellow-900/30 text-warning",
+  info: "bg-blue-100 dark:bg-blue-900/30 text-accent",
 };
 
 const stateColors: Record<string, string> = {
-  open: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400",
+  open: "bg-green-100 dark:bg-green-900/30 text-success",
   resolved:
     "bg-primary-100 dark:bg-primary-800 text-primary-600 dark:text-primary-400",
   ignored:
-    "bg-primary-100 dark:bg-primary-800 text-primary-500 dark:text-primary-500",
-  regressed: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",
+    "bg-primary-100 dark:bg-primary-800 text-primary-600 dark:text-primary-400",
+  regressed: "bg-red-100 dark:bg-red-900/30 text-danger",
 };
 
 export function SignalTabContent({ signal }: SignalTabContentProps) {
@@ -66,55 +66,55 @@ export function SignalTabContent({ signal }: SignalTabContentProps) {
               />
               {sig.state}
             </span>
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-primary-100 dark:bg-primary-800 text-primary-600 dark:text-primary-400 capitalize">
+            <Text as="span" size="xs" tone="subtle" weight="medium" className="inline-flex items-center px-2.5 py-1 rounded-full bg-primary-100 dark:bg-primary-800 capitalize">
               {sig.category}
-            </span>
+            </Text>
           </div>
         </div>
 
         {/* Meta info */}
-        <div className="flex items-center gap-4 flex-wrap text-sm text-primary-500 dark:text-primary-400">
+        <Text as="div" size="sm" tone="subtle" className="flex items-center gap-4 flex-wrap">
           <span>
             Source:{" "}
-            <span className="font-medium text-primary-700 dark:text-primary-300 capitalize">
+            <Text as="span" size="inherit" tone="muted" weight="medium" className="capitalize">
               {sig.source}
-            </span>
+            </Text>
           </span>
           {sig.eventCount > 1 && (
             <span>
               Events:{" "}
-              <span className="font-medium text-primary-700 dark:text-primary-300 tabular-nums">
+              <Text as="span" size="inherit" tone="muted" weight="medium" className="tabular-nums">
                 {sig.eventCount}
-              </span>
+              </Text>
             </span>
           )}
           {sig.affectedUsers != null && sig.affectedUsers > 0 && (
             <span>
               Affected users:{" "}
-              <span className="font-medium text-primary-700 dark:text-primary-300 tabular-nums">
+              <Text as="span" size="inherit" tone="muted" weight="medium" className="tabular-nums">
                 {sig.affectedUsers}
-              </span>
+              </Text>
             </span>
           )}
           {sig.assignee && (
             <span>
               Assigned to{" "}
-              <span className="font-medium text-primary-700 dark:text-primary-300">
+              <Text as="span" size="inherit" tone="muted" weight="medium">
                 {sig.assignee}
-              </span>
+              </Text>
             </span>
           )}
-        </div>
+        </Text>
 
         {/* File location */}
         {sig.file && (
-          <div className="text-sm text-primary-500 dark:text-primary-400">
-            <span className="font-mono text-xs bg-primary-100 dark:bg-primary-800 px-2 py-1 rounded">
+          <Text as="div" size="sm" tone="subtle">
+            <Text as="span" size="xs" tone="inherit" className="font-mono bg-primary-100 dark:bg-primary-800 px-2 py-1 rounded">
               {sig.file}
               {sig.function ? `:${sig.function}` : ""}
               {sig.line ? `:${sig.line}` : ""}
-            </span>
-          </div>
+            </Text>
+          </Text>
         )}
 
         {/* Body */}
@@ -137,12 +137,12 @@ export function SignalTabContent({ signal }: SignalTabContentProps) {
         {/* Stack trace */}
         {sig.stackTrace && (
           <div className="space-y-2">
-            <Body className="font-medium text-primary-700 dark:text-primary-300">
+            <Body tone="muted" weight="medium">
               Stack Trace
             </Body>
-            <pre className="text-xs font-mono bg-primary-50 dark:bg-primary-800 p-4 rounded-xl overflow-x-auto text-primary-700 dark:text-primary-300 whitespace-pre-wrap">
+            <Text as="pre" size="xs" tone="muted" className="font-mono bg-primary-50 dark:bg-primary-800 p-4 rounded-xl overflow-x-auto whitespace-pre-wrap">
               {sig.stackTrace}
-            </pre>
+            </Text>
           </div>
         )}
 

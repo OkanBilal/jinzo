@@ -8,9 +8,10 @@
 // Differences from cursor/copilot drivers (worth noting because they shape
 // the Driver interface usage):
 //
-//   - SessionId arrives DURING streaming (`msg.session_id`), not from the
-//     acquisition method. Driver persists inline via runsRepo; AcquiredSession
-//     omits sessionId so Core skips persistence.
+//   - SessionId is assigned by the driver, not read out of the stream: a new
+//     or forked session is opened on an id we generate, so AcquiredSession
+//     carries it and Core persists it before the first token. The stream is
+//     still watched for a mismatch, which would mean the CLI ignored the id.
 //   - SDK has both AbortController and `query.interrupt()`. Driver wires the
 //     incoming AbortSignal to fire both.
 //   - Per-run streaming buffers (text + thinking deltas, tool-call correlation
@@ -24,6 +25,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import type {
   AcquiredSession,
@@ -42,6 +44,7 @@ import type {
   ProviderDriver,
   SkillInfo,
   WorkRunContextItem,
+  WorkRunContextUsageCategory,
   WorkRunContinueRequest,
   WorkRunEvent,
   WorkRunEventHandler,
@@ -55,6 +58,10 @@ import {
   resolveCandidate,
 } from "../providers.utils";
 import { AGENT_ID_IN_RESULT } from "../../../../shared/subagent";
+import {
+  DEFAULT_CLAUDE_PERMISSION_MODE,
+  isClaudePermissionMode,
+} from "../../../../shared/claude-permission-modes";
 import {
   cancelPendingRequest,
   requestToolApproval,
@@ -152,6 +159,12 @@ interface SDKOptions {
   cwd?: string;
   resume?: string;
   forkSession?: boolean;
+  /**
+   * Opens the conversation on a caller-chosen UUID instead of an auto-generated
+   * one. Legal on its own or alongside `forkSession`; the CLI exits with an
+   * error if it is combined with a bare `resume`.
+   */
+  sessionId?: string;
   abortController?: AbortController;
   additionalDirectories?: string[];
   agents?: SDKAgentsConfig;
@@ -205,10 +218,7 @@ type SDKOnElicitation = (
 function isSDKPermissionMode(
   value: unknown,
 ): value is NonNullable<SDKOptions["permissionMode"]> {
-  return (
-    typeof value === "string" &&
-    ["default", "acceptEdits", "bypassPermissions", "plan", "dontAsk", "auto"].includes(value)
-  );
+  return isClaudePermissionMode(value);
 }
 
 export function buildClaudePermissionModeOptions(
@@ -257,6 +267,25 @@ export function buildClaudeExecutableOptions(
   return resolved ? { pathToClaudeCodeExecutable: resolved } : {};
 }
 
+/**
+ * Decide whether a run may open its session on an id we chose.
+ *
+ * The CLI accepts one for a fresh session and for a fork ("a custom ID for the
+ * forked session"), but exits with an error when it is combined with a plain
+ * resume — measured: `--session-id can only be used with --continue or --resume
+ * if --fork-session is also specified`. A resume already knows its id anyway.
+ */
+export function buildClaudeSessionIdOptions(args: {
+  newSessionId?: string;
+  resumeSessionId?: string;
+  forkSession?: boolean;
+}): Pick<SDKOptions, "sessionId"> {
+  const { newSessionId, resumeSessionId, forkSession } = args;
+  if (!newSessionId) return {};
+  if (resumeSessionId && !forkSession) return {};
+  return { sessionId: newSessionId };
+}
+
 interface SDKCanUseToolOptions {
   signal: AbortSignal;
   suggestions?: unknown[];
@@ -303,12 +332,71 @@ interface SDKMessageContent {
   id?: string;
 }
 
+/**
+ * Reply to the `get_context_usage` control request — the CLI's own `/context`
+ * report, structured. This is the meter's live source.
+ *
+ * Unlike the `/context` message payload below, its categories carry no kind
+ * discriminator: deferred rows are flagged, and the two rows that are space
+ * rather than content are identified only by name.
+ */
+export interface SDKContextUsageResponse {
+  totalTokens: number;
+  maxTokens: number;
+  percentage: number;
+  model: string;
+  isAutoCompactEnabled?: boolean;
+  autoCompactThreshold?: number;
+  categories?: { name: string; tokens: number; isDeferred?: boolean }[];
+}
+
+/**
+ * Context snapshot carried on an assistant message (Agent SDK >= 0.3.233).
+ *
+ * Per the CLI's own schema this rides *only* the synthetic message that answers
+ * `/context` — never an ordinary assistant turn — so it covers the case where a
+ * run invokes that command, and `getContextUsage()` covers everything else.
+ *
+ * `raw_max_tokens` is the *resolved autocompact window* — the model's believed
+ * limit, or a smaller compaction-policy window (e.g. the 200K boundary on
+ * 1M-window models) — so `percentage` is already measured against the boundary
+ * the meter cares about. `total_tokens` is unclamped and may exceed it.
+ */
+export interface SDKContextUsage {
+  model: string;
+  total_tokens: number;
+  raw_max_tokens: number;
+  percentage: number;
+  /** Partition of the window; see WorkRunContextUsageCategory for the kinds. */
+  categories?: { name: string; tokens: number; kind: string }[];
+}
+
+/** Why an assistant turn failed. Also carried on `system:api_retry`. */
+type SDKAssistantMessageError =
+  | "authentication_failed"
+  | "oauth_org_not_allowed"
+  | "billing_error"
+  | "rate_limit"
+  | "overloaded"
+  | "invalid_request"
+  | "model_not_found"
+  | "server_error"
+  | "unknown"
+  | "max_output_tokens";
+
 interface SDKAssistantMessage {
   type: "assistant";
   uuid: string;
   session_id: string;
   message: { role: "assistant"; content: SDKMessageContent[] };
   parent_tool_use_id: string | null;
+  /**
+   * Set when the API call behind this turn failed. Without it an auth or
+   * billing failure is indistinguishable from the agent saying nothing.
+   */
+  error?: SDKAssistantMessageError;
+  /** Agent SDK >= 0.3.233; absent on older CLI binaries. */
+  context_usage?: SDKContextUsage;
 }
 
 interface SDKUserMessage {
@@ -354,6 +442,19 @@ interface SDKPermissionDenial {
 
 type FastModeState = "off" | "cooldown" | "on";
 
+/** Why fast mode can't serve. Absent when nothing is blocking it. */
+type FastModeDisabledReason =
+  | "free"
+  | "preference"
+  | "extra_usage_disabled"
+  | "network_error"
+  | "unknown"
+  | "not_first_party"
+  | "disabled_by_env"
+  | "model_not_allowed"
+  | "sdk_opt_in_required"
+  | "pending";
+
 interface SDKResultBase {
   type: "result";
   uuid: string;
@@ -367,6 +468,7 @@ interface SDKResultBase {
   modelUsage: Record<string, SDKModelUsage>;
   permission_denials: SDKPermissionDenial[];
   fast_mode_state?: FastModeState;
+  fast_mode_disabled_reason?: FastModeDisabledReason;
 }
 
 interface SDKResultSuccess extends SDKResultBase {
@@ -397,7 +499,12 @@ export interface SDKSystemMessage {
     | "task_started"
     | "task_progress"
     | "task_updated"
-    | "task_notification";
+    | "task_notification"
+    | "model_refusal_fallback"
+    | "model_refusal_no_fallback"
+    | "permission_denied"
+    | "informational"
+    | "notification";
   uuid: string;
   session_id: string;
   model?: string;
@@ -414,6 +521,8 @@ export interface SDKSystemMessage {
   skills?: string[];
   // subtype: "init"
   plugins?: { name: string; path: string }[];
+  fast_mode_state?: FastModeState;
+  fast_mode_disabled_reason?: FastModeDisabledReason;
   // subtype: "compact_boundary"
   compact_metadata?: {
     trigger: "manual" | "auto";
@@ -429,6 +538,10 @@ export interface SDKSystemMessage {
   // subtype: "plugin_install"
   status?: "started" | "installed" | "failed" | "completed" | "stopped";
   name?: string;
+  /**
+   * Two shapes behind one field name: free-form prose on "plugin_install", and
+   * an SDKAssistantMessageError code on "api_retry".
+   */
   error?: string;
   // subtypes: "task_started" | "task_progress" | "task_updated" | "task_notification"
   task_id?: string;
@@ -449,6 +562,24 @@ export interface SDKSystemMessage {
     error?: string;
     is_backgrounded?: boolean;
   };
+  // subtypes: "model_refusal_fallback" | "model_refusal_no_fallback"
+  original_model?: string;
+  fallback_model?: string;
+  api_refusal_category?: string | null;
+  api_refusal_explanation?: string | null;
+  // subtypes: "model_refusal_*" | "informational" | "notification"
+  content?: string;
+  // subtype: "permission_denied"
+  tool_name?: string;
+  decision_reason?: string;
+  agent_id?: string;
+  message?: string;
+  // subtype: "informational"
+  level?: "info" | "notice" | "suggestion" | "warning";
+  prevent_continuation?: boolean;
+  // subtype: "notification"
+  text?: string;
+  priority?: "low" | "medium" | "high" | "immediate";
 }
 
 interface SDKRateLimitInfo {
@@ -539,6 +670,7 @@ interface SDKQuery extends AsyncGenerator<SDKMessage, void> {
   /** Forcefully ends the query and terminates the CLI subprocess. */
   close(): void;
   rewindFiles(userMessageUuid: string, options?: { dryRun?: boolean }): Promise<unknown>;
+  getContextUsage(): Promise<SDKContextUsageResponse>;
   setPermissionMode(mode: string): Promise<void>;
   setModel(model?: string): Promise<void>;
   setMaxThinkingTokens(maxThinkingTokens: number | null): Promise<void>;
@@ -574,6 +706,8 @@ interface ClaudeSession {
   abortController: AbortController;
   /** On-disk flag-settings snapshot inherited by dynamic Workflow agents. */
   runtimeSettingsPath?: string;
+  /** Whether this run asked for fast mode — the CLI only reports on it. */
+  fastModeRequested: boolean;
   /** Mutable: set during streaming. */
   state: {
     sessionId?: string;
@@ -581,6 +715,9 @@ interface ClaudeSession {
     lastUsage?: WorkRunUsage;
     terminalToolNonExecutionKind?: string;
     hasAssistantContent: boolean;
+    lastFastModeState?: FastModeState;
+    lastAssistantError?: string;
+    sawRateLimitNotice?: boolean;
   };
   /** Per-run tool-call correlation index (toolCallId → toolName/input). */
   toolCallIndex: Map<string, { toolName: string; input?: unknown; startedAt?: number }>;
@@ -980,6 +1117,206 @@ function safeParseJson(value: string): unknown {
 }
 
 /**
+ * Why an assistant turn failed, in words a user can act on, and how loudly to
+ * say it. `warn` is for what the CLI retries on its own; `error` is for what
+ * stays broken until someone does something about it.
+ */
+const ASSISTANT_ERRORS: Record<
+  SDKAssistantMessageError,
+  { text: string; level: "warn" | "error" }
+> = {
+  authentication_failed: { text: "authentication failed — sign in again", level: "error" },
+  oauth_org_not_allowed: { text: "this organization does not allow this login", level: "error" },
+  billing_error: { text: "billing problem on this account", level: "error" },
+  invalid_request: { text: "the request was rejected as invalid", level: "error" },
+  model_not_found: { text: "the selected model is unavailable", level: "error" },
+  unknown: { text: "the request failed", level: "error" },
+  rate_limit: { text: "rate limited", level: "warn" },
+  overloaded: { text: "the API is overloaded", level: "warn" },
+  server_error: { text: "the API returned a server error", level: "warn" },
+  max_output_tokens: { text: "the response hit the output token limit", level: "warn" },
+};
+
+function describeAssistantError(code: string | undefined): { text: string; level: "warn" | "error" } | null {
+  if (!code) return null;
+  return ASSISTANT_ERRORS[code as SDKAssistantMessageError] ?? null;
+}
+
+/**
+ * Report an assistant turn that failed.
+ *
+ * The CLI still emits the assistant message, just with no content and this flag
+ * set, so an auth or billing failure otherwise reads as the agent going quiet.
+ * Repeats of the same code are collapsed — a run can retry an overload many
+ * times, and one line per attempt buries the rest of the transcript.
+ */
+export function buildAssistantErrorEvent(
+  args: { error?: string; lastError?: string; sawRateLimitNotice?: boolean },
+  ts: number,
+): WorkRunEvent | null {
+  const { error, lastError, sawRateLimitNotice } = args;
+  if (!error || error === lastError) return null;
+  // `rate_limit_event` has its own line, carrying the scope and the reset time
+  // this one cannot. Repeating it here would say strictly less, twice.
+  if (error === "rate_limit" && sawRateLimitNotice) return null;
+  const described = describeAssistantError(error);
+  return {
+    type: "log",
+    message: `[api] ${described?.text ?? error}`,
+    level: described?.level ?? "error",
+    ts,
+    metadata: { source: "assistant_error", error },
+  };
+}
+
+/**
+ * Why the CLI would not serve fast mode, in words a user can act on.
+ *
+ * `sdk_opt_in_required` is absent on purpose: it means nothing asked for fast
+ * mode, which is not a failure and never reaches the reporter below.
+ */
+const FAST_MODE_REASONS: Record<FastModeDisabledReason, string> = {
+  extra_usage_disabled: "extra usage is turned off for this account",
+  free: "not available on the free plan",
+  model_not_allowed: "the selected model does not support it",
+  not_first_party: "not available on this API provider",
+  disabled_by_env: "disabled by an environment variable",
+  preference: "turned off in Claude Code settings",
+  network_error: "the availability check failed",
+  pending: "the availability check has not finished",
+  sdk_opt_in_required: "the request did not opt in",
+  unknown: "the CLI did not say why",
+};
+
+/**
+ * Report fast mode failing to engage.
+ *
+ * The CLI accepts the request and then silently serves at standard speed, so
+ * without this the button reads "on" for a whole run that never ran fast. Only
+ * speaks when the run actually asked for it, and only when the state changes,
+ * since init and result both carry it.
+ */
+export function buildFastModeEvent(
+  args: {
+    requested: boolean;
+    state?: FastModeState;
+    reason?: FastModeDisabledReason;
+    lastState?: FastModeState;
+  },
+  ts: number,
+): WorkRunEvent | null {
+  const { requested, state, reason, lastState } = args;
+  if (!requested || !state || state === lastState) return null;
+  if (state === "on") {
+    return {
+      type: "log",
+      message: "[fast-mode] active",
+      level: "info",
+      ts,
+      metadata: { source: "fast_mode", state },
+    };
+  }
+  const detail =
+    state === "cooldown"
+      ? "paused after a rate limit"
+      : reason
+        ? FAST_MODE_REASONS[reason]
+        : undefined;
+  return {
+    type: "log",
+    message: `[fast-mode] requested but not active${detail ? ` — ${detail}` : ""}`,
+    level: "warn",
+    ts,
+    metadata: { source: "fast_mode", state, reason },
+  };
+}
+
+/**
+ * The two category names that are space rather than content.
+ *
+ * Matched by name because the control reply carries no kind discriminator. A
+ * rename upstream degrades gracefully — the row keeps its real tokens and just
+ * renders as an ordinary category instead of as empty space.
+ */
+const FREE_CATEGORY_NAME = "free space";
+const BUFFER_CATEGORY_NAME = "autocompact buffer";
+
+/**
+ * Map the `get_context_usage` control reply to the renderer's meter event.
+ *
+ * `maxTokens` is the window `percentage` was computed against, so the meter
+ * measures the same thing the CLI's `/context` report does.
+ */
+export function mapContextUsageResponse(
+  response: SDKContextUsageResponse | null | undefined,
+  ts: number,
+): WorkRunEvent | null {
+  if (!response || !(response.maxTokens > 0)) return null;
+  const categories = response.categories
+    ?.filter((category) => category.tokens > 0)
+    .map((category) => {
+      const name = category.name.trim().toLowerCase();
+      const kind: WorkRunContextUsageCategory["kind"] = category.isDeferred
+        ? "deferred"
+        : name === FREE_CATEGORY_NAME
+          ? "free"
+          : name === BUFFER_CATEGORY_NAME
+            ? "buffer"
+            : "used";
+      return { name: category.name, tokens: category.tokens, kind };
+    });
+  return {
+    type: "context_usage",
+    totalTokens: response.totalTokens,
+    maxTokens: response.maxTokens,
+    percentage: response.percentage,
+    model: response.model,
+    ...(response.isAutoCompactEnabled !== undefined
+      ? { isAutoCompactEnabled: response.isAutoCompactEnabled }
+      : {}),
+    ...(response.autoCompactThreshold !== undefined
+      ? { autoCompactThreshold: response.autoCompactThreshold }
+      : {}),
+    ...(categories?.length ? { categories } : {}),
+    ts,
+  };
+}
+
+/**
+ * Map the `/context` message snapshot to the renderer's meter event.
+ *
+ * Returns null when there is nothing meaningful to show: a subagent message
+ * (its window is not the main conversation's), an older CLI that sends no
+ * snapshot, or a snapshot with no window to measure against. `total_tokens` is
+ * passed through unclamped — it can exceed the window, and the meter clamps.
+ */
+export function buildContextUsageEvent(
+  msg: { context_usage?: SDKContextUsage; parent_tool_use_id: string | null },
+  ts: number,
+): WorkRunEvent | null {
+  const ctx = msg.context_usage;
+  if (!ctx || msg.parent_tool_use_id || !(ctx.raw_max_tokens > 0)) return null;
+  // The kinds come off a subprocess, so unknown ones are dropped rather than
+  // widening the renderer's union — a row it can't classify has no place to go.
+  const categories = ctx.categories
+    ?.filter(
+      (c): c is WorkRunContextUsageCategory =>
+        c.tokens > 0 &&
+        (c.kind === "used" || c.kind === "free" || c.kind === "buffer" || c.kind === "deferred"),
+    )
+    .map((c) => ({ name: c.name, tokens: c.tokens, kind: c.kind }));
+  return {
+    type: "context_usage",
+    totalTokens: ctx.total_tokens,
+    maxTokens: ctx.raw_max_tokens,
+    percentage: ctx.percentage,
+    model: ctx.model,
+    ...(categories?.length ? { categories } : {}),
+    ts,
+  };
+}
+
+/**
  * Map a `system:task_*` message to a WorkRunTaskEvent.
  *
  * The CLI runs long tool calls as tasks: a Bash command that outlives the
@@ -1139,6 +1476,19 @@ export function mapSDKMessage(
     case "assistant": {
       const assistantMsg = msg as SDKAssistantMessage;
       const isFromSubagent = !!assistantMsg.parent_tool_use_id;
+
+      const errorEvent = buildAssistantErrorEvent(
+        {
+          error: assistantMsg.error,
+          lastError: cs.state.lastAssistantError,
+          sawRateLimitNotice: cs.state.sawRateLimitNotice,
+        },
+        ts,
+      );
+      if (errorEvent) events.push(errorEvent);
+      // A turn that came back clean ends the episode, so the next failure of the
+      // same kind is reported again instead of being read as a repeat.
+      cs.state.lastAssistantError = assistantMsg.error;
 
       if (assistantMsg.message?.content) {
         for (const block of assistantMsg.message.content) {
@@ -1303,6 +1653,19 @@ export function mapSDKMessage(
           ts,
           ...(plugins.length ? { metadata: { source: "init", plugins } } : {}),
         });
+        const fastModeEvent = buildFastModeEvent(
+          {
+            requested: cs.fastModeRequested,
+            state: systemMsg.fast_mode_state,
+            reason: systemMsg.fast_mode_disabled_reason,
+            lastState: cs.state.lastFastModeState,
+          },
+          ts,
+        );
+        if (fastModeEvent) {
+          cs.state.lastFastModeState = systemMsg.fast_mode_state;
+          events.push(fastModeEvent);
+        }
       } else if (systemMsg.subtype === "compact_boundary") {
         const meta = systemMsg.compact_metadata;
         const trigger = meta?.trigger ?? "auto";
@@ -1331,9 +1694,14 @@ export function mapSDKMessage(
           typeof delayMs === "number" ? ` — retrying in ${Math.round(delayMs / 1000)}s` : "";
         const statusPart =
           systemMsg.error_status != null ? ` [HTTP ${systemMsg.error_status}]` : "";
+        // On this subtype `error` is a failure code, not prose — saying which
+        // one is the difference between "retrying" and "retrying, and here is
+        // why it will keep failing".
+        const described = describeAssistantError(systemMsg.error);
+        const reasonPart = described ? `: ${described.text}` : "";
         events.push({
           type: "log",
-          message: `[api] Request failed${statusPart}${attemptPart}${delayPart}`,
+          message: `[api] Request failed${reasonPart}${statusPart}${attemptPart}${delayPart}`,
           level: "warn",
           ts,
           metadata: {
@@ -1342,6 +1710,7 @@ export function mapSDKMessage(
             maxRetries,
             retryDelayMs: delayMs,
             errorStatus: systemMsg.error_status,
+            error: systemMsg.error,
           },
         });
       } else if (systemMsg.subtype === "plugin_install") {
@@ -1369,7 +1738,87 @@ export function mapSDKMessage(
       ) {
         const taskEvent = mapTaskMessage(systemMsg, cs.taskIndex, ts);
         if (taskEvent) events.push(taskEvent);
+      } else if (systemMsg.subtype === "model_refusal_fallback") {
+        // The model declined and the CLI moved the turn to another one. Without
+        // this the swap is invisible and the run silently answers on a model the
+        // user did not pick.
+        const category = systemMsg.api_refusal_category
+          ? ` (${systemMsg.api_refusal_category})`
+          : "";
+        events.push({
+          type: "log",
+          message: `[model] ${systemMsg.original_model ?? "the model"} declined${category} — continuing on ${systemMsg.fallback_model ?? "a fallback model"}`,
+          level: "warn",
+          ts,
+          metadata: {
+            source: "model_refusal_fallback",
+            originalModel: systemMsg.original_model,
+            fallbackModel: systemMsg.fallback_model,
+            category: systemMsg.api_refusal_category,
+            explanation: systemMsg.api_refusal_explanation,
+          },
+        });
+      } else if (systemMsg.subtype === "model_refusal_no_fallback") {
+        const category = systemMsg.api_refusal_category
+          ? ` (${systemMsg.api_refusal_category})`
+          : "";
+        events.push({
+          type: "log",
+          message: `[model] ${systemMsg.original_model ?? "the model"} declined${category} and no fallback was available`,
+          level: "error",
+          ts,
+          metadata: {
+            source: "model_refusal_no_fallback",
+            originalModel: systemMsg.original_model,
+            category: systemMsg.api_refusal_category,
+            explanation: systemMsg.api_refusal_explanation,
+          },
+        });
+      } else if (systemMsg.subtype === "permission_denied") {
+        // A rule denied the call before canUseTool could ask, so the approval
+        // dialog never appears and the refusal has no other way to surface.
+        const reason = systemMsg.decision_reason ?? systemMsg.message;
+        events.push({
+          type: "log",
+          message: `[permission] ${systemMsg.tool_name ?? "tool"} denied${reason ? ` — ${reason}` : ""}`,
+          level: "warn",
+          ts,
+          metadata: {
+            source: "permission_denied",
+            toolName: systemMsg.tool_name,
+            toolUseId: systemMsg.tool_use_id,
+            agentId: systemMsg.agent_id,
+            reason,
+          },
+        });
+      } else if (systemMsg.subtype === "informational" && systemMsg.content) {
+        events.push({
+          type: "log",
+          message: systemMsg.content,
+          level: systemMsg.level === "warning" ? "warn" : "info",
+          ts,
+          metadata: {
+            source: "informational",
+            informationalLevel: systemMsg.level,
+            preventContinuation: systemMsg.prevent_continuation,
+          },
+        });
+      } else if (systemMsg.subtype === "notification" && systemMsg.text) {
+        // Low/medium are ambient CLI chrome; only what the CLI itself marks
+        // urgent is worth a transcript line.
+        if (systemMsg.priority === "high" || systemMsg.priority === "immediate") {
+          events.push({
+            type: "log",
+            message: `[notice] ${systemMsg.text}`,
+            level: "warn",
+            ts,
+            metadata: { source: "notification", priority: systemMsg.priority },
+          });
+        }
       }
+      // Every other system subtype (thinking_tokens, session_state_changed,
+      // hook_*, memory_recall, files_persisted, commands_changed, …) is CLI
+      // bookkeeping with no reader here, and is dropped rather than logged.
       break;
     }
 
@@ -1385,6 +1834,9 @@ export function mapSDKMessage(
         const scope = rl.rateLimitType ? ` [${rl.rateLimitType}]` : "";
         // Only surface warnings/rejections; "allowed" is the silent happy path.
         if (rl.status !== "allowed") {
+          // Remembered so the turn's own `rate_limit` error does not repeat what
+          // this line already said with the scope and the reset time attached.
+          cs.state.sawRateLimitNotice = true;
           events.push({
             type: "log",
             message: `[rate-limit] ${rl.status === "rejected" ? "Rate limit reached" : "Approaching rate limit"}${scope}${util}${resets}`,
@@ -1428,6 +1880,61 @@ export function mapSDKMessage(
           message: `[error] ${resultMsg.errors.join(", ")}`,
           level: "error",
           ts,
+        });
+      }
+
+      // Also checked here: fast mode can drop to cooldown mid-run after a rate
+      // limit, long after init reported it active.
+      const fastModeEvent = buildFastModeEvent(
+        {
+          requested: cs.fastModeRequested,
+          state: resultMsg.fast_mode_state,
+          reason: resultMsg.fast_mode_disabled_reason,
+          lastState: cs.state.lastFastModeState,
+        },
+        ts,
+      );
+      if (fastModeEvent) {
+        cs.state.lastFastModeState = resultMsg.fast_mode_state;
+        events.push(fastModeEvent);
+      }
+      break;
+    }
+
+    case "tool_progress": {
+      // A heartbeat for a long-running tool call. The only part worth a line is
+      // a subagent quietly retrying — everything else would spam the transcript.
+      const progress = msg as {
+        tool_name?: string;
+        subagent_retry?: {
+          attempt: number;
+          max_retries: number;
+          error_category?: string;
+        };
+      };
+      const retry = progress.subagent_retry;
+      if (retry) {
+        const category = retry.error_category ? ` (${retry.error_category})` : "";
+        events.push({
+          type: "log",
+          message: `[subagent] retrying ${progress.tool_name ?? "call"}${category} — attempt ${retry.attempt}/${retry.max_retries}`,
+          level: "warn",
+          ts,
+          metadata: { source: "subagent_retry", ...retry },
+        });
+      }
+      break;
+    }
+
+    case "tool_use_summary": {
+      const summary = (msg as { summary?: string }).summary;
+      if (summary) {
+        events.push({
+          type: "log",
+          message: summary,
+          level: "info",
+          ts,
+          metadata: { source: "tool_use_summary" },
         });
       }
       break;
@@ -1551,9 +2058,13 @@ export function mapSDKMessage(
           );
         }
       } else {
+        // The net for a message type this driver has never seen. Bounded: an
+        // unknown payload can be arbitrarily large, and a transcript line is a
+        // poor place to discover that.
+        const dump = safeJson(msg);
         events.push({
           type: "log",
-          message: `[event] ${msg.type}: ${safeJson(msg)}`,
+          message: `[event] ${msg.type}: ${dump.length > 500 ? `${dump.slice(0, 500)}…` : dump}`,
           level: "info",
           ts,
         });
@@ -1811,6 +2322,8 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     runId?: string;
     workspaceId?: string;
     forkSession?: boolean;
+    /** UUID to open the new (or forked) session on. Omitted when resuming. */
+    newSessionId?: string;
     onEvent?: WorkRunEventHandler;
     permissionMode?: NonNullable<SDKOptions["permissionMode"]>;
   }): Promise<SDKOptions> {
@@ -1824,6 +2337,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       runId,
       workspaceId,
       forkSession,
+      newSessionId,
       onEvent,
       permissionMode: runPermissionMode,
     } = args;
@@ -1856,7 +2370,8 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     delete cleanEnv.ANTHROPIC_API_KEY;
     delete cleanEnv.ANTHROPIC_AUTH_TOKEN;
 
-    const permissionMode = runPermissionMode ?? config.permissionMode ?? "default";
+    const permissionMode =
+      runPermissionMode ?? config.permissionMode ?? DEFAULT_CLAUDE_PERMISSION_MODE;
     const settingSources = config.settingSources ?? ["user", "project", "local"];
     const permissionBridge = runId
       ? createClaudePermissionBridge({
@@ -1894,6 +2409,11 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       options.resume = resumeSessionId;
       if (forkSession) options.forkSession = true;
     }
+
+    Object.assign(
+      options,
+      buildClaudeSessionIdOptions({ newSessionId, resumeSessionId, forkSession }),
+    );
 
     const mergedAgents = mergeAgentsConfig(config.agents, runAgents);
     if (mergedAgents && Object.keys(mergedAgents).length > 0) {
@@ -2102,6 +2622,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       abortController,
       runtimeSettingsPath:
         typeof options.settings === "string" ? options.settings : undefined,
+      fastModeRequested: !!config.fastMode,
       isInitial,
       state: { hasAssistantContent: false },
       toolCallIndex: new Map(),
@@ -2296,6 +2817,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
 
       const abortController = new AbortController();
       const overridePermissionMode = request.configSnapshot?.permissionMode;
+      const sessionId = randomUUID();
       const options = await buildOptions({
         model: getModel(request.model),
         workspacePath: request.workspace.rootPath,
@@ -2304,13 +2826,16 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
         runAgents: request.agents,
         runId: request.runId,
         workspaceId: request.workspace.id,
+        newSessionId: sessionId,
         permissionMode: isSDKPermissionMode(overridePermissionMode)
           ? overridePermissionMode
           : undefined,
       });
 
       const session = newSession(request.runId, options, abortController, true);
-      return { session, prompt: buildStartPrompt(request) };
+      session.state.sessionId = sessionId;
+      sessionIdMemo.set(request.runId, sessionId);
+      return { session, prompt: buildStartPrompt(request), sessionId };
     },
 
     async resumeSession(request: WorkRunContinueRequest): Promise<AcquiredSession> {
@@ -2355,6 +2880,9 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       }
 
       const abortController = new AbortController();
+      // A fork gets a new id, and the CLI lets us name it — so the fork is
+      // identified before it produces anything, same as a fresh session.
+      const sessionId = randomUUID();
       const options = await buildOptions({
         model: getModel(request.model ?? config.defaultModel),
         workspacePath: request.workspace.rootPath,
@@ -2365,11 +2893,13 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
         runId: request.runId,
         workspaceId: request.workspace.id,
         forkSession: true,
+        newSessionId: sessionId,
       });
 
       const session = newSession(request.runId, options, abortController, true);
-      // Don't prime sessionId — fork creates a NEW session id which will arrive in the stream.
-      return { session, prompt: buildForkPrompt(request) };
+      session.state.sessionId = sessionId;
+      sessionIdMemo.set(request.runId, sessionId);
+      return { session, prompt: buildForkPrompt(request), sessionId };
     },
 
     async executePrompt(
@@ -2412,12 +2942,50 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       });
 
       try {
-        // Single-request context snapshot for the context meter. result.modelUsage
-        // is *cumulative* across every API round-trip in the turn, so cache-read
-        // tokens balloon with each tool call and the meter pins to 100%. The latest
-        // top-level assistant message instead reflects one request — its
-        // prompt+response size ≈ what currently occupies the window (matches `/context`).
+        // Context meter, in preference order:
+        //   1. The `get_context_usage` control reply — the CLI's own `/context`
+        //      report, with the category breakdown and the autocompact
+        //      threshold. Requested while the stream is live; the reason the
+        //      driver used to avoid it is that requesting it around teardown
+        //      answers "Query closed before response".
+        //   2. `context_usage` on an assistant message, which per the CLI's
+        //      schema only ever rides the synthetic reply to `/context`.
+        //   3. A per-request snapshot from `message.usage`, sized against the
+        //      window in result.modelUsage — for a CLI too old for (1).
+        let sawContextUsage = false;
         let lastReqContextTokens = 0;
+        let contextUsageInFlight = false;
+        let contextUsageAt = 0;
+        // The reply is a whole-context token count, so it is asked for at a
+        // human-readable cadence rather than once per assistant message.
+        const CONTEXT_USAGE_MIN_INTERVAL_MS = 2_000;
+
+        function refreshContextUsage(): void {
+          const now = Date.now();
+          if (contextUsageInFlight) return;
+          if (contextUsageAt && now - contextUsageAt < CONTEXT_USAGE_MIN_INTERVAL_MS) return;
+          if (typeof cs.query?.getContextUsage !== "function") return;
+          contextUsageInFlight = true;
+          contextUsageAt = now;
+          // Fire-and-forget: the meter is an indicator and must never hold up
+          // the transcript stream.
+          void cs.query
+            .getContextUsage()
+            .then((response) => {
+              const event = mapContextUsageResponse(response, Date.now());
+              if (!event) return;
+              sawContextUsage = true;
+              return onEvent(event);
+            })
+            .catch(() => {
+              // A CLI without the control handler, or a closed query — the
+              // modelUsage fallback covers the meter either way.
+            })
+            .finally(() => {
+              contextUsageInFlight = false;
+            });
+        }
+
         const streamPromise = (async () => {
           for await (const msg of query) {
             if (signal.aborted || timedOut) break;
@@ -2428,8 +2996,24 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
               if (aMsg.message?.content?.some((b: any) => b.type === "text" && b.text)) {
                 cs.state.hasAssistantContent = true;
               }
-              // Skip subagent (e.g. haiku) messages so they don't clobber the
-              // main conversation's snapshot. The Anthropic message carries a
+              // (1) Ask the CLI where the window stands. Driven off assistant
+              // messages so a long tool-using turn keeps the meter live rather
+              // than updating it once at the end.
+              if (!aMsg.parent_tool_use_id) refreshContextUsage();
+
+              // (2) The `/context` reply, when a run happens to invoke it.
+              const ctxEvent = buildContextUsageEvent(aMsg, Date.now());
+              if (ctxEvent) {
+                sawContextUsage = true;
+                await onEvent(ctxEvent);
+              }
+
+              // (3) Fallback snapshot: one request's prompt+response size ≈ what
+              // occupies the window. result.modelUsage is *cumulative* across
+              // every round-trip in the turn, so cache-read tokens balloon with
+              // each tool call and pin the meter to 100% — hence per-request.
+              // Subagent (e.g. haiku) messages are skipped so they don't clobber
+              // the main conversation's snapshot. The Anthropic message carries a
               // per-request `usage` at runtime even though our local type omits it.
               const u = (aMsg.message as any)?.usage as
                 | { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number }
@@ -2444,8 +3028,14 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
               }
             }
 
-            // Capture session ID (Claude's id arrives in the stream) and persist on first sight.
-            if (msg.session_id && !cs.state.sessionId) {
+            // The id is assigned at acquisition and already persisted, so this
+            // is a tripwire rather than the happy path: if the CLI ever opens a
+            // different session than the one it was given, resuming this run
+            // would silently target a transcript that does not exist.
+            if (msg.session_id && msg.session_id !== cs.state.sessionId) {
+              logWarn(
+                `Session id mismatch for run ${cs.runId}: asked for ${cs.state.sessionId ?? "none"}, got ${msg.session_id}`,
+              );
               cs.state.sessionId = msg.session_id;
               sessionIdMemo.set(cs.runId, msg.session_id);
               runsRepo
@@ -2465,16 +3055,10 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
                 cacheRead = 0,
                 cacheWrite = 0;
               let primaryModel: string | undefined;
-              // Context meter: track the model entry with the largest window (the
-              // main conversation model, not haiku subagents) to estimate fill.
+              // Fallback context meter: the entry with the largest window is the
+              // main conversation model (not haiku subagents).
               let ctxModel: string | undefined;
               let ctxWindow = 0;
-              // Cumulative fallback for the largest-window model, used only when
-              // the per-request snapshot above is unavailable (older SDK builds
-              // may not surface `message.usage` on assistant messages). It runs
-              // hot (cache-read balloons across tool calls), so it's a worse
-              // estimate than the snapshot — hence fallback-only.
-              let ctxFallbackTokens = 0;
               if (resultMsg.modelUsage) {
                 for (const [modelName, usage] of Object.entries(resultMsg.modelUsage)) {
                   inputTokens += usage.inputTokens;
@@ -2482,18 +3066,10 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
                   cacheRead += usage.cacheReadInputTokens;
                   cacheWrite += usage.cacheCreationInputTokens;
                   if (!primaryModel) primaryModel = modelName;
-                  // Pick the entry with the largest window as the main
-                  // conversation model (not haiku subagents). Occupancy comes
-                  // from the per-request snapshot above, not this cumulative sum.
                   const window = usage.contextWindow ?? 0;
                   if (window > ctxWindow) {
                     ctxWindow = window;
                     ctxModel = modelName;
-                    ctxFallbackTokens =
-                      (usage.inputTokens ?? 0) +
-                      (usage.cacheReadInputTokens ?? 0) +
-                      (usage.cacheCreationInputTokens ?? 0) +
-                      (usage.outputTokens ?? 0);
                   }
                 }
               }
@@ -2510,12 +3086,9 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
                 modelUsage: resultMsg.modelUsage,
               };
 
-              // Derive the context-window snapshot from usage data rather than the
-              // SDK's getContextUsage() control request — the latter races the
-              // query teardown in single-prompt mode ("Query closed before response").
-              const ctxTokens = lastReqContextTokens || ctxFallbackTokens;
-              if (ctxWindow > 0 && ctxTokens > 0) {
-                const total = Math.min(ctxTokens, ctxWindow);
+              // Fallback only — an authoritative snapshot already covered the turn.
+              if (!sawContextUsage && ctxWindow > 0 && lastReqContextTokens > 0) {
+                const total = Math.min(lastReqContextTokens, ctxWindow);
                 await onEvent({
                   type: "context_usage",
                   totalTokens: total,

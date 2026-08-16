@@ -7,14 +7,15 @@ import {
   useUpdateReviewFindingMutation,
 } from "@/lib/redux/api";
 import { setPendingGoal, setPendingAutoExecute } from "@/lib/redux/slices/workspaceSlice";
-import { expandDiffForFindings } from "../utils/expand-diff";
-import { normalizePatchForPatchDiff } from "../utils/patch-utils";
-import { normalizePath, pathsMatch } from "../utils/path-utils";
+import { expandDiffForFindings } from "../lib/expand-diff";
+import { normalizePatchForPatchDiff } from "../lib/patch-utils";
+import { normalizePath, pathsMatch } from "../lib/path-utils";
 import type { FileContentResponse, ServiceResponse } from "@/features/workspace/types/file-explorer";
 import { ImagePreviewModal } from "./image-preview-modal";
 import { useLocalImageUrl } from "@/hooks/use-local-image-url";
 import { useIsDarkMode } from "@/hooks/use-is-dark-mode";
-import { Button } from "@/components/ui";
+import { DIFF_TYPOGRAPHY_STYLE, patchDiffOptions } from "@/lib/diff-style";
+import { Button, Text } from "@/components/ui";
 import type { FindingSeverity } from "@/lib/redux/api";
 import {
   asFindingSeverity,
@@ -40,11 +41,11 @@ function ImageDiffView({ absPath, fileName }: { absPath: string; fileName: strin
     <div className="h-full overflow-auto px-2  ">
       <div className="mx-auto ">
         {error ? (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-3 text-xs text-red-300 break-all">
-            <div className="font-medium mb-1">Image failed to load</div>
+          <Text as="div" size="xs" tone="danger" className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 break-all">
+            <Text as="div" size="inherit" tone="inherit" weight="medium" className="mb-1">Image failed to load</Text>
             <div className="opacity-70">{error}</div>
             <div className="mt-1 font-mono opacity-60">{absPath}</div>
-          </div>
+          </Text>
         ) : url ? (
           <Button
             type="button"
@@ -136,13 +137,13 @@ function makeFindingAnnotation({ colors, textColor, mutedColor, suggestionColor,
                 <div className="flex items-center gap-1.5 shrink-0">
                   <Button
                     onClick={() => onApprove(f.id)}
-                    className="px-2 cursor-pointer py-0.5 text-xxs rounded-sm font-medium transition-colors bg-green-600/13 text-green-500"
+                    className="px-2 cursor-pointer py-0.5 text-xxs rounded-sm font-medium transition-colors bg-success/10 text-success"
                   >
                     ✓ Approve
                   </Button>
                   <Button
                     onClick={() => onFix(f)}
-                    className="px-2 cursor-pointer py-0.5 text-xxs rounded-sm font-medium transition-colors bg-blue-500/13 text-blue-400"
+                    className="px-2 cursor-pointer py-0.5 text-xxs rounded-sm font-medium transition-colors bg-accent/10 text-accent"
                   >
                     Fix
                   </Button>
@@ -309,19 +310,12 @@ export function DiffViewer({
   return (
     <div className={`h-full overflow-auto ${className}`}>
       {!expandedDiff.trim() ? (
-        <div className="px-4 py-3 text-xs text-primary-600 dark:text-primary-400">No diff content to display.</div>
+        <Text as="div" size="xs" tone="subtle" className="px-4 py-3">No diff content to display.</Text>
       ) : (
         <PatchDiff
           patch={expandedDiff}
-          style={{ "--diffs-font-size": "12px", "--diffs-font-family": "ui-monospace, monospace" } as React.CSSProperties}
-          options={{
-            theme: isDarkMode ? "pierre-dark" : "pierre-light",
-            themeType: isDarkMode ? "dark" : "light",
-            diffStyle: "unified",
-            overflow: "wrap",
-            disableFileHeader: true,
-            unsafeCSS: `:host, [data-diffs], [data-diffs-header], [data-error-wrapper], [data-line], [data-column-number], [data-code] { --diffs-bg: var(--color-${isDarkMode ? "primary-950" : "primary"}); background-color: var(--color-${isDarkMode ? "primary-950" : "primary"}); }`,
-          }}
+          style={DIFF_TYPOGRAPHY_STYLE}
+          options={patchDiffOptions(isDarkMode)}
           lineAnnotations={lineAnnotations}
           renderAnnotation={lineAnnotations ? renderAnnotation : undefined}
         />

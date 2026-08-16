@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button } from "@/components/ui";
+import { Button, Text, Textarea } from "@/components/ui";
 import { Edit, Trash, Stop, Play, Check, Close, Goal } from "@/components/ui/icons";
 import { useCodexGoal } from "../hooks/use-codex-goal";
 import type { GoalInfo } from "@/lib/redux/api/providersApi";
@@ -49,11 +49,11 @@ function statusIconColor(status: string): string {
     case "blocked":
     case "budgetLimited":
     case "usageLimited":
-      return "text-amber-500 dark:text-amber-400";
+      return "text-warning";
     case "paused":
-      return "text-primary-400 dark:text-primary-500";
+      return "text-primary-600 dark:text-primary-400";
     default: // active + complete
-      return "text-emerald-500 dark:text-emerald-400";
+      return "text-success";
   }
 }
 
@@ -108,13 +108,13 @@ export function GoalSummaryBar({ providerId, runId, isRunning, enabled, rootPath
             ) : (
               <Goal className={`size-3.5 shrink-0 ${iconColor}`} />
             )}
-            <span className="shrink-0 text-xs font-medium text-primary-700 dark:text-primary-300">
+            <Text as="span" size="xs" tone="muted" weight="medium" className="shrink-0">
               {statusLabel(goal.status, isRunning)}
-            </span>
+            </Text>
             {usage && (
-              <span className="shrink-0 text-xs text-primary-500 dark:text-primary-400">
+              <Text as="span" size="xs" tone="subtle" className="shrink-0">
                 {usage}
-              </span>
+              </Text>
             )}
           </div>
           <div className="flex shrink-0 items-center gap-0.5">
@@ -124,7 +124,7 @@ export function GoalSummaryBar({ providerId, runId, isRunning, enabled, rootPath
                 type="button"
                 onClick={startEdit}
                 disabled={isBusy}
-                className="rounded-full p-1 text-primary-500 hover:bg-primary-200/40 hover:text-primary-700 dark:text-primary-400 dark:hover:bg-primary-800 dark:hover:text-primary-200 cursor-pointer"
+                className="rounded-full p-1 text-primary-600 hover:bg-primary-200/40 hover:text-primary-700 dark:text-primary-400 dark:hover:bg-primary-800 dark:hover:text-primary-300 cursor-pointer"
               >
                 <Edit className="size-3.5" />
               </Button>
@@ -135,7 +135,7 @@ export function GoalSummaryBar({ providerId, runId, isRunning, enabled, rootPath
                 type="button"
                 onClick={() => pause()}
                 disabled={isBusy}
-                className="rounded-full p-1 text-primary-500 hover:bg-primary-200/40 hover:text-primary-700 dark:text-primary-400 dark:hover:bg-primary-800 dark:hover:text-primary-200 cursor-pointer"
+                className="rounded-full p-1 text-primary-600 hover:bg-primary-200/40 hover:text-primary-700 dark:text-primary-400 dark:hover:bg-primary-800 dark:hover:text-primary-300 cursor-pointer"
               >
                 <Stop className="size-3.5" />
               </Button>
@@ -146,7 +146,7 @@ export function GoalSummaryBar({ providerId, runId, isRunning, enabled, rootPath
                 type="button"
                 onClick={() => resume()}
                 disabled={isBusy}
-                className="rounded-full p-1 text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400 cursor-pointer"
+                className="rounded-full p-1 text-success hover:bg-success/10 cursor-pointer"
               >
                 <Play className="size-3.5" />
               </Button>
@@ -156,7 +156,7 @@ export function GoalSummaryBar({ providerId, runId, isRunning, enabled, rootPath
               type="button"
               onClick={() => clear()}
               disabled={isBusy}
-              className="rounded-full p-1 text-primary-500 hover:bg-red-500/10 hover:text-red-500 dark:text-primary-400 dark:hover:text-red-400 cursor-pointer"
+              className="rounded-full p-1 text-primary-600 hover:bg-danger/10 hover:text-danger dark:text-primary-400 cursor-pointer"
             >
               <Trash className="size-3.5" />
             </Button>
@@ -165,7 +165,7 @@ export function GoalSummaryBar({ providerId, runId, isRunning, enabled, rootPath
 
         {editing ? (
           <div className="mt-1.5 flex items-start gap-1">
-            <textarea
+            <Textarea
               autoFocus
               rows={3}
               value={draft}
@@ -178,7 +178,8 @@ export function GoalSummaryBar({ providerId, runId, isRunning, enabled, rootPath
                   setEditing(false);
                 }
               }}
-              className="min-h-16 max-h-48 min-w-0 flex-1 glass-input resize-none overflow-y-auto rounded-xl bg-white px-2 py-2 text-xs leading-relaxed text-primary-800 outline-none  dark:text-primary-100"
+              aria-label="Goal objective"
+              className="max-h-48 flex-1 resize-none overflow-y-auto px-2 text-xs leading-relaxed text-primary-800 dark:text-primary-200"
               placeholder="Goal objective…"
             />
             <Button
@@ -186,7 +187,7 @@ export function GoalSummaryBar({ providerId, runId, isRunning, enabled, rootPath
               type="button"
               onClick={commitEdit}
               disabled={isBusy}
-              className="mt-0.5 p-1  rounded-full text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400 cursor-pointer"
+              className="mt-0.5 p-1 rounded-full text-success hover:bg-success/10 cursor-pointer"
             >
               <Check className="size-3.5" />
             </Button>
@@ -194,7 +195,7 @@ export function GoalSummaryBar({ providerId, runId, isRunning, enabled, rootPath
               tooltip="Cancel"
               type="button"
               onClick={() => setEditing(false)}
-              className="mt-0.5 rounded-full p-1 text-primary-500 hover:bg-primary-200/40 dark:text-primary-400 dark:hover:bg-primary-800 cursor-pointer"
+              className="mt-0.5 rounded-full p-1 text-primary-600 hover:bg-primary-200/40 dark:text-primary-400 dark:hover:bg-primary-800 cursor-pointer"
             >
               <Close className="size-3.5" />
             </Button>
@@ -202,7 +203,7 @@ export function GoalSummaryBar({ providerId, runId, isRunning, enabled, rootPath
         ) : (
           <p
             title={goal.objective}
-            className="mt-0.5 line-clamp-2 text-xs text-primary-600 dark:text-primary-300"
+            className="mt-0.5 line-clamp-2 text-xs text-primary-600 dark:text-primary-400"
           >
             {shortObjective}
           </p>

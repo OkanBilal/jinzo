@@ -1,166 +1,26 @@
 @import "@xterm/xterm/css/xterm.css";
 @import "tailwindcss";
 
+/* Inter ships as one variable font per style rather than eighteen static
+   instances. Same 4.001 build and the same metrics (2048 upem, 1984 ascender,
+   -494 descender), so nothing reflows — but the `opsz` axis is live now,
+   driven by the `font-optical-sizing` below. Every static instance was pinned
+   at opsz 14, Inter's body-text optical size, which left headings spaced for
+   14px copy. */
 @font-face {
   font-family: 'Inter';
   font-style: normal;
-  font-weight: 100;
+  font-weight: 100 900;
   font-display: swap;
-  src: url('/fonts/Inter-Thin.woff2') format('woff2');
+  src: url('/fonts/InterVariable.woff2') format('woff2');
 }
 @font-face {
   font-family: 'Inter';
   font-style: italic;
-  font-weight: 100;
+  font-weight: 100 900;
   font-display: swap;
-  src: url('/fonts/Inter-ThinItalic.woff2') format('woff2');
+  src: url('/fonts/InterVariable-Italic.woff2') format('woff2');
 }
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 200;
-  font-display: swap;
-  src: url('/fonts/Inter-ExtraLight.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: italic;
-  font-weight: 200;
-  font-display: swap;
-  src: url('/fonts/Inter-ExtraLightItalic.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 300;
-  font-display: swap;
-  src: url('/fonts/Inter-Light.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: italic;
-  font-weight: 300;
-  font-display: swap;
-  src: url('/fonts/Inter-LightItalic.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/Inter-Regular.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: italic;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/Inter-Italic.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('/fonts/Inter-Medium.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: italic;
-  font-weight: 500;
-  font-display: swap;
-  src: url('/fonts/Inter-MediumItalic.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('/fonts/Inter-SemiBold.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: italic;
-  font-weight: 600;
-  font-display: swap;
-  src: url('/fonts/Inter-SemiBoldItalic.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/fonts/Inter-Bold.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: italic;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/fonts/Inter-BoldItalic.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 800;
-  font-display: swap;
-  src: url('/fonts/Inter-ExtraBold.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: italic;
-  font-weight: 800;
-  font-display: swap;
-  src: url('/fonts/Inter-ExtraBoldItalic.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 900;
-  font-display: swap;
-  src: url('/fonts/Inter-Black.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: italic;
-  font-weight: 900;
-  font-display: swap;
-  src: url('/fonts/Inter-BlackItalic.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Geist Mono';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/GeistMono-Medium.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Geist Mono';
-  font-style: italic;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/GeistMono-MediumItalic.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Geist Mono';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/fonts/GeistMono-Bold.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Geist Mono';
-  font-style: italic;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/fonts/GeistMono-BoldItalic.woff2') format('woff2');
-}
-
-
-
-
-
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -241,6 +101,7 @@ html:not(.app-ready) *::after {
   --color-danger-hover: #e33221;
   --color-success: #22C55E;
   --color-warning: #F59E0B;
+  --color-accent: #2563eb;
   --color-claude: #D97757;
   --color-copilot: #8534F3;
   --color-codex: #0169CC;
@@ -287,6 +148,16 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  /* Ties Inter's `opsz` axis to the used font size. It is the browser default,
+     but stated here because it is the whole reason the variable font replaced
+     the static instances — without it every size would render at opsz 14. */
+  font-optical-sizing: auto;
+  /* cv05 = lower-case l with a tail, cv08 = upper-case I with serifs. Branch
+     names, file paths, and package names all render in the sans face, where a
+     bare `l`, `I`, and `1` are otherwise the same vertical stroke. Digits are
+     left alone: the fuller `ss02` set also slashes the zero, which reads as a
+     glyph error in ordinary counts. */
+  font-feature-settings: "cv05" 1, "cv08" 1;
 }
 
 /* While a layout handle is being dragged, suspend the sidebar/main width &
@@ -480,10 +351,6 @@ body[data-resizing] iframe {
   from { transform: translateY(0); }
   to { transform: translateY(calc(-100% + var(--frame-height, 32px))); }
 }
-.cm-editor, .cm-editor * {
-  font-family: 'Geist Mono', ui-monospace, monospace !important;
-}
-
 .animate-slide-in {
   animation: slide-fade-down 0.15s ease-out both;
 }
@@ -831,6 +698,20 @@ html.mains-web.dark #root {
   --glass-rim: rgba(0, 0, 0, 0.08);
   --glass-rim-shadow: rgba(255, 255, 255, 0);
   --glass-outline-rim: rgba(0, 0, 0, 0.1);
+
+  /* Categorical data-viz slots — identity only (which series), assigned in this
+     fixed order and never cycled or generated past the last slot; a longer tail
+     folds into a neutral "other" row. The ORDER is the colorblind-safety
+     mechanism, not cosmetic: adjacent pairs are what touch in a stacked bar.
+     Validated as a set against the tooltip surfaces (#f7f7f6 / #141414):
+     worst adjacent CVD ΔE 9.1 light / 8.4 dark, normal-vision 19.6 / 19.3.
+     Light steps sit under 3:1 on the light surface, so anything painted with
+     them must also carry a visible text label. Never reuse these for status. */
+  --viz-cat-1: #2a78d6;
+  --viz-cat-2: #eb6834;
+  --viz-cat-3: #1baf7a;
+  --viz-cat-4: #eda100;
+  --viz-cat-5: #e87ba4;
 }
 
 /* Dark mode is a token swap — the utility itself never forks. */
@@ -838,6 +719,13 @@ html.mains-web.dark #root {
   --glass-rim: rgba(255, 255, 255, 0.08);
   --glass-rim-shadow: rgba(0, 0, 0, 0);
   --glass-outline-rim: rgba(255, 255, 255, 0.1);
+
+  /* Same five hues, re-stepped for the dark surface — not an automatic flip. */
+  --viz-cat-1: #3987e5;
+  --viz-cat-2: #d95926;
+  --viz-cat-3: #199e70;
+  --viz-cat-4: #c98500;
+  --viz-cat-5: #d55181;
 
   --glass-fill-surface: var(--color-primary-900);
   --glass-fill-card: rgba(24, 24, 24, 0.98);

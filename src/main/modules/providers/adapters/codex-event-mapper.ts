@@ -2129,7 +2129,12 @@ export function createCodexEventMapper(
       case "dynamicToolCall": {
         const tool = typeof item.tool === "string" ? item.tool : "unknown";
         const args = (typeof item.arguments === "string" ? safeJson(item.arguments) : item.arguments) as Record<string, unknown> | undefined;
-        const result = item.result as unknown;
+        const contentItems = Array.isArray(item.contentItems)
+          ? item.contentItems
+          : undefined;
+        const success = typeof item.success === "boolean"
+          ? item.success
+          : undefined;
         const status = item.status as string | undefined;
 
         if (phase === "start") {
@@ -2141,15 +2146,21 @@ export function createCodexEventMapper(
             metadata: { phase: "start", toolCallId: item.id, itemId: item.id, codexItemType: "dynamic_tool_call" },
           });
         } else if (phase === "complete") {
-          const dynFailed = status === "failed";
+          const dynFailed = success === false || status === "failed";
           events.push({
             type: "tool_call",
             toolName: tool,
             input: args,
-            output: result,
+            output: contentItems,
             error: dynFailed ? `Dynamic tool call failed` : undefined,
             endedAt: ts,
-            metadata: { phase: "complete", toolCallId: item.id, itemId: item.id, codexItemType: "dynamic_tool_call" },
+            metadata: {
+              phase: "complete",
+              toolCallId: item.id,
+              itemId: item.id,
+              codexItemType: "dynamic_tool_call",
+              success,
+            },
           });
         }
         break;

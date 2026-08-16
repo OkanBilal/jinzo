@@ -18,7 +18,7 @@ import {
   useToolApproval,
   PluginLogoProvider,
 } from "@/features/workspace/hooks";
-import { isFirstWorkspaceTabActive } from "@/features/workspace/utils/is-first-workspace-tab-active";
+import { isFirstWorkspaceTabActive } from "@/features/workspace/lib/is-first-workspace-tab-active";
 import {
   useAbortRunMutation,
   useGetProviderByIdQuery,
@@ -258,21 +258,6 @@ export function WorkspaceProviderPage({
                   providerId={providerId}
                   selectedModel={ws.selectedModel}
                   onModelChange={ws.handleModelChange}
-                  contextFiles={ws.contextFiles}
-                  onRemoveContextFile={ws.handleRemoveContextFile}
-                  contextIssues={ws.contextIssues}
-                  onRemoveContextIssue={ws.handleRemoveContextIssue}
-                  contextSignals={ws.contextSignals}
-                  onRemoveContextSignal={ws.handleRemoveContextSignal}
-                  contextSkills={ws.contextSkills}
-                  contextBrowserSelections={ws.contextBrowserSelections}
-                  onRemoveContextBrowserSelection={
-                    ws.handleRemoveContextBrowserSelection
-                  }
-                  contextCodeSelections={ws.contextCodeSelections}
-                  onRemoveContextCodeSelection={
-                    ws.handleRemoveContextCodeSelection
-                  }
                   workspacePath={ws.currentWorkspace?.rootPath}
                   projectId={ws.currentWorkspace?.projectId ?? undefined}
                   uploadedFiles={ws.uploadedFiles}
@@ -362,21 +347,6 @@ export function WorkspaceProviderPage({
           providerId={providerId}
           selectedModel={ws.selectedModel}
           onModelChange={ws.handleModelChange}
-          contextFiles={ws.contextFiles}
-          onRemoveContextFile={ws.handleRemoveContextFile}
-          contextIssues={ws.contextIssues}
-          onRemoveContextIssue={ws.handleRemoveContextIssue}
-          contextSignals={ws.contextSignals}
-          onRemoveContextSignal={ws.handleRemoveContextSignal}
-          contextSkills={ws.contextSkills}
-          contextBrowserSelections={ws.contextBrowserSelections}
-          onRemoveContextBrowserSelection={
-            ws.handleRemoveContextBrowserSelection
-          }
-          contextCodeSelections={ws.contextCodeSelections}
-          onRemoveContextCodeSelection={
-            ws.handleRemoveContextCodeSelection
-          }
           sendTarget={ws.sendTarget}
           onSendTargetChange={ws.handleSendTargetChange}
           workspacePath={ws.currentWorkspace?.rootPath}

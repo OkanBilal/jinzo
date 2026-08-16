@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Mains } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse } from "./_shared";
-import { Tiny } from "@/components/ui";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader } from "./_shared";
+import { Text, Tiny } from "@/components/ui";
 
 export interface PRParams {
   title?: string;
@@ -33,16 +33,16 @@ export function PRDisplay({
         isCompact={isCompact}
       >
         {params.draft && (
-          <span className="text-yellow-500 dark:text-yellow-400 text-xs shrink-0">
+          <Text as="span" size="xs" tone="warning" className="shrink-0">
             draft
-          </span>
+          </Text>
         )}
         {params.base && (
-          <span className="text-primary-500 shrink-0 group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className={`shrink-0 ${TOOL_ROW_TEXT}`}>
            {params.base}
           </span>
         )}
-        <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+        <span className={`truncate ${TOOL_ROW_TEXT}`}>
           {titleText}
         </span>
       </ToolHeader>

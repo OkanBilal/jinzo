@@ -1,4 +1,4 @@
-import { Heading2, Tiny, Toggle, toast } from "@/components/ui";
+import { Heading2, Text, Tiny, Toggle, toast } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { extractErrorMessage } from "@/lib/extract-error-message";
 import { ThemePicker } from "@/features/settings/components/theme-picker";
@@ -44,16 +44,19 @@ function PreferenceRow({
   return (
     <div className="flex items-center justify-between gap-6 py-2.5">
       <div className="flex min-w-0 flex-col gap-0.5">
-        <span className="text-sm text-primary-900 dark:text-primary-100">
-          {title}
-        </span>
+        <Text as="span">{title}</Text>
         {description && (
-          <span className="text-xs leading-snug text-primary-500 dark:text-primary-400">
+          <Text as="span" size="xs" tone="subtle" className="leading-snug">
             {description}
-          </span>
+          </Text>
         )}
       </div>
-      <Toggle enabled={enabled} onChange={onChange} className="shrink-0 py-0" />
+      <Toggle
+        enabled={enabled}
+        onChange={onChange}
+        aria-label={title}
+        className="shrink-0 py-0"
+      />
     </div>
   );
 }

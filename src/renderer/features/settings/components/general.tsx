@@ -1,4 +1,24 @@
-import { Button, Select, Toggle, toast } from "@/components/ui";
+import { useState } from "react";
+import {
+  AsciiSpinner,
+  Button,
+  Select,
+  Slider,
+  Text,
+  Toggle,
+  toast,
+} from "@/components/ui";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
+import {
+  setCodeFontSize,
+  setInterfaceFontSize,
+} from "@/lib/redux/slices/appSettingsSlice";
+import {
+  MAX_CODE_FONT_SIZE,
+  MAX_INTERFACE_FONT_SIZE,
+  MIN_CODE_FONT_SIZE,
+  MIN_INTERFACE_FONT_SIZE,
+} from "@/lib/appearance-fonts";
 import {
   useGetAppSettingsQuery,
   useSetShowToolCallsMutation,
@@ -17,7 +37,6 @@ import { ThemePicker, ThemeSelect, type ThemeValue } from "./theme-picker";
 import { useAutoUpdate } from "@/hooks/use-auto-update";
 import { useCapabilities, useIsMobile } from "@/lib/platform";
 import { Refresh } from "@/components/ui/icons";
-import { AsciiSpinner } from "@/components/ui/ascii-spinner";
 import {
   AgentCard,
   AGENT_CHOICES,
@@ -62,9 +81,15 @@ function UpdateButton({
     case "error":
       return (
         <div className="flex items-center gap-3">
-          <span className="text-xs text-danger dark:text-danger/80 leading-relaxed text-right line-clamp-2 max-w-48">
+          <Text
+            as="span"
+            size="xs"
+            tone="danger"
+            align="right"
+            className="leading-relaxed line-clamp-2 max-w-48"
+          >
             {state.error}
-          </span>
+          </Text>
           <Button type="button" variant="ghost" onClick={onCheck}>
             Retry
           </Button>
@@ -73,9 +98,9 @@ function UpdateButton({
     case "not-available":
       return (
         <div className="flex items-center gap-2">
-          <span className="text-xs text-primary-500 dark:text-primary-400">
+          <Text as="span" size="xs" tone="subtle">
             Up to date
-          </span>
+          </Text>
           <Button type="button" variant="ghost" onClick={onCheck}>
             Check Again
           </Button>
@@ -121,6 +146,7 @@ function RunDetailSelect() {
   return (
     <Select
       value={value}
+      aria-label="Run detail"
       options={RUN_DETAIL_OPTIONS}
       onChange={(val) => {
         setShowToolCalls(val === "steps_with_tool_calls");
@@ -137,6 +163,7 @@ function PreventSleepToggle() {
   return (
     <Toggle
       enabled={settings?.preventSleepDuringRuns ?? false}
+      aria-label="Prevent sleep during runs"
       onChange={(val) => setPreventSleep(val)}
     />
   );
@@ -149,6 +176,7 @@ function NotifyRunCompleteToggle() {
   return (
     <Toggle
       enabled={settings?.notifyOnRunComplete ?? true}
+      aria-label="Notify when runs complete"
       onChange={(val) => setNotifyOnRunComplete(val)}
     />
   );
@@ -161,6 +189,7 @@ function MenuBarIconToggle() {
   return (
     <Toggle
       enabled={settings?.showMenuBarIcon ?? true}
+      aria-label="Show menu bar icon"
       onChange={async (val) => {
         await setShowMenuBarIcon(val);
         await window.api.app.setMenuBarIconVisible(val);
@@ -202,7 +231,57 @@ function NotifyToolApprovalToggle() {
   return (
     <Toggle
       enabled={settings?.notifyOnToolApproval ?? true}
+      aria-label="Notify when a tool needs approval"
       onChange={(val) => setNotifyOnToolApproval(val)}
+    />
+  );
+}
+
+/**
+ * Applied on release, not while dragging: the interface size rescales the whole
+ * page — this row included — so a live update would slide the handle out from
+ * under the cursor. The draft drives the readout during the drag.
+ */
+function InterfaceFontSizeSlider() {
+  const dispatch = useAppDispatch();
+  const stored = useAppSelector((s) => s.appSettings.interfaceFontSize);
+  const [draft, setDraft] = useState(stored);
+  const [syncedFrom, setSyncedFrom] = useState(stored);
+
+  // Adjust during render rather than in an effect: keying the slider off
+  // `stored` would remount it on every commit and drop keyboard focus mid-step.
+  if (syncedFrom !== stored) {
+    setSyncedFrom(stored);
+    setDraft(stored);
+  }
+
+  return (
+    <Slider
+      value={draft}
+      aria-label="Interface size"
+      onChange={setDraft}
+      onCommit={(next) => dispatch(setInterfaceFontSize(next))}
+      min={MIN_INTERFACE_FONT_SIZE}
+      max={MAX_INTERFACE_FONT_SIZE}
+      step={1}
+      formatValue={(size) => `${size}px`}
+    />
+  );
+}
+
+function CodeFontSizeSlider() {
+  const dispatch = useAppDispatch();
+  const value = useAppSelector((s) => s.appSettings.codeFontSize);
+
+  return (
+    <Slider
+      value={value}
+      aria-label="Code size"
+      onChange={(next) => dispatch(setCodeFontSize(next))}
+      min={MIN_CODE_FONT_SIZE}
+      max={MAX_CODE_FONT_SIZE}
+      step={1}
+      formatValue={(size) => `${size}px`}
     />
   );
 }
@@ -253,6 +332,22 @@ export default function GeneralSettings() {
           ) : (
             <ThemePicker onChange={handleThemeChange} />
           )}
+        </SettingsRow>
+
+        <SettingsDivider />
+        <SettingsRow
+          title="Interface Size"
+          description="Scales the whole interface — text, spacing, and controls"
+        >
+          <InterfaceFontSizeSlider />
+        </SettingsRow>
+
+        <SettingsDivider />
+        <SettingsRow
+          title="Code Size"
+          description="Size of diffs, file previews, and code blocks"
+        >
+          <CodeFontSizeSlider />
         </SettingsRow>
       </SettingsSection>
 

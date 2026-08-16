@@ -151,3 +151,9 @@ export { default as Write} from "./write"
 export { default as Box} from "./box"
 
 
+
+// Filename/extension → icon resolution for the file-icons set above. Lives with
+// the icons rather than in the file explorer that first needed it: the editor
+// tabs, the changed-file rows, the composer chips, and rendered markdown all
+// draw the same icon for the same filename.
+export { FileIcon, FileIconComponent, resolveFileIcon } from "./file-icon";

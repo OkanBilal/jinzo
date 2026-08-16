@@ -1,10 +1,10 @@
 import { ReactNode, RefObject, useCallback, useEffect, useMemo, useReducer, useState } from "react";
-import { Button, DropdownWrapper } from "@/components/ui";
+import { Button, DropdownWrapper, Text } from "@/components/ui";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import type { CommandInfo, SkillInfo } from "@/lib/redux/api/providersApi";
 import { Sparkles } from "@/components/ui/icons";
 import { useDropdownKeyboardNavigation } from "@/features/workspace/hooks/use-dropdown-keyboard-navigation";
-import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
+import { FileIconComponent } from "@/components/ui/icons";
 import type { DirEntry, FileNode } from "@/features/workspace/types/file-explorer";
 import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
 import { useListProjectIssuesQuery } from "@/lib/redux/api";
@@ -123,7 +123,7 @@ function SkillRowIcon({ skill }: { skill: SkillInfo }) {
   }
   return (
     <div
-      className="size-5 rounded shrink-0 flex items-center justify-center bg-primary-200/50 dark:bg-primary-700/50 text-primary-600 dark:text-primary-300"
+      className="size-5 rounded shrink-0 flex items-center justify-center bg-primary-200/50 dark:bg-primary-700/50 text-primary-600 dark:text-primary-400"
       style={skill.brandColor ? { backgroundColor: skill.brandColor, color: "#fff" } : undefined}
     >
       <Sparkles className="size-3" />
@@ -147,10 +147,11 @@ function RowButton({
   return (
     <Button
       type="button"
+      role="menuitem"
       data-dropdown-active={active ? "true" : undefined}
       onMouseEnter={onHover}
       onClick={onSelect}
-      className={`w-full text-left px-3 py-1.5 cursor-pointer transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 ${
+      className={`w-full text-left px-3 py-1.5 cursor-pointer transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300 ${
         active ? "bg-primary-200/30 dark:bg-primary-800" : ""
       } ${className}`}
     >
@@ -231,6 +232,27 @@ function buildSections(
     });
   }
   return out;
+}
+
+/** Heading over one group of rows in the dropdown. */
+function SectionHeading({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <Text
+      as="div"
+      size="xs"
+      tone="subtle"
+      weight="medium"
+      className={`px-3 pt-2 pb-1 ${className ?? ""}`}
+    >
+      {children}
+    </Text>
+  );
 }
 
 export function UnifiedContextDropdown({
@@ -513,22 +535,27 @@ export function UnifiedContextDropdown({
     <div ref={dropdownRef}>
       <DropdownWrapper
         isOpen={isOpen}
+        aria-label="Context suggestions"
         openUpward={true}
         minWidth="min-w-[22rem]"
       >
         <div className="max-h-96 max-w-115 overflow-auto noscrollbar">
           {wantsFiles && dirPath && (
-            <div className="px-3 pt-2 pb-1 text-xs font-medium truncate text-primary-400 dark:text-primary-500">
+            <SectionHeading className="truncate">
               {dirPath}
-            </div>
+            </SectionHeading>
           )}
           {isLoading ? (
-            <div className="px-4 py-3 text-sm text-primary-500 dark:text-primary-400">Loading...</div>
+            <Text as="div" tone="subtle" className="px-4 py-3">
+              Loading...
+            </Text>
           ) : flatRows.length === 0 &&
             !fetchState.loading &&
             !isLoadingIssues &&
             (wantsFiles ? !fetchState.error : true) ? (
-            <div className="px-4 py-3 text-sm text-primary-500 dark:text-primary-400">{emptyText}</div>
+            <Text as="div" tone="subtle" className="px-4 py-3">
+              {emptyText}
+            </Text>
           ) : (
             sections.map((section, sectionIndex) => {
               if (section.rows.length === 0 && section.title !== "Files") return null;
@@ -538,22 +565,26 @@ export function UnifiedContextDropdown({
               const baseIdx = sectionBaseIndex[sectionIndex];
               return (
                 <div key={`${section.title}-${sectionIndex}`}>
-                  <div className="px-3 pt-2 pb-1 text-xs font-medium text-primary-400 dark:text-primary-500">
+                  <SectionHeading>
                     {section.title}
-                  </div>
+                  </SectionHeading>
                   {section.title === "Files" && fetchState.loading && (
-                    <div className="px-4 py-2 text-xs text-primary-500 dark:text-primary-400">Loading files…</div>
+                    <Text as="div" size="xs" tone="subtle" className="px-4 py-2">
+                      Loading files…
+                    </Text>
                   )}
                   {section.title === "Files" && fetchState.error && (
-                    <div className="px-4 py-2 text-xs text-primary-500 dark:text-primary-400">{fetchState.error}</div>
+                    <Text as="div" size="xs" tone="subtle" className="px-4 py-2">
+                      {fetchState.error}
+                    </Text>
                   )}
                   {section.title === "Files" &&
                     isWorkspaceFileSearch &&
                     sortedFiles.length >= MAX_WORKSPACE_FILE_MATCHES && (
-                      <div className="px-3 pb-1 text-xxs text-primary-500 dark:text-primary-500">
+                      <Text as="div" size="xxs" tone="subtle" className="px-3 pb-1">
                         Showing first {MAX_WORKSPACE_FILE_MATCHES} matches — narrow your search for more specific
                         results.
-                      </div>
+                      </Text>
                     )}
                   {section.rows.map((row, j) => {
                     const idx = baseIdx + j;
@@ -577,23 +608,32 @@ export function UnifiedContextDropdown({
                           <div className="flex items-start gap-2">
                             <SkillRowIcon skill={skill} />
                             <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                              <div className="font-medium flex items-center gap-1.5">
-                                <span className="truncate text-xs">{title}</span>
+                              <Text as="div" size="inherit" tone="inherit" weight="medium" className="flex items-center gap-1.5">
+                                <Text as="span" size="xs" className="truncate">
+                                  {title}
+                                </Text>
                                 <div className="ml-auto gap-2 flex items-center shrink-0">
                                   {skill.argumentHint && (
-                                    <span className="font-normal text-xs text-primary-500 dark:text-primary-400">
+                                    <Text as="span" size="xs" tone="subtle" weight="normal">
                                       {skill.argumentHint}
-                                    </span>
+                                    </Text>
                                   )}
                                   {scopeLabel && (
-                                    <span className="text-t px-1.5 py-px rounded-full bg-primary-200/50 dark:bg-primary-700/50 text-primary-600 dark:text-primary-300">
+                                    <Text
+                                      as="span"
+                                      size="t"
+                                      tone="subtle"
+                                      className="px-1.5 py-px rounded-full bg-primary-200/50 dark:bg-primary-700/50"
+                                    >
                                       {scopeLabel}
-                                    </span>
+                                    </Text>
                                   )}
                                 </div>
-                              </div>
+                              </Text>
                               {desc && (
-                                <div className="text-xs line-clamp-2 text-primary-500 dark:text-primary-400">{desc}</div>
+                                <Text as="div" size="xs" tone="subtle" className="line-clamp-2">
+                                  {desc}
+                                </Text>
                               )}
                             </div>
                           </div>
@@ -612,19 +652,23 @@ export function UnifiedContextDropdown({
                               className="size-4 shrink-0 mt-0.5"
                             />
                             <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                              <span className="truncate font-medium text-xs">{entry.name}</span>
+                              <Text as="span" size="xs" weight="medium" className="truncate">
+                                {entry.name}
+                              </Text>
                               {entry.type !== "directory" &&
                                 (() => {
                                   const loc = formatFileLocation(entry.fullPath, workspacePath);
                                   return loc ? (
-                                    <span className="text-xs text-primary-500 dark:text-primary-400 truncate">
+                                    <Text as="span" size="xs" tone="subtle" className="truncate">
                                       {loc}
-                                    </span>
+                                    </Text>
                                   ) : null;
                                 })()}
                             </div>
                             {entry.type === "directory" && (
-                              <span className="ml-auto text-xs text-primary-500 dark:text-primary-400 shrink-0">/</span>
+                              <Text as="span" size="xs" tone="subtle" className="ml-auto shrink-0">
+                                /
+                              </Text>
                             )}
                           </div>
                         </RowButton>
@@ -641,11 +685,13 @@ export function UnifiedContextDropdown({
                               fallback="text"
                             />
                             {item.issue.number != null && (
-                              <span className="text-xs shrink-0 text-primary-500 dark:text-primary-400">
+                              <Text as="span" size="xs" tone="subtle" className="shrink-0">
                                 #{item.issue.number}
-                              </span>
+                              </Text>
                             )}
-                            <span className="truncate text-xs">{item.entity.title}</span>
+                            <Text as="span" size="xs" className="truncate">
+                              {item.entity.title}
+                            </Text>
                           </div>
                         </RowButton>
                       );
@@ -654,11 +700,11 @@ export function UnifiedContextDropdown({
                     return (
                       <RowButton key={`cmd-${cmd.name}`} {...rowProps} className="text-xs">
                         <div className="flex flex-col gap-0.5">
-                          <div className="font-medium">/{cmd.name}</div>
+                          <Text as="div" size="inherit" tone="inherit" weight="medium">/{cmd.name}</Text>
                           {cmd.description && (
-                            <div className="text-xs line-clamp-2 text-primary-500 dark:text-primary-400">
+                            <Text as="div" size="xs" tone="subtle" className="line-clamp-2">
                               {cmd.description}
-                            </div>
+                            </Text>
                           )}
                         </div>
                       </RowButton>

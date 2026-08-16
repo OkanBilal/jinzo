@@ -1,4 +1,4 @@
-import { isContinuationTool } from "../utils/subagent-identity";
+import { isContinuationTool } from "./subagent-identity";
 
 /**
  * Pure assembly of a subagent's detail flow — everything the detail view

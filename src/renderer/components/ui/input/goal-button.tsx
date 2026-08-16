@@ -16,7 +16,7 @@ const GOAL_EMERALD_STYLE = {
     "dark:from-emerald-400 dark:via-teal-400 dark:to-cyan-400",
     "dark:bg-[length:140%_100%] dark:bg-left",
   ].join(" "),
-  icon: "text-emerald-500 dark:text-emerald-400",
+  icon: "text-success",
 } as const;
 
 /**

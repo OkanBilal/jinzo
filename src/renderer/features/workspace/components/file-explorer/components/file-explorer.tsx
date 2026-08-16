@@ -2,8 +2,8 @@ import { memo, useState, useCallback, useEffect, useReducer, useRef } from "reac
 import { appApi } from "@/lib/transport";
 import type { FileNode, DirEntry, ServiceResponse } from "@/features/workspace/types/file-explorer";
 import { FileTreeNode } from "./file-tree-node";
-import { FileIconComponent } from "./file-icon";
-import { Button, Caption } from "@/components/ui";
+import { FileIconComponent } from "@/components/ui/icons";
+import { Button, Caption, Input, Text } from "@/components/ui";
 import { Close, CollapseAll, Plus, Refresh, Search } from "@/components/ui/icons";
 
 interface FileExplorerProps {
@@ -317,9 +317,9 @@ export const FileExplorer = memo(function FileExplorer({
   if (error) {
     return (
       <div className={`flex items-center justify-center h-full ${className}`}>
-        <div className="flex flex-col items-center gap-2 text-red-500 dark:text-red-400 px-4 text-center">
-          <span className="text-sm">{error}</span>
-        </div>
+        <Text as="div" size="inherit" tone="danger" align="center" className="flex flex-col items-center gap-2 px-4">
+          <Text as="span" size="sm" tone="inherit">{error}</Text>
+        </Text>
       </div>
     );
   }
@@ -327,9 +327,9 @@ export const FileExplorer = memo(function FileExplorer({
   if (!tree) {
     return (
       <div className={`flex items-center justify-center h-full ${className}`}>
-        <span className="text-sm text-primary-500 dark:text-primary-400">
+        <Text as="span" size="sm" tone="subtle">
           No files found
-        </span>
+        </Text>
       </div>
     );
   }
@@ -338,16 +338,18 @@ export const FileExplorer = memo(function FileExplorer({
     <div className={`flex flex-col h-full ${className}`}>
       <div className="flex items-center gap-1 shrink-0 mb-1">
         <div className="relative flex-1 min-w-0 glass-outline rounded-xl bg-transparent dark:bg-primary/5">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-primary-500 dark:text-primary-200 pointer-events-none" />
-          <input
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-primary-600 dark:text-primary-400 pointer-events-none" />
+          <Input
+            variant="bare"
             ref={searchInputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleSearchKeyDown}
             placeholder="Search files"
+            aria-label="Search files"
             spellCheck={false}
-            className="w-full h-7 pl-7 pr-7 text-s bg-transparent text-primary-900 dark:text-primary-100 placeholder:text-primary-500 dark:placeholder:text-primary-200 outline-none transition-colors"
+            className="w-full h-7 pl-7 pr-7 text-s bg-transparent text-primary-900 dark:text-primary-100 placeholder:text-primary-500 dark:placeholder:text-primary-500 outline-none transition-colors"
           />
           {isSearching && (
             <Button
@@ -358,7 +360,7 @@ export const FileExplorer = memo(function FileExplorer({
               className="absolute right-1.5 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center rounded cursor-pointer hover:bg-primary/20 dark:hover:bg-primary/10"
               title="Clear search"
             >
-              <Close className="w-3 h-3 text-primary-500 dark:text-primary-200" />
+              <Close className="w-3 h-3 text-primary-600 dark:text-primary-400" />
             </Button>
           )}
         </div>
@@ -367,7 +369,7 @@ export const FileExplorer = memo(function FileExplorer({
           className="w-5 h-5 shrink-0 flex items-center justify-center rounded-lg cursor-pointer hover:bg-primary/20 dark:hover:bg-primary/10"
           title="Refresh explorer"
         >
-          <Refresh className="w-3.5 h-3.5 text-primary-500 dark:text-primary-200" />
+          <Refresh className="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" />
         </Button>
         {onCollapseAll && (
           <Button
@@ -375,7 +377,7 @@ export const FileExplorer = memo(function FileExplorer({
             className="w-5 h-5 shrink-0 flex items-center justify-center rounded-lg cursor-pointer hover:bg-primary/20 dark:hover:bg-primary/10"
             title="Collapse all folders"
           >
-            <CollapseAll className="w-3.5 h-3.5 text-primary-500 dark:text-primary-200" />
+            <CollapseAll className="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" />
           </Button>
         )}
       </div>
@@ -388,11 +390,11 @@ export const FileExplorer = memo(function FileExplorer({
           className="flex-1 overflow-auto py-1 space-y-0.5 noscrollbar"
         >
           {searchError ? (
-            <div className="px-2 py-2 text-xs text-primary-500 dark:text-primary-400">{searchError}</div>
+            <Text as="div" size="xs" tone="subtle" className="px-2 py-2">{searchError}</Text>
           ) : searchEntries.length === 0 ? (
-            <div className="px-2 py-2 text-xs text-primary-500 dark:text-primary-400">
+            <Text as="div" size="xs" tone="subtle" className="px-2 py-2">
               {searchLoading ? "Searching…" : "No matches"}
-            </div>
+            </Text>
           ) : (
             <>
               {searchEntries.map((entry, index) => {
@@ -427,9 +429,9 @@ export const FileExplorer = memo(function FileExplorer({
                     />
                     <span className="truncate shrink-0 max-w-[60%]">{entry.name}</span>
                     {dir && (
-                      <span className="truncate ml-2 text-xs text-primary-500 dark:text-primary-400">
+                      <Text as="span" size="xs" tone="subtle" className="truncate ml-2">
                         {dir}
-                      </span>
+                      </Text>
                     )}
                     {onAddToContext && (
                       <Button
@@ -437,16 +439,16 @@ export const FileExplorer = memo(function FileExplorer({
                         className="opacity-0 group-hover:opacity-100 ml-auto w-5 h-5 flex items-center justify-center rounded hover:bg-primary/20 dark:hover:bg-primary/10 transition-opacity mr-1 shrink-0"
                         title="Add to context"
                       >
-                        <Plus className="w-3.5 h-3.5 text-primary-500 dark:text-primary-400" />
+                        <Plus className="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" />
                       </Button>
                     )}
                   </div>
                 );
               })}
               {searchEntries.length >= MAX_SEARCH_MATCHES && (
-                <div className="px-2 pt-1 text-xxs text-primary-500 dark:text-primary-500">
+                <Text as="div" size="xxs" tone="subtle" className="px-2 pt-1">
                   Showing first {MAX_SEARCH_MATCHES} matches — narrow your search for more.
-                </div>
+                </Text>
               )}
             </>
           )}

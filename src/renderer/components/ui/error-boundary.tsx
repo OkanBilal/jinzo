@@ -1,5 +1,5 @@
 import { Component, ReactNode } from "react";
-import { Heading3, Muted } from "./text";
+import Text, { Heading3, Muted } from "./text";
 import { Button } from "./button";
 
 interface ErrorFallbackProps {
@@ -24,14 +24,25 @@ function ErrorFallback({ error, resetError, level }: ErrorFallbackProps) {
         </Muted>
       </div>
 
-      <details className="max-w-lg rounded-xl bg-primary-100 dark:bg-primary-900 p-4 text-left">
-        <summary className="cursor-pointer text-xs font-medium text-primary-500 dark:text-primary-400">
+      <details className="max-w-lg rounded-xl bg-primary-100 dark:bg-primary-900  glass-outline p-4 text-left">
+        <Text
+          as="summary"
+          size="xs"
+          tone="subtle"
+          weight="medium"
+          className="cursor-pointer"
+        >
           Error details
-        </summary>
-        <pre className="mt-2 overflow-auto whitespace-pre-wrap text-xs text-red-600 dark:text-red-400">
+        </Text>
+        <Text
+          as="pre"
+          size="xs"
+          tone="danger"
+          className="mt-2 overflow-auto whitespace-pre-wrap"
+        >
           {error.message}
           {error.stack && `\n\n${error.stack}`}
-        </pre>
+        </Text>
       </details>
 
       <div className="flex gap-3">

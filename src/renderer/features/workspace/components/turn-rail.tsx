@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { Button } from "@/components/ui";
+import { Button, Text } from "@/components/ui";
 import type { TurnMarker } from "../lib/turn-markers";
 
 /**
@@ -94,13 +94,13 @@ export function TurnRail({
           style={{ top: hovered.offsetY }}
           role="tooltip"
         >
-          <p className="line-clamp-2 text-xs font-medium text-primary-800 dark:text-primary-100">
+          <Text as="p" size="xs" tone="secondary" weight="medium" className="line-clamp-2">
             {hovered.marker.prompt}
-          </p>
+          </Text>
           {hovered.marker.reply && (
-            <p className="mt-1 line-clamp-3 text-xs text-primary-500 dark:text-primary-400">
+            <Text as="p" size="xs" tone="subtle" className="mt-1 line-clamp-3">
               {hovered.marker.reply}
-            </p>
+            </Text>
           )}
         </div>
       )}

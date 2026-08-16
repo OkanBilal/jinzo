@@ -27,14 +27,15 @@ import {
 } from "../lib/transcript-rows";
 
 const EMPTY_TURNS: RunTurn[] = [];
-import { isIssueTab, getIssueEntityId, isSignalTab, getSignalEntityId, isNoteTab, getNoteId, isNewRunTab } from "../utils/repo-utils";
+import { isIssueTab, getIssueEntityId, isSignalTab, getSignalEntityId, isNoteTab, getNoteId, isNewRunTab } from "../lib/repo-utils";
 import { AsciiLoader } from "./ascii-loader";
 import { ProviderAuthNotice } from "./provider-auth-notice";
 import { classifyRunErrorKind } from "../../../../shared/run-errors";
 import { ArrowUp, Fork } from "@/components/ui/icons";
-import { useGetAppSettingsQuery } from "@/lib/redux/api";
+import { useGetAppSettingsQuery, useGetProviderAccountInfoQuery } from "@/lib/redux/api";
+import { getProviderVariant } from "@/lib/provider-variants";
 import { isDocumentRenderImage } from "@/lib/document-viewer";
-import { Button, CopyButton, Tooltip } from "@/components/ui";
+import { Button, CopyButton, Text, Tooltip } from "@/components/ui";
 import { formatCostFromMicros, formatDurationMs } from "@/lib/format";
 import { PromptSuggestionChips } from "./prompt-suggestion-chips";
 
@@ -42,15 +43,22 @@ function formatNumber(n: number): string {
   return n.toLocaleString("en-US");
 }
 
+/**
+ * Assistant-error codes an auth notice already speaks for. Anything else the
+ * provider reports (billing, a missing model) has no notice of its own, so its
+ * log line stays.
+ */
+const AUTH_ASSISTANT_ERRORS = new Set(["authentication_failed", "oauth_org_not_allowed"]);
+
 
 /** Single model usage block */
 function ModelUsageBlock({ modelName, usage }: { modelName: string; usage: ModelUsageEntry }) {
   return (
     <div className="space-y-0.5">
-      <div className="text-xxs opacity-70 flex justify-between gap-4">
+      <Text as="div" size="xxs" tone="inherit" className="opacity-70 flex justify-between gap-4">
         <span>{modelName}</span>
         <span>${usage.costUSD.toFixed(4)}</span>
-      </div>
+      </Text>
       <div className="flex justify-between gap-4">
         <span className="opacity-60">Input</span>
         <span>{formatNumber(usage.inputTokens)}</span>
@@ -81,7 +89,7 @@ function UsageTooltipContent({ turn }: { turn: RunTurn }) {
   const hasPerModel = modelEntries.length > 0;
 
   return (
-    <div className="text-xs  space-y-1 min-w-44">
+    <Text as="div" size="xs" tone="inherit" className="space-y-1 min-w-44">
 
       {hasPerModel ? (
         <>
@@ -95,7 +103,7 @@ function UsageTooltipContent({ turn }: { turn: RunTurn }) {
       ) : (
         <>
           {turn.model && (
-            <div className="text-xxs opacity-70 mb-1">{turn.model}</div>
+            <Text as="div" size="xxs" tone="inherit" className="opacity-70 mb-1">{turn.model}</Text>
           )}
           <div className="border-t border-current/15 pt-1 space-y-0.5">
             {turn.inputTokens != null && (
@@ -126,12 +134,12 @@ function UsageTooltipContent({ turn }: { turn: RunTurn }) {
         </>
       )}
       {turn.costMicros != null && (
-        <div className="border-t border-current/15 pt-1 flex justify-between gap-4 font-medium">
+        <Text as="div" size="inherit" tone="inherit" weight="medium" className="border-t border-current/15 pt-1 flex justify-between gap-4">
           <span className="opacity-60">Total</span>
           <span>{formatCostFromMicros(turn.costMicros)}</span>
-        </div>
+        </Text>
       )}
-    </div>
+    </Text>
   );
 }
 
@@ -155,7 +163,7 @@ function SessionTimeBar({
   const hasUsage = turn && (turn.inputTokens || turn.outputTokens || turn.cacheReadTokens || turn.cacheWriteTokens || turn.costMicros);
 
   return (
-    <div className="flex items-center gap-2 text-s text-primary-700 dark:text-primary-400  -mt-1">
+    <Text as="div" size="s" tone="muted" className="flex items-center gap-2 -mt-1">
       {hasUsage ? (
         <Tooltip
           content={<UsageTooltipContent turn={turn} />}
@@ -189,7 +197,7 @@ function SessionTimeBar({
           </Button>
         </>
       )}
-    </div>
+    </Text>
   );
 }
 
@@ -371,6 +379,21 @@ export function WorkspaceEvents({
 
   // Check if current run is still running
   const activeRun = runs.find((r) => r.id === activeTab);
+
+  // Being signed out entirely is already reported above the composer, with a
+  // recheck the run-anchored notice does not offer. The notice below is for the
+  // case that probe cannot see: a run that died on a refresh-token failure while
+  // the account still reads as signed in. Same query as the composer's, so RTK
+  // Query serves it from cache rather than probing twice.
+  const { data: providerAccountInfo } = useGetProviderAccountInfoQuery(
+    getProviderVariant(variant).providerId,
+    { refetchOnFocus: false },
+  );
+  const providerSignedOut =
+    !!providerAccountInfo && providerAccountInfo.account === null;
+  const activeRunFailedOnAuth =
+    activeRun?.status === "failed" &&
+    classifyRunErrorKind(activeRun.lastError) === "auth";
   const isRunning =
     activeRun?.status === "running" || activeRun?.status === "queued";
   const isRunCompleted =
@@ -401,11 +424,25 @@ export function WorkspaceEvents({
             }
             return true;
           });
+    // An auth failure that took the whole run down already gets a notice with a
+    // Sign in button — either here or above the composer. The driver's log line
+    // is the signal for the case that notice never covers: an auth failure the
+    // run recovered from, which leaves the status untouched.
+    const deduped = activeRunFailedOnAuth
+      ? filtered.filter(
+          (e) =>
+            !(
+              e.type === "log" &&
+              e.metadata?.source === "assistant_error" &&
+              AUTH_ASSISTANT_ERRORS.has(e.metadata?.error as string)
+            ),
+        )
+      : filtered;
     // Stop finished tools from spinning until the run-end sweep resolves their
     // status (providers don't all emit per-tool completions). Runs on the
     // display-ordered list so "later event" matches what the user actually sees.
-    return demoteStaleRunningTools(filtered);
-  }, [currentEvents]);
+    return demoteStaleRunningTools(deduped);
+  }, [currentEvents, activeRunFailedOnAuth]);
 
   // Group events for CLI-style display, reconciled so unchanged groups keep
   // their object identity across streamed tokens — that's what lets the memoized
@@ -609,7 +646,7 @@ export function WorkspaceEvents({
   const showEmpty = isRunTabActive && currentEvents.length === 0;
 
   return (
-    <div className=" text-sm h-full flex flex-col">
+    <Text as="div" size="sm" tone="inherit" className="h-full flex flex-col">
       {/* Content area */}
       <div className="flex-1 min-h-0 overflow-hidden relative">
         {isNewRunActive && (
@@ -672,14 +709,13 @@ export function WorkspaceEvents({
                   </div>
                 );
               })}
-              {activeRun?.status === "failed" &&
-                classifyRunErrorKind(activeRun.lastError) === "auth" && (
-                  <ProviderAuthNotice
-                    variant={variant}
-                    title="Authentication expired"
-                    message={activeRun.lastError}
-                  />
-                )}
+              {activeRunFailedOnAuth && !providerSignedOut && (
+                <ProviderAuthNotice
+                  variant={variant}
+                  title="Authentication expired"
+                  message={activeRun?.lastError}
+                />
+              )}
               {isRunning && !hasActiveImageGeneration && (
                 <AsciiLoader thinkingText={latestThinking} />
               )}
@@ -700,6 +736,6 @@ export function WorkspaceEvents({
           </>
         )}
       </div>
-    </div>
+    </Text>
   );
 }

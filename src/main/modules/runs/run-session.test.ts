@@ -176,6 +176,47 @@ describe("RunSession", () => {
       expect(log!.content).toBe("Starting work...");
     });
 
+    it("keeps the driver's metadata so the renderer can identify the log", async () => {
+      // Without this the renderer can only tell one log from another by matching
+      // its wording — the shape heuristic that hid every bracketed warning.
+      const session = makeSession();
+      await flushBackground();
+
+      await session.project({
+        type: "log",
+        message: "[api] authentication failed — sign in again",
+        level: "error",
+        ts: 7,
+        metadata: { source: "assistant_error", error: "authentication_failed" },
+      } as any);
+
+      const artifacts = await runsRepo.findArtifactsByRun("r1");
+      const log = artifacts.find((a) => a.kind === "log");
+      expect(log!.metadata).toEqual({
+        source: "assistant_error",
+        error: "authentication_failed",
+        level: "error",
+        ts: 7,
+      });
+    });
+
+    it("does not let driver metadata shadow level or ts", async () => {
+      const session = makeSession();
+      await flushBackground();
+
+      await session.project({
+        type: "log",
+        message: "spoof attempt",
+        level: "warn",
+        ts: 7,
+        metadata: { level: "info", ts: 1 },
+      } as any);
+
+      const artifacts = await runsRepo.findArtifactsByRun("r1");
+      const log = artifacts.find((a) => a.kind === "log");
+      expect(log!.metadata).toMatchObject({ level: "warn", ts: 7 });
+    });
+
     it("updates run title when threadTitle is in metadata", async () => {
       const session = makeSession();
       await flushBackground();

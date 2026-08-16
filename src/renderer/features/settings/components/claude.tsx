@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Select } from "@/components/ui";
+import { Button, Select, Text } from "@/components/ui";
 import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout";
 import { useCapabilities } from "@/lib/platform";
 import {
@@ -14,23 +14,17 @@ import type { ClaudeCodeAdapterConfig } from "../../../../shared/adapter.types";
 import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 import { getProviderVariant } from "@/lib/provider-variants";
 import { useGetProviderAccountInfoQuery } from "@/lib/redux/api";
+import { CLAUDE_PERMISSION_MODES } from "@/lib/provider-modes";
+import {
+  DEFAULT_CLAUDE_PERMISSION_MODE,
+  type ClaudePermissionMode,
+} from "../../../../shared/claude-permission-modes";
 
-type ClaudePermissionMode = NonNullable<
-  ClaudeCodeAdapterConfig["permissionMode"]
->;
-
-const SETTINGS_PERMISSION_MODES: Array<{
-  value: ClaudePermissionMode;
-  label: string;
-  description: string;
-}> = [
-  { value: "default", label: "Ask permissions", description: "Always ask before making changes" },
-  { value: "auto", label: "Auto", description: "Claude Code picks when to prompt vs allow, based on risk" },
-  { value: "acceptEdits", label: "Auto accept edits", description: "Automatically accept all file edits" },
-  { value: "plan", label: "Plan mode", description: "Create a plan before making changes" },
-  { value: "bypassPermissions", label: "Bypass permissions", description: "Accepts all permissions" },
-  { value: "dontAsk", label: "Don't ask", description: "Deny unapproved tools silently" },
-];
+const SETTINGS_PERMISSION_MODES = CLAUDE_PERMISSION_MODES.map((mode) => ({
+  value: mode.value,
+  label: mode.label,
+  description: mode.description,
+}));
 
 export default function ClaudeSettings(
 ) {
@@ -51,7 +45,7 @@ export default function ClaudeSettings(
   const account = accountInfo?.account;
   const cli = accountInfo?.cli;
 
-  const permissionMode = config.permissionMode ?? "bypassPermissions";
+  const permissionMode = config.permissionMode ?? DEFAULT_CLAUDE_PERMISSION_MODE;
   const selectedSchemaName = selectedSchemaLabel(config);
 
   const handlePermissionModeChange = async (mode: ClaudePermissionMode) => {
@@ -104,6 +98,7 @@ export default function ClaudeSettings(
         >
           <Select
             value={permissionMode}
+            aria-label="Permission mode"
             options={SETTINGS_PERMISSION_MODES}
             onChange={handlePermissionModeChange}
           />
@@ -118,7 +113,7 @@ export default function ClaudeSettings(
                 href="https://platform.claude.com/docs/en/agent-sdk/structured-outputs"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="ml-1 text-primary-500 hover:text-primary-600 dark:text-primary-200 dark:hover:text-primary-300 underline"
+                className="ml-1 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 underline"
               >
                 Learn more about structured outputs
               </a>
@@ -126,9 +121,9 @@ export default function ClaudeSettings(
           }
         >
           <div className="flex items-center gap-3">
-            <span className="text-sm text-primary-500 dark:text-primary-400">
+            <Text as="span" tone="subtle">
               {selectedSchemaName}
-            </span>
+            </Text>
             <Button
               variant="primary"
               onClick={() => setIsStructuredOutputsModalOpen(true)}
@@ -153,7 +148,7 @@ export default function ClaudeSettings(
                 href="https://platform.claude.com/docs/en/agent-sdk/mcp"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="ml-1 text-primary-500 hover:text-primary-600 dark:text-primary-200 dark:hover:text-primary-300 underline"
+                className="ml-1 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 underline"
               >
                 Learn more about MCP
               </a>
@@ -178,7 +173,7 @@ export default function ClaudeSettings(
                 href="https://platform.claude.com/docs/en/agent-sdk/skills"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="ml-1 text-primary-500 hover:text-primary-600 dark:text-primary-200 dark:hover:text-primary-300 underline"
+                className="ml-1 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 underline"
               >
                 Learn more about skills
               </a>
@@ -202,7 +197,7 @@ export default function ClaudeSettings(
                 href="https://platform.claude.com/docs/en/agent-sdk/subagents"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="ml-1 text-primary-500 hover:text-primary-600 dark:text-primary-200 dark:hover:text-primary-300 underline"
+                className="ml-1 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 underline"
               >
                 Learn more about subagents
               </a>
@@ -227,7 +222,7 @@ export default function ClaudeSettings(
                 href="https://platform.claude.com/docs/en/agent-sdk/slash-commands"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="ml-1 text-primary-500 hover:text-primary-600 dark:text-primary-200 dark:hover:text-primary-300 underline"
+                className="ml-1 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 underline"
               >
                 Learn more about slash commands
               </a>
@@ -252,5 +247,4 @@ export default function ClaudeSettings(
     </ProviderSettingsLayout>
   );
 }
-
 

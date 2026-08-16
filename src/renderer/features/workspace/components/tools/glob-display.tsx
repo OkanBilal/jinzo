@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Glob } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse, ToolOutputBody } from "./_shared";
-import { coerceToolOutput } from "../../utils/parse-tool-content";
-import { shortPath } from "../../utils/path-utils";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader, ToolOutputBody } from "./_shared";
+import { coerceToolOutput } from "../../lib/parse-tool-content";
+import { shortPath } from "../../lib/path-utils";
 
 export interface GlobParams {
   pattern?: string;
@@ -26,12 +26,12 @@ export function GlobDisplay({ params, output, isCompact = false }: { params: Glo
         isCompact={isCompact}
       >
         {numFiles > 0 && (
-          <span className="shrink-0 whitespace-nowrap text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className={`shrink-0 whitespace-nowrap ${TOOL_ROW_TEXT}`}>
             {numFiles} files
           </span>
         )}
         <code
-          className="min-w-0 truncate text-primary-500 font-mono text-xs group-hover:text-primary-950 group-hover:dark:text-primary"
+          className={`min-w-0 truncate font-mono text-xs ${TOOL_ROW_TEXT}`}
           title={params.pattern || undefined}
         >
           {params.pattern || "?"}

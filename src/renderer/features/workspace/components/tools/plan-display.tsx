@@ -5,8 +5,8 @@ import { markdownComponents } from "@/components/markdown-components";
 import type { RunEvent } from "../../types";
 import { Plan, ArrowUp } from "@/components/ui/icons";
 import { useUpdateToolCallMutation } from "@/lib/redux/api/toolsApi";
-import { Button } from "@/components/ui";
-import { coerceToolOutput } from "../../utils/parse-tool-content";
+import { Button, Text } from "@/components/ui";
+import { coerceToolOutput } from "../../lib/parse-tool-content";
 import {
   getPersistedPlanStatus,
   shouldShowPlanActions,
@@ -102,23 +102,23 @@ export function PlanDisplay({
         className="w-full flex items-center gap-2 px-6 py-3 cursor-pointer hover:bg-primary-100/50 dark:hover:bg-primary-500/10 transition-colors"
       >
         <Plan className="size-3.5 text-primary-500 shrink-0" />
-        <span className="text-xs font-medium text-primary-500">
+        <Text as="span" size="xs" tone="faint" weight="medium">
           Plan
-        </span>
+        </Text>
         {status === "applied" && (
-          <span className="flex items-center gap-1 text-xxs text-primary-500">
+          <Text as="span" size="xxs" tone="faint" className="flex items-center gap-1">
             Applied
-          </span>
+          </Text>
         )}
         {status === "dismissed" && (
-          <span className="text-xxs text-primary-500">
+          <Text as="span" size="xxs" tone="faint">
             Dismissed
-          </span>
+          </Text>
         )}
         {status === "failed" && (
-          <span className="text-xxs text-danger">
+          <Text as="span" size="xxs" tone="danger">
             Failed
-          </span>
+          </Text>
         )}
         <ArrowUp
           className={`size-3 text-primary-500 ml-auto transition-transform ${isExpanded ? "rotate-180" : "rotate-90"}`}

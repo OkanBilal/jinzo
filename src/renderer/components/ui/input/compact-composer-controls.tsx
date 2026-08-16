@@ -1,7 +1,8 @@
 import { formatEffortLevel } from "@/lib/format";
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import DropdownWrapper from "../dropdown-wrapper";
 import { Button } from "../button";
+import Text from "../text";
 import { ArrowUp, Brain, BoltFill, Check } from "../icons";
 import { Bolt } from "../icons/space";
 import { useClickOutside } from "@/hooks/use-click-outside";
@@ -32,8 +33,18 @@ interface CompactComposerControlsProps {
   supportsFastMode: boolean;
 }
 
-const SECTION =
-  "px-2.5 pt-2.5 pb-1 text-xxs uppercase tracking-wide text-primary-400 dark:text-primary-500";
+/** A heading between groups of rows in the menu. */
+const Section = ({ children }: { children: ReactNode }) => (
+  <Text
+    as="div"
+    size="xxs"
+    tone="subtle"
+    className="px-2.5 pt-2.5 pb-1 uppercase tracking-wide"
+  >
+    {children}
+  </Text>
+);
+
 const ROW =
   "w-full flex items-center gap-2 text-left px-2.5 py-2 text-sm cursor-pointer transition-colors";
 const ROW_ACTIVE =
@@ -82,7 +93,7 @@ export function CompactComposerControls({
         tooltip="Model & thinking"
         onClick={() => setIsOpen((o) => !o)}
         className="flex items-center gap-1 px-2 py-1 rounded-full text-sm cursor-pointer text-primary-950 dark:text-primary hover:bg-primary-200/30 dark:hover:bg-primary-800 transition-colors"
-        aria-haspopup="true"
+        aria-haspopup="menu"
         aria-expanded={isOpen}
       >
         {getModelIcon(displayModel, variant)}
@@ -93,7 +104,7 @@ export function CompactComposerControls({
               className={`capitalize ${
                 effortLevel === "ultracode"
                   ? `font-medium ${ULTRACODE_GRADIENT_TEXT}`
-                  : "font-normal text-primary-500 dark:text-primary-300"
+                  : "font-normal text-primary-600 dark:text-primary-400"
               }`}
             >
               {" "}
@@ -104,11 +115,16 @@ export function CompactComposerControls({
         <ArrowUp className="size-3.5 rotate-180" />
       </Button>
 
-      <DropdownWrapper isOpen={isOpen} openUpward minWidth="min-w-52">
+      <DropdownWrapper
+        isOpen={isOpen}
+        aria-label="Composer controls"
+        openUpward
+        minWidth="min-w-52"
+      >
         <div className="max-h-[60vh] overflow-auto noscrollbar py-1">
           {modelList.length > 0 && (
             <>
-              <div className={SECTION}>Model</div>
+              <Section>Model</Section>
               {modelList.map((m) => {
                 const name = formatModelDisplayName(m, variant);
                 const active = model === m;
@@ -116,6 +132,8 @@ export function CompactComposerControls({
                   <Button
                     key={m}
                     type="button"
+                    role="menuitemradio"
+                    aria-checked={active}
                     onClick={() => {
                       onModelChange(m);
                       setIsOpen(false);
@@ -133,10 +151,12 @@ export function CompactComposerControls({
 
           {hasEffortLevels ? (
             <>
-              <div className={SECTION}>Reasoning</div>
+              <Section>Reasoning</Section>
               {variant !== "codex" && (
                 <Button
                   type="button"
+                  role="menuitemradio"
+                  aria-checked={!thinkingMode}
                   onClick={() => {
                     onEffortLevelChange("");
                     setIsOpen(false);
@@ -153,6 +173,8 @@ export function CompactComposerControls({
                   <Button
                     key={level}
                     type="button"
+                    role="menuitemradio"
+                    aria-checked={active}
                     onClick={() => {
                       onEffortLevelChange(level);
                       setIsOpen(false);
@@ -168,6 +190,8 @@ export function CompactComposerControls({
               {supportsUltracode && variant === "claude" && (
                 <Button
                   type="button"
+                  role="menuitemradio"
+                  aria-checked={thinkingMode && effortLevel === "ultracode"}
                   onClick={() => {
                     onEffortLevelChange("ultracode");
                     setIsOpen(false);
@@ -177,7 +201,7 @@ export function CompactComposerControls({
                   <Brain
                     className={`size-3.5 shrink-0 ${
                       thinkingMode && effortLevel === "ultracode"
-                        ? "text-cyan-500 dark:text-cyan-400"
+                        ? "text-accent"
                         : ""
                     }`}
                   />
@@ -198,9 +222,11 @@ export function CompactComposerControls({
             </>
           ) : variant === "claude" ? (
             <>
-              <div className={SECTION}>Thinking</div>
+              <Section>Thinking</Section>
               <Button
                 type="button"
+                role="menuitemcheckbox"
+                aria-checked={thinkingMode}
                 onClick={() => {
                   onThinkingModeToggle();
                   setIsOpen(false);
@@ -216,9 +242,11 @@ export function CompactComposerControls({
 
           {supportsFastMode && (
             <>
-              <div className={SECTION}>Speed</div>
+              <Section>Speed</Section>
               <Button
                 type="button"
+                role="menuitemcheckbox"
+                aria-checked={fastMode}
                 onClick={() => {
                   onFastModeToggle();
                   setIsOpen(false);

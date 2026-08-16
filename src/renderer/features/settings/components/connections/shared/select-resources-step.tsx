@@ -1,4 +1,5 @@
-import { Muted, ErrorText, Body, Button, Checkbox } from "@/components/ui";
+import { useId } from "react";
+import { Body, Button, Checkbox, ErrorText, Muted, Text } from "@/components/ui";
 
 interface SelectableResource {
   id: string | number;
@@ -19,22 +20,22 @@ function ResourceRow<T extends SelectableResource>({
   loading: boolean;
 }) {
   const content = renderItem(resource);
+  const resourceLabelId = useId();
 
   return (
     <div className="flex items-center dark:bg-primary-950/50 bg-primary  justify-between px-4 py-3.5 border-b border-primary-200/50 dark:border-primary-800/40 last:border-b-0">
-      <div
-        role="button"
-        tabIndex={0}
-        className="flex-1 cursor-pointer"
+      <Button
+        id={resourceLabelId}
+        className="flex-1 text-left cursor-pointer"
         onClick={() => onToggle(resource.id)}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(resource.id); } }}
       >
         {content}
-      </div>
+      </Button>
       <Checkbox
         checked={selected}
         onChange={() => onToggle(resource.id)}
         disabled={loading}
+        aria-labelledby={resourceLabelId}
       />
     </div>
   );
@@ -86,9 +87,15 @@ export function SelectResourcesStep<T extends SelectableResource>({
       {title && <Muted>{title}</Muted>}
       {!title && (
         <Muted>
-          <span className="mr-1 font-semibold dark:text-primary text-primary-950">
+          <Text
+            as="span"
+            size="inherit"
+            tone="contrast"
+            weight="semibold"
+            className="mr-1"
+          >
             {selectedCount}
-          </span>
+          </Text>
           selected.
         </Muted>
       )}

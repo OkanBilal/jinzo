@@ -1,5 +1,9 @@
 import { baseApi } from "./baseApi";
 import { CHANNELS } from "../../../../shared/ipc-kit/channels";
+import type {
+  PluginAvailability,
+  PluginDisabledReason,
+} from "../../../../shared/plugin-install-availability";
 
 export interface RateLimitWindow {
   usedPercent: number;
@@ -197,6 +201,10 @@ export interface PluginInfo {
   installed: boolean;
   enabled: boolean;
   installPolicy: "NOT_AVAILABLE" | "AVAILABLE" | "INSTALLED_BY_DEFAULT";
+  availability?: PluginAvailability;
+  disabledReason?: PluginDisabledReason | null;
+  eligiblePlanTypes?: string[] | null;
+  installedAt?: number | null;
   authPolicy: "ON_INSTALL" | "ON_USE";
   interface: PluginInterfaceInfo | null;
   /** Marketplace install count (popularity), when known. */

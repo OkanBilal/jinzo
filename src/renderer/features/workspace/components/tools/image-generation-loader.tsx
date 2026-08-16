@@ -71,7 +71,7 @@ export function ImageGenerationLoader({ startedAt }: { startedAt: Date }) {
       <div className="relative z-10 flex h-full flex-col">
         <div
           key={stage}
-          className="image-generation-stage px-6 pt-6 text-sm font-semibold tracking-[-0.01em] text-primary-800 dark:text-primary-100"
+          className="image-generation-stage px-6 pt-6 text-sm font-semibold tracking-[-0.01em] text-primary-800 dark:text-primary-200"
         >
           {stage}
         </div>

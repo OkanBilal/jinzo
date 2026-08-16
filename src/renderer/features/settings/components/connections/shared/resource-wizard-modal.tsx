@@ -2,6 +2,7 @@ import { ReactNode, useState } from "react";
 
 import {
   ErrorText,
+  getSegmentedTabId,
   SegmentedTabs,
   WizardModal,
   useWizard,
@@ -230,6 +231,7 @@ function CredentialsStep({
   return (
     <div className="space-y-4">
       <SegmentedTabs
+        id="connection-auth-method-tabs"
         value={method}
         onChange={(next) => {
           setMethod(next);
@@ -239,12 +241,22 @@ function CredentialsStep({
           { value: "alternative", label: alternative.label },
           { value: "token", label: alternative.tokenLabel },
         ]}
+        panelId="connection-auth-method-panel"
+        aria-label="Authentication method"
         className="w-fit"
       />
       {/* Both panes stay mounted in the same grid cell so the modal keeps
           one height across tabs (the taller pane sets it) and each tab's
           state survives switching. */}
-      <div className="grid">
+      <div
+        id="connection-auth-method-panel"
+        role="tabpanel"
+        aria-labelledby={getSegmentedTabId(
+          "connection-auth-method-tabs",
+          method,
+        )}
+        className="grid"
+      >
         <div
           className={`col-start-1 row-start-1 ${
             method === "token" ? "" : "invisible pointer-events-none"

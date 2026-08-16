@@ -6,10 +6,11 @@ import type { CreateEditor, FileContents } from "@pierre/diffs/react";
 import { Editor, type EditorOptions } from "@pierre/diffs/edit";
 import {
   setSelectedFileContent,
-  addContextCodeSelection,
+  addContextItem,
 } from "@/lib/redux/slices/workspaceSlice";
 import { useResyncWorkspaceDiffMutation } from "@/lib/redux/api";
-import { Button } from "@/components/ui";
+import { DIFF_TYPOGRAPHY_STYLE, diffSurfaceOptions } from "@/lib/diff-style";
+import { Button, Text } from "@/components/ui";
 import type {
   FileContentResponse,
   ServiceResponse,
@@ -204,7 +205,8 @@ export function CodeViewer({
         const endLine =
           end.character === 0 && end.line > start.line ? end.line - 1 : end.line;
         dispatch(
-          addContextCodeSelection({
+          addContextItem({
+            kind: "code",
             id: crypto.randomUUID(),
             filePath,
             fileName: filename ?? filePath.split("/").pop() ?? filePath,
@@ -329,12 +331,15 @@ export function CodeViewer({
         <div className="absolute top-1 right-2 z-10 flex items-center gap-1.5 rounded-lg px-2 py-1 bg-primary/20 dark:bg-primary-950/50 backdrop-blur-sm">
           {saveState === "error" ? (
             <>
-              <span
-                className="text-xs text-danger max-w-100 truncate"
+              <Text
+                as="span"
+                size="xs"
+                tone="danger"
+                className="max-w-100 truncate"
                 title={saveError ?? undefined}
               >
                 {saveError}
-              </span>
+              </Text>
               {conflict ? (
                 <>
                   <Button
@@ -371,21 +376,8 @@ export function CodeViewer({
             file={file}
             edit={!!filePath}
             editorOptions={editorOptions}
-            style={
-              {
-                "--diffs-font-size": "12px",
-                "--diffs-font-family": "ui-monospace, monospace",
-              } as React.CSSProperties
-            }
-            options={{
-              theme: isDarkMode ? "pierre-dark" : "pierre-light",
-              themeType: isDarkMode ? "dark" : "light",
-              overflow: "scroll",
-              disableFileHeader: true,
-              unsafeCSS: `:host, [data-diffs], [data-diffs-header], [data-error-wrapper],
-          [data-line], [data-column-number], [data-code] { --diffs-bg: var(--color-${isDarkMode ? "primary-950" : "primary"});
-          background-color: var(--color-${isDarkMode ? "primary-950" : "primary"}); }`,
-            }}
+            style={DIFF_TYPOGRAPHY_STYLE}
+            options={{ ...diffSurfaceOptions(isDarkMode), overflow: "scroll" }}
           />
         </EditProvider>
       </div>

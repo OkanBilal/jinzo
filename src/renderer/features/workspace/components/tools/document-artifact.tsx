@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type MouseEvent } from "react";
-import { Button, DropdownMenu, DropdownMenuItem } from "@/components/ui";
+import { Button, DropdownMenu, DropdownMenuItem, Text } from "@/components/ui";
 import { ArrowUp, Finder, Mains } from "@/components/ui/icons";
 import { useLazyGetAppsForFileQuery } from "@/lib/redux/api";
 import { useDocumentViewer } from "@/hooks/use-document-viewer";
@@ -77,25 +77,28 @@ export function DocumentArtifact({
         onClick={openInMains}
         className="flex-1 min-w-0 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary-400 rounded-md"
       >
-        <div className="text-sm font-medium text-primary-950 dark:text-primary truncate">
+        <Text as="div" size="sm" tone="contrast" weight="medium" className="truncate">
           {fileName}
-        </div>
-        <div className="text-xs text-primary-500 dark:text-primary-400 mt-0.5">
+        </Text>
+        <Text as="div" size="xs" tone="subtle" className="mt-0.5">
           {DOC_VIEWER_LABELS[docType]}
           {ext ? ` · ${ext}` : ""}
-        </div>
+        </Text>
       </Button>
       <Button
         ref={openBtnRef}
         type="button"
         onClick={openMenu}
-        className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium text-primary-800 dark:text-primary-100 bg-primary-100/80 dark:bg-primary-800/40 hover:bg-primary-200/60 dark:hover:bg-primary-700/35 transition-colors cursor-pointer"
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
+        className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium text-primary-800 dark:text-primary-200 bg-primary-100/80 dark:bg-primary-800/40 hover:bg-primary-200/60 dark:hover:bg-primary-700/35 transition-colors cursor-pointer"
       >
         Open
         <ArrowUp className="size-3.5 rotate-180" />
       </Button>
       <DropdownMenu
         isOpen={menuOpen}
+        aria-label="Document actions"
         position={menuPos}
         onClose={() => setMenuOpen(false)}
         minWidth={240}
@@ -112,9 +115,9 @@ export function DocumentArtifact({
           </DropdownMenuItem>
         )}
         {isFetching ? (
-          <div className="px-3 py-2 text-xs text-primary-500 dark:text-primary-400">
+          <Text as="div" size="xs" tone="subtle" className="px-3 py-2">
             Loading applications…
-          </div>
+          </Text>
         ) : (
           handlerApps.map((app) => (
             <DropdownMenuItem key={app.bundleId} onClick={() => openWithBundle(app.bundleId)}>

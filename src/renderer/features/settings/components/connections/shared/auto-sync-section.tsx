@@ -75,12 +75,13 @@ export function AutoSyncSection({
           <Body>
             Auto Sync
           </Body>
-          <Muted className="text-xs">
+          <Muted size="xs">
             Automatically sync {providerLabel} data on a schedule
           </Muted>
         </div>
         <Toggle
           enabled={isEnabled ?? false}
+          aria-label={`Automatically sync ${providerLabel} data`}
           onChange={() => handleToggle()}
         />
       </div>
@@ -97,6 +98,8 @@ export function AutoSyncSection({
                 label: o.label,
               }))}
               variant="bordered"
+              semantics="radiogroup"
+              aria-label="Sync interval"
               disabled={!isEnabled}
             />
           </div>

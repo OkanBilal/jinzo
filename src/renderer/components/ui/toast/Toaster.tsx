@@ -6,6 +6,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { toastStore, toast as toastApi } from "./toast";
+import Text from "../text";
 import type { ToastItemProps, ToastType } from "./types";
 import { Button } from "../button";
 import { Error, Success } from "../icons";
@@ -85,9 +86,10 @@ function ToastItem({ toast, onDismiss }: ToastItemProps) {
         text-primary-950 dark:text-primary toast-item"
     >
       {icon && <span className="flex items-center">{icon}</span>}
-      <span className="text-sm font-medium whitespace-nowrap">
+      {/* Colour comes from the toast shell, which owns the surface it sits on. */}
+      <Text as="span" tone="inherit" weight="medium" className="whitespace-nowrap">
         {toast.message}
-      </span>
+      </Text>
       {toast.action && (
         <Button
           onClick={(e) => {
@@ -95,7 +97,7 @@ function ToastItem({ toast, onDismiss }: ToastItemProps) {
             toast.action?.onClick();
             handleDismiss();
           }}
-          className="text-sm font-semibold text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+          className="text-sm font-semibold text-accent transition-colors"
         >
           {toast.action.label}
         </Button>

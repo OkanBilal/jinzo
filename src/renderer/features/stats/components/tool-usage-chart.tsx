@@ -38,7 +38,7 @@ export default function ToolUsageChart({ data }: ToolUsageChartProps) {
             key: d.toolName,
             hoverLabel: `${d.toolName}: ${d.count}`,
             topLabel: (
-              <Text className="text-t tabular-nums">
+              <Text as="span" size="t" className="tabular-nums">
                 {d.count}
               </Text>
             ),
@@ -62,9 +62,10 @@ export default function ToolUsageChart({ data }: ToolUsageChartProps) {
             key: d.toolName,
             content: (
               <Text
-
-                className="text-xt truncate block max-w-full"
                 as="span"
+                size="xt"
+                tone="subtle"
+                className="truncate block max-w-full"
               >
                 {d.toolName}
               </Text>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Bash } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse, ToolOutputBody } from "./_shared";
-import { coerceToolOutput } from "../../utils/parse-tool-content";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader, ToolOutputBody } from "./_shared";
+import { coerceToolOutput } from "../../lib/parse-tool-content";
 
 export interface BashParams {
   command?: string;
@@ -24,7 +24,7 @@ export function BashDisplay({ params, output, isCompact = false }: { params: Bas
         onToggle={() => setIsExpanded((v) => !v)}
         isCompact={isCompact}
       >
-        <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+        <span className={`truncate ${TOOL_ROW_TEXT}`}>
           {params.description || params.command || "command"}
         </span>
       </ToolHeader>

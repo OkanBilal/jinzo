@@ -1,8 +1,8 @@
-import { useReducer } from "react";
+import { useId, useReducer } from "react";
 import {
   useGetProviderByIdQuery,
 } from "@/lib/redux/api";
-import { Modal } from "@/components/ui";
+import { getSegmentedTabId, Modal } from "@/components/ui";
 import { SchemaListTab } from "./schema-list-tab";
 import { SchemaEditorTab, type SchemaProperty } from "./schema-editor-tab";
 import { SchemaDeleteDialog } from "./schema-delete-dialog";
@@ -45,6 +45,7 @@ export function StructuredOutputsModal({
   providerId,
   enableFlag = false,
 }: StructuredOutputsModalProps) {
+  const titleId = useId();
   const { data: provider } = useGetProviderByIdQuery(providerId);
   const config = (provider?.config ?? {}) as Record<string, unknown>;
 
@@ -120,19 +121,30 @@ export function StructuredOutputsModal({
   return (
     <Modal
       isOpen
-      // Escape/backdrop dismiss the nested delete confirm first, then the modal.
+      // Keep any fallback dismissal scoped to the nested confirmation first.
       onClose={
         deleteTargetId ? () => updateState({ deleteTargetId: null }) : onClose
       }
+      aria-labelledby={titleId}
       className="w-full max-w-180 h-120 rounded-3xl"
     >
-        <SchemaModalHeader
-          activeTab={activeTab}
-          editingId={editingId}
-          onTabChange={(tab) => updateState({ activeTab: tab })}
-          onClose={onClose}
-        />
+      <SchemaModalHeader
+        titleId={titleId}
+        activeTab={activeTab}
+        editingId={editingId}
+        onTabChange={(tab) => updateState({ activeTab: tab })}
+        onClose={onClose}
+      />
 
+      <div
+        id="structured-outputs-panel"
+        role="tabpanel"
+        aria-labelledby={getSegmentedTabId(
+          "structured-outputs-tabs",
+          activeTab,
+        )}
+        className="flex min-h-0 flex-1 flex-col"
+      >
         {activeTab === "schemas" && (
           <SchemaListTab
             sortedEntries={sortedEntries}
@@ -165,14 +177,15 @@ export function StructuredOutputsModal({
             onSave={crud.handleSaveSchema}
           />
         )}
+      </div>
 
-        {deleteTargetId && (
-          <SchemaDeleteDialog
-            schemaName={entries[deleteTargetId]?.name ?? ""}
-            onCancel={() => updateState({ deleteTargetId: null })}
-            onConfirm={crud.handleConfirmDelete}
-          />
-        )}
+      {deleteTargetId && (
+        <SchemaDeleteDialog
+          schemaName={entries[deleteTargetId]?.name ?? ""}
+          onCancel={() => updateState({ deleteTargetId: null })}
+          onConfirm={crud.handleConfirmDelete}
+        />
+      )}
     </Modal>
   );
 }

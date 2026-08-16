@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { resolveTool } from "../../utils/resolve-tool";
+import { Text } from "@/components/ui";
+import { resolveTool } from "../../lib/resolve-tool";
 import { ToolHeader, ToolCollapse } from "./_shared";
 
 interface McpDisplayProps {
@@ -76,9 +77,9 @@ function formatCodePayload(raw: string): string {
 function McpOutput({ segments }: { segments: string[] }) {
   const body = segments.map(formatCodePayload).join("\n\n");
   return (
-    <pre className="noscrollbar text-xs text-primary-950 dark:text-primary whitespace-pre-wrap font-mono bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-64 overflow-y-auto">
+    <Text as="pre" size="xs" tone="contrast" className="noscrollbar whitespace-pre-wrap font-mono bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-64 overflow-y-auto">
       <code>{body}</code>
-    </pre>
+    </Text>
   );
 }
 

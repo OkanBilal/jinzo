@@ -16,14 +16,17 @@ import {
   type PullRequestSummary,
 } from "@/lib/redux/api";
 import {
+  Body,
   Button,
   DropdownWrapper,
+  getSegmentedTabId,
+  Heading3,
   SegmentedTabs,
   SendButton,
+  Text,
   Textarea,
+  toast,
 } from "@/components/ui";
-import { Body, Heading3 } from "@/components/ui/text";
-import { toast } from "@/components/ui/toast";
 import { extractErrorMessage } from "@/lib/extract-error-message";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import {
@@ -38,6 +41,7 @@ import {
 } from "@/components/ui/icons";
 import { proxiedImageSrc } from "@/lib/proxied-image-src";
 import { formatDate } from "@/lib/format-date";
+import { FilterLabel } from "./filter-section";
 import { PrDiffView, warmDiffHighlighter } from "./pr-diff-view";
 
 const DETAIL_TABS: { value: "summary" | "code"; label: string }[] = [
@@ -52,16 +56,16 @@ const MERGE_METHODS: { value: PrMergeMethod; label: string }[] = [
 ];
 
 const STATE_BADGE: Record<string, string> = {
-  open: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400",
+  open: "bg-primary-100 dark:bg-success/30 text-success",
   merged:
-    "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400",
-  closed: "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400",
+    "bg-primary-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400",
+  closed: "bg-primary-100 dark:bg-danger/30 text-danger",
 };
 
 const CHECK_DOT: Record<string, string> = {
-  passing: "bg-green-500",
-  failing: "bg-red-500",
-  pending: "bg-yellow-500",
+  passing: "bg-success",
+  failing: "bg-danger",
+  pending: "bg-warning",
   none: "bg-primary-400",
 };
 
@@ -81,9 +85,23 @@ function Avatar({ author }: { author: PrComment["author"] }) {
   );
 }
 
+/** Heading over one block of the detail body (Description / Threads / Comments). */
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <Body size="xs" tone="muted" weight="medium" className="mb-1.5">
+      {children}
+    </Body>
+  );
+}
+
 function Markdown({ children }: { children: string }) {
   return (
-    <div className="prose prose-sm dark:prose-invert max-w-none text-s text-primary-800 dark:text-primary-200 wrap-break-word">
+    <Text
+      as="div"
+      size="s"
+      tone="secondary"
+      className="prose prose-sm dark:prose-invert max-w-none wrap-break-word"
+    >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw, [rehypeSanitize, markdownSanitizeSchema]]}
@@ -91,7 +109,7 @@ function Markdown({ children }: { children: string }) {
       >
         {children}
       </ReactMarkdown>
-    </div>
+    </Text>
   );
 }
 
@@ -106,15 +124,15 @@ function MetaRow({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <span className="shrink-0 mt-0.5 w-4 flex items-center justify-center text-primary-500 dark:text-primary-400">
+      <span className="shrink-0 mt-0.5 w-4 flex items-center justify-center text-primary-600 dark:text-primary-400">
         {icon}
       </span>
-      <span className="shrink-0 w-24 text-s text-primary-500 dark:text-primary-400">
+      <Text as="span" size="s" tone="subtle" className="shrink-0 w-24">
         {label}
-      </span>
-      <span className="min-w-0 text-s text-primary-900 dark:text-primary-100">
+      </Text>
+      <Text as="span" size="s" className="min-w-0">
         {children}
-      </span>
+      </Text>
     </div>
   );
 }
@@ -124,12 +142,12 @@ function CommentCard({ comment }: { comment: PrComment }) {
     <div className="rounded-2xl bg-primary/30 dark:bg-primary/2 glass-outline px-3 py-3">
       <div className="flex items-center gap-2 mb-1.5">
         <Avatar author={comment.author} />
-        <span className="text-s font-medium text-primary-900 dark:text-primary-100">
+        <Text as="span" size="s" weight="medium">
           {comment.author?.login ?? "unknown"}
-        </span>
-        <span className="text-xs text-primary-600 dark:text-primary-400 ml-auto">
+        </Text>
+        <Text as="span" size="xs" tone="subtle" className="ml-auto">
           {formatDate(comment.createdAt)}
-        </span>
+        </Text>
       </div>
       <Markdown>{comment.body}</Markdown>
     </div>
@@ -262,7 +280,7 @@ export function PrDetail({ pr }: PrDetailProps) {
         <div className="flex items-start gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <Body className=" text-primary-600 dark:text-primary-400 truncate">
+              <Body tone="subtle" className="truncate">
                 {pr.repo.owner}/{pr.repo.repo}
               </Body>
 
@@ -274,11 +292,15 @@ export function PrDetail({ pr }: PrDetailProps) {
                   : current.state}
               </span>
             </div>
-            <Heading3 className="text-base font-medium text-primary-950 dark:text-primary-50 mt-1 wrap-break-word">
+            <Heading3
+              size="base"
+              weight="medium"
+              className="mt-1 wrap-break-word"
+            >
               {current.title}{" "}
-              <span className="text-primary-500 dark:text-primary-400 font-normal">
+              <Text as="span" size="inherit" tone="subtle" weight="normal">
                 #{pr.number}
-              </span>
+              </Text>
             </Heading3>
           </div>
           <Button
@@ -310,7 +332,7 @@ export function PrDetail({ pr }: PrDetailProps) {
                     variant="ghost"
                     disabled={!canMerge || isMerging}
                     onClick={handleMerge}
-                    className="rounded-r-none  bg-[#2563eb] hover:bg-[#2868f1]! text-primary!"
+                    className="rounded-r-none  bg-accent hover:bg-[#2868f1]! text-primary!"
                   >
                     {isMerging
                       ? "Merging..."
@@ -330,28 +352,33 @@ export function PrDetail({ pr }: PrDetailProps) {
                     disabled={!canMerge || isMerging}
                     onClick={() => setMergeMenuOpen((open) => !open)}
                     aria-label="Choose merge method"
+                    aria-haspopup="menu"
                     aria-expanded={mergeMenuOpen}
-                    className="rounded-l-none px-2 bg-[#2563eb]  hover:bg-[#2868f1]! text-primary!"
+                    className="rounded-l-none px-2 bg-accent  hover:bg-[#2868f1]! text-primary!"
                   >
                     <ArrowUp
                       className={`size-3.5 transition-transform rotate-180 text-primary`}
                     />
                   </Button>
                 </div>
-                <DropdownWrapper isOpen={mergeMenuOpen} minWidth="min-w-56">
+                <DropdownWrapper
+                  isOpen={mergeMenuOpen}
+                  aria-label="Merge method"
+                  minWidth="min-w-56"
+                >
                   <div className="py-1.5">
                     {MERGE_METHODS.map((m) => (
                       <Button
                         key={m.value}
+                        role="menuitemradio"
+                        aria-checked={mergeMethod === m.value}
                         onClick={() => {
                           setMergeMethod(m.value);
                           setMergeMenuOpen(false);
                         }}
                         className="w-full flex items-center gap-2 px-3 py-1.5 text-left cursor-pointer transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800"
                       >
-                        <span className="flex-1 min-w-0 truncate text-s text-primary-800 dark:text-primary-100">
-                          {m.label}
-                        </span>
+                        <FilterLabel>{m.label}</FilterLabel>
                         {mergeMethod === m.value && (
                           <Check className="w-3 h-3 shrink-0 text-primary-900 dark:text-primary-100" />
                         )}
@@ -366,24 +393,34 @@ export function PrDetail({ pr }: PrDetailProps) {
 
         {/* Summary / Code tabs */}
         <SegmentedTabs
+          id="pr-detail-tabs"
           value={tab}
           onChange={setTab}
           options={DETAIL_TABS}
+          panelId="pr-detail-panel"
+          aria-label="Pull request view"
           className="w-fit mt-4"
         />
       </div>
 
       {/* Body */}
-      <div className="flex-1 min-h-0 overflow-y-auto noscrollbar px-8 py-3 space-y-4">
+      <div
+        id="pr-detail-panel"
+        role="tabpanel"
+        aria-labelledby={getSegmentedTabId("pr-detail-tabs", tab)}
+        className="flex-1 min-h-0 overflow-y-auto noscrollbar px-8 py-3 space-y-4"
+      >
         {tab === "code" ? (
           <PrDiffView prRef={ref} />
         ) : isLoading && !detail ? (
           <div className="flex items-center justify-center py-8">
-            <span className="text-xs shine-text">Loading pull request...</span>
+            <Text as="span" size="xs" tone="inherit" className="shine-text">
+              Loading pull request...
+            </Text>
           </div>
         ) : isError && !detail ? (
           <div className="flex flex-col items-center gap-2 py-8">
-            <Body className="text-xs text-primary-800 dark:text-primary-300">
+            <Body size="xs" tone="secondary">
               Unable to load this pull request.
             </Body>
             <Button variant="subtle" onClick={() => refetch()}>
@@ -396,16 +433,16 @@ export function PrDetail({ pr }: PrDetailProps) {
             <div className="space-y-2.5">
               <MetaRow icon={<Branch className="w-4 h-4" />} label="Branch">
                 <span className="break-all">{current.headRefName}</span>
-                <span className="text-primary-500 dark:text-primary-400 mx-1.5">
+                <Text as="span" size="inherit" tone="subtle" className="mx-1.5">
                   →
-                </span>
+                </Text>
                 <span>{current.baseRefName}</span>{" "}
-                <span className="text-green-600 dark:text-green-400 tabular-nums">
+                <Text as="span" size="inherit" tone="success" className="tabular-nums">
                   +{current.additions.toLocaleString()}
-                </span>{" "}
-                <span className="text-red-500 dark:text-red-400 tabular-nums">
+                </Text>{" "}
+                <Text as="span" size="inherit" tone="danger" className="tabular-nums">
                   -{current.deletions.toLocaleString()}
-                </span>
+                </Text>
               </MetaRow>
               <MetaRow
                 icon={<Personalize className="w-4 h-4" />}
@@ -413,10 +450,10 @@ export function PrDetail({ pr }: PrDetailProps) {
               >
                 {reviewers.length > 0 ? reviewers.join(", ") : "No reviewers"}
                 {detail.reviewDecision && (
-                  <span className="text-primary-500 dark:text-primary-400 capitalize">
+                  <Text as="span" size="inherit" tone="subtle" className="capitalize">
                     {" · "}
                     {detail.reviewDecision.replace(/_/g, " ").toLowerCase()}
-                  </span>
+                  </Text>
                 )}
               </MetaRow>
               <MetaRow icon={<Chat className="w-4 h-4" />} label="Comments">
@@ -431,6 +468,7 @@ export function PrDetail({ pr }: PrDetailProps) {
                   <div className="relative" ref={checksDropdownRef}>
                     <Button
                       onClick={() => setChecksOpen((open) => !open)}
+                      aria-expanded={checksOpen}
                       className="flex items-center gap-1 cursor-pointer text-s text-primary-900 dark:text-primary-100 hover:text-primary-700 dark:hover:text-primary-300"
                     >
                       {checksSummary}
@@ -438,7 +476,12 @@ export function PrDetail({ pr }: PrDetailProps) {
                         className={`w-3 h-3 transition-transform rotate-180 `}
                       />
                     </Button>
-                    <DropdownWrapper isOpen={checksOpen} minWidth="min-w-56">
+                    <DropdownWrapper
+                      isOpen={checksOpen}
+                      role="region"
+                      aria-label="CI checks"
+                      minWidth="min-w-56"
+                    >
                       <div className="py-2 px-3 space-y-1.5">
                         {detail.checks.map((check, i) => (
                           <div
@@ -448,9 +491,14 @@ export function PrDetail({ pr }: PrDetailProps) {
                             <span
                               className={`w-1.5 h-1.5 rounded-full shrink-0 ${CHECK_DOT[check.status]}`}
                             />
-                            <span className="text-xs text-primary-800 dark:text-primary-200 truncate">
+                            <Text
+                              as="span"
+                              size="xs"
+                              tone="secondary"
+                              className="truncate"
+                            >
                               {check.name}
-                            </span>
+                            </Text>
                           </div>
                         ))}
                       </div>
@@ -468,24 +516,24 @@ export function PrDetail({ pr }: PrDetailProps) {
 
             {/* Description */}
             <div>
-              <Body className="text-xs font-medium text-primary-700 dark:text-primary-300 mb-1.5">
+              <SectionHeading>
                 Description
-              </Body>
+              </SectionHeading>
               {detail.body.trim() ? (
                 <Markdown>{detail.body}</Markdown>
               ) : (
-                <span className="text-xs text-primary-600 dark:text-primary-400">
+                <Text as="span" size="xs" tone="subtle">
                   No description provided
-                </span>
+                </Text>
               )}
             </div>
 
             {/* Review threads */}
             {detail.reviewThreads.length > 0 && (
               <div>
-                <Body className="text-xs font-medium text-primary-700 dark:text-primary-300 mb-1.5">
+                <SectionHeading>
                   Review threads
-                </Body>
+                </SectionHeading>
                 <div className="space-y-3">
                   {detail.reviewThreads.map((thread) => (
                     <div
@@ -497,14 +545,14 @@ export function PrDetail({ pr }: PrDetailProps) {
                       }`}
                     >
                       <div className="flex items-center gap-2 mb-1.5">
-                        <span className="text-xxs font-mono text-primary-700 dark:text-primary-300 truncate">
+                        <Text as="span" size="xxs" tone="muted" className="font-mono truncate">
                           {thread.path}
                           {thread.line != null ? `:${thread.line}` : ""}
-                        </span>
+                        </Text>
                         {thread.isResolved && (
-                          <span className="text-xxs text-primary-500 dark:text-primary-400">
+                          <Text as="span" size="xxs" tone="subtle">
                             Resolved
-                          </span>
+                          </Text>
                         )}
                         {(thread.isResolved
                           ? thread.viewerCanUnresolve
@@ -528,9 +576,15 @@ export function PrDetail({ pr }: PrDetailProps) {
                           >
                             <Avatar author={comment.author} />
                             <div className="min-w-0 flex-1">
-                              <span className="text-s font-medium text-primary-800 dark:text-primary-200 mr-1.5">
+                              <Text
+                                as="span"
+                                size="s"
+                                tone="secondary"
+                                weight="medium"
+                                className="mr-1.5"
+                              >
                                 {comment.author?.login ?? "unknown"}
-                              </span>
+                              </Text>
                               <Markdown>{comment.body}</Markdown>
                             </div>
                           </div>
@@ -544,13 +598,13 @@ export function PrDetail({ pr }: PrDetailProps) {
 
             {/* Comments */}
             <div>
-              <Body className="text-xs font-medium text-primary-700 dark:text-primary-300 mb-1.5">
+              <SectionHeading>
                 Comments
-              </Body>
+              </SectionHeading>
               {detail.comments.length === 0 ? (
-                <span className="text-xs text-primary-600 dark:text-primary-400">
+                <Text as="span" size="xs" tone="subtle">
                   No comments yet
-                </span>
+                </Text>
               ) : (
                 <div className="space-y-2">
                   {detail.comments.map((comment) => (
@@ -581,7 +635,7 @@ export function PrDetail({ pr }: PrDetailProps) {
             }}
             placeholder="Leave a comment"
             rows={3}
-            className="w-full resize-none px-3 py-2 pr-12 text-s rounded-2xl bg-primary/40 dark:bg-primary/5 glass-outline placeholder:text-primary-600 dark:placeholder:text-primary-500 text-primary-900 dark:text-primary-100 outline-none"
+            className="w-full resize-none px-3 py-2 pr-12 text-s rounded-2xl bg-primary/40 dark:bg-primary/5 glass-outline placeholder:text-primary-500 dark:placeholder:text-primary-500 text-primary-900 dark:text-primary-100 outline-none"
           />
           <div className="absolute bottom-4 right-2 z-10">
             <SendButton

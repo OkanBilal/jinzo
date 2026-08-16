@@ -1,14 +1,6 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useId } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Caption,
-  Heading3,
-  Button,
-  Checkbox,
-  toast,
-  Body,
-  Modal,
-} from "@/components/ui";
+import { Body, Button, Caption, Checkbox, Heading3, Modal, Text, toast } from "@/components/ui";
 import { extractErrorMessage } from "@/lib/extract-error-message";
 import {
   useListAvailableResourcesQuery,
@@ -32,6 +24,7 @@ export function LinkResourcesModal({
   onClose,
 }: LinkResourcesModalProps) {
   const navigate = useNavigate();
+  const titleId = useId();
 
   const goToApps = useCallback(() => {
     onClose();
@@ -148,34 +141,38 @@ export function LinkResourcesModal({
     return (
       <div
         key={resource.id}
-        role="button"
-        tabIndex={0}
-        onClick={() => !saving && toggleResource(resource.id)}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (!saving) toggleResource(resource.id); } }}
-        className={`flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-all duration-150 dark:bg-primary-950/50 bg-primary ${
+        className={`flex items-center bg-primary transition-all duration-150 dark:bg-primary-950/50 ${
           selected
             ? ""
             : ""
         }`}
       >
-        <span className="text-primary-500 dark:text-primary-400">{icon}</span>
-        <div className="flex-1 min-w-0">
-          <div className="flex gap-2 items-center">
-            <Body className="font-medium"
-            >
-              {resource.name || resource.externalId}
-            </Body>
-            {resource.externalId !== resource.name && (
-              <Caption className="truncate block mt-0.5">
-                {resource.externalId}
-              </Caption>
-            )}
+        <Button
+          variant="bare"
+          onClick={() => toggleResource(resource.id)}
+          disabled={saving}
+          className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3.5 text-left"
+        >
+          <Text as="span" size="inherit" tone="subtle">{icon}</Text>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <Body as="span" weight="medium">
+                {resource.name || resource.externalId}
+              </Body>
+              {resource.externalId !== resource.name && (
+                <Caption className="mt-0.5 block truncate">
+                  {resource.externalId}
+                </Caption>
+              )}
+            </div>
           </div>
-        </div>
+        </Button>
         <Checkbox
           checked={selected}
           onChange={() => toggleResource(resource.id)}
           disabled={saving}
+          aria-label={`Link ${resource.name || resource.externalId}`}
+          className="mr-4"
         />
       </div>
     );
@@ -185,11 +182,12 @@ export function LinkResourcesModal({
     <Modal
       isOpen
       onClose={handleCancel}
+      aria-labelledby={titleId}
       className="w-full max-w-xl rounded-3xl"
     >
       {/* Header */}
       <div className="px-6 pt-6 pb-4">
-        <Heading3>
+        <Heading3 id={titleId}>
           Link Resources
         </Heading3>
       </div>
@@ -202,15 +200,15 @@ export function LinkResourcesModal({
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="flex items-center gap-2">
-                <span className="text-sm shine-text">
+                <Text as="span" size="sm" tone="inherit" className="shine-text">
                   Loading resources...
-                </span>
+                </Text>
               </div>
             </div>
           ) : resources.length === 0 ? (
             <div className="p-8 text-center flex flex-col items-center">
-              <Connect className="size-6 mb-3 text-primary-400 dark:text-primary-700" />
-              <Body className="font-medium">
+              <Connect className="size-6 mb-3 text-primary-600 dark:text-primary-400" />
+              <Body weight="medium">
                 No resources available
               </Body>
               <Caption className="mt-1 block">
@@ -218,7 +216,7 @@ export function LinkResourcesModal({
                 <Button
                   type="button"
                   onClick={goToApps}
-                  className="underline dark:hover:text-primary-300 hover:text-primary-600 transition-colors cursor-pointer"
+                  className="underline dark:hover:text-primary-400 hover:text-primary-600 transition-colors cursor-pointer"
                 >
                   settings
                 </Button>{" "}

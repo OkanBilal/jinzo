@@ -7,6 +7,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "../button";
+import Text from "../text";
 import DropdownWrapper from "../dropdown-wrapper";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import {
@@ -383,16 +384,18 @@ export function ModelSelectDropdown({
           }
           className={`text-sm  px-2 py-1.5 flex items-center gap-1.5 ${
             noModels
-              ? "text-primary-400 dark:text-primary-600 cursor-not-allowed"
+              ? "text-primary-600 dark:text-primary-400 cursor-not-allowed"
               : "cursor-pointer text-primary-950 dark:text-primary"
           }`}
-          aria-haspopup="true"
+          aria-haspopup="menu"
           aria-expanded={isOpen}
           disabled={noModels || (isLoading && !displayModel)}
         >
           {isLoading && !displayModel ? (
             <span className="inline-flex items-center gap-1.5">
-              <span className="shine-text text-sm">Loading models...</span>
+              <Text as="span" tone="inherit" className="shine-text">
+                Loading models...
+              </Text>
             </span>
           ) : noModels ? (
             <span>No models found</span>
@@ -405,7 +408,7 @@ export function ModelSelectDropdown({
                   className={`shrink-0 capitalize ${
                     effortLevel === "ultracode"
                       ? `font-medium ${ULTRACODE_GRADIENT_TEXT}`
-                      : "font-normal text-primary-500 dark:text-primary-300"
+                      : "font-normal text-primary-600 dark:text-primary-400"
                   }`}
                 >
                   {selectedEffortLabel}
@@ -419,6 +422,7 @@ export function ModelSelectDropdown({
 
       <DropdownWrapper
         isOpen={isOpen}
+        aria-label="Model selection"
         openUpward={openUpward}
         minWidth="min-w-48"
         dropdownRef={mainMenuRef}
@@ -501,20 +505,24 @@ export function ModelSelectDropdown({
                 : "thinking mode"
             }`}
           >
-            <div
+            <Text
+              as="div"
               ref={effortMenuHeaderRef}
-              className="flex items-center gap-1.5 px-3 pb-1.5 pt-2 text-xxs font-medium tracking-wide"
+              size="xxs"
+              tone="subtle"
+              weight="medium"
+              className="flex items-center gap-1.5 px-3 pb-1.5 pt-2 tracking-wide"
             >
-              <span className="shrink-0 text-primary-500 dark:text-primary-300">
+              <span className="shrink-0">
                 {getModelIcon(hoveredModelDisplayName, variant)}
               </span>
-              <span className="min-w-0 flex-1 truncate text-primary-600 dark:text-primary-300">
+              <span className="min-w-0 flex-1 truncate">
                 {hoveredModelDisplayName}
               </span>
-              <span className="shrink-0 text-primary-400 dark:text-primary-500">
+              <span className="shrink-0">
                 {hoveredModelEffortLevels.length > 0 ? "Effort" : "Thinking"}
               </span>
-            </div>
+            </Text>
 
             {hoveredModelEffortLevels.length > 0 ? (
               <>

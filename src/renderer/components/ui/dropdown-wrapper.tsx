@@ -1,11 +1,19 @@
-import { ReactNode, useEffect, useRef, useState } from "react";
+import {
+  ReactNode,
+  useEffect,
+  useRef,
+  useState,
+  type AriaRole,
+  type KeyboardEventHandler,
+} from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../../lib/cn";
 import { isAppReady } from "../../lib/app-ready";
 
-interface DropdownWrapperProps {
+export interface DropdownWrapperProps {
+  id?: string;
   isOpen: boolean;
-  children: ReactNode;
+  children?: ReactNode;
   openUpward?: boolean;
   minWidth?: string;
   position?: "left" | "right";
@@ -14,9 +22,14 @@ interface DropdownWrapperProps {
   dropdownRef?: React.RefObject<HTMLDivElement | null>;
   /** When portal + anchored: set false so panel can grow beyond trigger width (e.g. menus with min-width). */
   matchTriggerWidth?: boolean;
+  role?: AriaRole;
+  "aria-label"?: string;
+  "aria-labelledby"?: string;
+  onKeyDown?: KeyboardEventHandler<HTMLDivElement>;
 }
 
 export default function DropdownWrapper({
+  id,
   isOpen,
   children,
   openUpward = false,
@@ -26,6 +39,10 @@ export default function DropdownWrapper({
   triggerRef,
   dropdownRef: externalDropdownRef,
   matchTriggerWidth = true,
+  role = "menu",
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
+  onKeyDown,
 }: DropdownWrapperProps) {
   const [coords, setCoords] = useState<{
     top: number | null;
@@ -79,16 +96,21 @@ export default function DropdownWrapper({
     };
   }, [isOpen]);
 
-  // Portal mode: wait for coords before rendering
-  if (usePortal && isOpen && !coords) return null;
+  // Closed panels do not exist in the accessibility tree or tab order. The
+  // previous opacity-only hiding left their buttons keyboard-focusable.
+  if (!isOpen) return null;
+
+  // Portal mode: wait for coords before rendering.
+  if (usePortal && !coords) return null;
 
   const positionClass = position === "right" ? "right-0" : "left-0";
   const verticalClass = openUpward ? "bottom-10" : "top-8";
 
-  const hiddenClass = isOpen && animateIn ? "animate-dropdown-in" : "dropdown-prewarm";
+  const hiddenClass = animateIn ? "animate-dropdown-in" : "dropdown-prewarm";
 
   const dropdown = (
     <div
+      id={id}
       ref={dropdownRef}
       className={cn(
         usePortal ? "fixed" : "absolute",
@@ -120,14 +142,17 @@ export default function DropdownWrapper({
             }
           : {}),
       }}
-      role="menu"
+      role={role}
+      aria-label={ariaLabel}
+      aria-labelledby={ariaLabelledBy}
+      onKeyDown={onKeyDown}
     >
       {children}
     </div>
   );
 
   if (usePortal) {
-    return isOpen ? createPortal(dropdown, document.body) : null;
+    return createPortal(dropdown, document.body);
   }
 
   return dropdown;

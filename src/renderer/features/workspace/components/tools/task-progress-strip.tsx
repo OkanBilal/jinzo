@@ -1,13 +1,13 @@
 import { useState } from "react";
+import { Button, SquareSpinner, Text } from "@/components/ui";
 import {
   subagentStateOf,
   type SubagentLifecycleMeta,
   type SubagentLifecycleState,
   type SubagentTaskMeta,
-} from "../../utils/subagent-identity";
+} from "../../lib/subagent-identity";
 import { Bot, Clock, Document, Stop } from "@/components/ui/icons";
-import { SquareSpinner } from "@/components/ui/square-spinner";
-import { ToolCollapse, ToolOutputBody } from "./_shared";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolOutputBody } from "./_shared";
 
 /**
  * `metadata.task` — written by `run-session.ts` from the provider's task
@@ -64,7 +64,7 @@ function toneOf(task: TaskMetadata): Tone {
 }
 
 const TONE_TEXT: Record<Tone, string> = {
-  running: "text-primary-500 dark:text-primary-300",
+  running: "text-primary-600 dark:text-primary-400",
   ok: "text-success dark:text-success",
   warn: "text-warning dark:text-warning",
   error: "text-danger dark:text-danger",
@@ -164,8 +164,7 @@ export function TaskProgressStrip({
 
   return (
     <div className="flex flex-col">
-      <button
-        type="button"
+      <Button
         onClick={() => hasDetail && setIsExpanded((v) => !v)}
         className={`group flex w-full min-w-0 items-center gap-1.5 py-0.5 text-s font-sans ${
           hasDetail ? "cursor-pointer" : "cursor-default"
@@ -178,14 +177,14 @@ export function TaskProgressStrip({
           <span className={`shrink-0 font-medium ${TONE_TEXT[tone]}`}>{label}</span>
         )}
         {description && (
-          <span className="truncate text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className={`truncate ${TOOL_ROW_TEXT}`}>
             {description}
           </span>
         )}
         {context && (
-          <span className="shrink-0 text-primary-400 dark:text-primary-400">{context}</span>
+          <Text as="span" size="inherit" tone="subtle" className="shrink-0">{context}</Text>
         )}
-      </button>
+      </Button>
 
       {hasDetail && (
         <ToolCollapse isExpanded={isExpanded}>
@@ -193,10 +192,10 @@ export function TaskProgressStrip({
             {detail}
           </ToolOutputBody>
           {outputFile && (
-            <div className="flex items-center gap-1 pt-1 text-s text-primary-400 dark:text-primary-400">
+            <Text as="div" size="s" tone="subtle" className="flex items-center gap-1 pt-1">
               <Document className="size-3 shrink-0" />
               <span className="truncate font-mono">{outputFile}</span>
-            </div>
+            </Text>
           )}
         </ToolCollapse>
       )}
@@ -204,10 +203,10 @@ export function TaskProgressStrip({
       {/* No body to expand, but the captured output still has a location worth
           surfacing — a backgrounded command's real stdout lives only there. */}
       {!hasDetail && outputFile && (
-        <div className="flex items-center gap-1 py-0.5 text-s text-primary-400 dark:text-primary-400">
+        <Text as="div" size="s" tone="subtle" className="flex items-center gap-1 py-0.5">
           <Document className="size-3 shrink-0" />
           <span className="truncate font-mono">{outputFile}</span>
-        </div>
+        </Text>
       )}
     </div>
   );

@@ -31,8 +31,7 @@ import { useSpaceProviderVariant } from "@/hooks/use-space-provider-variant";
 import { useScriptNotifications } from "@/hooks/use-script-notifications";
 import { useSidebarSpaceSwipe } from "@/hooks/use-sidebar-space-swipe";
 import { UpdateBanner } from "./update-banner";
-import { Button } from "@/components/ui/button";
-import { Body, Tooltip } from "@/components/ui";
+import { Button, Text, Tooltip } from "@/components/ui";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { useAppSelector, useAppDispatch } from "@/lib/redux/hooks";
 import { setSidebarWidth } from "@/lib/redux/slices/appSettingsSlice";
@@ -161,7 +160,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     <>
       <aside
         ref={swipeRef}
-        className={`fixed top-0 bottom-0 left-0 z-(--z-sidebar) transition-[transform,opacity] duration-200 ease-out will-change-transform ${
+        className={`fixed top-0 bottom-0 left-0 z-(--z-sidebar) transition-[transform,opacity] duration-150 ease-out will-change-transform ${
           isMobile ? "bg-primary dark:bg-primary-950 shadow-2xl" : ""
         }`}
         style={{
@@ -246,18 +245,17 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                   className={`w-4 h-4 -ml-1 ${
                     isTasksRoute
                       ? "text-primary-950 dark:text-primary"
-                      : "text-primary-900 dark:text-primary-200"
-                  }`}
-                />
-                <Body
-                  className={`text-s font-normal ${
-                    isTasksRoute
-                      ? "text-primary-950 dark:text-primary"
                       : "text-primary-900 dark:text-primary-100"
                   }`}
+                />
+                <Text
+                  as="span"
+                  size="s"
+                  weight="normal"
+                  tone={isTasksRoute ? "contrast" : "default"}
                 >
                   Tasks
-                </Body>
+                </Text>
               </Button>
             </div>
             <div className="px-3 mb-px">
@@ -276,18 +274,17 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                   className={`w-4 h-4 -ml-1 ${
                     isPulseRoute
                       ? "text-primary-950 dark:text-primary"
-                      : "text-primary-900 dark:text-primary-200"
-                  }`}
-                />
-                <Body
-                  className={`text-s font-normal ${
-                    isPulseRoute
-                      ? "text-primary-950 dark:text-primary"
                       : "text-primary-900 dark:text-primary-100"
                   }`}
+                />
+                <Text
+                  as="span"
+                  size="s"
+                  weight="normal"
+                  tone={isPulseRoute ? "contrast" : "default"}
                 >
                   Pulse
-                </Body>
+                </Text>
               </Button>
             </div>
             <div className="px-3 mb-px ">
@@ -312,18 +309,19 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                         className={`w-4 h-4 -ml-1 -rotate-45 ${
                           isPluginsRoute
                             ? "text-primary-950 dark:text-primary"
-                            : "text-primary-900 dark:text-primary-200"
-                        }`}
-                      />
-                      <Body
-                        className={`text-s flex-1 font-normal text-left ${
-                          isPluginsRoute
-                            ? "text-primary-950 dark:text-primary"
                             : "text-primary-900 dark:text-primary-100"
                         }`}
+                      />
+                      <Text
+                        as="span"
+                        size="s"
+                        weight="normal"
+                        tone={isPluginsRoute ? "contrast" : "default"}
+                        align="left"
+                        className="flex-1"
                       >
                         Plugins
-                      </Body>
+                      </Text>
                     </Button>
                   </span>
                 </Tooltip>
@@ -345,18 +343,19 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                     className={`w-4 h-4 -ml-1 shrink-0 -rotate-45 ${
                       isPluginsRoute
                         ? "text-primary-950 dark:text-primary"
-                        : "text-primary-900 dark:text-primary-200"
-                    }`}
-                  />
-                  <Body
-                    className={`text-s font-normal flex-1 text-left ${
-                      isPluginsRoute
-                        ? "text-primary-950 dark:text-primary"
                         : "text-primary-900 dark:text-primary-100"
                     }`}
+                  />
+                  <Text
+                    as="span"
+                    size="s"
+                    weight="normal"
+                    tone={isPluginsRoute ? "contrast" : "default"}
+                    align="left"
+                    className="flex-1"
                   >
                     Plugins
-                  </Body>
+                  </Text>
                 </Button>
               )}
             </div>
@@ -377,23 +376,24 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                   className={`w-4 h-4 -ml-1 shrink-0 ${
                     isRelayRoute
                       ? "text-primary-950 dark:text-primary"
-                      : "text-primary-900 dark:text-primary-200"
-                  }`}
-                />
-                <Body
-                  className={`text-s font-normal flex-1 text-left ${
-                    isRelayRoute
-                      ? "text-primary-950 dark:text-primary"
                       : "text-primary-900 dark:text-primary-100"
                   }`}
+                />
+                <Text
+                  as="span"
+                  size="s"
+                  weight="normal"
+                  tone={isRelayRoute ? "contrast" : "default"}
+                  align="left"
+                  className="flex-1"
                 >
                   Relay
-                </Body>
+                </Text>
                 <span
-                  className={`shrink-0 text-[10px] -mr-1 uppercase px-1.5 py-px rounded-md ${
+                  className={`shrink-0 text-t -mr-1 uppercase px-1.5 py-px rounded-md ${
                     isRelayRoute
                       ? "bg-primary-400/20 text-primary-800 dark:bg-primary/5 dark:text-primary"
-                      : "bg-primary-400/20 text-primary-600 dark:bg-primary/5 dark:text-primary-200"
+                      : "bg-primary-400/20 text-primary-600 dark:bg-primary/5 dark:text-primary-400"
                   }`}
                 >
                   Beta
@@ -414,6 +414,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
               onSpaceChange={handleSpaceChange}
               onSettingsClick={handleOpenSettings}
               onHelpClick={handleOpenHelpMenu}
+              helpMenuOpen={helpMenuState.isOpen}
             />
           </div>
         )}

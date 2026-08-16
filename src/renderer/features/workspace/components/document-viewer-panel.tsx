@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useRef, useState } from "react";
-import { Button } from "@/components/ui";
+import { Button, Text } from "@/components/ui";
 import { Close, Document } from "@/components/ui/icons";
 import { DOC_TYPE_ICONS } from "./document-viewer/doc-type-icons";
 import { useDocumentViewer } from "@/hooks/use-document-viewer";
@@ -96,18 +96,18 @@ export function DocumentViewerPanel() {
       <div className="flex items-center gap-2 px-2.5 py-1.5 border-b border-primary-200/60 dark:border-primary-800/50">
         <DocIcon className="size-4 shrink-0 " />
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-medium text-primary-900 dark:text-primary-100 truncate">
+          <Text as="div" size="xs" tone="default" weight="medium" className="truncate">
             {currentDoc?.fileName ?? "Document"}
-          </div>
+          </Text>
           {currentDoc && (
-            <div className="text-t text-primary-500 dark:text-primary-400 -mt-px">
+            <Text as="div" size="t" tone="subtle" className="-mt-px">
               {DOC_VIEWER_LABELS[currentDoc.docType]}
-            </div>
+            </Text>
           )}
         </div>
 
         {/* Zoom controls */}
-        <div className="flex items-center gap-0.5 text-primary-700 dark:text-primary-300">
+        <Text as="div" size="inherit" tone="muted" className="flex items-center gap-0.5">
           <Button
             tooltip="Zoom out"
             tooltipPosition="bottom"
@@ -116,7 +116,7 @@ export function DocumentViewerPanel() {
             className="size-6 flex items-center justify-center rounded-md cursor-pointer disabled:opacity-40 hover:bg-primary-200/60 dark:hover:bg-primary-800/60"
             aria-label="Zoom out"
           >
-            <span className="text-sm leading-none">−</span>
+            <Text as="span" size="sm" tone="inherit" className="leading-none">−</Text>
           </Button>
           <Button
             tooltip="Reset zoom"
@@ -135,9 +135,9 @@ export function DocumentViewerPanel() {
             className="size-6 flex items-center justify-center rounded-md cursor-pointer disabled:opacity-40 hover:bg-primary-200/60 dark:hover:bg-primary-800/60"
             aria-label="Zoom in"
           >
-            <span className="text-sm leading-none">+</span>
+            <Text as="span" size="sm" tone="inherit" className="leading-none">+</Text>
           </Button>
-        </div>
+        </Text>
 
         <Button
           tooltip="Close"
@@ -154,9 +154,9 @@ export function DocumentViewerPanel() {
       {currentDoc ? (
         <DocumentRenderHost doc={currentDoc} zoom={zoom} />
       ) : (
-        <div className="flex-1 flex items-center justify-center text-primary-500 dark:text-primary-400 text-xs">
+        <Text as="div" size="xs" tone="subtle" className="flex-1 flex items-center justify-center">
           No document selected
-        </div>
+        </Text>
       )}
     </div>
   );

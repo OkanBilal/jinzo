@@ -2,10 +2,14 @@ import { Archive, Option, Edit } from "@/components/ui/icons";
 import type { Run } from "../types";
 import { cn } from "@/lib/cn";
 import { PROVIDER_VARIANTS, type ProviderVariant } from "@/lib/provider-variants";
-import { AnimatedTitle } from "@/components/ui";
+import {
+  AnimatedTitle,
+  AsciiSpinner,
+  DropdownMenu,
+  DropdownMenuItem,
+  Input,
+} from "@/components/ui";
 import { BaseTab } from "./base-tab";
-import { AsciiSpinner } from "@/components/ui/ascii-spinner";
-import { DropdownMenu, DropdownMenuItem } from "@/components/ui";
 import { useState, useRef, useCallback, useEffect } from "react";
 
 interface RunTabProps {
@@ -101,18 +105,20 @@ export function RunTab({ run, isActive, isFirst, onClick, onClose, onRename, tit
   }, [onClose]);
 
   const label = isRenaming ? (
-    <input
+    <Input
+      variant="bare"
       ref={inputRef}
       value={renameValue}
       onChange={(e) => setRenameValue(e.target.value)}
       onBlur={handleRenameConfirm}
       onKeyDown={handleRenameKeyDown}
       onClick={(e) => e.stopPropagation()}
-      className="text-xs font-medium text-primary-900 dark:text-primary-200 bg-transparent outline-none border-b border-primary-400 dark:border-primary-600 w-full"
+      aria-label="Run title"
+      className="text-xs font-medium text-primary-900 dark:text-primary-100 bg-transparent outline-none border-b border-primary-400 dark:border-primary-600 w-full"
       maxLength={50}
     />
   ) : (
-    <AnimatedTitle title={title} className="text-xs font-medium tracking-tight text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200 truncate flex-1" />
+    <AnimatedTitle title={title} className="text-xs font-medium tracking-tight text-primary-900 dark:text-primary-100 hover:text-primary-900 dark:hover:text-primary-100 truncate flex-1" />
   );
 
   return (
@@ -125,10 +131,11 @@ export function RunTab({ run, isActive, isFirst, onClick, onClose, onRename, tit
         icon={<TabIcon run={run} variant={variant} isActive={isActive} />}
         label={label}
         tooltip={isRenaming ? undefined : run.title || run.goal || title}
-        closeIcon={<Option className="size-3.5 text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200" />}
+        closeIcon={<Option className="size-3.5 text-primary-900 dark:text-primary-100 hover:text-primary-900 dark:hover:text-primary-100" />}
       />
       <DropdownMenu
         isOpen={isDropdownOpen}
+        aria-label="Run actions"
         position={dropdownPosition}
         onClose={() => setIsDropdownOpen(false)}
         minWidth={140}

@@ -2,10 +2,10 @@ import { useEffect, useLayoutEffect } from "react";
 import { HashRouter as Router, useLocation } from "react-router-dom";
 import Sidebar from "./components/layout/sidebar";
 import RightPanel from "./components/layout/right-panel";
-import { SessionPanel } from "./components/layout/session-panel";
-import { SubagentPanel } from "./components/layout/subagent-panel/subagent-panel";
+import { SessionPanel } from "@/features/workspace/components/session-panel";
+import { SubagentPanel } from "@/features/workspace/components/subagent-panel/subagent-panel";
 import { useHasSessionSubagents } from "./features/workspace/hooks/use-session-subagents";
-import { selectSessionRunId } from "./components/layout/session-panel/select-session-run";
+import { selectSessionRunId } from "@/features/workspace/components/session-panel/select-session-run";
 import {
   MainRoutes,
   MainLayout,
@@ -24,7 +24,7 @@ import { useDocumentViewer, DocumentViewerProvider } from "./hooks/use-document-
 import { DocumentViewerPanel } from "./features/workspace/components/document-viewer-panel";
 import { useWorkspaceVariant } from "./hooks/use-workspace-variant";
 import { ReduxProvider } from "./providers/redux-provider";
-import { Toaster } from "./components/ui/toast/Toaster";
+import { ErrorBoundary, Toaster } from "@/components/ui";
 import { useAppSelector, useAppDispatch } from "./lib/redux/hooks";
 import { onAppReady } from "./lib/app-ready";
 import { isWeb, useIsMobile } from "./lib/platform";
@@ -36,9 +36,9 @@ import {
 } from "./lib/redux/slices/appSettingsSlice";
 import { SidebarToggleButton } from "./components/layout/sidebar/sidebar-toggle-button";
 import { OnboardingScreen } from "./features/onboarding/components/onboarding-screen";
-import { ErrorBoundary } from "./components/ui/error-boundary";
 import { MainHeaderProvider } from "./hooks/use-main-header";
 import { useLayoutWidthVars } from "./hooks/use-layout-width-vars";
+import { useAppearanceFonts } from "./hooks/use-appearance-fonts";
 import { getProviderVariant } from "./lib/provider-variants";
 
 /** Layout widths live in CSS (`--sidebar-width`, `--panel-width`, `--browser-panel-width`) — see index.css. */
@@ -80,6 +80,7 @@ function useDropdownAnimationPrewarm() {
 function AppContent() {
   useDropdownAnimationPrewarm();
   useLayoutWidthVars();
+  useAppearanceFonts();
   const location = useLocation();
   const hideRightPanel = shouldHideRightPanel(location.pathname);
   const variant = useWorkspaceVariant();

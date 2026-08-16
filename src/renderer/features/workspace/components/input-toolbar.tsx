@@ -2,8 +2,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { getProviderVariant } from "@/lib/provider-variants";
 import { useIsMobile } from "@/lib/platform";
-import { CompactComposerControls } from "@/components/ui/input/compact-composer-controls";
 import {
+  CompactComposerControls,
   SendButton,
   DictationButton,
   ModelSelectDropdown,
@@ -14,6 +14,7 @@ import {
   FILE_TYPES,
   type UploadedFile,
   Button,
+  Input,
 } from "@/components/ui";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import { useClickOutside } from "@/hooks/use-click-outside";
@@ -188,10 +189,12 @@ export function InputToolbar({
               onRemoveFile={handleRemoveFile}
               variant={variant}
             />
-          <input
+          <Input
+            variant="bare"
             ref={fileInputRef}
             type="file"
             className="hidden"
+            aria-label="Upload files"
             multiple
             onChange={handleFileChange}
           />

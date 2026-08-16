@@ -78,7 +78,7 @@ const CONFIG: ResourceWizardConfig = {
     <div className="flex items-center gap-2">
       <Body>{repo.fullName}</Body>
       {repo.private && (
-        <Lock className="w-3 h-3 text-primary-500 dark:text-primary-600" />
+        <Lock className="w-3 h-3 text-primary-600 dark:text-primary-400" />
       )}
     </div>
   ),
@@ -87,7 +87,7 @@ const CONFIG: ResourceWizardConfig = {
       <div className="flex items-center gap-2">
         <Body>{resource.fullName}</Body>
         {resource.metadata?.private && (
-          <Lock className="w-3 h-3 text-primary-500 dark:text-primary-600" />
+          <Lock className="w-3 h-3 text-primary-600 dark:text-primary-400" />
         )}
       </div>
     </div>

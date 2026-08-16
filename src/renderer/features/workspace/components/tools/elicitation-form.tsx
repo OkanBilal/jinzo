@@ -1,4 +1,11 @@
-import { Body, Caption, Checkbox } from "@/components/ui";
+import {
+  Body,
+  Caption,
+  Checkbox,
+  Input,
+  NativeSelect,
+  Text,
+} from "@/components/ui";
 
 /**
  * A single input derived from an MCP elicitation's `requestedSchema`.
@@ -146,7 +153,7 @@ export function buildElicitationContent(
 }
 
 const inputClass =
-  "w-full rounded-lg bg-primary-100/50 px-3 py-2 text-xs text-primary-950 transition-colors placeholder:text-primary-500 focus:outline-none dark:bg-primary-800/50 dark:text-primary-100 dark:placeholder:text-primary-500";
+  "w-full rounded-lg bg-primary-100/50 px-3 py-2 text-xs text-primary-900 transition-colors placeholder:text-primary-500 focus:outline-none dark:bg-primary-800/50 dark:text-primary-100 dark:placeholder:text-primary-500";
 
 export function ElicitationForm({
   fields,
@@ -164,15 +171,15 @@ export function ElicitationForm({
       {fields.map((field) => (
         <label key={field.name} className="block min-w-0">
           <div className="mb-1 flex items-baseline gap-1.5">
-            <Body className="text-xs font-medium">{field.label}</Body>
+            <Body size="xs" weight="medium">{field.label}</Body>
             {field.required && (
-              <span className="text-xxs text-danger" aria-hidden>
+              <Text as="span" size="xxs" tone="danger" aria-hidden>
                 *
-              </span>
+              </Text>
             )}
           </div>
           {field.description && (
-            <Caption className="mb-1 block text-primary-500">
+            <Caption tone="faint" className="mb-1 block">
               {field.description}
             </Caption>
           )}
@@ -183,7 +190,8 @@ export function ElicitationForm({
               onChange={(checked: boolean) => onChange(field.name, checked)}
             />
           ) : field.type === "enum" ? (
-            <select
+            <NativeSelect
+              variant="bare"
               value={typeof values[field.name] === "string" ? (values[field.name] as string) : ""}
               onChange={(e) => onChange(field.name, e.target.value)}
               className={inputClass}
@@ -194,9 +202,10 @@ export function ElicitationForm({
                   {option}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           ) : (
-            <input
+            <Input
+              variant="bare"
               type={field.isSecret ? "password" : field.type === "number" ? "number" : "text"}
               autoComplete={field.isSecret ? "new-password" : undefined}
               value={typeof values[field.name] === "string" ? (values[field.name] as string) : ""}

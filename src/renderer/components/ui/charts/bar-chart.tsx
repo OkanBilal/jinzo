@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/cn";
+import Text from "../text";
 
 interface BarSegment {
   percent: number;
@@ -94,18 +95,20 @@ export default function BarChart({
       })}
       {tooltip &&
         createPortal(
-          <div
+          <Text
+            as="div"
+            size="xs"
+            tone="muted"
             className={cn(
-              "fixed px-2 py-1 rounded-lg pointer-events-none whitespace-nowrap -translate-x-1/2",
-              "text-xs font-light",
-              "bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-200",
-              "border border-primary-200 dark:border-primary-800",
+              "fixed px-2 py-1 rounded-lg glass-outline pointer-events-none whitespace-nowrap -translate-x-1/2",
+              "font-light",
+              "bg-primary-100 dark:bg-primary-900",
               "shadow-lg shadow-primary-950/10",
             )}
             style={{ left: tooltip.x, top: tooltip.y - 32, zIndex: 9999 }}
           >
             {tooltip.content}
-          </div>,
+          </Text>,
           document.body,
         )}
     </div>

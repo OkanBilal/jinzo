@@ -12,13 +12,19 @@ import {
   type PrReviewThread,
 } from "@/lib/redux/api";
 import { useIsDarkMode } from "@/hooks/use-is-dark-mode";
-import { Button, SendButton, Textarea } from "@/components/ui";
-import { Body } from "@/components/ui/text";
-import { toast } from "@/components/ui/toast";
+import {
+  Body,
+  Button,
+  SendButton,
+  Text,
+  Textarea,
+  toast,
+} from "@/components/ui";
 import { extractErrorMessage } from "@/lib/extract-error-message";
 import { ArrowUp } from "@/components/ui/icons";
 import { proxiedImageSrc } from "@/lib/proxied-image-src";
 import { formatDate } from "@/lib/format-date";
+import { DIFF_TYPOGRAPHY_STYLE, patchDiffOptions } from "@/lib/diff-style";
 
 interface FileDiff {
   path: string;
@@ -130,16 +136,26 @@ function InlineThreadCard({
             <Avatar author={comment.author} />
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline gap-1.5">
-                <span className="text-s tracking-tight font-medium text-primary-900 dark:text-primary-100">
+                <Text
+                  as="span"
+                  size="s"
+                  weight="medium"
+                  className="tracking-tight"
+                >
                   {comment.author?.login ?? "unknown"}
-                </span>
-                <span className="text-xs text-primary-500 dark:text-primary-400">
+                </Text>
+                <Text as="span" size="xs" tone="subtle">
                   {formatDate(comment.createdAt)}
-                </span>
+                </Text>
               </div>
-              <p className="text-s text-primary-800 dark:text-primary-200 whitespace-pre-wrap wrap-break-word">
+              <Text
+                as="p"
+                size="s"
+                tone="secondary"
+                className="whitespace-pre-wrap wrap-break-word"
+              >
                 {comment.body}
-              </p>
+              </Text>
             </div>
           </div>
         ))}
@@ -162,7 +178,7 @@ function InlineThreadCard({
               }}
               placeholder="Reply"
               rows={2}
-              className="w-full resize-none px-3 py-2 pr-12 text-s rounded-xl bg-primary/40 dark:bg-primary/5 glass-outline placeholder:text-primary-600 dark:placeholder:text-primary-500 text-primary-900 dark:text-primary-100 outline-none"
+              className="w-full resize-none px-3 py-2 pr-12 text-s rounded-xl bg-primary/40 dark:bg-primary/5 glass-outline placeholder:text-primary-500 dark:placeholder:text-primary-500 text-primary-900 dark:text-primary-100 outline-none"
             />
             <div className="absolute bottom-2.5 right-2 z-10">
               <SendButton
@@ -255,7 +271,7 @@ function InlineCommentComposer({
           }}
           placeholder={`Comment on line ${target.line}`}
           rows={2}
-          className="w-full resize-none px-3 py-2 pr-12 text-s rounded-xl bg-primary/40 dark:bg-primary/5 glass-outline placeholder:text-primary-600 dark:placeholder:text-primary-500 text-primary-900 dark:text-primary-100 outline-none"
+          className="w-full resize-none px-3 py-2 pr-12 text-s rounded-xl bg-primary/40 dark:bg-primary/5 glass-outline placeholder:text-primary-500 dark:placeholder:text-primary-500 text-primary-900 dark:text-primary-100 outline-none"
         />
         <div className="absolute bottom-2.5 right-2 z-10">
           <SendButton
@@ -361,13 +377,27 @@ function FileSection({
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center gap-2 px-3 py-3 bg-primary/30 dark:bg-primary/5 cursor-pointer"
       >
-        <span className="text-xs font-mono font-medium text-primary-900 dark:text-primary-100 truncate">
+        <Text
+          as="span"
+          size="xs"
+          weight="medium"
+          className="font-mono truncate"
+        >
           {file.path}
-        </span>
-        <span className="ml-auto text-xxs tabular-nums whitespace-nowrap shrink-0">
-          <span className="text-green-600 dark:text-green-400">+{file.additions}</span>{" "}
-          <span className="text-red-500 dark:text-red-400">-{file.deletions}</span>
-        </span>
+        </Text>
+        <Text
+          as="span"
+          size="xxs"
+          tone="inherit"
+          className="ml-auto tabular-nums whitespace-nowrap shrink-0"
+        >
+          <Text as="span" size="inherit" tone="success">
+            +{file.additions}
+          </Text>{" "}
+          <Text as="span" size="inherit" tone="danger">
+            -{file.deletions}
+          </Text>
+        </Text>
         <ArrowUp
           className={`w-3 h-3 text-primary-600 dark:text-primary-400 transition-transform ${
             expanded ? "rotate-180" : "rotate-90"
@@ -385,29 +415,15 @@ function FileSection({
         <div className="overflow-hidden min-h-0">
           <PatchDiff<AnnotationMeta>
             patch={file.patch}
-            style={
-              {
-                "--diffs-font-size": "12px",
-                "--diffs-font-family": "ui-monospace, monospace",
-              } as React.CSSProperties
-            }
-            options={{
-              theme: isDarkMode ? "pierre-dark" : "pierre-light",
-              themeType: isDarkMode ? "dark" : "light",
-              diffStyle: "unified",
-              overflow: "wrap",
-              disableFileHeader: true,
-              enableGutterUtility: true,
-              unsafeCSS: `:host, [data-diffs], [data-diffs-header], [data-error-wrapper], [data-line], [data-column-number], [data-code] { --diffs-bg: var(--color-${isDarkMode ? "primary-950" : "primary"}); background-color: var(--color-${isDarkMode ? "primary-950" : "primary"}); }`,
-            }}
+            style={DIFF_TYPOGRAPHY_STYLE}
+            options={{ ...patchDiffOptions(isDarkMode), enableGutterUtility: true }}
             lineAnnotations={lineAnnotations}
             renderAnnotation={lineAnnotations ? renderAnnotation : undefined}
             /* The library forbids combining onGutterUtilityClick with a
                custom renderGutterUtility node — the node handles its own
                clicks and reads the line via getHoveredLine. */
             renderGutterUtility={(getHoveredLine) => (
-              <button
-                type="button"
+              <Button
                 title="Add a comment"
                 onClick={() => {
                   const hovered = getHoveredLine();
@@ -417,10 +433,10 @@ function FileSection({
                     side: hovered.side === "deletions" ? "left" : "right",
                   });
                 }}
-                className="flex items-center justify-center w-4 h-4 rounded bg-blue-500 text-white text-xs font-semibold leading-none cursor-pointer select-none"
+                className="flex items-center justify-center w-4 h-4 rounded bg-accent text-white text-xs font-semibold leading-none cursor-pointer select-none"
               >
                 +
-              </button>
+              </Button>
             )}
           />
         </div>
@@ -468,7 +484,9 @@ export function PrDiffView({ prRef }: { prRef: PrRefInput }) {
   if (isLoading || (!highlighterReady && !isError)) {
     return (
       <div className="flex items-center justify-center py-10">
-        <span className="text-xs shine-text">Loading diff...</span>
+        <Text as="span" size="xs" tone="inherit" className="shine-text">
+          Loading diff...
+        </Text>
       </div>
     );
   }
@@ -476,7 +494,7 @@ export function PrDiffView({ prRef }: { prRef: PrRefInput }) {
   if (isError) {
     return (
       <div className="flex flex-col items-center gap-2 py-10">
-        <Body className="text-xs text-primary-800 dark:text-primary-300">
+        <Body size="xs" tone="secondary">
           Unable to load the diff.
         </Body>
         <Button variant="subtle" onClick={() => refetch()}>
@@ -489,7 +507,7 @@ export function PrDiffView({ prRef }: { prRef: PrRefInput }) {
   if (files.length === 0) {
     return (
       <div className="flex items-center justify-center py-10">
-        <Body className="text-xs text-primary-800 dark:text-primary-300">
+        <Body size="xs" tone="secondary">
           No changes in this pull request.
         </Body>
       </div>
@@ -499,10 +517,15 @@ export function PrDiffView({ prRef }: { prRef: PrRefInput }) {
   return (
     <div className="space-y-3">
       {data?.truncated && (
-        <div className="px-3 py-3 rounded-xl bg-warning/10 text-xs text-warning ">
+        <Text
+          as="div"
+          size="xs"
+          tone="warning"
+          className="px-3 py-3 rounded-xl bg-warning/10"
+        >
           This diff is large — only the first files are shown. Open the pull
           request on GitHub for the full diff.
-        </div>
+        </Text>
       )}
       {files.map((file) => (
         <FileSection

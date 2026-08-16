@@ -1,4 +1,5 @@
 import type { CreateProviderPayload } from "../../modules/providers/providers.dto";
+import { DEFAULT_CLAUDE_PERMISSION_MODE } from "../../../shared/claude-permission-modes";
 import { PROVIDER_IDS } from "../../../shared/provider-ids";
 
 // `defaultModel` is deliberately unset on every provider below. It is a *user*
@@ -37,7 +38,7 @@ export const seedProviders: CreateProviderPayload[] = [
     config: {
       timeout: 3_600_000,
       apiKey: process.env.ANTHROPIC_API_KEY,
-      permissionMode: "default",
+      permissionMode: DEFAULT_CLAUDE_PERMISSION_MODE,
       // Claude couples thinking to the effort level, so both are seeded
       // together — the renderer clamps the level to whatever the selected
       // model advertises.

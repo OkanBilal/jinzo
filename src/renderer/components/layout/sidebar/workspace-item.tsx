@@ -1,17 +1,19 @@
 import {
   useState,
   useRef,
-  useEffect,
+  useLayoutEffect,
   type MouseEvent,
   type ReactNode,
 } from "react";
 import NumberFlow from "@number-flow/react";
 import {
   Muted,
+  Text,
   Button,
   DropdownMenu,
   DropdownMenuItem,
   DropdownMenuSub,
+  Input,
   SquareSpinner,
   Tooltip,
 } from "@/components/ui";
@@ -25,12 +27,12 @@ import {
   External,
   OpenWith,
   Edit,
+  WorkspaceStatusIcon,
 } from "@/components/ui/icons";
 import { useGetInstalledAppsQuery } from "@/lib/redux/api";
 import { useGetLatestWorkspaceDiffSummaryQuery } from "@/lib/redux/api/workspaceApi";
 //import { formatDate } from "@/lib/format-date";
 import { getWorkspaceStatusConfig } from "@/lib/workspace-status";
-import WorkspaceStatusIcon from "@/components/ui/icons/workspace-status-icon";
 import type { WorkspaceStatus } from "@/lib/redux/api/workspaceApi";
 
 type GroupingMode = "none" | "status" | "project";
@@ -164,7 +166,12 @@ export default function WorkspaceItem({
     setRenameBranchValue(branch || "");
   };
 
-  useEffect(() => {
+  // Layout effect, not a passive one: the same click closes the dropdown, and
+  // the menu only keeps its focus restore off when something else already holds
+  // focus by the following frame. Focusing here runs inside that commit, so the
+  // editor wins the race deterministically instead of being blurred (and
+  // blur-committed straight back out of existence).
+  useLayoutEffect(() => {
     if (isRenamingBranch && renameInputRef.current) {
       renameInputRef.current.focus();
       renameInputRef.current.select();
@@ -197,11 +204,9 @@ export default function WorkspaceItem({
                 {projectIcon ?? (
                   <Branch className="size-3.5 text-primary-800 dark:text-primary-200" />
                 )}
-              </span><span
-                className="truncate text-s text-primary-950  dark:text-primary"
-              >
+              </span><Text as="span" size="s" tone="contrast" className="truncate">
                   {name}
-                </span></>
+                </Text></>
             )}
 
           </div>
@@ -231,20 +236,25 @@ export default function WorkspaceItem({
                   position="top"
                 >
                   <Muted
-                    className={`text-xs text-amber-600 dark:text-amber-500 truncate ${grouping === "status" ? "-ml-1.5" : ""}`}
+                    size="xs"
+                    tone="warning"
+                    className={`truncate ${grouping === "status" ? "-ml-1.5" : ""}`}
                   >
                     Folder missing
                   </Muted>
                 </Tooltip>
               ) : branch && !isRenamingBranch ? (
                 <Muted
-                  className={`text-xs text-primary-800 dark:text-primary-200 truncate ${grouping === "status" ? "-ml-1.5" : ""}`}
+                  size="xs"
+                  tone="secondary"
+                  className={`truncate ${grouping === "status" ? "-ml-1.5" : ""}`}
                 >
                   {branch}
                 </Muted>
               ) : null}
               {isRenamingBranch && (
-                <input
+                <Input
+                  variant="bare"
                   ref={renameInputRef}
                   value={renameBranchValue}
                   onChange={(e) => setRenameBranchValue(e.target.value)}
@@ -255,11 +265,12 @@ export default function WorkspaceItem({
                   }}
                   onBlur={handleRenameBranchConfirm}
                   onClick={(e) => e.stopPropagation()}
-                  className="text-xs bg-primary/20 dark:bg-primary/10 text-primary-800 dark:text-primary-200 rounded px-1 py-0.5 outline-none border border-primary/30 dark:border-primary/20 w-full max-w-35"
+                  aria-label="Branch name"
+                  className="text-xs bg-primary/20 dark:bg-primary/10 text-primary-800 dark:text-primary-200 rounded-md px-1 py-0.5 outline-none glass-input w-full max-w-35"
                 />
               )}
               {/* {branch && updatedAt && (
-                <span className="text-primary-900 text-lg leading-6 dark:text-primary-200">
+                <span className="text-primary-900 text-lg leading-6 dark:text-primary-100">
                   ·
                 </span>
               )}
@@ -276,27 +287,34 @@ export default function WorkspaceItem({
       {/* Diff stats (visible by default, hidden on hover) / Options button (hidden by default, visible on hover) */}
       <div className="absolute right-1.5 top-1/2 -translate-y-1/2 z-(--z-base)">
         {(insertions || deletions) && (
-          <span className="flex items-center gap-1 text-t font-mono tabular-nums group-hover:opacity-0 transition-opacity pointer-events-none">
+          <Text
+            as="span"
+            size="t"
+            tone="inherit"
+            className="flex items-center gap-1 font-mono tabular-nums group-hover:opacity-0 transition-opacity pointer-events-none"
+          >
             {insertions && (
               <NumberFlow
                 value={parseInt(insertions)}
                 prefix="+"
-                className="text-green-600 dark:text-green-400"
+                className="text-success"
               />
             )}
             {deletions && (
               <NumberFlow
                 value={parseInt(deletions)}
                 prefix="-"
-                className="text-red-500 dark:text-red-400"
+                className="text-danger"
               />
             )}
-          </span>
+          </Text>
         )}
         <Button
           tooltip="More options"
           ref={buttonRef}
           onClick={handleOptionClick}
+          aria-haspopup="menu"
+          aria-expanded={isDropdownOpen}
           className={`absolute right-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1 cursor-pointer rounded-md`}
           aria-label="Workspace options"
         >
@@ -307,6 +325,7 @@ export default function WorkspaceItem({
       {/* Dropdown Menu */}
       <DropdownMenu
         isOpen={isDropdownOpen}
+        aria-label="Workspace actions"
         position={dropdownPosition}
         onClose={() => setIsDropdownOpen(false)}
       >

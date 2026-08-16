@@ -2,9 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useGetIssuesInboxQuery, type IssueWithEntity } from "@/lib/redux/api";
 import { IssueListItem } from "@/features/workspace/components/issue-list-item";
 import { ProviderIcon } from "@/features/workspace/components/provider-icon";
-import { Button, DropdownWrapper, Input, SegmentedTabs } from "@/components/ui";
+import { Body, Button, DropdownWrapper, Input, SegmentedTabs, Text } from "@/components/ui";
 import { Close, Layers, Search, Trash } from "@/components/ui/icons";
-import { Body } from "@/components/ui/text";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { parseLabels } from "@/lib/label-colors";
 import { FilterSection, sortedEntries } from "./filter-section";
@@ -200,14 +199,14 @@ export function IssuesPanel({ activeEntityId, onSelectIssue }: IssuesPanelProps)
             onChange={(e) => setText(e.target.value)}
             placeholder="Search issues"
             aria-label="Search issues"
-            className={`w-full pl-9 ${text ? "pr-9" : "pr-3"} py-1.5 text-s rounded-2xl bg-primary/40 dark:bg-primary/5 glass-outline placeholder:text-primary-600 dark:placeholder:text-primary-500 text-primary-900 dark:text-primary-100 outline-none`}
+            className={`w-full pl-9 ${text ? "pr-9" : "pr-3"} py-1.5 text-s rounded-2xl bg-primary/40 dark:bg-primary/5 glass-outline placeholder:text-primary-500 dark:placeholder:text-primary-500 text-primary-900 dark:text-primary-100 outline-none`}
           />
           {text && (
             <Button
               onClick={() => setText("")}
               tooltip="Clear search"
               aria-label="Clear search"
-              className="absolute right-2 top-1/2 z-10 -translate-y-1/2 p-1 rounded-lg cursor-pointer text-primary-500 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 hover:bg-primary/50 dark:hover:bg-primary/10"
+              className="absolute right-2 top-1/2 z-10 -translate-y-1/2 p-1 rounded-lg cursor-pointer text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 hover:bg-primary/50 dark:hover:bg-primary/10"
             >
               <Close className="size-3" />
             </Button>
@@ -227,6 +226,8 @@ export function IssuesPanel({ activeEntityId, onSelectIssue }: IssuesPanelProps)
                 }
               }}
               options={STATE_FILTERS}
+              semantics="radiogroup"
+              aria-label="Issue state"
               className="w-fit"
             />
             <Button
@@ -237,23 +238,29 @@ export function IssuesPanel({ activeEntityId, onSelectIssue }: IssuesPanelProps)
               }}
               tooltip="Filter issues"
               aria-label="Filter issues"
+              aria-haspopup="dialog"
               aria-expanded={filterOpen}
               className={`p-1.5 rounded-xl cursor-pointer transition-colors ${
                 filterOpen || activeFilterCount > 0
                   ? "bg-primary/80 dark:bg-primary/10 glass-outline text-primary-900 dark:text-primary-100"
-                  : "text-primary-500 dark:text-primary-400 hover:bg-primary/50 dark:hover:bg-primary/10 hover:text-primary-800 dark:hover:text-primary-200"
+                  : "text-primary-600 dark:text-primary-400 hover:bg-primary/50 dark:hover:bg-primary/10 hover:text-primary-800 dark:hover:text-primary-200"
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
             </Button>
             {/* Positioned anchor so the menu opens under the active tab. */}
             <div className="absolute inset-y-0" style={{ left: menuLeft }}>
-              <DropdownWrapper isOpen={filterOpen} minWidth="min-w-80">
+              <DropdownWrapper
+                isOpen={filterOpen}
+                role="dialog"
+                aria-label="Issue filters"
+                minWidth="min-w-80"
+              >
               <div className="max-h-80 overflow-y-auto noscrollbar pb-1.5">
                 {!hasFilterOptions && activeFilterCount === 0 && (
-                  <div className="px-3 py-3 text-xs text-primary-600 dark:text-primary-400 -mb-1.5">
+                  <Text as="div" size="xs" tone="subtle" className="px-3 py-3 -mb-1.5">
                     Nothing to filter — this list is empty.
-                  </div>
+                  </Text>
                 )}
                 <FilterSection
                   title="Connection"
@@ -263,7 +270,7 @@ export function IssuesPanel({ activeEntityId, onSelectIssue }: IssuesPanelProps)
                   renderIcon={(value) => (
                     <ProviderIcon
                       provider={value}
-                      className="size-4 shrink-0 text-primary-800 dark:text-primary-300"
+                      className="size-4 shrink-0 text-primary-800 dark:text-primary-200"
                       fallback="text"
                     />
                   )}
@@ -321,17 +328,19 @@ export function IssuesPanel({ activeEntityId, onSelectIssue }: IssuesPanelProps)
       <div className="flex-1 min-h-0 overflow-y-auto noscrollbar px-6 pt-3 pb-16 mask-[linear-gradient(to_bottom,transparent,black_1.75rem)]">
         {isLoading || (isFetching && issues.length === 0) ? (
           <div className="flex items-center justify-center py-10">
-            <span className="text-xs shine-text">Loading issues...</span>
+            <Text as="span" size="xs" tone="inherit" className="shine-text">
+              Loading issues...
+            </Text>
           </div>
         ) : filteredIssues.length === 0 ? (
           <div className="flex flex-col items-center gap-1 py-12 text-center">
-            <Body className="text-s text-primary-800 dark:text-primary-300">
+            <Body size="s" tone="secondary">
               {text.trim() || activeFilterCount > 0
                 ? "No issues match these filters."
                 : `No ${stateFilter === "all" ? "" : stateFilter + " "}issues synced yet.`}
             </Body>
             {!text.trim() && activeFilterCount === 0 && (
-              <Body className="text-xs text-primary-600 dark:text-primary-500">
+              <Body size="xs" tone="subtle">
                 Issues arrive from your connections (GitHub, Linear, Jira, ...)
                 via sync.
               </Body>

@@ -2,7 +2,7 @@ import { memo, useMemo, useState, useEffect, useRef, type MouseEvent } from "rea
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { markdownComponents } from "@/components/markdown-components";
-import type { EventGroup } from "../../utils/group-events";
+import type { EventGroup } from "../../lib/group-events";
 import { Code } from "@/components/ui/icons/space";
 import {
   Picture,
@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/icons";
 import { ProviderIcon } from "../provider-icon";
 import { ImagePreviewModal } from "../image-preview-modal";
-import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
+import { FileIconComponent } from "@/components/ui/icons";
 import {
   Body,
   Button,
@@ -320,17 +320,17 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
         <div className="w-full overflow-hidden">
           <div className="w-full py-2 flex justify-end">
             <div className="flex flex-col items-end gap-2 max-w-[80%]">
-              <div className="px-4 py-2 rounded-2xl bg-blue-50 dark:bg-blue-500/8 border border-blue-200/60 dark:border-blue-500/15">
-                <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
+              <div className="px-4 py-2 rounded-2xl bg-accent/10 dark:bg-accent/10 border border-accent/60 dark:border-accent/10">
+                <div className="flex items-center gap-2 text-accent">
                   <Codex className="size-3.5 shrink-0" />
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-blue-600 dark:text-blue-300/70">
+                    <Text as="span" size="xs" tone="inherit">
                       {targetLabel}
-                    </span>
+                    </Text>
                   </div>
                 </div>
                 {message && (
-                  <Text className="text-xs  text-blue-900 dark:text-blue-100 mt-1.5">
+                  <Text size="xs" tone="inherit" className="text-accent mt-1.5">
                     {message}
                   </Text>
                 )}
@@ -375,7 +375,7 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
                 {issues.map((issue) => (
                   <div
                     key={`${issue.provider}-${issue.number ?? issue.title}`}
-                    className={`flex items-center gap-1.5 px-2 py-2 rounded-xl text-xs bg-primary-200/40 dark:bg-primary-200/20 text-primary-800 dark:text-primary-100`}
+                    className={`flex items-center gap-1.5 px-2 py-2 rounded-xl text-xs bg-primary-200/40 dark:bg-primary-200/20 text-primary-800 dark:text-primary-200`}
                   >
                     <ProviderIcon
                       provider={issue.provider}
@@ -391,7 +391,7 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
                 {signals.map((signal) => (
                   <div
                     key={`${signal.source}-${signal.title}`}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-xl text-xs bg-primary-200 dark:bg-primary-400 text-primary-600 dark:text-primary-100"
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-xl text-xs bg-primary-200 dark:bg-primary-400 text-primary-600 dark:text-primary-400"
                   >
                     <ProviderIcon
                       provider={signal.source}
@@ -404,13 +404,13 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
                 {externalFiles.map((file) => (
                   <div
                     key={file.fullPath}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-primary-200/40 dark:bg-primary-200/20 text-xs text-primary-800 dark:text-primary-100"
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-primary-200/40 dark:bg-primary-200/20 text-xs text-primary-800 dark:text-primary-200"
                     title={file.fullPath}
                   >
-                    <Code className="size-3 dark:text-primary-200 text-primary-700" />
-                    <span className="text-primary-700 dark:text-primary-200">
+                    <Code className="size-3 dark:text-primary-300 text-primary-700" />
+                    <Text as="span" size="inherit" tone="muted">
                       {file.displayName}
-                    </span>
+                    </Text>
                   </div>
                 ))}
                 {attachments.map((att) => {
@@ -425,7 +425,7 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
                       onClick={() =>
                         setPreviewAtt({ name: att.name, dataUrl: imgSrc })
                       }
-                      className="flex items-center gap-1.5 pl-2 pr-2 py-1 rounded-xl bg-primary-200/40 dark:bg-primary-200/20 text-xs text-primary-800 dark:text-primary-100 hover:bg-primary-100 dark:hover:bg-primary-700/30 transition-colors cursor-pointer"
+                      className="flex items-center gap-1.5 pl-2 pr-2 py-1 rounded-xl bg-primary-200/40 dark:bg-primary-200/20 text-xs text-primary-800 dark:text-primary-200 hover:bg-primary-100 dark:hover:bg-primary-700/30 transition-colors cursor-pointer"
                       title={`Click to preview · ${att.name}`}
                     >
                       <img
@@ -433,24 +433,24 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
                         alt={att.name}
                         className="h-6 w-6 rounded-lg object-cover  border border-primary-200/60 dark:border-primary-700/40"
                       />
-                      <span className="text-primary-700 dark:text-primary-200 truncate max-w-40">
+                      <Text as="span" size="inherit" tone="muted" className="truncate max-w-40">
                         {att.name}
-                      </span>
+                      </Text>
                     </Button>
                   ) : (
                     <div
                       key={att.name}
-                      className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary-50 dark:bg-primary-700/15 text-xs"
+                      className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary-50 dark:bg-primary-700/10 text-xs"
                       title={att.name}
                     >
                       {att.type === "image" ? (
-                        <Picture className="size-3 dark:text-primary-200 text-primary-700" />
+                        <Picture className="size-3 dark:text-primary-300 text-primary-700" />
                       ) : (
-                        <Document className="size-3 dark:text-primary-200 text-primary-700" />
+                        <Document className="size-3 dark:text-primary-300 text-primary-700" />
                       )}
-                      <span className="text-primary-700 dark:text-primary-200">
+                      <Text as="span" size="inherit" tone="muted">
                         {att.name}
-                      </span>
+                      </Text>
                     </div>
                   );
                 })}
@@ -559,11 +559,17 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
     );
   }
 
+  // A warning or an error is the one kind of log the reader has to notice, so
+  // it does not wear the same recessive tone as the rest of the system chrome.
+  const logLevel = event.type === "log" ? event.metadata?.level : undefined;
+  const tone =
+    logLevel === "error" ? "danger" : logLevel === "warn" ? "warning" : "subtle";
+
   return (
-    <div className=" py-1.5 flex items-start gap-2 text-sm">
-      <span className="text-primary-600 dark:text-primary-300">
+    <div className="py-1.5 flex items-start gap-2">
+      <Text as="span" tone={tone}>
         {event.content}
-      </span>
+      </Text>
     </div>
   );
 }
@@ -631,6 +637,7 @@ function ImageArtifact({
   const menu = (
     <DropdownMenu
       isOpen={menuOpen}
+      aria-label="Image actions"
       position={menuPos}
       onClose={() => setMenuOpen(false)}
       minWidth={240}
@@ -647,9 +654,9 @@ function ImageArtifact({
         </DropdownMenuItem>
       )}
       {isFetching ? (
-        <div className="px-3 py-2 text-xs text-primary-500 dark:text-primary-400">
+        <Text as="div" size="xs" tone="subtle" className="px-3 py-2">
           Loading applications…
-        </div>
+        </Text>
       ) : (
         handlerApps.map((app) => (
           <DropdownMenuItem
@@ -696,17 +703,21 @@ function ImageArtifact({
                 onError={() => setThumbFailed(true)}
               />
             ) : (
-              <Picture className="size-7 text-primary-400 dark:text-primary-500" />
+              <Picture className="size-7 text-primary-600 dark:text-primary-400" />
             )}
           </div>
         </Button>
         <div className="absolute inset-x-0 bottom-0 px-2.5 pb-2 pt-6 bg-linear-to-t from-black/60 to-transparent opacity-0 group-hover/image-tile:opacity-100 transition-opacity pointer-events-none">
-          <span className="block text-xs text-white truncate">{fileName}</span>
+          <Text as="span" size="xs" tone="inherit" className="block text-white truncate">
+            {fileName}
+          </Text>
         </div>
         <Button
           ref={openBtnRef}
           type="button"
           onClick={openMenu}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
           className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-white bg-black/50 hover:bg-black/70 opacity-0 group-hover/image-tile:opacity-100 transition-opacity cursor-pointer"
         >
           Open
@@ -748,18 +759,20 @@ function ImageArtifact({
         onClick={openInMains}
         className="flex-1 min-w-0 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary-400 rounded-md"
       >
-        <div className="text-sm font-medium text-primary-950 dark:text-primary truncate">
+        <Text as="div" tone="contrast" weight="medium" className="truncate">
           {fileName}
-        </div>
-        <div className="text-xs text-primary-500 dark:text-primary-400 mt-0.5">
+        </Text>
+        <Text as="div" size="xs" tone="subtle" className="mt-0.5">
           Image{ext ? ` · ${ext}` : ""}
-        </div>
+        </Text>
       </Button>
       <Button
         ref={openBtnRef}
         type="button"
         onClick={openMenu}
-        className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium text-primary-800 dark:text-primary-100  bg-primary-100/80 dark:bg-primary-800/40 hover:bg-primary-200/60 dark:hover:bg-primary-700/35 transition-colors cursor-pointer"
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
+        className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium text-primary-800 dark:text-primary-200  bg-primary-100/80 dark:bg-primary-800/40 hover:bg-primary-200/60 dark:hover:bg-primary-700/35 transition-colors cursor-pointer"
       >
         Open
         <ArrowUp className="size-3.5  rotate-180" />

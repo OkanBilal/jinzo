@@ -5,7 +5,7 @@ import rehypeSanitize from "rehype-sanitize";
 import { markdownComponents } from "@/components/markdown-components";
 import { markdownSanitizeSchema } from "@/lib/markdown-sanitize";
 import type { IssueWithEntity } from "@/lib/redux/api";
-import { Heading2, Caption } from "@/components/ui";
+import { Caption, Heading2, Text } from "@/components/ui";
 
 interface IssueTabContentProps {
   issue: IssueWithEntity;
@@ -39,23 +39,23 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
           {/* State badge */}
           <div className="flex items-center gap-3 flex-wrap">
             {iss.assignee && (
-              <span className="text-sm text-primary-500 dark:text-primary-400">
+              <Text as="span" size="sm" tone="subtle">
                 Assigned to{" "}
-                <span className="font-medium text-primary-700 dark:text-primary-300">
+                <Text as="span" size="inherit" tone="muted" weight="medium">
                   {iss.assignee}
-                </span>
-              </span>
+                </Text>
+              </Text>
             )}
             <span
               className={`inline-flex capitalize items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
                 isOpen
-                  ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                  ? "bg-primary-100 dark:bg-success/30 text-success"
                   : "bg-primary-100 dark:bg-primary-800 text-primary-600 dark:text-primary-400"
               }`}
             >
               <span
                 className={`w-2 h-2 rounded-full ${
-                  isOpen ? "bg-green-500" : "bg-primary-400"
+                  isOpen ? "bg-success" : "bg-primary-400"
                 }`}
               />
               {iss.state}
@@ -69,7 +69,7 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
             {labels.map((label) => (
               <span
                 key={label}
-                className={`inline-block glass-primary px-2.5 py-1 text-xs rounded-full capitalize font-medium text-primary-600 dark:text-primary-100`}
+                className={`inline-block glass-primary px-2.5 py-1 text-xs rounded-full capitalize font-medium text-primary-600 dark:text-primary-400`}
               >
                 {label}
               </span>

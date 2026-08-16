@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { EventGroup } from "../utils/group-events";
+import type { EventGroup } from "./group-events";
 import type { RunEvent } from "../types";
 import type { RunTurn } from "@/lib/redux/api";
 import {

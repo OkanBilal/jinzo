@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { AsciiSpinner, Button, toast } from "@/components/ui";
+import { AsciiSpinner, Button, Text, toast } from "@/components/ui";
 import {
   SettingsPageShell,
   SettingsSection,
@@ -144,9 +144,9 @@ export function ProviderCliSection({
       >
         <div className="flex items-center gap-3">
           {updateResult && (
-            <span className="text-xs text-primary-500 dark:text-primary-400">
+            <Text as="span" size="xs" tone="subtle">
               {updateResult}
-            </span>
+            </Text>
           )}
           <Button
             variant={buttonVariant}
@@ -196,21 +196,21 @@ export function ProviderAccountSection({
         </div>
       ) : signedIn ? (
         <SettingsRow title={signedIn.title} description={signedIn.description}>
-          <span className="text-sm font-medium text-primary-900 dark:text-primary-100">
+          <Text as="span" weight="medium">
             {signedIn.plan}
-          </span>
+          </Text>
         </SettingsRow>
       ) : isApiKey ? (
         <SettingsRow title="Authentication" description="Connected via API key">
-          <span className="text-sm text-primary-500 dark:text-primary-400">
+          <Text as="span" tone="subtle">
             API Key
-          </span>
+          </Text>
         </SettingsRow>
       ) : (
         <SettingsRow title="Not signed in" description={notSignedInDescription}>
-          <span className="text-xs text-primary-400 dark:text-primary-500">
+          <Text as="span" size="xs" tone="subtle">
             No account
-          </span>
+          </Text>
         </SettingsRow>
       )}
     </SettingsSection>
@@ -254,13 +254,13 @@ function UsageRateLimitRow({
   return (
     <div className="flex items-center justify-between py-3">
       <div className="flex flex-col gap-0.5">
-        <span className="text-sm font-medium text-primary-900 dark:text-primary-100">
+        <Text as="span" weight="medium">
           {row.label}
-        </span>
+        </Text>
         {row.resetsAt && (
-          <span className="text-xs text-primary-400 dark:text-primary-500">
+          <Text as="span" size="xs" tone="subtle">
             {formatResetDate(row.resetsAt)}
-          </span>
+          </Text>
         )}
       </div>
       <div className="flex items-center gap-3">
@@ -271,15 +271,15 @@ function UsageRateLimitRow({
           />
         </div>
         {display === "remaining" ? (
-          <span className="text-sm text-primary-500 dark:text-primary-400 w-16 text-right">
+          <Text as="span" tone="subtle" align="right" className="w-16">
             {remaining}% left
-          </span>
+          </Text>
         ) : (
-          <span className="text-sm text-primary-500 dark:text-primary-400 w-24 text-right tabular-nums">
+          <Text as="span" tone="subtle" align="right" className="w-24 tabular-nums">
             {hasCounts
               ? `${row.used!.toLocaleString()} / ${row.total!.toLocaleString()}`
               : `${row.usedPercent}% used`}
-          </span>
+          </Text>
         )}
       </div>
     </div>
@@ -321,9 +321,9 @@ export function ProviderUsageSection({
         </div>
       ) : (
         <div className="px-4 py-3">
-          <span className="text-sm text-primary-400 dark:text-primary-500">
+          <Text as="span" tone="subtle">
             No usage data available
-          </span>
+          </Text>
         </div>
       )}
     </SettingsSection>

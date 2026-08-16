@@ -334,6 +334,64 @@ describe("Codex event mapper", () => {
     });
   });
 
+  it("maps dynamic tool output from contentItems and success", () => {
+    const { mapper } = createHarness();
+    const contentItems = [
+      { type: "inputText", text: '{"reviewId":"review-1"}' },
+    ];
+
+    const completed = mapper.mapThreadItem(
+      {
+        id: "dynamic-1",
+        type: "dynamicToolCall",
+        tool: "SaveReview",
+        arguments: { title: "Review" },
+        status: "completed",
+        contentItems,
+        success: true,
+      },
+      "item/completed",
+      130,
+      "run-1",
+    );
+    const failed = mapper.mapThreadItem(
+      {
+        id: "dynamic-2",
+        type: "dynamicToolCall",
+        tool: "SaveReview",
+        arguments: { title: "Review" },
+        status: "completed",
+        contentItems: [
+          { type: "inputText", text: "Error: persistence failed" },
+        ],
+        success: false,
+      },
+      "item/completed",
+      140,
+      "run-1",
+    );
+
+    expect(completed).toContainEqual(
+      expect.objectContaining({
+        type: "tool_call",
+        toolName: "SaveReview",
+        output: contentItems,
+        error: undefined,
+        metadata: expect.objectContaining({
+          phase: "complete",
+          success: true,
+        }),
+      }),
+    );
+    expect(failed).toContainEqual(
+      expect.objectContaining({
+        type: "tool_call",
+        error: "Dynamic tool call failed",
+        metadata: expect.objectContaining({ success: false }),
+      }),
+    );
+  });
+
   it("turns a completed streamed plan into one pending Plan tool call", () => {
     const state = createRunState();
     state.planBuffers.set("plan-1", "1. Inspect\n2. Change");

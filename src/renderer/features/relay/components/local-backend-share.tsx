@@ -48,7 +48,7 @@ function CopyButton({ value, tooltip }: { value: string; tooltip: string }) {
       text={value}
       tooltip={tooltip}
       variant="bare"
-      className="text-primary-900 dark:text-primary-200"
+      className="text-primary-900 dark:text-primary-100"
     />
   );
 }
@@ -115,6 +115,7 @@ export function LocalBackendShare() {
         </div>
         <Toggle
           enabled={remoteOn}
+          aria-label="Allow remote access"
           onChange={(v) =>
             run("remote", window.api.localBackend.setRemoteAccess(v))
           }
@@ -140,10 +141,9 @@ export function LocalBackendShare() {
             </div>
           )}
           {!status.webUiAvailable && (
-            <Caption className="text-warning block">
-              Web UI not built — run{" "}
-              <code className="text-xs">npm run build:web</code> once so browsers
-              can load the interface.
+            <Caption tone="warning" className="block">
+              Web UI not built — run <code>npm run build:web</code> once so
+              browsers can load the interface.
             </Caption>
           )}
 
@@ -158,6 +158,7 @@ export function LocalBackendShare() {
             </div>
             <Toggle
               enabled={lanOn}
+              aria-label="Allow network access on LAN"
               onChange={(v) => {
                 if (v) setConfirmLan(true);
                 else void run("lan", window.api.localBackend.setLanAccess(false));
@@ -172,6 +173,7 @@ export function LocalBackendShare() {
             description="Plain ws:// — the pairing token and all traffic are unencrypted, and the token grants full control of this machine. Prefer Tailscale HTTPS or SSH."
             primaryButtonText="Enable anyway"
             secondaryButtonText="Cancel"
+            primaryButtonVariant="danger"
             isPrimaryLoading={busy === "lan"}
             onPrimary={() =>
               void run("lan", window.api.localBackend.setLanAccess(true)).finally(
@@ -196,6 +198,7 @@ export function LocalBackendShare() {
         </div>
         <Toggle
           enabled={tailscaleOn}
+          aria-label="Enable Tailscale HTTPS"
           onChange={(v) =>
             run(
               "tailscale",

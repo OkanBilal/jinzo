@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { Body, Caption } from "@/components/ui";
-import LockIcon from "@/components/ui/icons/lock";
+import { Lock as LockIcon } from "@/components/ui/icons";
 import { useLazyGetGitLabProjectsQuery } from "@/lib/redux/api";
 import {
   ResourceWizardModal,

@@ -78,30 +78,25 @@ export const ICON_COLORS: IconColorOption[] = [
     swatch: "bg-primary-900 dark:bg-primary-100",
     className: "",
   },
-  { name: "red", label: "Red", swatch: "bg-red-500", className: "text-red-500" },
-  {
-    name: "orange",
-    label: "Orange",
-    swatch: "bg-orange-500",
-    className: "text-orange-500",
-  },
+  { name: "red", label: "Red", swatch: "bg-danger", className: "text-danger" },
+
   {
     name: "amber",
     label: "Amber",
-    swatch: "bg-amber-400",
-    className: "text-amber-500 dark:text-amber-400",
+    swatch: "bg-warning",
+    className: "text-warning",
   },
   {
     name: "green",
     label: "Green",
-    swatch: "bg-green-500",
-    className: "text-green-600 dark:text-green-500",
+    swatch: "bg-success",
+    className: "text-success",
   },
   {
     name: "blue",
     label: "Blue",
-    swatch: "bg-blue-500",
-    className: "text-blue-500",
+    swatch: "bg-accent",
+    className: "text-accent",
   },
   {
     name: "purple",

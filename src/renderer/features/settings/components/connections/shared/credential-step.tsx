@@ -64,8 +64,10 @@ export function CredentialStep({
         </div>
       ))}
 
+      {/* No size on the box: the `Caption` inside sets its own, so one here
+          would never reach it. */}
       {instructions && (
-        <div className="mt-4 px-2 py-2 bg-primary dark:bg-primary-900 rounded-xl text-sm">
+        <div className="mt-4 px-2 py-2 bg-primary dark:bg-primary-900 rounded-xl">
           <Caption>{instructions}</Caption>
         </div>
       )}

@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { useAutoUpdate } from "@/hooks/use-auto-update";
-import { Button } from "@/components/ui";
+import { AsciiSpinner, Button, Text } from "@/components/ui";
 import { Close } from "@/components/ui/icons";
-import { AsciiSpinner } from "@/components/ui/ascii-spinner";
-import { Body } from "@/components/ui/text";
 
 export function UpdateBanner() {
   const { state, install } = useAutoUpdate();
@@ -24,7 +22,7 @@ export function UpdateBanner() {
       <div className="px-3 py-2.5 space-y-2">
         <div className="flex items-center justify-between">
           <div />
-          <Body className="text-xs">
+          <Text size="xs">
             {(state.status === "available" ||
               state.status === "downloading") && (
               <>
@@ -36,11 +34,11 @@ export function UpdateBanner() {
               (state.info?.version
                 ? `${state.info.version} ready`
                 : "Update ready")}
-          </Body>
+          </Text>
           <Button
             type="button"
             onClick={() => setDismissed(true)}
-            className="p-0.5 rounded-md hover:bg-primary-200/50 dark:hover:bg-primary/10 transition-colors text-primary-500 dark:text-primary-400 cursor-pointer"
+            className="p-0.5 rounded-md hover:bg-primary-200/50 dark:hover:bg-primary/10 transition-colors text-primary-600 dark:text-primary-400 cursor-pointer"
           >
             <Close className="size-3" />
           </Button>

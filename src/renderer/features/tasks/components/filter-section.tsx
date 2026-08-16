@@ -1,10 +1,28 @@
-import { Button } from "@/components/ui";
+import type { ReactNode } from "react";
+import { Button, Text } from "@/components/ui";
 import { Check } from "@/components/ui/icons";
 
 /** value → occurrence count, sorted by count. */
 export function sortedEntries(map: Map<string, number>): [string, number][] {
   return [...map.entries()].sort((a, b) => b[1] - a[1]);
 }
+
+// The two groups below are the same menu to the reader, so their heading and
+// their row label are one decision each rather than two that happen to agree.
+
+/** Heading over a group of filter rows. */
+const FilterTitle = ({ children }: { children: ReactNode }) => (
+  <Text as="div" size="s" tone="subtle" weight="medium" className="px-3 pt-2 pb-1">
+    {children}
+  </Text>
+);
+
+/** The label a filter row is chosen by. Shared with the PR detail filter menu. */
+export const FilterLabel = ({ children }: { children: ReactNode }) => (
+  <Text as="span" size="s" tone="secondary" className="flex-1 min-w-0 truncate">
+    {children}
+  </Text>
+);
 
 /**
  * Single-choice group inside the /tasks filter menus — radio-like rows
@@ -23,18 +41,18 @@ export function FilterChoiceSection<T extends string>({
 }) {
   return (
     <div>
-      <div className="px-3 pt-2 pb-1 text-s font-medium text-primary-400 dark:text-primary-500">
+      <FilterTitle>
         {title}
-      </div>
+      </FilterTitle>
       {options.map((opt) => (
         <Button
           key={opt.value}
           onClick={() => onSelect(opt.value)}
           className="w-full flex items-center gap-2 px-3 py-1.5 text-left cursor-pointer transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800"
         >
-          <span className="flex-1 min-w-0 truncate text-s text-primary-800 dark:text-primary-100">
+          <FilterLabel>
             {opt.label}
-          </span>
+          </FilterLabel>
           {value === opt.value && (
             <Check className="w-3 h-3 shrink-0 text-primary-900 dark:text-primary-100" />
           )}
@@ -61,9 +79,9 @@ export function FilterSection({
   if (entries.length === 0) return null;
   return (
     <div>
-      <div className="px-3 pt-2 pb-1 text-s font-medium text-primary-400 dark:text-primary-500">
+      <FilterTitle>
         {title}
-      </div>
+      </FilterTitle>
       {entries.map(([value, count]) => {
         const isSelected = selected.includes(value);
         return (
@@ -73,12 +91,12 @@ export function FilterSection({
             className="w-full flex items-center gap-2 px-3 py-1.5 text-left cursor-pointer transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800"
           >
             {renderIcon?.(value)}
-            <span className="flex-1 min-w-0 truncate text-s text-primary-800 dark:text-primary-100">
+            <FilterLabel>
               {value}
-            </span>
-            <span className="shrink-0 text-xxs text-primary-500 dark:text-primary-400 tabular-nums">
+            </FilterLabel>
+            <Text as="span" size="xxs" tone="subtle" className="shrink-0 tabular-nums">
               {count}
-            </span>
+            </Text>
             {isSelected && (
               <Check className="w-3 h-3 shrink-0 text-primary-900 dark:text-primary-100" />
             )}

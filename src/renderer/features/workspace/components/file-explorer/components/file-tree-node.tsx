@@ -1,6 +1,6 @@
 import { memo, useState, useCallback, useEffect, useRef } from "react";
 import type { FileNode } from "@/features/workspace/types/file-explorer";
-import { FileIconComponent } from "./file-icon";
+import { FileIconComponent } from "@/components/ui/icons";
 import { ArrowUp, Plus } from "@/components/ui/icons";
 import { Button } from "@/components/ui";
 
@@ -138,7 +138,7 @@ export const FileTreeNode = memo(function FileTreeNode({
           {isDirectory && showChevron && (
             <ArrowUp
               className={`
-                w-3 h-3 text-primary-500 dark:text-primary-400
+                w-3 h-3 text-primary-600 dark:text-primary-400
                 transition-transform duration-150
                 ${isExpanded ? "rotate-180" : "rotate-90"}
               `}
@@ -162,7 +162,7 @@ export const FileTreeNode = memo(function FileTreeNode({
             className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded hover:bg-primary/20 dark:hover:bg-primary/10 transition-opacity mr-1"
             title="Add to context"
           >
-            <Plus className="w-3.5 h-3.5 text-primary-500 dark:text-primary-400" />
+            <Plus className="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" />
           </Button>
         )}
 

@@ -56,9 +56,20 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between mb-8 gap-3">
         <Heading3>Dashboard</Heading3>
         {isMobile ? (
-          <Select value={filter} options={OPTIONS} onChange={setFilter} />
+          <Select
+            value={filter}
+            options={OPTIONS}
+            onChange={setFilter}
+            aria-label="Dashboard provider"
+          />
         ) : (
-          <SegmentedTabs value={filter} onChange={setFilter} options={OPTIONS} />
+          <SegmentedTabs
+            value={filter}
+            onChange={setFilter}
+            options={OPTIONS}
+            semantics="radiogroup"
+            aria-label="Dashboard provider"
+          />
         )}
       </div>
 

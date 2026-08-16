@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Mains } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse } from "./_shared";
-import { Tiny } from "@/components/ui";
-import { shortPath } from "../../utils/path-utils";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader } from "./_shared";
+import { Text, Tiny } from "@/components/ui";
+import { shortPath } from "../../lib/path-utils";
 
 export interface CommitParams {
   message?: string;
@@ -31,11 +31,11 @@ export function CommitDisplay({
         isCompact={isCompact}
       >
         {params.files?.length && (
-          <span className="text-primary-500 shrink-0 group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className={`shrink-0 ${TOOL_ROW_TEXT}`}>
             {params.files.length} file{params.files.length !== 1 ? "s" : ""}
           </span>
         )}
-        <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+        <span className={`truncate ${TOOL_ROW_TEXT}`}>
           {firstLine}
         </span>
       </ToolHeader>
@@ -46,9 +46,9 @@ export function CommitDisplay({
             {params.files?.length && (
               <div className="space-y-0.5">
                 {params.files.map((file) => (
-                  <div key={file} className="text-xs font-mono text-primary-500 py-0.5">
+                  <Text as="div" key={file} size="xs" tone="faint" className="font-mono py-0.5">
                     {shortPath(file)}
-                  </div>
+                  </Text>
                 ))}
               </div>
             )}

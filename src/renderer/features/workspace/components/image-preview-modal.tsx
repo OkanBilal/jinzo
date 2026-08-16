@@ -1,11 +1,12 @@
 import {
   useCallback,
   useEffect,
+  useId,
   useRef,
   useState,
   type PointerEvent,
 } from "react";
-import { Modal, Button } from "@/components/ui";
+import { Button, Modal, Text } from "@/components/ui";
 import { Close, Download, Plus, Minus } from "@/components/ui/icons";
 
 interface ImagePreviewModalProps {
@@ -23,6 +24,7 @@ function clampScale(value: number): number {
 }
 
 export function ImagePreviewModal({ name, src, onClose }: ImagePreviewModalProps) {
+  const titleId = useId();
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
@@ -153,12 +155,19 @@ export function ImagePreviewModal({ name, src, onClose }: ImagePreviewModalProps
       isOpen
       onClose={onClose}
       backdrop="media"
+      aria-labelledby={titleId}
       className="w-fit min-w-80 max-w-[92vw]"
     >
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-primary-200 dark:border-primary-800  shrink-0">
-        <span className="text-xs font-mono text-primary-600 dark:text-primary-400 truncate">
+        <Text
+          as="span"
+          id={titleId}
+          size="xs"
+          tone="subtle"
+          className="font-mono truncate"
+        >
           {name}
-        </span>
+        </Text>
         <div className="flex items-center gap-1 ml-3 shrink-0 glass-surface p-1 rounded-full">
           <Button
             onClick={handleDownload}
@@ -201,24 +210,23 @@ export function ImagePreviewModal({ name, src, onClose }: ImagePreviewModalProps
             onClick={zoomOut}
             disabled={scale <= MIN_SCALE}
             aria-label="Zoom out"
-            className="p-1.5 rounded-full text-primary-200 hover:bg-primary-100/15 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            className="p-1.5 rounded-full text-primary-200 hover:bg-primary-100/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Minus className="w-3.5 h-3.5" />
           </Button>
-          <button
-            type="button"
+          <Button
             onClick={resetZoom}
             aria-label="Reset zoom"
             title="Reset zoom"
             className="min-w-12 px-1 text-xs font-medium tabular-nums text-primary-100 hover:text-primary cursor-pointer"
           >
             {Math.round(scale * 100)}%
-          </button>
+          </Button>
           <Button
             onClick={zoomIn}
             disabled={scale >= MAX_SCALE}
             aria-label="Zoom in"
-            className="p-1.5 rounded-full text-primary-200 hover:bg-primary-100/15 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            className="p-1.5 rounded-full text-primary-200 hover:bg-primary-100/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Plus className="w-3.5 h-3.5" />
           </Button>

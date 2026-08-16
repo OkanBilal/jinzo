@@ -1,5 +1,5 @@
 {
-  "cliVersion": "0.146.0",
+  "cliVersion": "0.147.0",
   "files": [
     {
       "path": "AbsolutePathBuf.ts",
@@ -19,11 +19,11 @@
     },
     {
       "path": "ImageGenerationItem.ts",
-      "sha256": "2d7d1204095bd20a6dee8269737038053323e156f904b6b450e5c6c9504d476d"
+      "sha256": "e2510a3e4ce1e76393238d8a758468d925d91a41833156d97f61a6c927edbe1f"
     },
     {
       "path": "InitializeCapabilities.ts",
-      "sha256": "6f04ceb3f75de8d4061fde084d89c7756b23a9e33e37684d44d35f535e715c42"
+      "sha256": "4abc3c8bf9f039c61a0ee0f92c21854e350ce9ef4ef6b770178040e47744cd7b"
     },
     {
       "path": "InitializeParams.ts",
@@ -51,7 +51,7 @@
     },
     {
       "path": "PlanType.ts",
-      "sha256": "afb5250f6dbd3d97560504a683a613ace7aa66c8c147a580b55e3944663500b8"
+      "sha256": "38a98c7fba374ada1fd46550bcb203dbf79f061b9a44e88d6028a62b76ff5ce7"
     },
     {
       "path": "ReasoningEffort.ts",
@@ -131,7 +131,7 @@
     },
     {
       "path": "v2/CommandAction.ts",
-      "sha256": "4e8c73d84f83ac4f601354aa78ba4fefc750068b509e2fd589c5c30719b81b5a"
+      "sha256": "df8e6909e1e46e352ada64e766c3d6c93552199ce2448b35b83912efb2fe8917"
     },
     {
       "path": "v2/CommandExecutionSource.ts",
@@ -251,7 +251,7 @@
     },
     {
       "path": "v2/Model.ts",
-      "sha256": "773f54658d25318c479669b3083bce050183bcefb6942a16ea001b7e3141de27"
+      "sha256": "da8f59a5d58b329912e24050b846d5d4eb2f2ba1cd6f5e5eed1c71c42bcef49b"
     },
     {
       "path": "v2/ModelAvailabilityNux.ts",
@@ -304,6 +304,10 @@
     {
       "path": "v2/PluginDetail.ts",
       "sha256": "42abe52a1f73e2dee242f4a8327ac800e0ccc299548ebd8411e94d5dc196e2d0"
+    },
+    {
+      "path": "v2/PluginDisabledReason.ts",
+      "sha256": "6ee9da97c290fe832d73b4b8b10b9b8227c245d84487c72e65256741e04b52e6"
     },
     {
       "path": "v2/PluginHookSummary.ts",
@@ -387,7 +391,7 @@
     },
     {
       "path": "v2/PluginSummary.ts",
-      "sha256": "01a55d213ed9ad62eec7c15f5869086aa025c8f37f02de625d04a90e4b0215dc"
+      "sha256": "d5a603da2dc423601f26eeba5f46caeb8ad4e8e678a111d85b10dc3f07a751fe"
     },
     {
       "path": "v2/PluginUninstallParams.ts",
@@ -523,7 +527,7 @@
     },
     {
       "path": "v2/Thread.ts",
-      "sha256": "d4e0924bd68594bf0f70733a4b0b259c8f45ae8114f0661e579328749106d47a"
+      "sha256": "40e7ba25dfcf9dd7c044445181ec1a3397c56daacaa69791b76b7b2c03d6bfae"
     },
     {
       "path": "v2/ThreadActiveFlag.ts",
@@ -587,7 +591,7 @@
     },
     {
       "path": "v2/ThreadItem.ts",
-      "sha256": "23efe935fe3582ae96b1611be9f191d564db26d00463ff2cec2bc67c553cb02b"
+      "sha256": "f32622ac45c25b7bbeef2ea77ed47d3b6e4e11f01c405e189241a5ebfa85b224"
     },
     {
       "path": "v2/ThreadReadParams.ts",
@@ -604,6 +608,10 @@
     {
       "path": "v2/ThreadResumeResponse.ts",
       "sha256": "4104912c2c4149f885b45e76e4ae7a4d27810f07fa8de85e96e1505ddcf6f1e0"
+    },
+    {
+      "path": "v2/ThreadSection.ts",
+      "sha256": "18decac3e6e3bda58b681350c94424cbbe13d3b4fe82248f5f4be152fe52fc75"
     },
     {
       "path": "v2/ThreadSource.ts",

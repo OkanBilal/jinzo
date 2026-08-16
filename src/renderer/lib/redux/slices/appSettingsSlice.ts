@@ -6,8 +6,14 @@ import {
   DOC_VIEWER_PANEL_WIDTH_DEFAULT,
   TASKS_DETAIL_WIDTH_DEFAULT,
 } from "@/lib/layout";
+import {
+  DEFAULT_CODE_FONT_SIZE,
+  DEFAULT_INTERFACE_FONT_SIZE,
+  clampCodeFontSize,
+  clampInterfaceFontSize,
+} from "@/lib/appearance-fonts";
 import type { DocType } from "@/lib/document-viewer";
-import { isNewRunTab } from "@/features/workspace/utils/repo-utils";
+import { isNewRunTab } from "@/features/workspace/lib/repo-utils";
 import { openNewRunTab, setActiveTab } from "./workspaceSlice";
 
 /** The document currently shown in the document viewer panel. */
@@ -57,6 +63,10 @@ export interface AppSettingsState {
   tasksDetailWidth: number;
   /** Light / dark / follow-the-OS. Applied to `<html class="dark">`. */
   theme: ThemePreference;
+  /** Root font size in pixels. Rescales every rem-based dimension. */
+  interfaceFontSize: number;
+  /** Code / diff font size in pixels. Absolute so it never scales twice. */
+  codeFontSize: number;
   /** Whether the bottom terminal drawer is open. */
   bottomTerminalOpen: boolean;
   /** How the sidebar workspace list is grouped. */
@@ -82,6 +92,8 @@ const initialState: AppSettingsState = {
   documentViewerDoc: null,
   tasksDetailWidth: TASKS_DETAIL_WIDTH_DEFAULT,
   theme: "system",
+  interfaceFontSize: DEFAULT_INTERFACE_FONT_SIZE,
+  codeFontSize: DEFAULT_CODE_FONT_SIZE,
   bottomTerminalOpen: false,
   workspaceListGrouping: "none",
   workspaceGroupExpanded: {},
@@ -137,6 +149,12 @@ const appSettingsSlice = createSlice({
     setTheme: (state, action: PayloadAction<ThemePreference>) => {
       state.theme = action.payload;
     },
+    setInterfaceFontSize: (state, action: PayloadAction<number>) => {
+      state.interfaceFontSize = clampInterfaceFontSize(action.payload);
+    },
+    setCodeFontSize: (state, action: PayloadAction<number>) => {
+      state.codeFontSize = clampCodeFontSize(action.payload);
+    },
     setBottomTerminalOpen: (state, action: PayloadAction<boolean>) => {
       state.bottomTerminalOpen = action.payload;
     },
@@ -191,6 +209,8 @@ export const {
   setTasksDetailWidth,
   setDocumentViewerDoc,
   setTheme,
+  setInterfaceFontSize,
+  setCodeFontSize,
   setBottomTerminalOpen,
   setWorkspaceListGrouping,
   setWorkspaceGroupExpanded,

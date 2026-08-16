@@ -5,10 +5,12 @@ import {
   Button,
   Caption,
   Checkbox,
+  getSegmentedTabId,
   Input,
   Muted,
   SegmentedTabs,
   toast,
+  Text,
 } from "@/components/ui";
 import {
   Archive,
@@ -53,11 +55,9 @@ export default function ArchiveSettings() {
   return (
     <SettingsPageShell
       title="Archive"
-      isLoading={isLoading}
-      error={error}
-      errorMessage={`Unable to load archived ${activeTab}.`}
       headerActions={
         <SegmentedTabs
+          id="archive-tabs"
           value={activeTab}
           onChange={setActiveTab}
           options={[
@@ -70,15 +70,27 @@ export default function ArchiveSettings() {
               label: `Runs`,
             },
           ]}
+          panelId="archive-panel"
+          aria-label="Archive type"
           className="min-w-40"
         />
       }
     >
-      {activeTab === "workspaces" ? (
-        <ArchivedWorkspacesPanel workspaces={workspacesQuery.data ?? []} />
-      ) : (
-        <ArchivedRunsPanel runs={runsQuery.data ?? []} />
-      )}
+      <div
+        id="archive-panel"
+        role="tabpanel"
+        aria-labelledby={getSegmentedTabId("archive-tabs", activeTab)}
+      >
+        {isLoading ? (
+          <Muted>Loading...</Muted>
+        ) : error ? (
+          <Muted>{`Unable to load archived ${activeTab}.`}</Muted>
+        ) : activeTab === "workspaces" ? (
+          <ArchivedWorkspacesPanel workspaces={workspacesQuery.data ?? []} />
+        ) : (
+          <ArchivedRunsPanel runs={runsQuery.data ?? []} />
+        )}
+      </div>
     </SettingsPageShell>
   );
 }
@@ -175,7 +187,7 @@ function ArchivedWorkspacesPanel({
               onChange={setRemoveWorktree}
               aria-label="Also remove the worktree from disk"
             />
-            <Caption className="text-primary-900 dark:text-primary-100">
+            <Caption tone="default">
               Also remove the worktree from disk
             </Caption>
           </label>
@@ -289,9 +301,15 @@ function ArchivedRunsPanel({ runs }: { runs: ArchivedRun[] }) {
                 {group.runs.length} run{group.runs.length === 1 ? "" : "s"}
               </Caption>
               {group.workspaceArchived && (
-                <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400">
+                <Text
+                  as="span"
+                  size="t"
+                  tone="warning"
+                  weight="medium"
+                  className="rounded-full bg-warning/10 px-2 py-0.5"
+                >
                   Workspace archived
-                </span>
+                </Text>
               )}
             </div>
 
@@ -351,10 +369,15 @@ function ArchivedWorkspaceRow({
           <Body className="truncate">{workspace.name}</Body>
           {branch && <Body className="truncate opacity-70">• {branch}</Body>}
           {!workspace.pathExists && (
-            <span className="flex shrink-0 items-center gap-1 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-amber-700 dark:text-amber-500">
+            <Text
+              as="span"
+              size="t"
+              tone="warning"
+              className="flex shrink-0 items-center gap-1 rounded-full bg-warning/10 px-1.5 py-0.5"
+            >
               <Danger className="size-3" />
-              <span className="text-[10px]">Folder missing</span>
-            </span>
+              Folder missing
+            </Text>
           )}
         </div>
 
@@ -469,7 +492,7 @@ function ArchiveEmptyState({
 }) {
   return (
     <div className="flex flex-col items-center gap-2 py-16 text-center">
-      <Archive className="size-5 text-primary-400 dark:text-primary-600" />
+      <Archive className="size-5 text-primary-600 dark:text-primary-400" />
       <Muted>{title}.</Muted>
       <Caption>{description}</Caption>
     </div>

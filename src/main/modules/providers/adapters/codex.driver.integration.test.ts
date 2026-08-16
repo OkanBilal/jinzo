@@ -189,7 +189,7 @@ describe("codex.driver / app-server protocol", () => {
     await expect(
       driver.createSession(request("run-old-codex")),
     ).rejects.toThrow(
-      "Codex CLI 0.145.0 is not supported. Mains requires 0.146.0 or newer.",
+      "Codex CLI 0.145.0 is not supported. Mains requires 0.147.0 or newer.",
     );
   });
 
@@ -208,13 +208,13 @@ describe("codex.driver / app-server protocol", () => {
       version: "0.145.0",
       outdated: true,
       compatibility: "unsupported",
-      minimumVersion: "0.146.0",
-      testedProtocolVersion: "0.146.0",
+      minimumVersion: "0.147.0",
+      testedProtocolVersion: "0.147.0",
     });
   });
 
   it("allows a newer CLI in forward-compatible mode and reports a warning", async () => {
-    process.env.MAINS_CODEX_FIXTURE_VERSION = "0.147.0";
+    process.env.MAINS_CODEX_FIXTURE_VERSION = "0.148.0";
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     const driver = createCodexDriver({
@@ -226,15 +226,15 @@ describe("codex.driver / app-server protocol", () => {
     const accountInfo = await driver.getAccountInfo?.();
 
     expect(accountInfo?.cli).toMatchObject({
-      version: "0.147.0",
+      version: "0.148.0",
       outdated: false,
       compatibility: "newer",
-      testedProtocolVersion: "0.146.0",
+      testedProtocolVersion: "0.147.0",
     });
     expect(warn).toHaveBeenCalledWith(
       "[CodexDriver]",
       expect.stringContaining(
-        "newer than Mains' tested app-server schema 0.146.0",
+        "newer than Mains' tested app-server schema 0.147.0",
       ),
     );
     warn.mockRestore();
@@ -282,7 +282,7 @@ describe("codex.driver / app-server protocol", () => {
     await expect(
       driver.createSession(request("run-legacy-initialize")),
     ).rejects.toThrow(
-      "Codex app-server initialize response is incompatible with protocol 0.146.0",
+      "Codex app-server initialize response is incompatible with protocol 0.147.0",
     );
   });
 

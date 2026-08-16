@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../../lib/cn";
+import Text from "./text";
 
 export type TooltipPosition =
   | "top"
@@ -148,7 +149,10 @@ export default function Tooltip({
 
   const tooltipElement = shouldRender
     ? createPortal(
-        <div
+        <Text
+          as="div"
+          size="xs"
+          tone="contrast"
           role="tooltip"
           style={{
             position: "fixed",
@@ -158,8 +162,7 @@ export default function Tooltip({
             zIndex: 9999,
           }}
           className={cn(
-            "px-2 py-1 text-xs whitespace-nowrap rounded-[10px] pointer-events-none glass-surface",
-            " text-primary-950 dark:text-primary",
+            "px-2 py-1 whitespace-nowrap rounded-[10px] pointer-events-none glass-surface",
             "shadow-lg shadow-primary-950/10 ",
             "transition-all duration-50 ease-out",
             "flex items-center gap-2",
@@ -169,11 +172,11 @@ export default function Tooltip({
         >
           <span>{content}</span>
           {shortcut && (
-            <span className="text-primary-400 dark:text-primary-500 font-normal">
+            <Text as="span" size="inherit" tone="subtle" weight="normal">
               {shortcut}
-            </span>
+            </Text>
           )}
-        </div>,
+        </Text>,
         document.body,
       )
     : null;

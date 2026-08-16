@@ -9,7 +9,27 @@ import {
 import { Attach, Picture, Document, Close } from "../icons";
 import DropdownWrapper from "../dropdown-wrapper";
 import { Button } from "../button";
+import Text from "../text";
 import { cn } from "@/lib/cn";
+
+/**
+ * A filename, wherever it appears — the collapsed chip, a dropdown row, the
+ * standalone preview. Eight sites rendered this by hand; one component is what
+ * keeps them one size and one colour.
+ */
+function FileLabel({
+  className,
+  children,
+}: {
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Text as="span" size="xs" tone="contrast" className={cn("truncate", className)}>
+      {children}
+    </Text>
+  );
+}
 
 export interface UploadedFile {
   file: File;
@@ -135,13 +155,14 @@ function ImageGroupChip({
             </div>
           ))}
         </div>
-        <span className="max-w-24 truncate pr-0.5 text-xs text-primary-950 dark:text-primary">
+        <FileLabel className="max-w-24 pr-0.5">
           {count} images
-        </span>
+        </FileLabel>
       </Button>
 
       <DropdownWrapper
         isOpen={menuOpen}
+        aria-label="Attached images"
         openUpward={openUpward}
         minWidth="min-w-56"
         usePortal
@@ -165,16 +186,16 @@ function ImageGroupChip({
                     className="h-full w-full object-cover"
                   />
                 </div>
-                <span className="min-w-0 flex-1 truncate text-left text-xs text-primary-950 dark:text-primary">
+                <FileLabel className="min-w-0 flex-1 text-left">
                   {uploadedFile.file.name}
-                </span>
+                </FileLabel>
                 <Button
                   type="button"
                   onClick={() => rowRemove(index)}
                   className="shrink-0 rounded-full p-1 hover:bg-primary-200/40 dark:hover:bg-primary-600/40"
                   aria-label={`Remove ${uploadedFile.file.name}`}
                 >
-                  <Close className="h-3.5 w-3.5 text-primary-600 dark:text-primary-300" />
+                  <Close className="h-3.5 w-3.5 text-primary-600 dark:text-primary-400" />
                 </Button>
               </div>
             );
@@ -252,13 +273,14 @@ function DocumentGroupChip({
             </div>
           ))}
         </div>
-        <span className="max-w-24 truncate pr-0.5 text-xs text-primary-950 dark:text-primary">
+        <FileLabel className="max-w-24 pr-0.5">
           {count} documents
-        </span>
+        </FileLabel>
       </Button>
 
       <DropdownWrapper
         isOpen={menuOpen}
+        aria-label="Attached documents"
         openUpward={openUpward}
         minWidth="min-w-56"
         usePortal
@@ -278,16 +300,16 @@ function DocumentGroupChip({
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-primary-200/40 ring-2 ring-primary-200 dark:bg-primary-700/50 dark:ring-primary-700/60">
                   <Document className="size-4 text-primary-950 dark:text-primary" />
                 </div>
-                <span className="min-w-0 flex-1 truncate text-left text-xs text-primary-950 dark:text-primary">
+                <FileLabel className="min-w-0 flex-1 text-left">
                   {uploadedFile.file.name}
-                </span>
+                </FileLabel>
                 <Button
                   type="button"
                   onClick={() => rowRemove(index)}
                   className="shrink-0 rounded-full p-1 hover:bg-primary-200/40 dark:hover:bg-primary-600/40"
                   aria-label={`Remove ${uploadedFile.file.name}`}
                 >
-                  <Close className="h-3.5 w-3.5 text-primary-600 dark:text-primary-300" />
+                  <Close className="h-3.5 w-3.5 text-primary-600 dark:text-primary-400" />
                 </Button>
               </div>
             );
@@ -330,17 +352,17 @@ export function FileUploadDropdown({
               className="flex cursor-pointer items-center gap-2"
               aria-label="Remove document"
             >
-              <Close className="h-4 w-4 text-primary-600 dark:text-primary-300" />
-              <span className="max-w-25 truncate text-xs text-primary-950 dark:text-primary">
+              <Close className="h-4 w-4 text-primary-600 dark:text-primary-400" />
+              <FileLabel className="max-w-25">
                 {uploadedFile.file.name}
-              </span>
+              </FileLabel>
             </Button>
           ) : (
             <>
               <Document className="h-4 w-4 text-primary-950 dark:text-primary" />
-              <span className="max-w-25 truncate text-xs text-primary-950 dark:text-primary">
+              <FileLabel className="max-w-25">
                 {uploadedFile.file.name}
-              </span>
+              </FileLabel>
             </>
           )}
         </div>
@@ -372,13 +394,13 @@ export function FileUploadDropdown({
                 className="absolute inset-0 flex cursor-pointer items-center justify-center bg-primary-950/50 transition-opacity"
                 aria-label="Remove image"
               >
-                <Close className="h-4 w-4 text-primary-600 dark:text-primary-300" />
+                <Close className="h-4 w-4 text-primary-600 dark:text-primary-400" />
               </Button>
             )}
           </div>
-          <span className="max-w-25 truncate text-xs text-primary-950 dark:text-primary">
+          <FileLabel className="max-w-25">
             {uploadedFile.file.name}
-          </span>
+          </FileLabel>
         </div>
       </div>
     );
@@ -404,12 +426,12 @@ export function FileUploadDropdown({
               className="absolute inset-0 flex cursor-pointer items-center justify-center bg-primary-950/50 opacity-0 transition-opacity group-hover:opacity-100"
               aria-label="Remove image"
             >
-              <Close className="h-4 w-4 text-primary-600 dark:text-primary-300" />
+              <Close className="h-4 w-4 text-primary-600 dark:text-primary-400" />
             </Button>
           </div>
-          <span className="max-w-25 truncate text-xs text-primary-950 dark:text-primary">
+          <FileLabel className="max-w-25">
             {uploadedFile.file.name}
-          </span>
+          </FileLabel>
         </div>
       </div>
     );
@@ -491,6 +513,7 @@ export function FileUploadDropdown({
         onClick={onToggle}
         className="shrink-0 cursor-pointer rounded-full p-2 transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800"
         aria-label="Upload file"
+        aria-haspopup="menu"
         aria-expanded={isOpen}
       >
         <Attach className="text-primary-950 dark:text-primary size-4" />
@@ -507,6 +530,7 @@ export function FileUploadDropdown({
 
       <DropdownWrapper
         isOpen={isOpen}
+        aria-label="Upload type"
         openUpward={openUpward}
       >
         {[
@@ -518,7 +542,7 @@ export function FileUploadDropdown({
             type="button"
             onClick={onClick}
             role="menuitem"
-            className="flex w-full cursor-pointer items-center px-3 py-2 text-left text-sm text-primary-900 first:rounded-t-xl last:rounded-b-xl hover:bg-primary-200/30 dark:text-primary-200 dark:hover:bg-primary-800"
+            className="flex w-full cursor-pointer items-center px-3 py-2 text-left text-sm text-primary-900 first:rounded-t-xl last:rounded-b-xl hover:bg-primary-200/30 dark:text-primary-100 dark:hover:bg-primary-800"
           >
             <Icon className="mr-2 size-3.5" />
             {label}

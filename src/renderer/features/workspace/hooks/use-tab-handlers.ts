@@ -19,7 +19,7 @@ import {
   getIssueEntityId,
   getSignalEntityId,
   getNoteId,
-} from "@/features/workspace/utils/repo-utils";
+} from "@/features/workspace/lib/repo-utils";
 
 interface UseTabHandlersParams {
   activeTab: string;

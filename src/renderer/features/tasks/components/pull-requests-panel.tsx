@@ -11,13 +11,14 @@ import {
   type PullRequestSummary,
 } from "@/lib/redux/api";
 import {
+  Body,
   Button,
   DropdownWrapper,
   Input,
   SegmentedTabs,
+  Text,
 } from "@/components/ui";
 import { Close, Layers, Search, Trash } from "@/components/ui/icons";
-import { Body } from "@/components/ui/text";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import {
   FilterChoiceSection,
@@ -205,7 +206,9 @@ export function PullRequestsPanel({
   if (availabilityLoading) {
     return (
       <div className="flex items-center justify-center py-16 px-6">
-        <span className="text-xs shine-text">Checking GitHub access...</span>
+        <Text as="span" size="xs" tone="inherit" className="shine-text">
+          Checking GitHub access...
+        </Text>
       </div>
     );
   }
@@ -213,11 +216,11 @@ export function PullRequestsPanel({
   if (!availability?.connected || availability.error) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-16 px-6 text-center">
-        <Body className="text-s text-primary-900 dark:text-primary-100 font-medium">
+        <Body size="s" weight="medium">
           {availability?.error ?? "GitHub is not connected"}
         </Body>
         {!availability?.error && (
-          <Body className="text-xs text-primary-700 dark:text-primary-400 max-w-90">
+          <Body size="xs" tone="muted" className="max-w-90">
             Connect GitHub to see pull requests you authored, are reviewing, or
             were asked to review.
           </Body>
@@ -244,14 +247,14 @@ export function PullRequestsPanel({
             onChange={(e) => setText(e.target.value)}
             placeholder="Search pull requests"
             aria-label="Search pull requests"
-            className={`w-full pl-9 ${text ? "pr-9" : "pr-3"} py-1.5 text-s rounded-2xl bg-primary/40 dark:bg-primary/5 glass-outline placeholder:text-primary-600 dark:placeholder:text-primary-500 text-primary-900 dark:text-primary-100 outline-none`}
+            className={`w-full pl-9 ${text ? "pr-9" : "pr-3"} py-1.5 text-s rounded-2xl bg-primary/40 dark:bg-primary/5 glass-outline placeholder:text-primary-500 dark:placeholder:text-primary-500 text-primary-900 dark:text-primary-100 outline-none`}
           />
           {text && (
             <Button
               onClick={() => setText("")}
               tooltip="Clear search"
               aria-label="Clear search"
-              className="absolute right-2 top-1/2 z-10 -translate-y-1/2 p-1 rounded-lg cursor-pointer text-primary-500 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 hover:bg-primary/50 dark:hover:bg-primary/10"
+              className="absolute right-2 top-1/2 z-10 -translate-y-1/2 p-1 rounded-lg cursor-pointer text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 hover:bg-primary/50 dark:hover:bg-primary/10"
             >
               <Close className="size-3" />
             </Button>
@@ -263,6 +266,8 @@ export function PullRequestsPanel({
             value={relationship}
             onChange={setRelationship}
             options={RELATIONSHIP_FILTERS}
+            semantics="radiogroup"
+            aria-label="Pull request relationship"
             className="w-fit"
           />
           <div className="flex items-center gap-1.5">
@@ -283,17 +288,20 @@ export function PullRequestsPanel({
                 onClick={() => setRepoFilterOpen((open) => !open)}
                 tooltip="Filter pull requests"
                 aria-label="Filter pull requests"
+                aria-haspopup="dialog"
                 aria-expanded={repoFilterOpen}
                 className={`p-1.5 rounded-xl cursor-pointer transition-colors ${
                   repoFilterOpen || activeFilterCount > 0
                     ? "bg-primary/80 dark:bg-primary/10 glass-outline text-primary-900 dark:text-primary-100"
-                    : "text-primary-500 dark:text-primary-400 hover:bg-primary/50 dark:hover:bg-primary/10 hover:text-primary-800 dark:hover:text-primary-200"
+                    : "text-primary-600 dark:text-primary-400 hover:bg-primary/50 dark:hover:bg-primary/10 hover:text-primary-800 dark:hover:text-primary-200"
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />
               </Button>
               <DropdownWrapper
                 isOpen={repoFilterOpen}
+                role="dialog"
+                aria-label="Pull request filters"
                 minWidth="min-w-80"
                 position="right"
               >
@@ -332,7 +340,7 @@ export function PullRequestsPanel({
       <div className="flex-1 min-h-0 overflow-y-auto noscrollbar px-6 pt-3 pb-16 mask-[linear-gradient(to_bottom,transparent,black_1.75rem)]">
         {isError ? (
           <div className="flex flex-col items-center gap-2 py-10">
-            <Body className="text-xs text-primary-800 dark:text-primary-300">
+            <Body size="xs" tone="secondary">
               Unable to load pull requests.
             </Body>
             <Button variant="subtle" onClick={() => refetch()}>
@@ -341,11 +349,13 @@ export function PullRequestsPanel({
           </div>
         ) : isFetching && items.length === 0 ? (
           <div className="flex items-center justify-center py-10">
-            <span className="text-xs shine-text">Loading pull requests...</span>
+            <Text as="span" size="xs" tone="inherit" className="shine-text">
+              Loading pull requests...
+            </Text>
           </div>
         ) : items.length === 0 ? (
           <div className="flex items-center justify-center py-10">
-            <Body className="text-xs text-primary-800 dark:text-primary-300">
+            <Body size="xs" tone="secondary">
               No pull requests match these filters.
             </Body>
           </div>

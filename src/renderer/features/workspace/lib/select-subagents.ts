@@ -7,7 +7,7 @@ import {
   type SubagentLifecycleMeta,
   type SubagentLifecycleState,
   type SubagentTaskMeta,
-} from "../utils/subagent-identity";
+} from "./subagent-identity";
 
 export type SubagentState = SubagentLifecycleState;
 

@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { RunEvent } from "../types";
-import { resolveTool } from "../utils/resolve-tool";
+import { resolveTool } from "../lib/resolve-tool";
 import { Check } from "@/components/ui/icons";
-import { AsciiSpinner, Button, toastStore } from "@/components/ui";
-import type { AsciiSpinnerVariant } from "@/components/ui";
+import {
+  AsciiSpinner,
+  Button,
+  Text,
+  toastStore,
+  type AsciiSpinnerVariant,
+} from "@/components/ui";
 
 interface TodoSummaryBarProps {
   events: RunEvent[];
@@ -286,17 +291,17 @@ export function TodoSummaryBar({
           className="flex items-center gap-3 w-full px-5 py-3 cursor-pointer"
         >
           {allDone ? (
-            <Check className="size-3.5 text-emerald-500 shrink-0" />
+            <Check className="size-3.5 text-success shrink-0" />
           ) : (
             <AsciiSpinner variant={variant} kind="circle" />
           )}
-          <span className="text-sm font-medium whitespace-nowrap shrink-0 tabular-nums">
+          <Text as="span" size="sm" tone="inherit" weight="medium" className="whitespace-nowrap shrink-0 tabular-nums">
             Task {currentStep}/{todos.length}
-          </span>
+          </Text>
           {activeLabel && (
-            <span className="text-xs text-warning dark:text-warning truncate min-w-0 flex-1 text-left">
+            <Text as="span" size="xs" tone="warning" align="left" className="truncate min-w-0 flex-1">
               {activeLabel}
-            </span>
+            </Text>
           )}
         </Button>
 
@@ -317,7 +322,7 @@ export function TodoSummaryBar({
                     <span
                       className={`mt-0.5 size-4 rounded-full  flex items-center justify-center shrink-0 ${
                         isDone
-                          ? " bg-success/15 text-success dark:text-success"
+                          ? " bg-success/15 text-success"
                           : isActive
                             ? " bg-warning/20"
                             : " bg-primary-300/50 dark:bg-primary-600/40"
@@ -329,20 +334,18 @@ export function TodoSummaryBar({
                         <span className="size-1.5 rounded-full bg-warning animate-pulse" />
                       )}
                     </span>
-                    <span className="text-primary-500 dark:text-primary-400 tabular-nums shrink-0 w-4 text-right">
+                    <Text as="span" size="inherit" tone="subtle" align="right" className="tabular-nums shrink-0 w-4">
                       {idx + 1}.
-                    </span>
-                    <span
-                      className={`min-w-0 flex-1 ${
-                        isDone
-                          ? "text-primary-500 dark:text-primary-500 line-through"
-                          : isActive
-                            ? "text-primary-900 dark:text-primary-100 font-medium"
-                            : "text-primary-700 dark:text-primary-300"
-                      }`}
+                    </Text>
+                    <Text
+                      as="span"
+                      size="inherit"
+                      tone={isDone ? "subtle" : isActive ? "default" : "muted"}
+                      weight={isActive && !isDone ? "medium" : undefined}
+                      className={`min-w-0 flex-1 ${isDone ? "line-through" : ""}`}
                     >
                       {todo.content}
-                    </span>
+                    </Text>
                   </li>
                 );
               })}

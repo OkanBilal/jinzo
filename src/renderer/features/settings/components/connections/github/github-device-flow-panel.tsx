@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
-import { Button, Caption, CopyButton, ErrorText, Muted } from "@/components/ui";
-import { AsciiSpinner } from "@/components/ui/ascii-spinner";
+import {
+  AsciiSpinner,
+  Button,
+  Caption,
+  CopyButton,
+  ErrorText,
+  Muted,
+  Text,
+} from "@/components/ui";
 import { Github } from "@/components/ui/icons";
 import {
   useStartGithubDeviceFlowMutation,
@@ -118,11 +125,16 @@ export function GitHubDeviceFlowPanel({
         </Muted>
 
         <div className="flex items-center gap-2">
-          <code className="flex-1 text-center text-xl tracking-[0.3em] font-mono py-3 rounded-xl bg-primary dark:bg-primary-900 text-primary-900 dark:text-primary-100 select-all">
+          <Text
+            as="code"
+            size="xl"
+            align="center"
+            className="flex-1 tracking-[0.3em] font-mono py-3 rounded-xl bg-primary dark:bg-primary-900 select-all"
+          >
             {auth.userCode}
-          </code>
+          </Text>
           <CopyButton text={auth.userCode} tooltip="Copy code" variant="bare"
-          className=" text-primary-700 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-100 transition-colors cursor-pointer"
+          className=" text-primary-700 dark:text-primary-300 hover:text-primary-900 dark:hover:text-primary-100 transition-colors cursor-pointer"
           />
         </div>
 

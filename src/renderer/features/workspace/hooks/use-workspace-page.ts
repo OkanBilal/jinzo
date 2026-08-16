@@ -5,18 +5,6 @@ import {
   setWorkspaceModel,
   setActiveTab,
   clearSelectedFile,
-  removeContextFile,
-  clearContextFiles,
-  removeContextIssue,
-  clearContextIssues,
-  removeContextSignal,
-  clearContextSignals,
-  removeContextSkill,
-  clearContextSkills,
-  removeContextBrowserSelection,
-  clearContextBrowserSelections,
-  removeContextCodeSelection,
-  clearContextCodeSelections,
   clearIssueTabs,
   clearSignalTabs,
   clearNoteTabs,
@@ -26,12 +14,13 @@ import {
   clearPendingGoal,
   clearPendingReviewTarget,
 } from "@/lib/redux/slices/workspaceSlice";
-import { isRunTab, isNewRunTab } from "@/features/workspace/utils/repo-utils";
+import { isRunTab, isNewRunTab } from "@/features/workspace/lib/repo-utils";
+import { useComposerContext } from "./use-composer-context";
 import { useWorkspaceData } from "./use-workspace-data";
 import { useWorkspaceRuns } from "./use-workspace-runs";
 import { useFileContentLoader } from "./use-file-content-loader";
 import { useTabHandlers } from "./use-tab-handlers";
-import { serializeAttachments } from "@/features/workspace/utils/run-helpers";
+import { serializeAttachments } from "@/features/workspace/lib/run-helpers";
 
 export function useWorkspacePage(providerId: string) {
   const dispatch = useAppDispatch();
@@ -46,24 +35,7 @@ export function useWorkspacePage(providerId: string) {
   const selectedFile = useAppSelector(
     (state) => state.workspace.selectedFile,
   );
-  const contextFiles = useAppSelector(
-    (state) => state.workspace.contextFiles,
-  );
-  const contextIssues = useAppSelector(
-    (state) => state.workspace.contextIssues,
-  );
-  const contextSignals = useAppSelector(
-    (state) => state.workspace.contextSignals,
-  );
-  const contextSkills = useAppSelector(
-    (state) => state.workspace.contextSkills,
-  );
-  const contextBrowserSelections = useAppSelector(
-    (state) => state.workspace.contextBrowserSelections,
-  );
-  const contextCodeSelections = useAppSelector(
-    (state) => state.workspace.contextCodeSelections,
-  );
+  const { items: contextItems, clear: clearContext } = useComposerContext();
   const openIssueTabs = useAppSelector(
     (state) => state.workspace.openIssueTabs,
   );
@@ -117,17 +89,13 @@ export function useWorkspacePage(providerId: string) {
 
   useEffect(() => {
     dispatch(clearSelectedFile());
-    dispatch(clearContextFiles());
-    dispatch(clearContextIssues());
-    dispatch(clearContextSignals());
-    dispatch(clearContextSkills());
-    dispatch(clearContextBrowserSelections());
-    dispatch(clearContextCodeSelections());
+    clearContext();
     dispatch(clearIssueTabs());
     dispatch(clearSignalTabs());
     dispatch(clearNoteTabs());
     dispatch(setActiveTab("editor"));
-  }, [workspaceId, dispatch]);
+    // `clearContext` is dispatch-stable, so listing it doesn't re-fire this.
+  }, [workspaceId, dispatch, clearContext]);
 
   // Sync pendingGoal from Redux to local state
   useEffect(() => {
@@ -255,13 +223,8 @@ export function useWorkspacePage(providerId: string) {
   const clearInputState = useCallback(() => {
     setGoal("");
     setUploadedFiles([]);
-    dispatch(clearContextFiles());
-    dispatch(clearContextIssues());
-    dispatch(clearContextSignals());
-    dispatch(clearContextSkills());
-    dispatch(clearContextBrowserSelections());
-    dispatch(clearContextCodeSelections());
-  }, [dispatch]);
+    clearContext();
+  }, [clearContext]);
 
   const handleExecute = useCallback(async () => {
     if (!workspaceId) {
@@ -285,7 +248,14 @@ export function useWorkspacePage(providerId: string) {
         dispatch(setActiveTab(composeTargetRunId));
         selectTab(composeTargetRunId);
       }
-      const success = (await continueRun(composeTargetRunId, goal, attachments, contextIssues, contextFiles, contextSignals, selectedModel, contextBrowserSelections, contextSkills, contextCodeSelections)) ?? false;
+      const success =
+        (await continueRun(
+          composeTargetRunId,
+          goal,
+          selectedModel,
+          attachments,
+          contextItems,
+        )) ?? false;
       if (success) clearInputState();
     } else {
       const newRunId = await executeRun(
@@ -294,12 +264,7 @@ export function useWorkspacePage(providerId: string) {
         providerId,
         selectedModel,
         attachments,
-        contextIssues,
-        contextFiles,
-        contextSignals,
-        contextBrowserSelections,
-        contextSkills,
-        contextCodeSelections,
+        contextItems,
       );
       if (newRunId) {
         clearInputState();
@@ -309,12 +274,7 @@ export function useWorkspacePage(providerId: string) {
   }, [
     goal,
     uploadedFiles,
-    contextFiles,
-    contextIssues,
-    contextSignals,
-    contextSkills,
-    contextBrowserSelections,
-    contextCodeSelections,
+    contextItems,
     workspaceId,
     selectedWorkspace,
     selectedModel,
@@ -337,7 +297,8 @@ export function useWorkspacePage(providerId: string) {
       if (!workspaceId) return;
       const run = async () => {
         if (activeRunId && canResume && activeRun && activeRun.status !== "running") {
-          const success = (await continueRun(activeRunId, goal, undefined, undefined, undefined, undefined, selectedModel)) ?? false;
+          const success =
+            (await continueRun(activeRunId, goal, selectedModel)) ?? false;
           if (success) clearInputState();
         } else {
           const newRunId = await executeRun(goal, selectedWorkspace, providerId, selectedModel);
@@ -350,59 +311,6 @@ export function useWorkspacePage(providerId: string) {
       run();
     }
   }, [autoExecute, goal, executeRun, continueRun, workspaceId, selectedWorkspace, providerId, selectedModel, dispatch, activeRunId, canResume, activeRun, clearInputState]);
-
-  const handleRemoveContextFile = useCallback(
-    (filePath: string) => {
-      dispatch(removeContextFile(filePath));
-    },
-    [dispatch],
-  );
-
-  const handleRemoveContextIssue = useCallback(
-    (entityId: string) => {
-      dispatch(removeContextIssue(entityId));
-    },
-    [dispatch],
-  );
-
-  const handleRemoveContextSignal = useCallback(
-    (entityId: string) => {
-      dispatch(removeContextSignal(entityId));
-    },
-    [dispatch],
-  );
-
-  const handleRemoveContextSkill = useCallback(
-    (name: string) => {
-      dispatch(removeContextSkill(name));
-    },
-    [dispatch],
-  );
-
-  const handleRemoveContextBrowserSelection = useCallback(
-    (id: string) => {
-      const sel = contextBrowserSelections.find((s) => s.id === id);
-      dispatch(removeContextBrowserSelection(id));
-      // Free the on-disk capture immediately to keep userData/browser-captures bounded.
-      const api = (window as any).api?.browser;
-      if (api?.deleteCapture) {
-        if (sel?.screenshotCaptureName) {
-          api.deleteCapture(sel.screenshotCaptureName).catch(() => {});
-        }
-        if (sel?.surroundingScreenshotCaptureName) {
-          api.deleteCapture(sel.surroundingScreenshotCaptureName).catch(() => {});
-        }
-      }
-    },
-    [dispatch, contextBrowserSelections],
-  );
-
-  const handleRemoveContextCodeSelection = useCallback(
-    (id: string) => {
-      dispatch(removeContextCodeSelection(id));
-    },
-    [dispatch],
-  );
 
   const runLabel = (r: { title?: string; goal: string }) =>
     r.title?.trim() ? r.title : r.goal;
@@ -461,12 +369,6 @@ export function useWorkspacePage(providerId: string) {
     selectedModel,
     activeTab,
     selectedFile,
-    contextFiles,
-    contextIssues,
-    contextSignals,
-    contextSkills,
-    contextBrowserSelections,
-    contextCodeSelections,
     openIssueTabs,
     openSignalTabs,
     openNoteTabs,
@@ -486,12 +388,6 @@ export function useWorkspacePage(providerId: string) {
     // Handlers
     handleModelChange,
     handleExecute,
-    handleRemoveContextFile,
-    handleRemoveContextIssue,
-    handleRemoveContextSignal,
-    handleRemoveContextSkill,
-    handleRemoveContextBrowserSelection,
-    handleRemoveContextCodeSelection,
     handleSendTargetChange,
     setAutoExecute,
     ...tabHandlers,

@@ -1,6 +1,11 @@
 import { useCallback, useState } from "react";
-import { Heading3, Muted, SegmentedTabs } from "@/components/ui";
-import { Body } from "@/components/ui/text";
+import {
+  getSegmentedTabId,
+  Heading3,
+  Muted,
+  SegmentedTabs,
+  Text,
+} from "@/components/ui";
 import type { IssueWithEntity, PullRequestSummary } from "@/lib/redux/api";
 import { IssuesPanel } from "@/features/tasks/components/issues-panel";
 import { PullRequestsPanel } from "@/features/tasks/components/pull-requests-panel";
@@ -58,14 +63,22 @@ export default function TasksPage() {
             </header>
 
             <SegmentedTabs
+              id="tasks-view-tabs"
               value={tab}
               onChange={switchTab}
               options={TABS}
+              panelId="tasks-view-panel"
+              aria-label="Task type"
               className="w-fit mb-4"
             />
           </div>
 
-          <div className="flex-1 min-h-0">
+          <div
+            id="tasks-view-panel"
+            role="tabpanel"
+            aria-labelledby={getSegmentedTabId("tasks-view-tabs", tab)}
+            className="flex-1 min-h-0"
+          >
             {tab === "issues" ? (
               <IssuesPanel
                 activeEntityId={
@@ -93,9 +106,9 @@ export default function TasksPage() {
           />
         ) : (
           <div className="flex-1 flex items-center justify-center">
-            <Body className="text-xs text-primary-600 dark:text-primary-400">
+            <Text size="xs" tone="subtle">
               {tab === "issues" ? "No issues" : "No pull requests"}
-            </Body>
+            </Text>
           </div>
         )}
       </DetailDrawer>

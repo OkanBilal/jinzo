@@ -37,12 +37,12 @@ export default function UserProfile({
         />
       ) : (
         <div className="size-6 rounded-full bg-primary/20 dark:bg-primary/5 flex items-center justify-center ml-1">
-          <Text className="text-t">
+          <Text as="span" size="t">
             {getInitials(displayName || "")}
           </Text>
         </div>
       )}
-      <Body className="truncate whitespace-nowrap font-medium">
+      <Body weight="medium" className="truncate whitespace-nowrap">
         {displayName || "Mains"}
       </Body>
     </div>

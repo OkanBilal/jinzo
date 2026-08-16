@@ -4,6 +4,8 @@
  * to add or rename a mode, change it here — both surfaces pick it up.
  */
 
+import type { ClaudePermissionMode } from "../../shared/claude-permission-modes";
+
 export interface ModeOption<TValue extends string = string> {
   value: TValue;
   /** Long form, e.g. "Workspace Write" — used in settings rows */
@@ -13,6 +15,49 @@ export interface ModeOption<TValue extends string = string> {
   /** Description shown under the label in dropdowns */
   description: string;
 }
+
+// ── Claude permission mode ─────────────────────────────────────────
+// Values and the install default live in `shared/claude-permission-modes`,
+// since main needs them too; only the copy is a renderer concern.
+
+export const CLAUDE_PERMISSION_MODES: readonly ModeOption<ClaudePermissionMode>[] = [
+  {
+    value: "default",
+    label: "Ask permissions",
+    shortLabel: "Ask",
+    description: "Ask before changes",
+  },
+  {
+    value: "auto",
+    label: "Auto",
+    shortLabel: "Auto",
+    description: "Claude decides when to ask",
+  },
+  {
+    value: "acceptEdits",
+    label: "Auto accept edits",
+    shortLabel: "Edit",
+    description: "Accept all edits",
+  },
+  {
+    value: "plan",
+    label: "Plan mode",
+    shortLabel: "Plan",
+    description: "Plan before changes",
+  },
+  {
+    value: "bypassPermissions",
+    label: "Bypass permissions",
+    shortLabel: "Bypass",
+    description: "Bypass all permissions",
+  },
+  {
+    value: "dontAsk",
+    label: "Don't ask",
+    shortLabel: "Don't Ask",
+    description: "Deny unapproved tools silently",
+  },
+] as const;
 
 // ── Cursor mode (ask / agent / plan) ───────────────────────────────
 export type CursorMode = "ask" | "agent" | "plan";

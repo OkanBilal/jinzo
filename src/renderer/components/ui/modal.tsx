@@ -1,19 +1,37 @@
-import { useEffect, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useId,
+  useRef,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../../lib/cn";
 import { Button } from "./button";
 import { Close } from "./icons";
 import { useSuppressBrowserView } from "@/hooks/use-suppress-browser-view";
+import { useDialogFocus } from "./dialog-focus";
 
-interface ModalProps {
+export interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  children: ReactNode;
+  children?: ReactNode;
   /** Panel overrides — sizing (w-*, max-w-*) and radius. */
   className?: string;
   /** "dim" matches Alert/WizardModal; "media" darkens + blurs for image/screenshot previews. */
   backdrop?: "dim" | "media";
+  /** Name the dialog when its content does not use ModalHeader. */
+  "aria-label"?: string;
+  /** Link the dialog to a visible title when its content does not use ModalHeader. */
+  "aria-labelledby"?: string;
+  "aria-describedby"?: string;
+  initialFocusRef?: RefObject<HTMLElement | null>;
+  closeOnEscape?: boolean;
+  closeOnBackdrop?: boolean;
 }
+
+const ModalTitleContext = createContext<string | null>(null);
 
 /**
  * Shared modal shell: portal, backdrop click-to-close, Escape key, entrance
@@ -27,17 +45,23 @@ export function Modal({
   children,
   className,
   backdrop = "dim",
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
+  "aria-describedby": ariaDescribedBy,
+  initialFocusRef,
+  closeOnEscape = true,
+  closeOnBackdrop = true,
 }: ModalProps) {
   useSuppressBrowserView(isOpen);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [isOpen, onClose]);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const generatedTitleId = useId();
+  const handleKeyDown = useDialogFocus({
+    isOpen,
+    dialogRef,
+    onClose,
+    initialFocusRef,
+    closeOnEscape,
+  });
 
   if (!isOpen) return null;
 
@@ -51,36 +75,50 @@ export function Modal({
             : "dark:bg-primary-950/60 bg-primary/80",
         )}
         role="presentation"
-        onClick={onClose}
+        onClick={closeOnBackdrop ? onClose : undefined}
       />
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
+        aria-label={ariaLabel}
+        aria-labelledby={
+          ariaLabel ? undefined : (ariaLabelledBy ?? generatedTitleId)
+        }
+        aria-describedby={ariaDescribedBy}
+        tabIndex={-1}
+        onKeyDown={handleKeyDown}
         className={cn(
-          "relative flex flex-col glass-surface rounded-xl shadow-2xl overflow-hidden max-h-[92vh]",
+          "relative flex flex-col glass-surface rounded-xl shadow-2xl overflow-hidden max-h-[92vh] focus:outline-none",
           className,
         )}
         style={{
           animation: "wizardModalIn 250ms cubic-bezier(0.22, 1, 0.36, 1) both",
         }}
       >
-        {children}
+        <ModalTitleContext.Provider value={generatedTitleId}>
+          {children}
+        </ModalTitleContext.Provider>
       </div>
     </div>,
     document.body,
   );
 }
 
-interface ModalHeaderProps {
+export interface ModalHeaderProps {
   onClose: () => void;
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 /** Standard modal title bar: content on the left, close button on the right. */
 export function ModalHeader({ onClose, children }: ModalHeaderProps) {
+  const titleId = useContext(ModalTitleContext) ?? undefined;
+
   return (
     <div className="flex items-center justify-between px-4 py-2.5 border-b border-primary-200 dark:border-primary-800 shrink-0">
-      <div className="flex items-center gap-2 min-w-0 flex-1">{children}</div>
+      <div id={titleId} className="flex items-center gap-2 min-w-0 flex-1">
+        {children}
+      </div>
       <Button
         onClick={onClose}
         aria-label="Close"

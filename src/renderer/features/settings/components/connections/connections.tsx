@@ -1,5 +1,12 @@
 import { useState, useMemo } from "react";
-import { Text, Button, SegmentedTabs, toast, Body } from "@/components/ui";
+import {
+  AsciiSpinner,
+  Body,
+  Button,
+  SegmentedTabs,
+  Text,
+  toast,
+} from "@/components/ui";
 import { SettingsPageShell } from "../settings-layout";
 import AsanaModal from "./asana/asana-modal";
 import GitHubModal from "./github/github-modal";
@@ -12,7 +19,6 @@ import SocketDevModal from "./socketdev/socketdev-modal";
 import { useRunEntitySyncMutation } from "@/lib/redux/api/syncApi";
 import { useGetConnectionStatesQuery } from "@/lib/redux/api";
 import type { ConnectionState } from "@/lib/redux/api";
-import { AsciiSpinner } from "@/components/ui/ascii-spinner";
 
 type ConnectionItem = ConnectionState;
 
@@ -110,13 +116,15 @@ export default function ConnectionsSettings() {
         onChange={setFilter}
         options={FILTER_TABS.map((t) => ({ value: t.id, label: t.label }))}
         variant="plain"
+        semantics="radiogroup"
+        aria-label="Connection category"
         className="mb-6"
       />
 
       {/* Connected */}
       {connectedFiltered.length > 0 && (
         <div className="mb-6">
-          <Body className="font-medium mb-3">
+          <Body weight="medium" className="mb-3">
             Connected
           </Body>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -135,7 +143,7 @@ export default function ConnectionsSettings() {
       {/* Available */}
       {notConnectedFiltered.length > 0 && (
         <div className="mb-6">
-          <Body className="font-medium mb-3">
+          <Body weight="medium" className="mb-3">
             Available
           </Body>
           <div className="grid grid-cols-1 gap-6 pb-12 md:grid-cols-2">
@@ -201,17 +209,17 @@ function ConnectionCard({
       <div className="flex items-start justify-between mb-10">
         <div className="flex items-center gap-2 min-w-0">
           <ConnectionIcon connection={connection} />
-          <span className="text-sm font-medium text-primary-900 dark:text-primary-100 truncate">
+          <Text as="span" weight="medium" className="truncate">
             {connection.displayName}
-          </span>
+          </Text>
         </div>
 
       </div>
       <div className="flex items-end justify-between">
         {connection.config ? (
-          <span className="text-xs px-1 text-primary-400 dark:text-primary-300 leading-tight">
+          <Text as="span" size="xs" tone="subtle" className="px-1 leading-tight">
             {(() => { try { const c = JSON.parse(connection.config); return c.description ?? ""; } catch { return ""; } })()}
-          </span>
+          </Text>
         ) : <span />}
         <Button
           variant={connected ? "primary" : "secondary"}

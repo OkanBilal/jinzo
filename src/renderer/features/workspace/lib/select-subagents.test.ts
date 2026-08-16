@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { ToolCall } from "@/lib/redux/api";
 import { selectSessionSubagents, selectSubagentEntry } from "./select-subagents";
-import { subagentStateOf } from "../utils/subagent-identity";
+import { subagentStateOf } from "./subagent-identity";
 
 function call(partial: Partial<ToolCall> & { id: number }): ToolCall {
   return {

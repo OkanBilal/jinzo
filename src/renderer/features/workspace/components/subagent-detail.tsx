@@ -6,14 +6,13 @@ import rehypeSanitize from "rehype-sanitize";
 import { markdownComponents } from "@/components/markdown-components";
 import { markdownSanitizeSchema } from "@/lib/markdown-sanitize";
 import { Check, Close, Minimize, Stop } from "@/components/ui/icons";
-import { AgentGlyph } from "@/components/ui/agent-glyph";
-import { Button } from "@/components/ui";
+import { AgentGlyph, Button, Text } from "@/components/ui";
 import {
   useGetRunArtifactsQuery,
   useGetToolCallsByRunQuery,
 } from "@/lib/redux/api";
 import { useRunEventRefetch } from "../hooks/use-run-event-refetch";
-import { mapToolCallToEvent } from "../utils/run-event-mappers";
+import { mapToolCallToEvent } from "../lib/run-event-mappers";
 import { selectSubagentEntry } from "../lib/select-subagents";
 import {
   buildSubagentFlow,
@@ -25,7 +24,7 @@ import {
   type SubagentLifecycleMeta,
   type SubagentLifecycleState,
   type SubagentTaskMeta,
-} from "../utils/subagent-identity";
+} from "../lib/subagent-identity";
 import { ToolCallItem } from "./tools/tool-call-item";
 
 /** 88_000 → "1m 28s"; sub-minute → "42s". */
@@ -137,44 +136,44 @@ export function SubagentDetail({
           active={state === "running"}
           className="size-4"
         />
-        <span className="min-w-0 flex-1 truncate text-sm font-medium text-primary-700 dark:text-primary-200">
+        <Text as="span" size="sm" tone="muted" weight="medium" className="min-w-0 flex-1 truncate">
           {display.name}
-        </span>
+        </Text>
         {workedMs !== undefined && (
-          <span className="shrink-0 text-xs tabular-nums text-primary-700 dark:text-primary-200">
+          <Text as="span" size="xs" tone="muted" className="shrink-0 tabular-nums">
             {formatWorkedFor(workedMs)}
-          </span>
+          </Text>
         )}
         <StateBadge state={state} />
         <Button
           onClick={onBack}
           title="Back to subagents"
           aria-label="Back to subagents"
-          className="shrink-0 rounded-md p-0.5 text-primary-500 transition-colors hover:bg-primary-50 hover:text-primary-900 dark:text-primary-400 dark:hover:bg-primary/5 dark:hover:text-primary-100"
+          className="shrink-0 rounded-md p-0.5 text-primary-600 transition-colors hover:bg-primary-50 hover:text-primary-900 dark:text-primary-400 dark:hover:bg-primary/5 dark:hover:text-primary-100"
         >
-          <Minimize className="size-4 scale-x-[-1] text-primary-700 dark:text-primary-200 " />
+          <Minimize className="size-4 scale-x-[-1] text-primary-700 dark:text-primary-300 " />
         </Button>
       </div>
 
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 noscrollbar">
         {display.detail && (
-          <span className="block text-xs text-primary-400 dark:text-primary-500">
+          <Text as="span" size="xs" tone="subtle" className="block">
             {display.detail}
-          </span>
+          </Text>
         )}
 
         {meta.prompt && (
-          <div className="rounded-xl bg-primary-50 px-3 py-2.5 text-sm whitespace-pre-wrap text-primary-700 dark:bg-primary/5 dark:text-primary-200">
+          <Text as="div" size="sm" tone="muted" className="rounded-xl bg-primary-50 px-3 py-2.5 whitespace-pre-wrap dark:bg-primary/5">
             {meta.prompt}
-          </div>
+          </Text>
         )}
 
         {flow.length === 0 && !resultText && !meta.error && (
-          <p className="text-sm text-primary-400">
+          <Text as="p" tone="subtle">
             {state === "running"
               ? "No activity recorded yet."
               : "No activity was recorded for this agent."}
-          </p>
+          </Text>
         )}
 
         <div className="space-y-1">
@@ -184,7 +183,7 @@ export function SubagentDetail({
               // Same bubble language as the task prompt above.
               <div
                 key={item.key}
-                className="my-3 rounded-xl bg-primary-50 px-3 py-2.5 text-sm whitespace-pre-wrap text-primary-700 dark:bg-primary/5 dark:text-primary-200"
+                className="my-3 rounded-xl bg-primary-50 px-3 py-2.5 text-sm whitespace-pre-wrap text-primary-700 dark:bg-primary/5 dark:text-primary-300"
               >
                 {item.content}
               </div>
@@ -232,7 +231,7 @@ export function SubagentDetail({
           </div>
         )}
 
-        {meta.error && <p className="text-sm text-danger">{meta.error}</p>}
+        {meta.error && <Text as="p" size="sm" tone="danger">{meta.error}</Text>}
       </div>
     </div>
   );

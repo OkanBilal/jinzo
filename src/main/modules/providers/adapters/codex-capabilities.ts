@@ -11,6 +11,7 @@ import type {
   RateLimitInfo,
   SkillInfo,
 } from "../../../../shared/adapter.types";
+import { getPluginInstallBlockReason } from "../../../../shared/plugin-install-availability";
 import {
   createLogger,
   type AdapterLogger,
@@ -281,6 +282,41 @@ function pluginAssetUrl(
   return undefined;
 }
 
+function mapPluginAvailability(
+  value: unknown,
+): PluginInfo["availability"] {
+  if (value === "AVAILABLE" || value === "DISABLED_BY_ADMIN") {
+    return value;
+  }
+  // Older experimental plugin payloads wrapped availability in an object.
+  if (value && typeof value === "object") {
+    const legacyType = (value as { type?: unknown }).type;
+    if (legacyType === "available") return "AVAILABLE";
+    if (legacyType === "disabledByAdmin") return "DISABLED_BY_ADMIN";
+  }
+  return undefined;
+}
+
+function mapPluginDisabledReason(
+  value: unknown,
+): PluginInfo["disabledReason"] {
+  switch (value) {
+    case "disabled_by_admin":
+    case "plan_not_eligible":
+    case "required_app_unavailable":
+    case "unknown":
+      return value;
+    default:
+      return typeof value === "string" ? "unknown" : null;
+  }
+}
+
+function mapEligiblePlanTypes(value: unknown): string[] | null {
+  return Array.isArray(value)
+    ? value.filter((plan): plan is string => typeof plan === "string")
+    : null;
+}
+
 export function mapCodexPluginList(
   result: Record<string, unknown> | null | undefined,
 ): PluginListResponse {
@@ -319,6 +355,15 @@ export function mapCodexPluginList(
             installPolicy:
               (plugin.installPolicy as PluginInfo["installPolicy"]) ??
               "AVAILABLE",
+            availability: mapPluginAvailability(plugin.availability),
+            disabledReason: mapPluginDisabledReason(plugin.disabledReason),
+            eligiblePlanTypes: mapEligiblePlanTypes(
+              plugin.eligiblePlanTypes,
+            ),
+            installedAt:
+              typeof plugin.installedAt === "number"
+                ? plugin.installedAt
+                : null,
             authPolicy:
               (plugin.authPolicy as PluginInfo["authPolicy"]) ?? "ON_INSTALL",
             interface: pluginInterface
@@ -418,6 +463,13 @@ function mapPluginDetail(
       enabled: (summary.enabled as boolean) ?? false,
       installPolicy:
         (summary.installPolicy as PluginInfo["installPolicy"]) ?? "AVAILABLE",
+      availability: mapPluginAvailability(summary.availability),
+      disabledReason: mapPluginDisabledReason(summary.disabledReason),
+      eligiblePlanTypes: mapEligiblePlanTypes(summary.eligiblePlanTypes),
+      installedAt:
+        typeof summary.installedAt === "number"
+          ? summary.installedAt
+          : null,
       authPolicy:
         (summary.authPolicy as PluginInfo["authPolicy"]) ?? "ON_INSTALL",
       interface: pluginInterface
@@ -545,6 +597,23 @@ export function createCodexCapabilities(
     { marketplaceName: string; plugin: PluginInfo }
   >();
   const sessionUninstalls = new Set<string>();
+
+  function findCatalogPlugin(pluginId: string): PluginInfo | undefined {
+    for (const marketplace of pluginCatalogCache?.value.marketplaces ?? []) {
+      const plugin = marketplace.plugins.find(
+        (candidate) => candidate.id === pluginId,
+      );
+      if (plugin) return plugin;
+    }
+    return undefined;
+  }
+
+  function assertPluginCanInstall(pluginId: string): void {
+    const plugin = findCatalogPlugin(pluginId);
+    if (!plugin) return;
+    const blockReason = getPluginInstallBlockReason(plugin);
+    if (blockReason) throw new Error(blockReason);
+  }
 
   /** Snapshot the catalog entry for a plugin before its caches are dropped. */
   function captureCatalogEntry(pluginId: string): {
@@ -985,6 +1054,7 @@ export function createCodexCapabilities(
     pluginId: string,
     _scope?: PluginScope,
   ): Promise<void> {
+    assertPluginCanInstall(pluginId);
     const server = await options.ensureServer();
     await assertPluginCapability(server);
     const separatorIndex = pluginId.lastIndexOf("@");

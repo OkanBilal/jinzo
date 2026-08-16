@@ -1,4 +1,4 @@
-import { Caption, Muted, Button, toast } from "@/components/ui";
+import { Button, Caption, Muted, Text, toast } from "@/components/ui";
 import { useListProjectResourcesQuery, useRemoveProjectResourceMutation } from "@/lib/redux/api";
 import { SettingsSection, SettingsDivider } from "../settings-layout";
 import { Close, Plus } from "@/components/ui/icons";
@@ -35,13 +35,13 @@ export function ProjectLinkedResources({ projectId, onManageClick }: ProjectLink
             <div key={r.id}>
               {i > 0 && <SettingsDivider />}
               <div className="flex items-center gap-3 py-4">
-                <span className="text-primary-500 dark:text-primary-400 shrink-0">
+                <Text as="span" size="inherit" tone="subtle" className="shrink-0">
                   <ResourceIcon kind={r.resource.kind} />
-                </span>
+                </Text>
                 <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium text-primary-900 dark:text-primary-100 truncate block">
+                  <Text as="span" weight="medium" className="truncate block">
                     {r.resource.name || r.resource.externalId}
-                  </span>
+                  </Text>
                   {r.resource.externalId !== r.resource.name && (
                     <Caption className="truncate block">
                       {r.resource.externalId}
@@ -50,7 +50,7 @@ export function ProjectLinkedResources({ projectId, onManageClick }: ProjectLink
                 </div>
                 <Button
                   type="button"
-                  className="shrink-0  cursor-pointer hover:bg-primary-100/80 dark:hover:bg-primary/10 p-1.5 glass-button rounded-full text-primary-900 dark:text-primary-300 transition-all duration-300 ease-out"
+                  className="shrink-0  cursor-pointer hover:bg-primary-100/80 dark:hover:bg-primary/10 p-1.5 glass-button rounded-full text-primary-900 dark:text-primary-100 transition-all duration-300 ease-out"
                   onClick={() => handleRemove(r.resourceId)}
                 >
                   <Close className="size-4" />

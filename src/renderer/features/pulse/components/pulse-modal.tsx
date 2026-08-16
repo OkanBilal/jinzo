@@ -1,6 +1,13 @@
 import { useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import { WizardModal, useWizard, type WizardStep } from "@/components/ui/wizard-modal";
+import {
+  Button,
+  Input,
+  Textarea,
+  WizardModal,
+  toast,
+  useWizard,
+  type WizardStep,
+} from "@/components/ui";
 import { useGetAccountQuery } from "@/lib/redux/api/accountApi";
 import {
   useCreatePulseMutation,
@@ -24,7 +31,6 @@ import {
 } from "./pulse-pickers";
 import type { PulseTemplate } from "../templates";
 import { Sun } from "@/components/ui/icons";
-import { toast } from "@/components/ui/toast/toast";
 
 type PulseWizardData = PulseFormState;
 
@@ -57,11 +63,13 @@ function PulseStep({ isEditing }: { isEditing: boolean }) {
   return (
     <div className="-m-2">
       {/* Title */}
-      <input
+      <Input
+        variant="bare"
         type="text"
         value={data.title}
         onChange={(e) => setData({ title: e.target.value })}
         placeholder="Automation title"
+        aria-label="Automation title"
         className="w-full bg-transparent outline-none  text-primary-900 dark:text-primary-100 placeholder-primary-500 mb-3"
       />
 
@@ -120,11 +128,13 @@ function PulseStep({ isEditing }: { isEditing: boolean }) {
       {/* Divider */}
 
       {/* Prompt / description */}
-      <textarea
+      <Textarea
+        variant="bare"
         value={data.prompt}
         onChange={(e) => setData({ prompt: e.target.value })}
         placeholder="Add prompt e.g. look for crashes in $sentry"
-        className="w-full h-64 py-4 bg-transparent outline-none resize-none text-sm text-primary-900 dark:text-primary-200 placeholder-primary-400 dark:placeholder-primary-700"
+        aria-label="Automation prompt"
+        className="w-full h-64 py-4 bg-transparent outline-none resize-none text-sm text-primary-900 dark:text-primary-100 placeholder-primary-400 dark:placeholder-primary-700"
       />
 
       {/* Footer */}
@@ -178,7 +188,7 @@ export function PulseModal({
       {
         id: "pulse",
         title: isEditing ? "Edit automation" : "New pulse",
-        titleIcon: <Sun className="size-5.5! text-primary-900 dark:text-primary-200" />,
+        titleIcon: <Sun className="size-5.5! text-primary-900 dark:text-primary-100" />,
         render: () => <PulseStep isEditing={isEditing} />,
       },
     ],

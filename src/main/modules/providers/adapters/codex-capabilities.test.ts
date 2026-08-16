@@ -52,6 +52,7 @@ afterEach(async () => {
     fs.rmSync(dir, { recursive: true, force: true });
   }
   delete process.env.MAINS_CODEX_FIXTURE_STALE_INSTALLED;
+  delete process.env.MAINS_CODEX_FIXTURE_PLUGIN_DISABLED_REASON;
 });
 
 describe("Codex capabilities", () => {
@@ -150,6 +151,10 @@ describe("Codex capabilities", () => {
       id: "fixture-plugin@fixture-remote",
       name: "fixture-plugin",
       installed: false,
+      availability: "AVAILABLE",
+      disabledReason: null,
+      eligiblePlanTypes: null,
+      installedAt: null,
     });
     expect(
       readProtocolLog(logPath).filter(
@@ -165,6 +170,12 @@ describe("Codex capabilities", () => {
     ).resolves.toMatchObject({
       marketplaceName: "fixture-remote",
       description: "Fixture plugin detail.",
+      summary: {
+        availability: "AVAILABLE",
+        disabledReason: null,
+        eligiblePlanTypes: null,
+        installedAt: null,
+      },
       mcpServers: ["fixture-mcp"],
     });
     await capabilities.installPlugin(
@@ -200,6 +211,43 @@ describe("Codex capabilities", () => {
     ).toEqual({
       pluginId: "remote-fixture-plugin-id",
     });
+  });
+
+  it("blocks installs that are unavailable for the current plan", async () => {
+    process.env.MAINS_CODEX_FIXTURE_PLUGIN_DISABLED_REASON =
+      "plan_not_eligible";
+    const tempDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "mains-codex-capabilities-"),
+    );
+    tempDirs.push(tempDir);
+    const logPath = path.join(tempDir, "protocol.jsonl");
+    const server = await startServer(logPath);
+    const capabilities = createCodexCapabilities({
+      ensureServer: async () => server,
+      getRunningServer: () => server,
+      getCliHealth: async () => ({
+        version: "0.147.0",
+        channel: null,
+        outdated: false,
+      }),
+    });
+
+    const catalog = await capabilities.listPlugins();
+    expect(catalog.marketplaces[0]?.plugins[0]).toMatchObject({
+      availability: "AVAILABLE",
+      disabledReason: "plan_not_eligible",
+      eligiblePlanTypes: ["pro", "business"],
+    });
+    await expect(
+      capabilities.installPlugin("fixture-plugin@fixture-remote"),
+    ).rejects.toThrow(
+      "This plugin is not available on your current plan. Eligible plans: pro, business.",
+    );
+    expect(
+      readProtocolLog(logPath).some(
+        (message) => message.method === "plugin/install",
+      ),
+    ).toBe(false);
   });
 
   it("surfaces a mid-session install that plugin/installed still omits", async () => {

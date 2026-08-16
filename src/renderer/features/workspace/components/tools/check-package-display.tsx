@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Mains } from "@/components/ui/icons";
-import { ToolHeader, ToolCollapse } from "./_shared";
-import { Tiny } from "@/components/ui";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader } from "./_shared";
+import { Text, Tiny } from "@/components/ui";
 
 interface PackageInfo {
   name: string;
@@ -47,16 +47,16 @@ export function CheckPackageDisplay({
         isCompact={isCompact}
       >
         {blockedCount > 0 && (
-          <span className="text-red-500 dark:text-red-400 text-xs font-medium shrink-0">
+          <Text as="span" size="xs" tone="danger" weight="medium" className="shrink-0">
             {blockedCount} blocked
-          </span>
+          </Text>
         )}
         {allPassed && (
-          <span className="text-green-500 dark:text-green-400 text-xs font-medium shrink-0">
+          <Text as="span" size="xs" tone="success" weight="medium" className="shrink-0">
             passed
-          </span>
+          </Text>
         )}
-        <span className="text-primary-400 dark:text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+        <span className={`truncate ${TOOL_ROW_TEXT}`}>
           {summaryText}
         </span>
       </ToolHeader>
@@ -70,21 +70,21 @@ export function CheckPackageDisplay({
                   key={i}
                   className={`flex items-center gap-2 text-xs font-mono py-0.5 ${
                     r.blocked
-                      ? "text-red-500 dark:text-red-400"
-                      : "text-green-600 dark:text-green-400"
+                      ? "text-danger"
+                      : "text-success"
                   }`}
                 >
                   <span>{r.blocked ? "✘" : "✔"}</span>
-                  <span className="font-medium">{r.name}</span>
+                  <Text as="span" size="inherit" tone="inherit" weight="medium">{r.name}</Text>
                   {r.score && (
-                    <span className="text-primary-400 dark:text-primary-500">
+                    <Text as="span" size="inherit" tone="subtle">
                       score: {r.score}
-                    </span>
+                    </Text>
                   )}
                   {r.reason && (
-                    <span className="text-primary-400 dark:text-primary-500 truncate">
+                    <Text as="span" size="inherit" tone="subtle" className="truncate">
                       {r.reason}
-                    </span>
+                    </Text>
                   )}
                 </div>
               ))

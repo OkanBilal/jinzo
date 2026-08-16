@@ -8,7 +8,7 @@ import {
   DEFAULT_ICON_COLOR,
   ICON_COLORS,
 } from "@/lib/icon-registry";
-import { Button } from "@/components/ui";
+import { Button, Text } from "@/components/ui";
 import { Close, SelectOption } from "@/components/ui/icons";
 
 function CurrentIcon({
@@ -103,7 +103,7 @@ export default function SpaceIconPicker({
                 }}
                 className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/icon:opacity-100 transition-opacity cursor-pointer"
               >
-                <Close className="size-4 text-primary-500 dark:text-primary-400" />
+                <Close className="size-4 text-primary-600 dark:text-primary-400" />
               </span>
             </span>
           ) : (
@@ -112,7 +112,7 @@ export default function SpaceIconPicker({
           <span>{icon ? "Change Icon" : "Choose an Icon"}</span>
         </div>
         <SelectOption
-          className={`size-3 text-primary-900 dark:text-primary-400`}
+          className={`size-3 text-primary-900 dark:text-primary-100`}
         />
       </Button>
 
@@ -130,7 +130,7 @@ export default function SpaceIconPicker({
               className={`flex-1 py-2 text-xs font-medium transition-colors cursor-pointer ${
                 iconMode === "emoji"
                   ? "text-primary-900 dark:text-primary bg-primary-950/5 dark:bg-primary/10"
-                  : "text-primary-700 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-100"
+                  : "text-primary-700 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-200"
               }`}
             >
               Emoji
@@ -141,7 +141,7 @@ export default function SpaceIconPicker({
               className={`flex-1 py-2 text-xs font-medium transition-colors cursor-pointer ${
                 iconMode === "icon"
                   ? "text-primary-900 dark:text-primary bg-primary-950/5 dark:bg-primary/10"
-                  : "text-primary-700 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-100"
+                  : "text-primary-700 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-200"
               }`}
             >
               Icon
@@ -155,18 +155,26 @@ export default function SpaceIconPicker({
               >
                 <EmojiPicker.Search
                   placeholder="Search emoji..."
-                  className="w-full mb-2 px-2 py-1.5 glass-input dark:text-primary-200 text-primary-700 dark:placeholder:text-primary-200 placeholder:text-primary-700  rounded-xl text-sm outline-none "
+                  className="w-full mb-2 px-2 py-1.5 glass-input dark:text-primary-300 text-primary-700 dark:placeholder:text-primary-500 placeholder:text-primary-500  rounded-xl text-sm outline-none "
                 />
                 <EmojiPicker.Viewport className="h-64 overflow-y-auto w-full noscrollbar">
                   <EmojiPicker.Loading>
-                    <div className="flex items-center justify-center py-8 text-sm text-primary-500 dark:text-primary-400">
+                    <Text
+                      as="div"
+                      tone="subtle"
+                      className="flex items-center justify-center py-8"
+                    >
                       Loading emojis...
-                    </div>
+                    </Text>
                   </EmojiPicker.Loading>
                   <EmojiPicker.Empty>
-                    <div className="flex items-center justify-center py-8 text-sm text-primary-500 dark:text-primary-400">
+                    <Text
+                      as="div"
+                      tone="subtle"
+                      className="flex items-center justify-center py-8"
+                    >
                       No emoji found.
-                    </div>
+                    </Text>
                   </EmojiPicker.Empty>
                   <EmojiPicker.List
                     className="select-none pb-1.5"
@@ -213,8 +221,8 @@ export default function SpaceIconPicker({
                           aria-pressed={isSelected}
                           className={`flex items-center justify-center size-6 rounded-full cursor-pointer transition-colors ${
                             isSelected
-                              ? "bg-primary-950/15 dark:bg-primary/20"
-                              : "hover:bg-primary-950/8 dark:hover:bg-primary/10"
+                              ? "bg-primary-950/10 dark:bg-primary/10"
+                              : "hover:bg-primary-950/10 dark:hover:bg-primary/10"
                           }`}
                         >
                           <span className={`size-4 rounded-full ${swatch}`} />
@@ -232,9 +240,9 @@ export default function SpaceIconPicker({
                         onClick={() => onSelectIcon(name)}
                         className={`flex items-center justify-center size-8 rounded-lg transition-colors cursor-pointer ${
                           icon === name
-                            ? "bg-primary-950/15 dark:bg-primary/20"
+                            ? "bg-primary-950/10 dark:bg-primary/10"
                             : "hover:bg-primary-950/10 dark:hover:bg-primary/10"
-                        } ${tint || "text-primary-700 dark:text-primary-200"}`}
+                        } ${tint || "text-primary-700 dark:text-primary-300"}`}
                         title={name}
                       >
                         <IconComp className="size-5.5" />

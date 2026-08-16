@@ -16,14 +16,14 @@ export function ProjectIcon({
       const tint = iconColorClass(parsed.color);
       return (
         <IconComp
-          className={`size-3.5 ${tint || "text-primary-700 dark:text-primary-200"}`}
+          className={`size-3.5 ${tint || "text-primary-700 dark:text-primary-300"}`}
         />
       );
     }
     if (parsed.type === "emoji") {
-      return (
-        <span className="text-xs ">{parsed.value as string}</span>
-      );
+      // An emoji here is the icon, not text — it sits in the same slot as the
+      // `size-3.5` glyphs above and is sized to match them.
+      return <span className="text-xs">{parsed.value as string}</span>;
     }
   }
   void projectName;
