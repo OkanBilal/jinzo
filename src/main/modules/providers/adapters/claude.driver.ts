@@ -8,9 +8,10 @@
 // Differences from cursor/copilot drivers (worth noting because they shape
 // the Driver interface usage):
 //
-//   - SessionId arrives DURING streaming (`msg.session_id`), not from the
-//     acquisition method. Driver persists inline via runsRepo; AcquiredSession
-//     omits sessionId so Core skips persistence.
+//   - SessionId is assigned by the driver, not read out of the stream: a new
+//     or forked session is opened on an id we generate, so AcquiredSession
+//     carries it and Core persists it before the first token. The stream is
+//     still watched for a mismatch, which would mean the CLI ignored the id.
 //   - SDK has both AbortController and `query.interrupt()`. Driver wires the
 //     incoming AbortSignal to fire both.
 //   - Per-run streaming buffers (text + thinking deltas, tool-call correlation
@@ -24,6 +25,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import type {
   AcquiredSession,
@@ -153,6 +155,12 @@ interface SDKOptions {
   cwd?: string;
   resume?: string;
   forkSession?: boolean;
+  /**
+   * Opens the conversation on a caller-chosen UUID instead of an auto-generated
+   * one. Legal on its own or alongside `forkSession`; the CLI exits with an
+   * error if it is combined with a bare `resume`.
+   */
+  sessionId?: string;
   abortController?: AbortController;
   additionalDirectories?: string[];
   agents?: SDKAgentsConfig;
@@ -256,6 +264,25 @@ export function buildClaudeExecutableOptions(
   if (!candidate) return {};
   const resolved = resolveCandidate(candidate);
   return resolved ? { pathToClaudeCodeExecutable: resolved } : {};
+}
+
+/**
+ * Decide whether a run may open its session on an id we chose.
+ *
+ * The CLI accepts one for a fresh session and for a fork ("a custom ID for the
+ * forked session"), but exits with an error when it is combined with a plain
+ * resume — measured: `--session-id can only be used with --continue or --resume
+ * if --fork-session is also specified`. A resume already knows its id anyway.
+ */
+export function buildClaudeSessionIdOptions(args: {
+  newSessionId?: string;
+  resumeSessionId?: string;
+  forkSession?: boolean;
+}): Pick<SDKOptions, "sessionId"> {
+  const { newSessionId, resumeSessionId, forkSession } = args;
+  if (!newSessionId) return {};
+  if (resumeSessionId && !forkSession) return {};
+  return { sessionId: newSessionId };
 }
 
 interface SDKCanUseToolOptions {
@@ -689,6 +716,7 @@ interface ClaudeSession {
     hasAssistantContent: boolean;
     lastFastModeState?: FastModeState;
     lastAssistantError?: string;
+    sawRateLimitNotice?: boolean;
   };
   /** Per-run tool-call correlation index (toolCallId → toolName/input). */
   toolCallIndex: Map<string, { toolName: string; input?: unknown; startedAt?: number }>;
@@ -1122,11 +1150,14 @@ function describeAssistantError(code: string | undefined): { text: string; level
  * times, and one line per attempt buries the rest of the transcript.
  */
 export function buildAssistantErrorEvent(
-  args: { error?: string; lastError?: string },
+  args: { error?: string; lastError?: string; sawRateLimitNotice?: boolean },
   ts: number,
 ): WorkRunEvent | null {
-  const { error, lastError } = args;
+  const { error, lastError, sawRateLimitNotice } = args;
   if (!error || error === lastError) return null;
+  // `rate_limit_event` has its own line, carrying the scope and the reset time
+  // this one cannot. Repeating it here would say strictly less, twice.
+  if (error === "rate_limit" && sawRateLimitNotice) return null;
   const described = describeAssistantError(error);
   return {
     type: "log",
@@ -1446,7 +1477,11 @@ export function mapSDKMessage(
       const isFromSubagent = !!assistantMsg.parent_tool_use_id;
 
       const errorEvent = buildAssistantErrorEvent(
-        { error: assistantMsg.error, lastError: cs.state.lastAssistantError },
+        {
+          error: assistantMsg.error,
+          lastError: cs.state.lastAssistantError,
+          sawRateLimitNotice: cs.state.sawRateLimitNotice,
+        },
         ts,
       );
       if (errorEvent) events.push(errorEvent);
@@ -1798,6 +1833,9 @@ export function mapSDKMessage(
         const scope = rl.rateLimitType ? ` [${rl.rateLimitType}]` : "";
         // Only surface warnings/rejections; "allowed" is the silent happy path.
         if (rl.status !== "allowed") {
+          // Remembered so the turn's own `rate_limit` error does not repeat what
+          // this line already said with the scope and the reset time attached.
+          cs.state.sawRateLimitNotice = true;
           events.push({
             type: "log",
             message: `[rate-limit] ${rl.status === "rejected" ? "Rate limit reached" : "Approaching rate limit"}${scope}${util}${resets}`,
@@ -2283,6 +2321,8 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     runId?: string;
     workspaceId?: string;
     forkSession?: boolean;
+    /** UUID to open the new (or forked) session on. Omitted when resuming. */
+    newSessionId?: string;
     onEvent?: WorkRunEventHandler;
     permissionMode?: NonNullable<SDKOptions["permissionMode"]>;
   }): Promise<SDKOptions> {
@@ -2296,6 +2336,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       runId,
       workspaceId,
       forkSession,
+      newSessionId,
       onEvent,
       permissionMode: runPermissionMode,
     } = args;
@@ -2366,6 +2407,11 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       options.resume = resumeSessionId;
       if (forkSession) options.forkSession = true;
     }
+
+    Object.assign(
+      options,
+      buildClaudeSessionIdOptions({ newSessionId, resumeSessionId, forkSession }),
+    );
 
     const mergedAgents = mergeAgentsConfig(config.agents, runAgents);
     if (mergedAgents && Object.keys(mergedAgents).length > 0) {
@@ -2769,6 +2815,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
 
       const abortController = new AbortController();
       const overridePermissionMode = request.configSnapshot?.permissionMode;
+      const sessionId = randomUUID();
       const options = await buildOptions({
         model: getModel(request.model),
         workspacePath: request.workspace.rootPath,
@@ -2777,13 +2824,16 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
         runAgents: request.agents,
         runId: request.runId,
         workspaceId: request.workspace.id,
+        newSessionId: sessionId,
         permissionMode: isSDKPermissionMode(overridePermissionMode)
           ? overridePermissionMode
           : undefined,
       });
 
       const session = newSession(request.runId, options, abortController, true);
-      return { session, prompt: buildStartPrompt(request) };
+      session.state.sessionId = sessionId;
+      sessionIdMemo.set(request.runId, sessionId);
+      return { session, prompt: buildStartPrompt(request), sessionId };
     },
 
     async resumeSession(request: WorkRunContinueRequest): Promise<AcquiredSession> {
@@ -2828,6 +2878,9 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       }
 
       const abortController = new AbortController();
+      // A fork gets a new id, and the CLI lets us name it — so the fork is
+      // identified before it produces anything, same as a fresh session.
+      const sessionId = randomUUID();
       const options = await buildOptions({
         model: getModel(request.model ?? config.defaultModel),
         workspacePath: request.workspace.rootPath,
@@ -2838,11 +2891,13 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
         runId: request.runId,
         workspaceId: request.workspace.id,
         forkSession: true,
+        newSessionId: sessionId,
       });
 
       const session = newSession(request.runId, options, abortController, true);
-      // Don't prime sessionId — fork creates a NEW session id which will arrive in the stream.
-      return { session, prompt: buildForkPrompt(request) };
+      session.state.sessionId = sessionId;
+      sessionIdMemo.set(request.runId, sessionId);
+      return { session, prompt: buildForkPrompt(request), sessionId };
     },
 
     async executePrompt(
@@ -2971,8 +3026,14 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
               }
             }
 
-            // Capture session ID (Claude's id arrives in the stream) and persist on first sight.
-            if (msg.session_id && !cs.state.sessionId) {
+            // The id is assigned at acquisition and already persisted, so this
+            // is a tripwire rather than the happy path: if the CLI ever opens a
+            // different session than the one it was given, resuming this run
+            // would silently target a transcript that does not exist.
+            if (msg.session_id && msg.session_id !== cs.state.sessionId) {
+              logWarn(
+                `Session id mismatch for run ${cs.runId}: asked for ${cs.state.sessionId ?? "none"}, got ${msg.session_id}`,
+              );
               cs.state.sessionId = msg.session_id;
               sessionIdMemo.set(cs.runId, msg.session_id);
               runsRepo

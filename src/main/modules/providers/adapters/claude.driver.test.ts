@@ -11,6 +11,7 @@ import { describe, it, expect, vi } from "vitest";
 import {
   buildClaudePermissionModeOptions,
   buildClaudeExecutableOptions,
+  buildClaudeSessionIdOptions,
   classifyOutcome,
   createClaudePermissionBridge,
   createClaudeElicitationHandler,
@@ -136,6 +137,26 @@ describe("claude.driver / permission mode options", () => {
     expect(buildClaudeExecutableOptions(undefined, process.execPath)).toEqual({
       pathToClaudeCodeExecutable: process.execPath,
     });
+  });
+
+  it("names a fresh session and a fork, but never a plain resume", () => {
+    // Measured: a plain resume plus an id exits the CLI with
+    // "--session-id can only be used with --continue or --resume if
+    // --fork-session is also specified" — a crash, not a warning.
+    const id = "11111111-2222-3333-4444-555555555555";
+
+    expect(buildClaudeSessionIdOptions({ newSessionId: id })).toEqual({ sessionId: id });
+    expect(
+      buildClaudeSessionIdOptions({
+        newSessionId: id,
+        resumeSessionId: "source",
+        forkSession: true,
+      }),
+    ).toEqual({ sessionId: id });
+    expect(
+      buildClaudeSessionIdOptions({ newSessionId: id, resumeSessionId: "source" }),
+    ).toEqual({});
+    expect(buildClaudeSessionIdOptions({})).toEqual({});
   });
 
   it("acknowledges bypassPermissions so detached agents can inherit bypass mode", () => {
@@ -1141,6 +1162,22 @@ describe("claude.driver / buildAssistantErrorEvent", () => {
     ).not.toBeNull();
   });
 
+  it("yields to the rate-limit notice, which says more", () => {
+    // That line carries the scope (five_hour vs seven_day) and the reset time;
+    // this one would only restate "rate limited" underneath it.
+    expect(
+      buildAssistantErrorEvent({ error: "rate_limit", sawRateLimitNotice: true }, 1),
+    ).toBeNull();
+    // But it is still the only signal when no such notice was emitted.
+    expect(buildAssistantErrorEvent({ error: "rate_limit" }, 1)).toMatchObject({
+      message: "[api] rate limited",
+    });
+    // Only rate_limit defers — nothing else has a dedicated line.
+    expect(
+      buildAssistantErrorEvent({ error: "overloaded", sawRateLimitNotice: true }, 1),
+    ).not.toBeNull();
+  });
+
   it("passes an unrecognized code through rather than swallowing it", () => {
     expect(buildAssistantErrorEvent({ error: "some_new_code" }, 1)).toMatchObject({
       message: "[api] some_new_code",
@@ -1178,6 +1215,35 @@ describe("claude.driver / assistant error in the stream", () => {
     );
     // ...so the next occurrence is news again.
     expect(mapSDKMessage(failing, cs)[0]).toMatchObject({ level: "warn" });
+  });
+
+  it("stays quiet about a rate limit the run already reported", () => {
+    // Reproduces the observed order: the rate-limit event lands first, then the
+    // turn comes back tagged rate_limit.
+    const cs = makeClaudeSession();
+
+    const [notice] = mapSDKMessage(
+      {
+        type: "rate_limit_event",
+        rate_limit_info: { status: "rejected", rateLimitType: "five_hour" },
+      } as any,
+      cs,
+    ) as Array<{ message: string }>;
+    expect(notice.message).toContain("[rate-limit] Rate limit reached [five_hour]");
+
+    expect(
+      mapSDKMessage(
+        {
+          type: "assistant",
+          uuid: "u1",
+          session_id: "s1",
+          parent_tool_use_id: null,
+          error: "rate_limit",
+          message: { role: "assistant", content: [] },
+        } as any,
+        cs,
+      ),
+    ).toEqual([]);
   });
 
   it("names the cause on an api retry", () => {
