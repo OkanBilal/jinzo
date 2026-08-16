@@ -8,9 +8,9 @@ import { BaseTab } from "./base-tab";
 import type { Run } from "../types";
 import type { IssueWithEntity, SignalWithEntity } from "@/lib/redux/api";
 import type { ReviewTab as ReviewTabType } from "@/lib/redux/slices/workspaceSlice";
-import { useRef } from "react";
 import { Button } from "@/components/ui";
 import { cn } from "@/lib/cn";
+import { LAYOUT_PANEL_ANIM_MS } from "@/lib/layout";
 import { getProviderVariant } from "@/lib/provider-variants";
 import { useAppSelector } from "@/lib/redux/hooks";
 import { useIsMobile } from "@/lib/platform";
@@ -70,7 +70,6 @@ export function WorkspaceTabs({
   onSelectNewRunTab,
   onCloseNewRunTab,
 }: WorkspaceTabsProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const sidebarCollapsed = useAppSelector((state) => state.appSettings.sidebarCollapsed);
   const isMobile = useIsMobile();
 
@@ -157,9 +156,15 @@ export function WorkspaceTabs({
   return (
     <div className="flex items-end">
       <div
-        ref={containerRef}
         className="relative flex-1 flex items-end overflow-x-auto noscrollbar"
-        style={{ paddingLeft: sidebarCollapsed ? "0.75rem" : undefined }}
+        style={{
+          // Clears the sidebar-toggle cluster once the sidebar is gone. Third
+          // and last term of the strip's left edge (content margin + header
+          // padding + this), so it runs on the same clock as the other two —
+          // untransitioned it snapped 12px ahead of them.
+          paddingLeft: sidebarCollapsed ? "0.75rem" : undefined,
+          transition: `padding ${LAYOUT_PANEL_ANIM_MS}ms ease-out`,
+        }}
       >
         {hasSelectedFile && (
           <EditorTab

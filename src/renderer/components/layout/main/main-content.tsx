@@ -66,8 +66,16 @@ export function MainContent({
     >
       {header && (
         <div
-          className={`shrink-0 transition-all duration-300 ease-out ${hasRightPanel ? "max-w-[calc(100%-150px)]" : browserOpen ? "max-w-[calc(100%-150px)]" : ""}`}
-          style={{ paddingLeft: headerPaddingLeft }}
+          className={`shrink-0 ${hasRightPanel ? "max-w-[calc(100%-150px)]" : browserOpen ? "max-w-[calc(100%-150px)]" : ""}`}
+          style={{
+            paddingLeft: headerPaddingLeft,
+            // On the same clock as the margin above, for the same reason: the
+            // header's left edge is that margin *plus* this padding, and the
+            // two move in opposite directions when the sidebar toggles. Give
+            // them different durations and the tabs shoot past their resting
+            // place, then drift back as the slower one catches up.
+            transition: `padding ${LAYOUT_PANEL_ANIM_MS}ms ease-out, max-width ${LAYOUT_PANEL_ANIM_MS}ms ease-out`,
+          }}
         >
           {header}
         </div>

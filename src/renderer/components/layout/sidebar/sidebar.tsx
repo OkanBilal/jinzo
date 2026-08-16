@@ -160,7 +160,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     <>
       <aside
         ref={swipeRef}
-        className={`fixed top-0 bottom-0 left-0 z-(--z-sidebar) transition-[transform,opacity] duration-200 ease-out will-change-transform ${
+        className={`fixed top-0 bottom-0 left-0 z-(--z-sidebar) transition-[transform,opacity] duration-150 ease-out will-change-transform ${
           isMobile ? "bg-primary dark:bg-primary-950 shadow-2xl" : ""
         }`}
         style={{
