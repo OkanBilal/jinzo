@@ -11,6 +11,7 @@ import { describe, it, expect, vi } from "vitest";
 import {
   buildClaudePermissionModeOptions,
   buildClaudeExecutableOptions,
+  buildClaudeSessionIdOptions,
   classifyOutcome,
   createClaudePermissionBridge,
   createClaudeElicitationHandler,
@@ -21,6 +22,10 @@ import {
   cleanGeneratedTitle,
   parseSimpleYaml,
   mapTaskMessage,
+  mapContextUsageResponse,
+  buildFastModeEvent,
+  buildAssistantErrorEvent,
+  buildContextUsageEvent,
   normalizeSubagentOutput,
   buildSubagentCompletionEvent,
   mapSDKMessage,
@@ -132,6 +137,26 @@ describe("claude.driver / permission mode options", () => {
     expect(buildClaudeExecutableOptions(undefined, process.execPath)).toEqual({
       pathToClaudeCodeExecutable: process.execPath,
     });
+  });
+
+  it("names a fresh session and a fork, but never a plain resume", () => {
+    // Measured: a plain resume plus an id exits the CLI with
+    // "--session-id can only be used with --continue or --resume if
+    // --fork-session is also specified" — a crash, not a warning.
+    const id = "11111111-2222-3333-4444-555555555555";
+
+    expect(buildClaudeSessionIdOptions({ newSessionId: id })).toEqual({ sessionId: id });
+    expect(
+      buildClaudeSessionIdOptions({
+        newSessionId: id,
+        resumeSessionId: "source",
+        forkSession: true,
+      }),
+    ).toEqual({ sessionId: id });
+    expect(
+      buildClaudeSessionIdOptions({ newSessionId: id, resumeSessionId: "source" }),
+    ).toEqual({});
+    expect(buildClaudeSessionIdOptions({})).toEqual({});
   });
 
   it("acknowledges bypassPermissions so detached agents can inherit bypass mode", () => {
@@ -1098,6 +1123,507 @@ describe("claude.driver / mapTaskMessage", () => {
 // request, so these cover the paths that make a request reach the user.
 // ─────────────────────────────────────────────────────────────
 
+describe("claude.driver / buildAssistantErrorEvent", () => {
+  it("says nothing for a turn that came back clean", () => {
+    expect(buildAssistantErrorEvent({}, 1)).toBeNull();
+  });
+
+  it("names a failure that would otherwise read as an empty answer", () => {
+    // The CLI still emits the assistant message, just with no content and this
+    // flag set — so without it an expired login looks like the agent went quiet.
+    expect(buildAssistantErrorEvent({ error: "authentication_failed" }, 1)).toEqual({
+      type: "log",
+      message: "[api] authentication failed — sign in again",
+      level: "error",
+      ts: 1,
+      metadata: { source: "assistant_error", error: "authentication_failed" },
+    });
+  });
+
+  it("keeps what the CLI retries on its own at warn", () => {
+    // An overload resolves itself; an auth failure does not. Reporting both as
+    // errors would train the reader to ignore the red ones.
+    expect(buildAssistantErrorEvent({ error: "overloaded" }, 1)).toMatchObject({
+      level: "warn",
+    });
+    expect(buildAssistantErrorEvent({ error: "billing_error" }, 1)).toMatchObject({
+      level: "error",
+    });
+  });
+
+  it("collapses a repeat of the same failure", () => {
+    // A run can retry an overload many times; one line per attempt buries
+    // everything else in the transcript.
+    expect(
+      buildAssistantErrorEvent({ error: "overloaded", lastError: "overloaded" }, 1),
+    ).toBeNull();
+    expect(
+      buildAssistantErrorEvent({ error: "rate_limit", lastError: "overloaded" }, 1),
+    ).not.toBeNull();
+  });
+
+  it("yields to the rate-limit notice, which says more", () => {
+    // That line carries the scope (five_hour vs seven_day) and the reset time;
+    // this one would only restate "rate limited" underneath it.
+    expect(
+      buildAssistantErrorEvent({ error: "rate_limit", sawRateLimitNotice: true }, 1),
+    ).toBeNull();
+    // But it is still the only signal when no such notice was emitted.
+    expect(buildAssistantErrorEvent({ error: "rate_limit" }, 1)).toMatchObject({
+      message: "[api] rate limited",
+    });
+    // Only rate_limit defers — nothing else has a dedicated line.
+    expect(
+      buildAssistantErrorEvent({ error: "overloaded", sawRateLimitNotice: true }, 1),
+    ).not.toBeNull();
+  });
+
+  it("passes an unrecognized code through rather than swallowing it", () => {
+    expect(buildAssistantErrorEvent({ error: "some_new_code" }, 1)).toMatchObject({
+      message: "[api] some_new_code",
+      level: "error",
+    });
+  });
+});
+
+describe("claude.driver / assistant error in the stream", () => {
+  it("reports the failure and re-arms once a turn succeeds", () => {
+    const cs = makeClaudeSession();
+    const failing = {
+      type: "assistant",
+      uuid: "u1",
+      session_id: "s1",
+      parent_tool_use_id: null,
+      error: "rate_limit",
+      message: { role: "assistant", content: [] },
+    } as any;
+
+    expect(mapSDKMessage(failing, cs)[0]).toMatchObject({ level: "warn" });
+    // Same code again while the episode is still running: silent.
+    expect(mapSDKMessage(failing, cs)).toEqual([]);
+
+    // A clean turn ends the episode...
+    mapSDKMessage(
+      {
+        type: "assistant",
+        uuid: "u2",
+        session_id: "s1",
+        parent_tool_use_id: null,
+        message: { role: "assistant", content: [{ type: "text", text: "ok" }] },
+      } as any,
+      cs,
+    );
+    // ...so the next occurrence is news again.
+    expect(mapSDKMessage(failing, cs)[0]).toMatchObject({ level: "warn" });
+  });
+
+  it("stays quiet about a rate limit the run already reported", () => {
+    // Reproduces the observed order: the rate-limit event lands first, then the
+    // turn comes back tagged rate_limit.
+    const cs = makeClaudeSession();
+
+    const [notice] = mapSDKMessage(
+      {
+        type: "rate_limit_event",
+        rate_limit_info: { status: "rejected", rateLimitType: "five_hour" },
+      } as any,
+      cs,
+    ) as Array<{ message: string }>;
+    expect(notice.message).toContain("[rate-limit] Rate limit reached [five_hour]");
+
+    expect(
+      mapSDKMessage(
+        {
+          type: "assistant",
+          uuid: "u1",
+          session_id: "s1",
+          parent_tool_use_id: null,
+          error: "rate_limit",
+          message: { role: "assistant", content: [] },
+        } as any,
+        cs,
+      ),
+    ).toEqual([]);
+  });
+
+  it("names the cause on an api retry", () => {
+    const [event] = mapSDKMessage(
+      {
+        type: "system",
+        subtype: "api_retry",
+        attempt: 1,
+        max_retries: 3,
+        retry_delay_ms: 2000,
+        error_status: 529,
+        error: "overloaded",
+      } as any,
+      makeClaudeSession(),
+    ) as Array<{ message: string }>;
+
+    expect(event.message).toBe(
+      "[api] Request failed: the API is overloaded [HTTP 529] (1/3) — retrying in 2s",
+    );
+  });
+});
+
+describe("claude.driver / buildFastModeEvent", () => {
+  it("stays silent when the run never asked for fast mode", () => {
+    // The CLI reports `sdk_opt_in_required` on every ordinary run; treating that
+    // as a failure would warn users who never touched the button.
+    expect(
+      buildFastModeEvent(
+        { requested: false, state: "off", reason: "sdk_opt_in_required" },
+        1,
+      ),
+    ).toBeNull();
+  });
+
+  it("explains a refusal the CLI would otherwise swallow", () => {
+    // The measured case: the request is accepted, the run serves at standard
+    // speed, and nothing anywhere says so.
+    expect(
+      buildFastModeEvent(
+        { requested: true, state: "off", reason: "extra_usage_disabled" },
+        1,
+      ),
+    ).toEqual({
+      type: "log",
+      message:
+        "[fast-mode] requested but not active — extra usage is turned off for this account",
+      level: "warn",
+      ts: 1,
+      metadata: { source: "fast_mode", state: "off", reason: "extra_usage_disabled" },
+    });
+  });
+
+  it("names a mid-run cooldown rather than the stale reason", () => {
+    expect(
+      buildFastModeEvent({ requested: true, state: "cooldown" }, 1),
+    ).toMatchObject({
+      message: "[fast-mode] requested but not active — paused after a rate limit",
+      level: "warn",
+    });
+  });
+
+  it("still reports when the CLI gives no reason", () => {
+    expect(buildFastModeEvent({ requested: true, state: "off" }, 1)).toMatchObject({
+      message: "[fast-mode] requested but not active",
+      level: "warn",
+    });
+  });
+
+  it("confirms the happy path once", () => {
+    expect(buildFastModeEvent({ requested: true, state: "on" }, 1)).toMatchObject({
+      message: "[fast-mode] active",
+      level: "info",
+    });
+  });
+
+  it("repeats nothing while the state holds", () => {
+    // init and result both carry it, and a long run sees result more than once.
+    expect(
+      buildFastModeEvent({ requested: true, state: "off", lastState: "off" }, 1),
+    ).toBeNull();
+    expect(
+      buildFastModeEvent({ requested: true, state: "cooldown", lastState: "on" }, 1),
+    ).not.toBeNull();
+  });
+});
+
+describe("claude.driver / system messages that used to be dropped", () => {
+  function logs(msg: Record<string, unknown>) {
+    return mapSDKMessage({ type: "system", ...msg } as any, makeClaudeSession()).filter(
+      (event) => event.type === "log",
+    ) as Array<{ message: string; level?: string; metadata?: Record<string, unknown> }>;
+  }
+
+  it("surfaces a model refusal that moved the turn to another model", () => {
+    const [event] = logs({
+      subtype: "model_refusal_fallback",
+      original_model: "claude-opus-5",
+      fallback_model: "claude-opus-4-8",
+      api_refusal_category: "cyber",
+    });
+
+    expect(event.level).toBe("warn");
+    expect(event.message).toContain("claude-opus-5 declined (cyber)");
+    expect(event.message).toContain("continuing on claude-opus-4-8");
+  });
+
+  it("escalates a refusal with nowhere to fall back to", () => {
+    const [event] = logs({
+      subtype: "model_refusal_no_fallback",
+      original_model: "claude-opus-5",
+      api_refusal_category: "cyber",
+    });
+
+    expect(event.level).toBe("error");
+    expect(event.message).toContain("no fallback was available");
+  });
+
+  it("surfaces a rule-denied tool call", () => {
+    // Denied before canUseTool runs, so no approval dialog ever appears.
+    const [event] = logs({
+      subtype: "permission_denied",
+      tool_name: "Bash",
+      decision_reason: "matched deny rule Bash(rm:*)",
+    });
+
+    expect(event.level).toBe("warn");
+    expect(event.message).toBe("[permission] Bash denied — matched deny rule Bash(rm:*)");
+  });
+
+  it("passes an informational notice through at its own level", () => {
+    expect(logs({ subtype: "informational", content: "Heads up", level: "warning" })[0])
+      .toMatchObject({ message: "Heads up", level: "warn" });
+    expect(logs({ subtype: "informational", content: "FYI", level: "info" })[0])
+      .toMatchObject({ level: "info" });
+  });
+
+  it("keeps only the notifications the CLI marks urgent", () => {
+    expect(logs({ subtype: "notification", text: "Ambient", priority: "low" })).toEqual([]);
+    expect(logs({ subtype: "notification", text: "Act now", priority: "immediate" })[0])
+      .toMatchObject({ message: "[notice] Act now", level: "warn" });
+  });
+
+  it("drops CLI bookkeeping instead of logging it", () => {
+    // These carry nothing a reader of the transcript can act on.
+    expect(logs({ subtype: "thinking_tokens", estimated_tokens: 900 })).toEqual([]);
+    expect(logs({ subtype: "session_state_changed", state: "idle" })).toEqual([]);
+  });
+});
+
+describe("claude.driver / top-level messages that used to be raw JSON", () => {
+  function events(msg: Record<string, unknown>) {
+    return mapSDKMessage(msg as any, makeClaudeSession());
+  }
+
+  it("says nothing for a routine tool heartbeat", () => {
+    // One per tick per running tool — this was the loudest line in the transcript.
+    expect(events({ type: "tool_progress", tool_use_id: "t1", tool_name: "Bash" })).toEqual(
+      [],
+    );
+  });
+
+  it("reports a subagent quietly retrying", () => {
+    const [event] = events({
+      type: "tool_progress",
+      tool_name: "Agent",
+      subagent_retry: { agent_id: "a1", attempt: 2, max_retries: 3, error_category: "overloaded" },
+    });
+
+    expect(event).toMatchObject({
+      type: "log",
+      level: "warn",
+      message: "[subagent] retrying Agent (overloaded) — attempt 2/3",
+    });
+  });
+
+  it("passes a tool-use summary through as prose", () => {
+    expect(events({ type: "tool_use_summary", summary: "Read 4 files" })[0]).toMatchObject({
+      message: "Read 4 files",
+      level: "info",
+    });
+  });
+
+  it("bounds the dump for a genuinely unknown type", () => {
+    const [event] = events({ type: "something_new", blob: "x".repeat(5_000) }) as Array<{
+      message: string;
+    }>;
+
+    expect(event.message.length).toBeLessThan(600);
+    expect(event.message).toContain("[event] something_new");
+    expect(event.message.endsWith("…")).toBe(true);
+  });
+});
+
+describe("claude.driver / mapContextUsageResponse", () => {
+  const response = {
+    totalTokens: 11_236,
+    maxTokens: 200_000,
+    percentage: 6,
+    model: "claude-haiku-4-5-20251001",
+    isAutoCompactEnabled: true,
+    autoCompactThreshold: 167_000,
+    categories: [
+      { name: "System prompt", tokens: 368 },
+      { name: "System tools (deferred)", tokens: 13_198, isDeferred: true },
+      { name: "Autocompact buffer", tokens: 33_000 },
+      { name: "Free space", tokens: 188_679 },
+    ],
+  };
+
+  it("classifies rows the control reply leaves undiscriminated", () => {
+    // Unlike the /context payload, this shape carries no `kind` — deferred rows
+    // are flagged and the two space rows are known only by name.
+    const event = mapContextUsageResponse(response, 7);
+
+    expect(event).toEqual({
+      type: "context_usage",
+      totalTokens: 11_236,
+      maxTokens: 200_000,
+      percentage: 6,
+      model: "claude-haiku-4-5-20251001",
+      isAutoCompactEnabled: true,
+      autoCompactThreshold: 167_000,
+      categories: [
+        { name: "System prompt", tokens: 368, kind: "used" },
+        { name: "System tools (deferred)", tokens: 13_198, kind: "deferred" },
+        { name: "Autocompact buffer", tokens: 33_000, kind: "buffer" },
+        { name: "Free space", tokens: 188_679, kind: "free" },
+      ],
+      ts: 7,
+    });
+  });
+
+  it("carries the compaction threshold so the meter can mark it", () => {
+    // No Claude path supplied this before, so the threshold marker never drew.
+    expect(mapContextUsageResponse(response, 7)).toMatchObject({
+      isAutoCompactEnabled: true,
+      autoCompactThreshold: 167_000,
+    });
+  });
+
+  it("keeps an unrecognized space row as a plain category", () => {
+    // Name matching is the only discriminator available; a rename upstream must
+    // not drop the row or its tokens.
+    const event = mapContextUsageResponse(
+      { ...response, categories: [{ name: "Unused window", tokens: 100 }] },
+      7,
+    );
+
+    expect(event).toMatchObject({
+      categories: [{ name: "Unused window", tokens: 100, kind: "used" }],
+    });
+  });
+
+  it("returns null without a window to measure against", () => {
+    expect(mapContextUsageResponse(null, 7)).toBeNull();
+    expect(mapContextUsageResponse({ ...response, maxTokens: 0 }, 7)).toBeNull();
+  });
+});
+
+describe("claude.driver / buildContextUsageEvent", () => {
+  const snapshot = {
+    model: "claude-opus-4-8",
+    total_tokens: 42_000,
+    raw_max_tokens: 200_000,
+    percentage: 21,
+  };
+
+  it("maps a top-level snapshot onto the meter event", () => {
+    expect(
+      buildContextUsageEvent({ context_usage: snapshot, parent_tool_use_id: null }, 123),
+    ).toEqual({
+      type: "context_usage",
+      totalTokens: 42_000,
+      // The window is the CLI's *resolved autocompact window*, not the model's
+      // raw limit — the meter measures against the same boundary `/context` does.
+      maxTokens: 200_000,
+      percentage: 21,
+      model: "claude-opus-4-8",
+      ts: 123,
+    });
+  });
+
+  it("passes an over-limit total through unclamped", () => {
+    // total_tokens is documented as unclamped; clamping is the meter's job, and
+    // swallowing the overflow here would hide a context overrun.
+    const event = buildContextUsageEvent(
+      {
+        context_usage: { ...snapshot, total_tokens: 210_000, percentage: 105 },
+        parent_tool_use_id: null,
+      },
+      123,
+    );
+    expect(event).toMatchObject({ totalTokens: 210_000, percentage: 105 });
+  });
+
+  it("ignores a subagent's snapshot", () => {
+    // A subagent (e.g. haiku) has its own window; letting it through would
+    // clobber the main conversation's reading.
+    expect(
+      buildContextUsageEvent(
+        { context_usage: snapshot, parent_tool_use_id: "toolu_parent" },
+        123,
+      ),
+    ).toBeNull();
+  });
+
+  it("returns null when the CLI sends no snapshot", () => {
+    // Older configured binaries omit the field; the caller falls back to the
+    // modelUsage-derived estimate instead.
+    expect(buildContextUsageEvent({ parent_tool_use_id: null }, 123)).toBeNull();
+  });
+
+  it("returns null when there is no window to measure against", () => {
+    expect(
+      buildContextUsageEvent(
+        { context_usage: { ...snapshot, raw_max_tokens: 0 }, parent_tool_use_id: null },
+        123,
+      ),
+    ).toBeNull();
+  });
+
+  it("passes the category partition through as semantic rows", () => {
+    // Colors are the renderer's call — the driver ships kinds, never presentation.
+    const event = buildContextUsageEvent(
+      {
+        context_usage: {
+          ...snapshot,
+          categories: [
+            { name: "System prompt", tokens: 12_000, kind: "used" },
+            { name: "Free", tokens: 158_000, kind: "free" },
+          ],
+        },
+        parent_tool_use_id: null,
+      },
+      123,
+    );
+
+    expect(event).toMatchObject({
+      categories: [
+        { name: "System prompt", tokens: 12_000, kind: "used" },
+        { name: "Free", tokens: 158_000, kind: "free" },
+      ],
+    });
+  });
+
+  it("drops rows the renderer could not classify", () => {
+    // The kinds come off a subprocess; an unknown one has no lane in the meter,
+    // and a zero-token row would only render as a minimum-width sliver.
+    const event = buildContextUsageEvent(
+      {
+        context_usage: {
+          ...snapshot,
+          categories: [
+            { name: "Messages", tokens: 12_000, kind: "used" },
+            { name: "Mystery", tokens: 5_000, kind: "something_new" },
+            { name: "Skills", tokens: 0, kind: "used" },
+          ],
+        },
+        parent_tool_use_id: null,
+      },
+      123,
+    );
+
+    expect(event).toMatchObject({ categories: [{ name: "Messages", kind: "used" }] });
+  });
+
+  it("omits the field entirely when nothing survives", () => {
+    // An empty array would make the renderer draw an empty legend frame.
+    const event = buildContextUsageEvent(
+      {
+        context_usage: { ...snapshot, categories: [{ name: "x", tokens: 0, kind: "used" }] },
+        parent_tool_use_id: null,
+      },
+      123,
+    );
+
+    expect(event).not.toHaveProperty("categories");
+  });
+});
+
 describe("claude.driver / elicitation handler", () => {
   const FORM_REQUEST = {
     serverName: "linear",
@@ -1252,11 +1778,13 @@ describe("normalizeSubagentOutput", () => {
 // Subagent event sequence (spawn → children → ack/result)
 // ─────────────────────────────────────────────────────────────
 
-function makeClaudeSession() {
+function makeClaudeSession(overrides: Record<string, unknown> = {}) {
   return {
     runId: "run-1",
     options: {},
     abortController: new AbortController(),
+    fastModeRequested: false,
+    ...overrides,
     state: { hasAssistantContent: false },
     toolCallIndex: new Map(),
     taskIndex: new Map(),

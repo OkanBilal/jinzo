@@ -1,4 +1,9 @@
-import { useId, useRef, type ReactNode } from "react";
+import {
+  useId,
+  useRef,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { Body, Muted } from "./text";
 import { Button } from "./button";
@@ -18,7 +23,9 @@ export interface AlertProps {
   primaryButtonVariant?: "primary" | "danger";
   /**
    * Extra content between the description and the buttons — an opt-in the
-   * confirmation itself carries, such as "also remove the directory".
+   * confirmation itself carries, such as "also remove the directory". Enter
+   * fires the primary action from anywhere in the dialog, so anything
+   * focusable here must not need Enter of its own.
    */
   children?: ReactNode;
 }
@@ -71,6 +78,27 @@ export default function Alert({
     closeOnEscape: !isPrimaryLoading,
   });
 
+  /**
+   * The ↵ chip on the primary button is a promise the focus trap alone cannot
+   * keep: a danger alert deliberately parks focus on the secondary button, so
+   * native activation would make Enter mean Cancel. Both keycaps describe the
+   * dialog, not whatever holds focus — Escape is already handled that way.
+   *
+   * `preventDefault` matters when focus *is* on the primary button (the
+   * non-danger case): without it the button's own activation would fire the
+   * action a second time.
+   */
+  const handleAlertKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Enter" || event.repeat) {
+      handleKeyDown(event);
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    // Both buttons are disabled mid-action; the keys follow them.
+    if (!isPrimaryLoading) onPrimary();
+  };
+
   if (!isOpen) return null;
 
   return createPortal(
@@ -88,7 +116,7 @@ export default function Alert({
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={handleKeyDown}
+        onKeyDown={handleAlertKeyDown}
       >
         <Body as="h2" id={titleId} weight="medium" className="mb-2">
           {title}

@@ -57,7 +57,7 @@ interface RpcMethod<Params, Result> {
 
 /**
  * Typed request/result pairs for every app-server RPC currently emitted by
- * codex.driver.ts. Core data surfaces use Codex's generated 0.146.0 bindings;
+ * codex.driver.ts. Core data surfaces use Codex's generated 0.147.0 bindings;
  * feature-specific surfaces retain a narrow JSON object until they graduate
  * into the generated snapshot.
  */

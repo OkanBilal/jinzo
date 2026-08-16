@@ -83,7 +83,9 @@ interface DropdownMenuBaseProps {
   isOpen: boolean;
   position: { x: number; y: number };
   onClose: () => void;
-  children: ReactNode;
+  // Optional like its siblings (DropdownMenuSub, DropdownMenuItem): a menu
+  // whose every row is conditional can legitimately render none of them.
+  children?: ReactNode;
   minWidth?: number;
   className?: string;
   origin?: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "auto";
@@ -127,9 +129,17 @@ export function DropdownMenu({
 
     return () => {
       const target = previouslyFocused.current;
-      if (shouldRestoreFocus.current && target?.isConnected) {
-        requestAnimationFrame(() => target.focus());
-      }
+      if (!shouldRestoreFocus.current || !target?.isConnected) return;
+      // An item's action can hand focus to whatever it just opened — an inline
+      // editor, a modal. Those focus calls land in the same commit as this
+      // cleanup, so decide a frame later instead: reclaim the trigger only when
+      // nothing else claimed focus, or the restore would blur what the item
+      // opened (and blur-to-commit editors would close on the spot).
+      requestAnimationFrame(() => {
+        const active = document.activeElement;
+        if (active && active !== document.body) return;
+        if (target.isConnected) target.focus();
+      });
     };
   }, [isOpen]);
 
@@ -425,8 +435,15 @@ export function DropdownMenuItem({
       disabled={disabled}
       className={cn(
         "flex w-full items-center gap-3 px-3 py-2 text-s",
-        "transition-colors hover:bg-primary-200/40 focus:bg-primary-200/40 focus:outline-none",
-        "dark:hover:bg-primary/5 dark:focus:bg-primary/5",
+        // Button's standalone focus ring does not survive here: the row runs
+        // edge to edge inside an `overflow-hidden rounded-2xl` menu, so the
+        // ring's sides are clipped away and its offset band reads as two thick
+        // bars across the row. A menu marks the keyboard position by filling the
+        // row instead — which also needs to outrank hover, or the two states
+        // look identical while arrowing over a row the pointer happens to sit on.
+        "focus-visible:ring-0 focus-visible:ring-offset-0",
+        "transition-colors hover:bg-primary-200/40 focus:bg-primary-200/60 focus:outline-none",
+        "dark:hover:bg-primary/5 dark:focus:bg-primary/12",
         disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
         variantClasses[variant],
         className,

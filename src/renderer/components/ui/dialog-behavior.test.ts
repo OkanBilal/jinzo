@@ -10,6 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Modal, ModalHeader } from "./modal";
+import Alert from "./alert";
 
 beforeEach(() => {
   vi.stubGlobal(
@@ -136,5 +137,87 @@ describe("Modal behavior", () => {
 
     await user.click(screen.getByRole("button", { name: "Close" }));
     expect(onClose).toHaveBeenCalledOnce();
+  });
+});
+
+// The two keycaps describe the dialog, not whatever holds focus: ↵ runs the
+// primary action and ESC cancels, wherever the user is inside the alert.
+describe("Alert keyboard contract", () => {
+  const renderAlert = (
+    overrides: Partial<Parameters<typeof Alert>[0]> = {},
+  ) => {
+    const onPrimary = vi.fn();
+    const onSecondary = vi.fn();
+    render(
+      createElement(Alert, {
+        isOpen: true,
+        title: "Delete Workspace?",
+        description: "This action cannot be undone.",
+        primaryButtonText: "Delete",
+        secondaryButtonText: "Cancel",
+        onPrimary,
+        onSecondary,
+        ...overrides,
+      }),
+    );
+    return {
+      onPrimary,
+      onSecondary,
+      dialog: screen.getByRole("alertdialog"),
+    };
+  };
+
+  it("runs the primary action on Enter even though a danger alert focuses Cancel", async () => {
+    const user = userEvent.setup();
+    const { onPrimary, onSecondary } = renderAlert({
+      primaryButtonVariant: "danger",
+    });
+
+    // The safe button keeps initial focus — Enter still has to mean Delete.
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: /Cancel/ }),
+    );
+    await user.keyboard("{Enter}");
+
+    expect(onPrimary).toHaveBeenCalledOnce();
+    expect(onSecondary).not.toHaveBeenCalled();
+  });
+
+  it("fires the primary action once when the primary button holds focus", async () => {
+    const user = userEvent.setup();
+    const { onPrimary } = renderAlert();
+
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: /Delete/ }),
+    );
+    // Without preventDefault the focused button would activate on top of the
+    // dialog-level shortcut and run the action twice.
+    await user.keyboard("{Enter}");
+
+    expect(onPrimary).toHaveBeenCalledOnce();
+  });
+
+  it("cancels on Escape", () => {
+    const { onPrimary, onSecondary, dialog } = renderAlert({
+      primaryButtonVariant: "danger",
+    });
+
+    fireEvent.keyDown(dialog, { key: "Escape" });
+
+    expect(onSecondary).toHaveBeenCalledOnce();
+    expect(onPrimary).not.toHaveBeenCalled();
+  });
+
+  it("ignores both keys while the primary action is running", () => {
+    const { onPrimary, onSecondary, dialog } = renderAlert({
+      primaryButtonVariant: "danger",
+      isPrimaryLoading: true,
+    });
+
+    fireEvent.keyDown(dialog, { key: "Enter" });
+    fireEvent.keyDown(dialog, { key: "Escape" });
+
+    expect(onPrimary).not.toHaveBeenCalled();
+    expect(onSecondary).not.toHaveBeenCalled();
   });
 });

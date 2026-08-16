@@ -158,9 +158,6 @@ export function groupEvents(events: RunEvent[]): EventGroup[] {
       if (level === "start" || level === "resume") {
         continue;
       }
-      if (level === "error") {
-        continue;
-      }
 
       // SDK user messages - show as special info group
       if (level === "sdk-user") {
@@ -175,9 +172,17 @@ export function groupEvents(events: RunEvent[]): EventGroup[] {
         continue;
       }
 
-      // Check if this is a system/info log we want to show
+      // Check if this is a system/info log we want to show.
+      //
+      // `warn` and `error` are shown on their level alone. The shape heuristic
+      // below treats a leading "[" as internal chrome, which is also how every
+      // provider tags the things a user most needs to hear — a rate limit, a
+      // denied tool call, a model refusal — so judging those by prefix hid
+      // exactly the wrong set.
       const content = event.content;
       const isImportant =
+        level === "warn" ||
+        level === "error" ||
         content.includes("Session initialized") ||
         content.includes("Starting") ||
         content.includes("Resuming") ||

@@ -1,7 +1,7 @@
 import {
   useState,
   useRef,
-  useEffect,
+  useLayoutEffect,
   type MouseEvent,
   type ReactNode,
 } from "react";
@@ -166,7 +166,12 @@ export default function WorkspaceItem({
     setRenameBranchValue(branch || "");
   };
 
-  useEffect(() => {
+  // Layout effect, not a passive one: the same click closes the dropdown, and
+  // the menu only keeps its focus restore off when something else already holds
+  // focus by the following frame. Focusing here runs inside that commit, so the
+  // editor wins the race deterministically instead of being blurred (and
+  // blur-committed straight back out of existence).
+  useLayoutEffect(() => {
     if (isRenamingBranch && renameInputRef.current) {
       renameInputRef.current.focus();
       renameInputRef.current.select();

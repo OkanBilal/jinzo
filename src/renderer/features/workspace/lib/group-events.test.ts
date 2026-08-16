@@ -176,3 +176,33 @@ describe("groupEvents — subagent machinery stays out of the chat", () => {
     expect(groups[0].events.map((e) => e.id)).toEqual(["t1", "t2"]);
   });
 });
+
+describe("groupEvents / warning and error logs", () => {
+  function shown(level: string, content: string): boolean {
+    return groupEvents([ev({ id: "l1", type: "log", content, metadata: { level } })]).some(
+      (group) => group.events.some((event) => event.id === "l1"),
+    );
+  }
+
+  it("shows warnings and errors whatever shape the message takes", () => {
+    // Providers tag exactly these with a bracketed prefix — a rate limit, a
+    // denied tool, a model refusal — and the shape heuristic below reads a
+    // leading "[" as internal chrome, so judging them by prefix hid the whole
+    // set. Level decides for these two.
+    expect(shown("warn", "[permission] Bash denied — matched deny rule")).toBe(true);
+    expect(shown("error", "[model] claude-opus-5 declined and no fallback was available")).toBe(
+      true,
+    );
+    expect(shown("warn", "[rate-limit] Rate limit reached")).toBe(true);
+  });
+
+  it("still hides internal chrome", () => {
+    expect(shown("start", "[system] Session initialized with model: x")).toBe(false);
+    expect(shown("resume", "Resuming session")).toBe(false);
+    expect(shown("info", "[context] Conversation compacted (900 → 400 tokens)")).toBe(false);
+  });
+
+  it("keeps showing plain info prose", () => {
+    expect(shown("info", "Wrote 3 files")).toBe(true);
+  });
+});

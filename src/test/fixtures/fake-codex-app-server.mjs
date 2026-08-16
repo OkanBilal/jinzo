@@ -5,10 +5,11 @@ import readline from "node:readline";
 import process from "node:process";
 import { setTimeout } from "node:timers";
 
+const fixtureCliVersion =
+  process.env.MAINS_CODEX_FIXTURE_VERSION ?? "0.147.0";
+
 if (process.argv.includes("--version")) {
-  process.stdout.write(
-    `codex-cli ${process.env.MAINS_CODEX_FIXTURE_VERSION ?? "0.146.0"}\n`,
-  );
+  process.stdout.write(`codex-cli ${fixtureCliVersion}\n`);
   process.exit(0);
 }
 
@@ -33,6 +34,8 @@ function notify(method, params) {
 }
 
 function fixturePluginSummary(overrides = {}) {
+  const disabledReason =
+    process.env.MAINS_CODEX_FIXTURE_PLUGIN_DISABLED_REASON ?? null;
   return {
     id: "fixture-plugin@fixture-remote",
     remotePluginId: "remote-fixture-plugin-id",
@@ -42,12 +45,21 @@ function fixturePluginSummary(overrides = {}) {
     shareContext: null,
     source: { type: "remote", path: "" },
     installed: false,
+    installedAt: null,
     enabled: false,
     installPolicy: "AVAILABLE",
     installPolicySource: null,
     mustShowInstallationInterstitial: false,
     authPolicy: "ON_INSTALL",
-    availability: { type: "available" },
+    availability:
+      disabledReason === "disabled_by_admin"
+        ? "DISABLED_BY_ADMIN"
+        : "AVAILABLE",
+    disabledReason,
+    eligiblePlanTypes:
+      disabledReason === "plan_not_eligible"
+        ? ["pro", "business"]
+        : null,
     interface: {
       displayName: "Fixture Plugin",
       shortDescription: "Fixture remote plugin",
@@ -130,7 +142,10 @@ input.on("line", (line) => {
           status: { type: "idle" },
           path: null,
           cwd: params.cwd,
-          cliVersion: "0.146.0",
+          cliVersion: fixtureCliVersion,
+          ephemeral: false,
+          section: null,
+          sectionEnteredAt: null,
           source: "appServer",
           agentNickname: null,
           agentRole: null,
@@ -153,7 +168,10 @@ input.on("line", (line) => {
           status: { type: "idle" },
           path: null,
           cwd: params.cwd,
-          cliVersion: "0.146.0",
+          cliVersion: fixtureCliVersion,
+          ephemeral: false,
+          section: null,
+          sectionEnteredAt: null,
           source: "appServer",
           agentNickname: null,
           agentRole: null,
@@ -176,7 +194,10 @@ input.on("line", (line) => {
           status: { type: "idle" },
           path: null,
           cwd: params.cwd,
-          cliVersion: "0.146.0",
+          cliVersion: fixtureCliVersion,
+          ephemeral: false,
+          section: null,
+          sectionEnteredAt: null,
           source: "appServer",
           agentNickname: null,
           agentRole: null,

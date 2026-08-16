@@ -23,6 +23,7 @@ import {
 } from "@/lib/redux/api";
 import type { PluginAppSummary, PluginInfo, PluginScope } from "@/lib/redux/api";
 import { PROVIDER_IDS } from "../../../../shared/provider-ids";
+import { getPluginInstallBlockReason } from "../../../../shared/plugin-install-availability";
 import { extractErrorMessage } from "@/lib/extract-error-message";
 import { proxiedImageSrc } from "@/lib/proxied-image-src";
 import {
@@ -312,6 +313,9 @@ function PluginCard({
 }) {
   const name = plugin.interface?.displayName || humanizePluginName(plugin.name);
   const description = plugin.interface?.shortDescription || "";
+  const installBlockReason = plugin.installed
+    ? null
+    : getPluginInstallBlockReason(plugin);
 
   return (
     <div
@@ -351,6 +355,16 @@ function PluginCard({
               Update
             </Text>
           )}
+          {installBlockReason && (
+            <Text
+              as="span"
+              size="t"
+              tone="warning"
+              className="shrink-0 px-1.5 py-0.5 rounded-full bg-warning/15"
+            >
+              Unavailable
+            </Text>
+          )}
         </div>
         <Text
           as="div"
@@ -381,7 +395,8 @@ function PluginCard({
             onInstall();
           }
         }}
-        disabled={isInstalling || plugin.installPolicy === "NOT_AVAILABLE"}
+        disabled={isInstalling || Boolean(installBlockReason)}
+        title={installBlockReason ?? undefined}
       >
         {isInstalling ? (
           <div className="mb-1 px-1.5">
@@ -466,6 +481,13 @@ function PluginDetail({
       : undefined;
   const installCount = plugin.installs ?? detail?.uniqueInstalls ?? null;
   const lastUpdated = detail?.lastUpdated ?? null;
+  const installedAt = plugin.installedAt ?? detail?.summary.installedAt ?? null;
+  const installBlockReason = plugin.installed
+    ? null
+    : getPluginInstallBlockReason(plugin) ??
+      (detail?.summary
+        ? getPluginInstallBlockReason(detail.summary)
+        : null);
   const hasInformation = !!(
     info?.category ||
     info?.developerName ||
@@ -474,6 +496,7 @@ function PluginDetail({
     info?.termsOfServiceUrl ||
     sourceUrl ||
     installCount != null ||
+    installedAt != null ||
     lastUpdated
   );
 
@@ -510,7 +533,8 @@ function PluginDetail({
                   )}
                   <Button
                     onClick={onInstall}
-                    disabled={isInstalling || plugin.installPolicy === "NOT_AVAILABLE"}
+                    disabled={isInstalling || Boolean(installBlockReason)}
+                    title={installBlockReason ?? undefined}
                     variant="primary"
                   >
                     {isInstalling ? (
@@ -561,6 +585,11 @@ function PluginDetail({
               )}
             </div>
           </div>
+          {installBlockReason && (
+            <Text as="div" size="xs" tone="warning" className="mt-2">
+              {installBlockReason}
+            </Text>
+          )}
         </div>
       </div>
 
@@ -739,6 +768,19 @@ function PluginDetail({
                   month: "short",
                   day: "numeric",
                 })}
+              />
+            )}
+            {installedAt != null && (
+              <InfoRow
+                label="Installed"
+                value={new Date(installedAt * 1000).toLocaleDateString(
+                  "en-US",
+                  {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  },
+                )}
               />
             )}
             {info?.websiteUrl && (

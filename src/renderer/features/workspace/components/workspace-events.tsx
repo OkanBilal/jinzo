@@ -32,7 +32,8 @@ import { AsciiLoader } from "./ascii-loader";
 import { ProviderAuthNotice } from "./provider-auth-notice";
 import { classifyRunErrorKind } from "../../../../shared/run-errors";
 import { ArrowUp, Fork } from "@/components/ui/icons";
-import { useGetAppSettingsQuery } from "@/lib/redux/api";
+import { useGetAppSettingsQuery, useGetProviderAccountInfoQuery } from "@/lib/redux/api";
+import { getProviderVariant } from "@/lib/provider-variants";
 import { isDocumentRenderImage } from "@/lib/document-viewer";
 import { Button, CopyButton, Text, Tooltip } from "@/components/ui";
 import { formatCostFromMicros, formatDurationMs } from "@/lib/format";
@@ -41,6 +42,13 @@ import { PromptSuggestionChips } from "./prompt-suggestion-chips";
 function formatNumber(n: number): string {
   return n.toLocaleString("en-US");
 }
+
+/**
+ * Assistant-error codes an auth notice already speaks for. Anything else the
+ * provider reports (billing, a missing model) has no notice of its own, so its
+ * log line stays.
+ */
+const AUTH_ASSISTANT_ERRORS = new Set(["authentication_failed", "oauth_org_not_allowed"]);
 
 
 /** Single model usage block */
@@ -371,6 +379,21 @@ export function WorkspaceEvents({
 
   // Check if current run is still running
   const activeRun = runs.find((r) => r.id === activeTab);
+
+  // Being signed out entirely is already reported above the composer, with a
+  // recheck the run-anchored notice does not offer. The notice below is for the
+  // case that probe cannot see: a run that died on a refresh-token failure while
+  // the account still reads as signed in. Same query as the composer's, so RTK
+  // Query serves it from cache rather than probing twice.
+  const { data: providerAccountInfo } = useGetProviderAccountInfoQuery(
+    getProviderVariant(variant).providerId,
+    { refetchOnFocus: false },
+  );
+  const providerSignedOut =
+    !!providerAccountInfo && providerAccountInfo.account === null;
+  const activeRunFailedOnAuth =
+    activeRun?.status === "failed" &&
+    classifyRunErrorKind(activeRun.lastError) === "auth";
   const isRunning =
     activeRun?.status === "running" || activeRun?.status === "queued";
   const isRunCompleted =
@@ -401,11 +424,25 @@ export function WorkspaceEvents({
             }
             return true;
           });
+    // An auth failure that took the whole run down already gets a notice with a
+    // Sign in button — either here or above the composer. The driver's log line
+    // is the signal for the case that notice never covers: an auth failure the
+    // run recovered from, which leaves the status untouched.
+    const deduped = activeRunFailedOnAuth
+      ? filtered.filter(
+          (e) =>
+            !(
+              e.type === "log" &&
+              e.metadata?.source === "assistant_error" &&
+              AUTH_ASSISTANT_ERRORS.has(e.metadata?.error as string)
+            ),
+        )
+      : filtered;
     // Stop finished tools from spinning until the run-end sweep resolves their
     // status (providers don't all emit per-tool completions). Runs on the
     // display-ordered list so "later event" matches what the user actually sees.
-    return demoteStaleRunningTools(filtered);
-  }, [currentEvents]);
+    return demoteStaleRunningTools(deduped);
+  }, [currentEvents, activeRunFailedOnAuth]);
 
   // Group events for CLI-style display, reconciled so unchanged groups keep
   // their object identity across streamed tokens — that's what lets the memoized
@@ -672,14 +709,13 @@ export function WorkspaceEvents({
                   </div>
                 );
               })}
-              {activeRun?.status === "failed" &&
-                classifyRunErrorKind(activeRun.lastError) === "auth" && (
-                  <ProviderAuthNotice
-                    variant={variant}
-                    title="Authentication expired"
-                    message={activeRun.lastError}
-                  />
-                )}
+              {activeRunFailedOnAuth && !providerSignedOut && (
+                <ProviderAuthNotice
+                  variant={variant}
+                  title="Authentication expired"
+                  message={activeRun?.lastError}
+                />
+              )}
               {isRunning && !hasActiveImageGeneration && (
                 <AsciiLoader thinkingText={latestThinking} />
               )}

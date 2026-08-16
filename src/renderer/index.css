@@ -698,6 +698,20 @@ html.mains-web.dark #root {
   --glass-rim: rgba(0, 0, 0, 0.08);
   --glass-rim-shadow: rgba(255, 255, 255, 0);
   --glass-outline-rim: rgba(0, 0, 0, 0.1);
+
+  /* Categorical data-viz slots — identity only (which series), assigned in this
+     fixed order and never cycled or generated past the last slot; a longer tail
+     folds into a neutral "other" row. The ORDER is the colorblind-safety
+     mechanism, not cosmetic: adjacent pairs are what touch in a stacked bar.
+     Validated as a set against the tooltip surfaces (#f7f7f6 / #141414):
+     worst adjacent CVD ΔE 9.1 light / 8.4 dark, normal-vision 19.6 / 19.3.
+     Light steps sit under 3:1 on the light surface, so anything painted with
+     them must also carry a visible text label. Never reuse these for status. */
+  --viz-cat-1: #2a78d6;
+  --viz-cat-2: #eb6834;
+  --viz-cat-3: #1baf7a;
+  --viz-cat-4: #eda100;
+  --viz-cat-5: #e87ba4;
 }
 
 /* Dark mode is a token swap — the utility itself never forks. */
@@ -705,6 +719,13 @@ html.mains-web.dark #root {
   --glass-rim: rgba(255, 255, 255, 0.08);
   --glass-rim-shadow: rgba(0, 0, 0, 0);
   --glass-outline-rim: rgba(255, 255, 255, 0.1);
+
+  /* Same five hues, re-stepped for the dark surface — not an automatic flip. */
+  --viz-cat-1: #3987e5;
+  --viz-cat-2: #d95926;
+  --viz-cat-3: #199e70;
+  --viz-cat-4: #c98500;
+  --viz-cat-5: #d55181;
 
   --glass-fill-surface: var(--color-primary-900);
   --glass-fill-card: rgba(24, 24, 24, 0.98);
