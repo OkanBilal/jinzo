@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
-    branches: [main]
+    branches: [main, dev]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -65,3 +65,23 @@ jobs:
       - name: Install Codex CLI
         run: npm install --global @openai/codex@${{ matrix.codex-version }}
       - run: npm run codex:protocol:smoke
+
+  # Feature work merges into dev; main only ever receives a preview promotion
+  # (dev) or a fix branch (hotfix / preview defect). GitHub has no native way to
+  # restrict which branches may target a base, so it is a status check.
+  pr-target:
+    name: PR target
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Only dev and fix/* may target main
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          case "$HEAD_REF" in
+            dev|fix/*)
+              echo "$HEAD_REF -> main is allowed." ;;
+            *)
+              echo "::error::'$HEAD_REF' cannot target main. Feature work merges into dev; only dev (preview promotion) and fix/* (hotfix or preview defect) may target main."
+              exit 1 ;;
+          esac

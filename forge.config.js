@@ -1,4 +1,5 @@
 require('dotenv').config({ path: '.env.local' });
+const { version } = require('./package.json');
 const { FusesPlugin } = require('@electron-forge/plugin-fuses');
 const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 const { AutoUnpackNativesPlugin } = require('@electron-forge/plugin-auto-unpack-natives');
@@ -223,13 +224,15 @@ module.exports = {
   publishers: [
     {
       // Release flow: tag push → CI builds + uploads assets to a DRAFT release.
-      // Auto-updater (update.electronjs.org) only sees PUBLISHED releases, so
-      // after CI finishes you must manually click "Publish release" on GitHub.
+      // Auto-updater (update.electronjs.org) only sees PUBLISHED, non-prerelease
+      // releases, so after CI finishes you must manually click "Publish release"
+      // on GitHub. Preview builds go out as prereleases, which keeps them out of
+      // the auto-updater's sight — preview users install the DMG by hand.
       // Repo must be public for ElectronPublicUpdateService to read it.
       name: '@electron-forge/publisher-github',
       config: {
         repository: { owner: 'mainsdotdev', name: 'mains' },
-        prerelease: false,
+        prerelease: version.includes('-preview.'),
         draft: true,
       },
     },
