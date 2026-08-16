@@ -42,6 +42,7 @@ import type {
   ProviderDriver,
   SkillInfo,
   WorkRunContextItem,
+  WorkRunContextUsageCategory,
   WorkRunContinueRequest,
   WorkRunEvent,
   WorkRunEventHandler,
@@ -303,12 +304,53 @@ interface SDKMessageContent {
   id?: string;
 }
 
+/**
+ * Reply to the `get_context_usage` control request — the CLI's own `/context`
+ * report, structured. This is the meter's live source.
+ *
+ * Unlike the `/context` message payload below, its categories carry no kind
+ * discriminator: deferred rows are flagged, and the two rows that are space
+ * rather than content are identified only by name.
+ */
+export interface SDKContextUsageResponse {
+  totalTokens: number;
+  maxTokens: number;
+  percentage: number;
+  model: string;
+  isAutoCompactEnabled?: boolean;
+  autoCompactThreshold?: number;
+  categories?: { name: string; tokens: number; isDeferred?: boolean }[];
+}
+
+/**
+ * Context snapshot carried on an assistant message (Agent SDK >= 0.3.233).
+ *
+ * Per the CLI's own schema this rides *only* the synthetic message that answers
+ * `/context` — never an ordinary assistant turn — so it covers the case where a
+ * run invokes that command, and `getContextUsage()` covers everything else.
+ *
+ * `raw_max_tokens` is the *resolved autocompact window* — the model's believed
+ * limit, or a smaller compaction-policy window (e.g. the 200K boundary on
+ * 1M-window models) — so `percentage` is already measured against the boundary
+ * the meter cares about. `total_tokens` is unclamped and may exceed it.
+ */
+export interface SDKContextUsage {
+  model: string;
+  total_tokens: number;
+  raw_max_tokens: number;
+  percentage: number;
+  /** Partition of the window; see WorkRunContextUsageCategory for the kinds. */
+  categories?: { name: string; tokens: number; kind: string }[];
+}
+
 interface SDKAssistantMessage {
   type: "assistant";
   uuid: string;
   session_id: string;
   message: { role: "assistant"; content: SDKMessageContent[] };
   parent_tool_use_id: string | null;
+  /** Agent SDK >= 0.3.233; absent on older CLI binaries. */
+  context_usage?: SDKContextUsage;
 }
 
 interface SDKUserMessage {
@@ -539,6 +581,7 @@ interface SDKQuery extends AsyncGenerator<SDKMessage, void> {
   /** Forcefully ends the query and terminates the CLI subprocess. */
   close(): void;
   rewindFiles(userMessageUuid: string, options?: { dryRun?: boolean }): Promise<unknown>;
+  getContextUsage(): Promise<SDKContextUsageResponse>;
   setPermissionMode(mode: string): Promise<void>;
   setModel(model?: string): Promise<void>;
   setMaxThinkingTokens(maxThinkingTokens: number | null): Promise<void>;
@@ -977,6 +1020,91 @@ function safeParseJson(value: string): unknown {
   } catch {
     return null;
   }
+}
+
+/**
+ * The two category names that are space rather than content.
+ *
+ * Matched by name because the control reply carries no kind discriminator. A
+ * rename upstream degrades gracefully — the row keeps its real tokens and just
+ * renders as an ordinary category instead of as empty space.
+ */
+const FREE_CATEGORY_NAME = "free space";
+const BUFFER_CATEGORY_NAME = "autocompact buffer";
+
+/**
+ * Map the `get_context_usage` control reply to the renderer's meter event.
+ *
+ * `maxTokens` is the window `percentage` was computed against, so the meter
+ * measures the same thing the CLI's `/context` report does.
+ */
+export function mapContextUsageResponse(
+  response: SDKContextUsageResponse | null | undefined,
+  ts: number,
+): WorkRunEvent | null {
+  if (!response || !(response.maxTokens > 0)) return null;
+  const categories = response.categories
+    ?.filter((category) => category.tokens > 0)
+    .map((category) => {
+      const name = category.name.trim().toLowerCase();
+      const kind: WorkRunContextUsageCategory["kind"] = category.isDeferred
+        ? "deferred"
+        : name === FREE_CATEGORY_NAME
+          ? "free"
+          : name === BUFFER_CATEGORY_NAME
+            ? "buffer"
+            : "used";
+      return { name: category.name, tokens: category.tokens, kind };
+    });
+  return {
+    type: "context_usage",
+    totalTokens: response.totalTokens,
+    maxTokens: response.maxTokens,
+    percentage: response.percentage,
+    model: response.model,
+    ...(response.isAutoCompactEnabled !== undefined
+      ? { isAutoCompactEnabled: response.isAutoCompactEnabled }
+      : {}),
+    ...(response.autoCompactThreshold !== undefined
+      ? { autoCompactThreshold: response.autoCompactThreshold }
+      : {}),
+    ...(categories?.length ? { categories } : {}),
+    ts,
+  };
+}
+
+/**
+ * Map the `/context` message snapshot to the renderer's meter event.
+ *
+ * Returns null when there is nothing meaningful to show: a subagent message
+ * (its window is not the main conversation's), an older CLI that sends no
+ * snapshot, or a snapshot with no window to measure against. `total_tokens` is
+ * passed through unclamped — it can exceed the window, and the meter clamps.
+ */
+export function buildContextUsageEvent(
+  msg: { context_usage?: SDKContextUsage; parent_tool_use_id: string | null },
+  ts: number,
+): WorkRunEvent | null {
+  const ctx = msg.context_usage;
+  if (!ctx || msg.parent_tool_use_id || !(ctx.raw_max_tokens > 0)) return null;
+  // The kinds come off a subprocess, so unknown ones are dropped rather than
+  // widening the renderer's union — a row it can't classify has no place to go.
+  const categories = ctx.categories
+    ?.filter(
+      (c): c is WorkRunContextUsageCategory =>
+        c.tokens > 0 &&
+        (c.kind === "used" || c.kind === "free" || c.kind === "buffer" || c.kind === "deferred"),
+    )
+    .map((c) => ({ name: c.name, tokens: c.tokens, kind: c.kind }));
+  return {
+    type: "context_usage",
+    totalTokens: ctx.total_tokens,
+    maxTokens: ctx.raw_max_tokens,
+    percentage: ctx.percentage,
+    model: ctx.model,
+    ...(categories?.length ? { categories } : {}),
+    ts,
+  };
 }
 
 /**
@@ -2412,12 +2540,50 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       });
 
       try {
-        // Single-request context snapshot for the context meter. result.modelUsage
-        // is *cumulative* across every API round-trip in the turn, so cache-read
-        // tokens balloon with each tool call and the meter pins to 100%. The latest
-        // top-level assistant message instead reflects one request — its
-        // prompt+response size ≈ what currently occupies the window (matches `/context`).
+        // Context meter, in preference order:
+        //   1. The `get_context_usage` control reply — the CLI's own `/context`
+        //      report, with the category breakdown and the autocompact
+        //      threshold. Requested while the stream is live; the reason the
+        //      driver used to avoid it is that requesting it around teardown
+        //      answers "Query closed before response".
+        //   2. `context_usage` on an assistant message, which per the CLI's
+        //      schema only ever rides the synthetic reply to `/context`.
+        //   3. A per-request snapshot from `message.usage`, sized against the
+        //      window in result.modelUsage — for a CLI too old for (1).
+        let sawContextUsage = false;
         let lastReqContextTokens = 0;
+        let contextUsageInFlight = false;
+        let contextUsageAt = 0;
+        // The reply is a whole-context token count, so it is asked for at a
+        // human-readable cadence rather than once per assistant message.
+        const CONTEXT_USAGE_MIN_INTERVAL_MS = 2_000;
+
+        function refreshContextUsage(): void {
+          const now = Date.now();
+          if (contextUsageInFlight) return;
+          if (contextUsageAt && now - contextUsageAt < CONTEXT_USAGE_MIN_INTERVAL_MS) return;
+          if (typeof cs.query?.getContextUsage !== "function") return;
+          contextUsageInFlight = true;
+          contextUsageAt = now;
+          // Fire-and-forget: the meter is an indicator and must never hold up
+          // the transcript stream.
+          void cs.query
+            .getContextUsage()
+            .then((response) => {
+              const event = mapContextUsageResponse(response, Date.now());
+              if (!event) return;
+              sawContextUsage = true;
+              return onEvent(event);
+            })
+            .catch(() => {
+              // A CLI without the control handler, or a closed query — the
+              // modelUsage fallback covers the meter either way.
+            })
+            .finally(() => {
+              contextUsageInFlight = false;
+            });
+        }
+
         const streamPromise = (async () => {
           for await (const msg of query) {
             if (signal.aborted || timedOut) break;
@@ -2428,8 +2594,24 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
               if (aMsg.message?.content?.some((b: any) => b.type === "text" && b.text)) {
                 cs.state.hasAssistantContent = true;
               }
-              // Skip subagent (e.g. haiku) messages so they don't clobber the
-              // main conversation's snapshot. The Anthropic message carries a
+              // (1) Ask the CLI where the window stands. Driven off assistant
+              // messages so a long tool-using turn keeps the meter live rather
+              // than updating it once at the end.
+              if (!aMsg.parent_tool_use_id) refreshContextUsage();
+
+              // (2) The `/context` reply, when a run happens to invoke it.
+              const ctxEvent = buildContextUsageEvent(aMsg, Date.now());
+              if (ctxEvent) {
+                sawContextUsage = true;
+                await onEvent(ctxEvent);
+              }
+
+              // (3) Fallback snapshot: one request's prompt+response size ≈ what
+              // occupies the window. result.modelUsage is *cumulative* across
+              // every round-trip in the turn, so cache-read tokens balloon with
+              // each tool call and pin the meter to 100% — hence per-request.
+              // Subagent (e.g. haiku) messages are skipped so they don't clobber
+              // the main conversation's snapshot. The Anthropic message carries a
               // per-request `usage` at runtime even though our local type omits it.
               const u = (aMsg.message as any)?.usage as
                 | { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number }
@@ -2465,16 +2647,10 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
                 cacheRead = 0,
                 cacheWrite = 0;
               let primaryModel: string | undefined;
-              // Context meter: track the model entry with the largest window (the
-              // main conversation model, not haiku subagents) to estimate fill.
+              // Fallback context meter: the entry with the largest window is the
+              // main conversation model (not haiku subagents).
               let ctxModel: string | undefined;
               let ctxWindow = 0;
-              // Cumulative fallback for the largest-window model, used only when
-              // the per-request snapshot above is unavailable (older SDK builds
-              // may not surface `message.usage` on assistant messages). It runs
-              // hot (cache-read balloons across tool calls), so it's a worse
-              // estimate than the snapshot — hence fallback-only.
-              let ctxFallbackTokens = 0;
               if (resultMsg.modelUsage) {
                 for (const [modelName, usage] of Object.entries(resultMsg.modelUsage)) {
                   inputTokens += usage.inputTokens;
@@ -2482,18 +2658,10 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
                   cacheRead += usage.cacheReadInputTokens;
                   cacheWrite += usage.cacheCreationInputTokens;
                   if (!primaryModel) primaryModel = modelName;
-                  // Pick the entry with the largest window as the main
-                  // conversation model (not haiku subagents). Occupancy comes
-                  // from the per-request snapshot above, not this cumulative sum.
                   const window = usage.contextWindow ?? 0;
                   if (window > ctxWindow) {
                     ctxWindow = window;
                     ctxModel = modelName;
-                    ctxFallbackTokens =
-                      (usage.inputTokens ?? 0) +
-                      (usage.cacheReadInputTokens ?? 0) +
-                      (usage.cacheCreationInputTokens ?? 0) +
-                      (usage.outputTokens ?? 0);
                   }
                 }
               }
@@ -2510,12 +2678,9 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
                 modelUsage: resultMsg.modelUsage,
               };
 
-              // Derive the context-window snapshot from usage data rather than the
-              // SDK's getContextUsage() control request — the latter races the
-              // query teardown in single-prompt mode ("Query closed before response").
-              const ctxTokens = lastReqContextTokens || ctxFallbackTokens;
-              if (ctxWindow > 0 && ctxTokens > 0) {
-                const total = Math.min(ctxTokens, ctxWindow);
+              // Fallback only — an authoritative snapshot already covered the turn.
+              if (!sawContextUsage && ctxWindow > 0 && lastReqContextTokens > 0) {
+                const total = Math.min(lastReqContextTokens, ctxWindow);
                 await onEvent({
                   type: "context_usage",
                   totalTokens: total,

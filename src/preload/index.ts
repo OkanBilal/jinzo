@@ -550,7 +550,7 @@ const api = {
       ipcRenderer.on(CHANNELS.runs.ephemeralEvent, listener);
       return () => ipcRenderer.removeListener(CHANNELS.runs.ephemeralEvent, listener);
     },
-    // Live context-window usage snapshots (ephemeral — pushed at turn boundaries, not persisted).
+    // Live context-window usage snapshots (ephemeral — pushed as the turn advances, not persisted).
     onContextUsage: (
       callback: (data: {
         runId: string;
@@ -562,7 +562,11 @@ const api = {
           model?: string;
           isAutoCompactEnabled?: boolean;
           autoCompactThreshold?: number;
-          categories?: { name: string; tokens: number; color: string }[];
+          categories?: {
+            name: string;
+            tokens: number;
+            kind: "used" | "free" | "buffer" | "deferred";
+          }[];
           ts?: number;
         };
         ts: number;

@@ -248,9 +248,24 @@ export interface WorkRunContextUsageEvent {
   isAutoCompactEnabled?: boolean;
   /** Token count at which auto-compaction triggers, when known. */
   autoCompactThreshold?: number;
-  /** Per-category breakdown (name/tokens/color) for a detailed view. */
-  categories?: { name: string; tokens: number; color: string }[];
+  /**
+   * Per-category breakdown of the window, as the provider partitions it.
+   *
+   * `used` rows are the occupied portion, `free` is what remains, `buffer` is
+   * the compaction reserve, and `deferred` rows sit outside the window
+   * (out-of-context tool schemas) and are excluded from the usage math.
+   *
+   * Semantic only — the renderer owns presentation. Providers must not send
+   * colors or class names.
+   */
+  categories?: WorkRunContextUsageCategory[];
   ts?: number;
+}
+
+export interface WorkRunContextUsageCategory {
+  name: string;
+  tokens: number;
+  kind: "used" | "free" | "buffer" | "deferred";
 }
 
 export interface WorkRunPlanStep {

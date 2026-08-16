@@ -21,6 +21,8 @@ import {
   cleanGeneratedTitle,
   parseSimpleYaml,
   mapTaskMessage,
+  mapContextUsageResponse,
+  buildContextUsageEvent,
   normalizeSubagentOutput,
   buildSubagentCompletionEvent,
   mapSDKMessage,
@@ -1097,6 +1099,193 @@ describe("claude.driver / mapTaskMessage", () => {
 // MCP elicitation bridge. Without a handler the SDK auto-declines every
 // request, so these cover the paths that make a request reach the user.
 // ─────────────────────────────────────────────────────────────
+
+describe("claude.driver / mapContextUsageResponse", () => {
+  const response = {
+    totalTokens: 11_236,
+    maxTokens: 200_000,
+    percentage: 6,
+    model: "claude-haiku-4-5-20251001",
+    isAutoCompactEnabled: true,
+    autoCompactThreshold: 167_000,
+    categories: [
+      { name: "System prompt", tokens: 368 },
+      { name: "System tools (deferred)", tokens: 13_198, isDeferred: true },
+      { name: "Autocompact buffer", tokens: 33_000 },
+      { name: "Free space", tokens: 188_679 },
+    ],
+  };
+
+  it("classifies rows the control reply leaves undiscriminated", () => {
+    // Unlike the /context payload, this shape carries no `kind` — deferred rows
+    // are flagged and the two space rows are known only by name.
+    const event = mapContextUsageResponse(response, 7);
+
+    expect(event).toEqual({
+      type: "context_usage",
+      totalTokens: 11_236,
+      maxTokens: 200_000,
+      percentage: 6,
+      model: "claude-haiku-4-5-20251001",
+      isAutoCompactEnabled: true,
+      autoCompactThreshold: 167_000,
+      categories: [
+        { name: "System prompt", tokens: 368, kind: "used" },
+        { name: "System tools (deferred)", tokens: 13_198, kind: "deferred" },
+        { name: "Autocompact buffer", tokens: 33_000, kind: "buffer" },
+        { name: "Free space", tokens: 188_679, kind: "free" },
+      ],
+      ts: 7,
+    });
+  });
+
+  it("carries the compaction threshold so the meter can mark it", () => {
+    // No Claude path supplied this before, so the threshold marker never drew.
+    expect(mapContextUsageResponse(response, 7)).toMatchObject({
+      isAutoCompactEnabled: true,
+      autoCompactThreshold: 167_000,
+    });
+  });
+
+  it("keeps an unrecognized space row as a plain category", () => {
+    // Name matching is the only discriminator available; a rename upstream must
+    // not drop the row or its tokens.
+    const event = mapContextUsageResponse(
+      { ...response, categories: [{ name: "Unused window", tokens: 100 }] },
+      7,
+    );
+
+    expect(event).toMatchObject({
+      categories: [{ name: "Unused window", tokens: 100, kind: "used" }],
+    });
+  });
+
+  it("returns null without a window to measure against", () => {
+    expect(mapContextUsageResponse(null, 7)).toBeNull();
+    expect(mapContextUsageResponse({ ...response, maxTokens: 0 }, 7)).toBeNull();
+  });
+});
+
+describe("claude.driver / buildContextUsageEvent", () => {
+  const snapshot = {
+    model: "claude-opus-4-8",
+    total_tokens: 42_000,
+    raw_max_tokens: 200_000,
+    percentage: 21,
+  };
+
+  it("maps a top-level snapshot onto the meter event", () => {
+    expect(
+      buildContextUsageEvent({ context_usage: snapshot, parent_tool_use_id: null }, 123),
+    ).toEqual({
+      type: "context_usage",
+      totalTokens: 42_000,
+      // The window is the CLI's *resolved autocompact window*, not the model's
+      // raw limit — the meter measures against the same boundary `/context` does.
+      maxTokens: 200_000,
+      percentage: 21,
+      model: "claude-opus-4-8",
+      ts: 123,
+    });
+  });
+
+  it("passes an over-limit total through unclamped", () => {
+    // total_tokens is documented as unclamped; clamping is the meter's job, and
+    // swallowing the overflow here would hide a context overrun.
+    const event = buildContextUsageEvent(
+      {
+        context_usage: { ...snapshot, total_tokens: 210_000, percentage: 105 },
+        parent_tool_use_id: null,
+      },
+      123,
+    );
+    expect(event).toMatchObject({ totalTokens: 210_000, percentage: 105 });
+  });
+
+  it("ignores a subagent's snapshot", () => {
+    // A subagent (e.g. haiku) has its own window; letting it through would
+    // clobber the main conversation's reading.
+    expect(
+      buildContextUsageEvent(
+        { context_usage: snapshot, parent_tool_use_id: "toolu_parent" },
+        123,
+      ),
+    ).toBeNull();
+  });
+
+  it("returns null when the CLI sends no snapshot", () => {
+    // Older configured binaries omit the field; the caller falls back to the
+    // modelUsage-derived estimate instead.
+    expect(buildContextUsageEvent({ parent_tool_use_id: null }, 123)).toBeNull();
+  });
+
+  it("returns null when there is no window to measure against", () => {
+    expect(
+      buildContextUsageEvent(
+        { context_usage: { ...snapshot, raw_max_tokens: 0 }, parent_tool_use_id: null },
+        123,
+      ),
+    ).toBeNull();
+  });
+
+  it("passes the category partition through as semantic rows", () => {
+    // Colors are the renderer's call — the driver ships kinds, never presentation.
+    const event = buildContextUsageEvent(
+      {
+        context_usage: {
+          ...snapshot,
+          categories: [
+            { name: "System prompt", tokens: 12_000, kind: "used" },
+            { name: "Free", tokens: 158_000, kind: "free" },
+          ],
+        },
+        parent_tool_use_id: null,
+      },
+      123,
+    );
+
+    expect(event).toMatchObject({
+      categories: [
+        { name: "System prompt", tokens: 12_000, kind: "used" },
+        { name: "Free", tokens: 158_000, kind: "free" },
+      ],
+    });
+  });
+
+  it("drops rows the renderer could not classify", () => {
+    // The kinds come off a subprocess; an unknown one has no lane in the meter,
+    // and a zero-token row would only render as a minimum-width sliver.
+    const event = buildContextUsageEvent(
+      {
+        context_usage: {
+          ...snapshot,
+          categories: [
+            { name: "Messages", tokens: 12_000, kind: "used" },
+            { name: "Mystery", tokens: 5_000, kind: "something_new" },
+            { name: "Skills", tokens: 0, kind: "used" },
+          ],
+        },
+        parent_tool_use_id: null,
+      },
+      123,
+    );
+
+    expect(event).toMatchObject({ categories: [{ name: "Messages", kind: "used" }] });
+  });
+
+  it("omits the field entirely when nothing survives", () => {
+    // An empty array would make the renderer draw an empty legend frame.
+    const event = buildContextUsageEvent(
+      {
+        context_usage: { ...snapshot, categories: [{ name: "x", tokens: 0, kind: "used" }] },
+        parent_tool_use_id: null,
+      },
+      123,
+    );
+
+    expect(event).not.toHaveProperty("categories");
+  });
+});
 
 describe("claude.driver / elicitation handler", () => {
   const FORM_REQUEST = {
