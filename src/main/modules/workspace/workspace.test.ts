@@ -2673,6 +2673,16 @@ describe("workspaceService — createFromSource (workspace intake)", () => {
     createAccount(db, { id: "default" });
     vi.clearAllMocks();
     gitMock.isGitRepo.mockResolvedValue(true);
+    // Intake records the repo's starting diff. Default to a clean tree so the
+    // acquisition tests below stay about acquisition.
+    gitMock.getHeadSha.mockResolvedValue("sha-head");
+    gitMock.captureDiffSnapshot.mockResolvedValue({
+      baseRef: "sha-head",
+      diffText: "",
+      files: [],
+      untrackedFiles: [],
+      shortstat: "",
+    });
   });
 
   afterEach(() => {
@@ -2968,6 +2978,115 @@ describe("workspaceService — createFromSource (workspace intake)", () => {
 
   it("worktree: fails when the project does not exist", async () => {
     await expect(workspaceService.createFromSource({ accountId: "default", source: { kind: "worktree", projectId: "missing" }, })).rejects.toThrow("Project not found");
+  });
+
+  // ── Initial diff capture ──
+  // An imported folder can already carry uncommitted work, so intake records
+  // it once. The capture is a courtesy on top of a workspace that already
+  // exists — it must never be able to fail the import.
+
+  it("records the repo's starting diff against the imported workspace", async () => {
+    setWorktrees(false);
+    gitMock.importLocalRepoDirect.mockResolvedValue({
+      branchName: "main",
+      sourcePath: "/repos/dirty",
+      baseBranch: "main",
+      tracking: null,
+      ahead: 0,
+      behind: 0,
+      originUrl: null,
+    });
+    gitMock.captureDiffSnapshot.mockResolvedValue({
+      baseRef: "sha-head",
+      diffText: "diff --git a/a.ts b/a.ts",
+      files: ["a.ts"],
+      untrackedFiles: [],
+      shortstat: " 1 file changed, 2 insertions(+)",
+    });
+
+    const workspace = await workspaceService.createFromSource({
+      accountId: "default",
+      source: { kind: "folder", path: "/repos/dirty" },
+    });
+
+    // Anchored at HEAD, like resyncDiff — uncommitted work, not the branch.
+    expect(gitMock.captureDiffSnapshot).toHaveBeenCalledWith(
+      "/repos/dirty",
+      "sha-head",
+    );
+    const diff = await workspaceRepo.findLatestDiffByWorkspace(workspace.id);
+    expect(diff?.diffText).toBe("diff --git a/a.ts b/a.ts");
+    expect(diff?.baseRef).toBe("sha-head");
+  });
+
+  it("writes no diff row when the imported repo is clean", async () => {
+    setWorktrees(false);
+    gitMock.importLocalRepoDirect.mockResolvedValue({
+      branchName: "main",
+      sourcePath: "/repos/clean",
+      baseBranch: "main",
+      tracking: null,
+      ahead: 0,
+      behind: 0,
+      originUrl: null,
+    });
+
+    const workspace = await workspaceService.createFromSource({
+      accountId: "default",
+      source: { kind: "folder", path: "/repos/clean" },
+    });
+
+    expect(
+      await workspaceRepo.findLatestDiffByWorkspace(workspace.id),
+    ).toBeNull();
+  });
+
+  it("still imports the repo when the diff capture fails", async () => {
+    setWorktrees(false);
+    gitMock.importLocalRepoDirect.mockResolvedValue({
+      branchName: "main",
+      sourcePath: "/repos/nodiff",
+      baseBranch: "main",
+      tracking: null,
+      ahead: 0,
+      behind: 0,
+      originUrl: null,
+    });
+    gitMock.captureDiffSnapshot.mockRejectedValue(new Error("git exploded"));
+
+    const workspace = await workspaceService.createFromSource({
+      accountId: "default",
+      source: { kind: "folder", path: "/repos/nodiff" },
+    });
+
+    expect(workspace.rootPath).toBe("/repos/nodiff");
+    expect(await projectsRepo.findAll()).toHaveLength(1);
+    expect(
+      await workspaceRepo.findLatestDiffByWorkspace(workspace.id),
+    ).toBeNull();
+  });
+
+  // A fresh `init` has no commits, so there is no HEAD to anchor a diff to.
+  it("still imports the repo when the repo has no HEAD to anchor to", async () => {
+    setWorktrees(false);
+    gitMock.getHeadSha.mockRejectedValue(new Error("no HEAD"));
+    gitMock.importLocalRepoDirect.mockResolvedValue({
+      branchName: "main",
+      sourcePath: "/repos/nohead",
+      baseBranch: "main",
+      tracking: null,
+      ahead: 0,
+      behind: 0,
+      originUrl: null,
+    });
+
+    const workspace = await workspaceService.createFromSource({
+      accountId: "default",
+      source: { kind: "folder", path: "/repos/nohead" },
+    });
+
+    expect(workspace.rootPath).toBe("/repos/nohead");
+    expect(gitMock.captureDiffSnapshot).not.toHaveBeenCalled();
   });
 });
 

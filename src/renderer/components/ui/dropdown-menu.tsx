@@ -83,7 +83,9 @@ interface DropdownMenuBaseProps {
   isOpen: boolean;
   position: { x: number; y: number };
   onClose: () => void;
-  children: ReactNode;
+  // Optional like its siblings (DropdownMenuSub, DropdownMenuItem): a menu
+  // whose every row is conditional can legitimately render none of them.
+  children?: ReactNode;
   minWidth?: number;
   className?: string;
   origin?: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "auto";

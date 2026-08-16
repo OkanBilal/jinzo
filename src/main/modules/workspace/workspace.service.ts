@@ -263,6 +263,38 @@ interface MetadataParts {
   worktree: { name: string; path: string; sourcePath: string } | null;
 }
 
+/**
+ * Record the repo's current diff once, as the workspace's first diff row. An
+ * imported folder can already carry uncommitted work, and without this its
+ * Changes tab stays empty until the first run or a manual resync.
+ *
+ * Anchored at HEAD, like `resyncDiff` and the in-process commit tool — the
+ * diff is "what isn't committed yet", not "what this branch adds".
+ *
+ * Best-effort on purpose: the workspace row is already written by the time
+ * this runs, and a repo that can't be diffed (a fresh `init` with no HEAD, a
+ * git failure) is still a repo worth keeping. Failures are logged, never
+ * thrown — intake must not fail over its diff.
+ */
+async function captureInitialDiff(workspace: WorkspaceResponse): Promise<void> {
+  try {
+    const head = await gitService.getHeadSha(workspace.rootPath);
+    const snapshot = await gitService.captureDiffSnapshot(
+      workspace.rootPath,
+      head,
+    );
+    // A clean tree gets no row at all — same as resyncDiff, so "no changes"
+    // stays one state instead of an empty diff row plus a missing one.
+    if (snapshot.files.length === 0) return;
+    await recordWorkspaceDiff(workspace.id, null, snapshot);
+  } catch (err) {
+    console.warn(
+      `[WorkspaceService] Initial diff capture failed for workspace ${workspace.id}:`,
+      err,
+    );
+  }
+}
+
 /** Assemble the `WorkspaceMetadata` blob stored on the workspace row. */
 function buildMetadata(parts: MetadataParts): WorkspaceMetadata {
   return {
@@ -572,6 +604,16 @@ export const workspaceService = {
   ): Promise<WorkspaceResponse> {
     const { accountId, source } = payload;
 
+    // Every branch below ends here: write the row, then record the repo's
+    // starting diff before the workspace reaches the renderer, so its first
+    // Changes read already has one. `captureInitialDiff` swallows its own
+    // failures — intake is done once `create` returns.
+    const completeIntake = async (input: CreateWorkspacePayload) => {
+      const workspace = await this.create(input);
+      await captureInitialDiff(workspace);
+      return workspace;
+    };
+
     // ── init: brand-new empty repo. Always direct, no remote. ──
     if (source.kind === "init") {
       const init = await gitService.initRepo(source.name, source.parentPath);
@@ -582,7 +624,7 @@ export const workspaceService = {
         defaultBranch: "main",
         branches: ["main"],
       });
-      return this.create({
+      return completeIntake({
         accountId,
         name: source.name,
         rootPath: init.rootPath,
@@ -622,7 +664,7 @@ export const workspaceService = {
           workspacesPath: deriveWorkspacesPath(imported.worktreePath),
         });
       }
-      return this.create({
+      return completeIntake({
         accountId,
         name: project.name,
         rootPath: imported.worktreePath,
@@ -687,7 +729,7 @@ export const workspaceService = {
           workspacesPath: deriveWorkspacesPath(imported.worktreePath),
         });
       }
-      return this.create({
+      return completeIntake({
         accountId,
         name,
         rootPath: imported.worktreePath,
@@ -722,7 +764,7 @@ export const workspaceService = {
     if (!project.defaultBranch) {
       await projectsRepo.update(project.id, { defaultBranch: baseBranch });
     }
-    return this.create({
+    return completeIntake({
       accountId,
       name,
       rootPath: sourcePath,
