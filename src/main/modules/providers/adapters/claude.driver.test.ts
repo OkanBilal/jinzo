@@ -23,6 +23,7 @@ import {
   mapTaskMessage,
   mapContextUsageResponse,
   buildFastModeEvent,
+  buildAssistantErrorEvent,
   buildContextUsageEvent,
   normalizeSubagentOutput,
   buildSubagentCompletionEvent,
@@ -1100,6 +1101,104 @@ describe("claude.driver / mapTaskMessage", () => {
 // MCP elicitation bridge. Without a handler the SDK auto-declines every
 // request, so these cover the paths that make a request reach the user.
 // ─────────────────────────────────────────────────────────────
+
+describe("claude.driver / buildAssistantErrorEvent", () => {
+  it("says nothing for a turn that came back clean", () => {
+    expect(buildAssistantErrorEvent({}, 1)).toBeNull();
+  });
+
+  it("names a failure that would otherwise read as an empty answer", () => {
+    // The CLI still emits the assistant message, just with no content and this
+    // flag set — so without it an expired login looks like the agent went quiet.
+    expect(buildAssistantErrorEvent({ error: "authentication_failed" }, 1)).toEqual({
+      type: "log",
+      message: "[api] authentication failed — sign in again",
+      level: "error",
+      ts: 1,
+      metadata: { source: "assistant_error", error: "authentication_failed" },
+    });
+  });
+
+  it("keeps what the CLI retries on its own at warn", () => {
+    // An overload resolves itself; an auth failure does not. Reporting both as
+    // errors would train the reader to ignore the red ones.
+    expect(buildAssistantErrorEvent({ error: "overloaded" }, 1)).toMatchObject({
+      level: "warn",
+    });
+    expect(buildAssistantErrorEvent({ error: "billing_error" }, 1)).toMatchObject({
+      level: "error",
+    });
+  });
+
+  it("collapses a repeat of the same failure", () => {
+    // A run can retry an overload many times; one line per attempt buries
+    // everything else in the transcript.
+    expect(
+      buildAssistantErrorEvent({ error: "overloaded", lastError: "overloaded" }, 1),
+    ).toBeNull();
+    expect(
+      buildAssistantErrorEvent({ error: "rate_limit", lastError: "overloaded" }, 1),
+    ).not.toBeNull();
+  });
+
+  it("passes an unrecognized code through rather than swallowing it", () => {
+    expect(buildAssistantErrorEvent({ error: "some_new_code" }, 1)).toMatchObject({
+      message: "[api] some_new_code",
+      level: "error",
+    });
+  });
+});
+
+describe("claude.driver / assistant error in the stream", () => {
+  it("reports the failure and re-arms once a turn succeeds", () => {
+    const cs = makeClaudeSession();
+    const failing = {
+      type: "assistant",
+      uuid: "u1",
+      session_id: "s1",
+      parent_tool_use_id: null,
+      error: "rate_limit",
+      message: { role: "assistant", content: [] },
+    } as any;
+
+    expect(mapSDKMessage(failing, cs)[0]).toMatchObject({ level: "warn" });
+    // Same code again while the episode is still running: silent.
+    expect(mapSDKMessage(failing, cs)).toEqual([]);
+
+    // A clean turn ends the episode...
+    mapSDKMessage(
+      {
+        type: "assistant",
+        uuid: "u2",
+        session_id: "s1",
+        parent_tool_use_id: null,
+        message: { role: "assistant", content: [{ type: "text", text: "ok" }] },
+      } as any,
+      cs,
+    );
+    // ...so the next occurrence is news again.
+    expect(mapSDKMessage(failing, cs)[0]).toMatchObject({ level: "warn" });
+  });
+
+  it("names the cause on an api retry", () => {
+    const [event] = mapSDKMessage(
+      {
+        type: "system",
+        subtype: "api_retry",
+        attempt: 1,
+        max_retries: 3,
+        retry_delay_ms: 2000,
+        error_status: 529,
+        error: "overloaded",
+      } as any,
+      makeClaudeSession(),
+    ) as Array<{ message: string }>;
+
+    expect(event.message).toBe(
+      "[api] Request failed: the API is overloaded [HTTP 529] (1/3) — retrying in 2s",
+    );
+  });
+});
 
 describe("claude.driver / buildFastModeEvent", () => {
   it("stays silent when the run never asked for fast mode", () => {

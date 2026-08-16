@@ -343,12 +343,30 @@ export interface SDKContextUsage {
   categories?: { name: string; tokens: number; kind: string }[];
 }
 
+/** Why an assistant turn failed. Also carried on `system:api_retry`. */
+type SDKAssistantMessageError =
+  | "authentication_failed"
+  | "oauth_org_not_allowed"
+  | "billing_error"
+  | "rate_limit"
+  | "overloaded"
+  | "invalid_request"
+  | "model_not_found"
+  | "server_error"
+  | "unknown"
+  | "max_output_tokens";
+
 interface SDKAssistantMessage {
   type: "assistant";
   uuid: string;
   session_id: string;
   message: { role: "assistant"; content: SDKMessageContent[] };
   parent_tool_use_id: string | null;
+  /**
+   * Set when the API call behind this turn failed. Without it an auth or
+   * billing failure is indistinguishable from the agent saying nothing.
+   */
+  error?: SDKAssistantMessageError;
   /** Agent SDK >= 0.3.233; absent on older CLI binaries. */
   context_usage?: SDKContextUsage;
 }
@@ -492,6 +510,10 @@ export interface SDKSystemMessage {
   // subtype: "plugin_install"
   status?: "started" | "installed" | "failed" | "completed" | "stopped";
   name?: string;
+  /**
+   * Two shapes behind one field name: free-form prose on "plugin_install", and
+   * an SDKAssistantMessageError code on "api_retry".
+   */
   error?: string;
   // subtypes: "task_started" | "task_progress" | "task_updated" | "task_notification"
   task_id?: string;
@@ -666,6 +688,7 @@ interface ClaudeSession {
     terminalToolNonExecutionKind?: string;
     hasAssistantContent: boolean;
     lastFastModeState?: FastModeState;
+    lastAssistantError?: string;
   };
   /** Per-run tool-call correlation index (toolCallId → toolName/input). */
   toolCallIndex: Map<string, { toolName: string; input?: unknown; startedAt?: number }>;
@@ -1065,6 +1088,56 @@ function safeParseJson(value: string): unknown {
 }
 
 /**
+ * Why an assistant turn failed, in words a user can act on, and how loudly to
+ * say it. `warn` is for what the CLI retries on its own; `error` is for what
+ * stays broken until someone does something about it.
+ */
+const ASSISTANT_ERRORS: Record<
+  SDKAssistantMessageError,
+  { text: string; level: "warn" | "error" }
+> = {
+  authentication_failed: { text: "authentication failed — sign in again", level: "error" },
+  oauth_org_not_allowed: { text: "this organization does not allow this login", level: "error" },
+  billing_error: { text: "billing problem on this account", level: "error" },
+  invalid_request: { text: "the request was rejected as invalid", level: "error" },
+  model_not_found: { text: "the selected model is unavailable", level: "error" },
+  unknown: { text: "the request failed", level: "error" },
+  rate_limit: { text: "rate limited", level: "warn" },
+  overloaded: { text: "the API is overloaded", level: "warn" },
+  server_error: { text: "the API returned a server error", level: "warn" },
+  max_output_tokens: { text: "the response hit the output token limit", level: "warn" },
+};
+
+function describeAssistantError(code: string | undefined): { text: string; level: "warn" | "error" } | null {
+  if (!code) return null;
+  return ASSISTANT_ERRORS[code as SDKAssistantMessageError] ?? null;
+}
+
+/**
+ * Report an assistant turn that failed.
+ *
+ * The CLI still emits the assistant message, just with no content and this flag
+ * set, so an auth or billing failure otherwise reads as the agent going quiet.
+ * Repeats of the same code are collapsed — a run can retry an overload many
+ * times, and one line per attempt buries the rest of the transcript.
+ */
+export function buildAssistantErrorEvent(
+  args: { error?: string; lastError?: string },
+  ts: number,
+): WorkRunEvent | null {
+  const { error, lastError } = args;
+  if (!error || error === lastError) return null;
+  const described = describeAssistantError(error);
+  return {
+    type: "log",
+    message: `[api] ${described?.text ?? error}`,
+    level: described?.level ?? "error",
+    ts,
+    metadata: { source: "assistant_error", error },
+  };
+}
+
+/**
  * Why the CLI would not serve fast mode, in words a user can act on.
  *
  * `sdk_opt_in_required` is absent on purpose: it means nothing asked for fast
@@ -1372,6 +1445,15 @@ export function mapSDKMessage(
       const assistantMsg = msg as SDKAssistantMessage;
       const isFromSubagent = !!assistantMsg.parent_tool_use_id;
 
+      const errorEvent = buildAssistantErrorEvent(
+        { error: assistantMsg.error, lastError: cs.state.lastAssistantError },
+        ts,
+      );
+      if (errorEvent) events.push(errorEvent);
+      // A turn that came back clean ends the episode, so the next failure of the
+      // same kind is reported again instead of being read as a repeat.
+      cs.state.lastAssistantError = assistantMsg.error;
+
       if (assistantMsg.message?.content) {
         for (const block of assistantMsg.message.content) {
           if (block.type === "text" && block.text) {
@@ -1576,9 +1658,14 @@ export function mapSDKMessage(
           typeof delayMs === "number" ? ` — retrying in ${Math.round(delayMs / 1000)}s` : "";
         const statusPart =
           systemMsg.error_status != null ? ` [HTTP ${systemMsg.error_status}]` : "";
+        // On this subtype `error` is a failure code, not prose — saying which
+        // one is the difference between "retrying" and "retrying, and here is
+        // why it will keep failing".
+        const described = describeAssistantError(systemMsg.error);
+        const reasonPart = described ? `: ${described.text}` : "";
         events.push({
           type: "log",
-          message: `[api] Request failed${statusPart}${attemptPart}${delayPart}`,
+          message: `[api] Request failed${reasonPart}${statusPart}${attemptPart}${delayPart}`,
           level: "warn",
           ts,
           metadata: {
@@ -1587,6 +1674,7 @@ export function mapSDKMessage(
             maxRetries,
             retryDelayMs: delayMs,
             errorStatus: systemMsg.error_status,
+            error: systemMsg.error,
           },
         });
       } else if (systemMsg.subtype === "plugin_install") {
