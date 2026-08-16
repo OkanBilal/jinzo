@@ -4,6 +4,10 @@
 // ─────────────────────────────────────────────────────────────
 
 import type { ClaudePermissionMode } from "./claude-permission-modes";
+import type {
+  PluginAvailability,
+  PluginDisabledReason,
+} from "./plugin-install-availability";
 
 /**
  * Context item provided to a work run
@@ -1742,6 +1746,14 @@ export interface PluginInfo {
   installed: boolean;
   enabled: boolean;
   installPolicy: "NOT_AVAILABLE" | "AVAILABLE" | "INSTALLED_BY_DEFAULT";
+  /** App-server availability after account and organization policy checks. */
+  availability?: PluginAvailability;
+  /** Why the plugin is unavailable, when the backend provides a reason. */
+  disabledReason?: PluginDisabledReason | null;
+  /** Raw plan identifiers that are eligible to install this plugin. */
+  eligiblePlanTypes?: string[] | null;
+  /** Unix timestamp in seconds when the plugin was installed. */
+  installedAt?: number | null;
   authPolicy: "ON_INSTALL" | "ON_USE";
   interface: PluginInterface | null;
   /** Marketplace install count (popularity signal), when known. */
