@@ -1,7 +1,6 @@
 /**
  * Utilities for expanding unified diffs to include context around
- * finding lines that aren't visible in the original diff hunks,
- * and for building synthetic diffs for files with no changes.
+ * finding lines that aren't visible in the original diff hunks.
  */
 
 interface LineRange {
@@ -131,32 +130,4 @@ export function expandDiffForFindings(
   }
 
   return result.join("\n");
-}
-
-/**
- * Build a synthetic unified diff for a file that has no actual changes
- * but has findings. Creates context-only hunks around finding lines.
- */
-export function buildSyntheticDiff(
-  filePath: string,
-  findingLines: number[],
-  fileLines: string[],
-  contextSize: number = 3,
-): string {
-  if (findingLines.length === 0 || fileLines.length === 0) return "";
-
-  const validLines = findingLines.filter((l) => l >= 1 && l <= fileLines.length);
-  if (validLines.length === 0) return "";
-
-  const ranges = buildContextRanges(validLines, fileLines.length, contextSize);
-
-  const header = [
-    `diff --git a/${filePath} b/${filePath}`,
-    `--- a/${filePath}`,
-    `+++ b/${filePath}`,
-  ].join("\n");
-
-  const hunks = ranges.map((range) => buildContextHunk(range, fileLines));
-
-  return `${header}\n${hunks.join("\n")}`;
 }
