@@ -59,6 +59,10 @@ import {
 } from "../providers.utils";
 import { AGENT_ID_IN_RESULT } from "../../../../shared/subagent";
 import {
+  DEFAULT_CLAUDE_PERMISSION_MODE,
+  isClaudePermissionMode,
+} from "../../../../shared/claude-permission-modes";
+import {
   cancelPendingRequest,
   requestToolApproval,
 } from "../../runs/user-input-broker";
@@ -214,10 +218,7 @@ type SDKOnElicitation = (
 function isSDKPermissionMode(
   value: unknown,
 ): value is NonNullable<SDKOptions["permissionMode"]> {
-  return (
-    typeof value === "string" &&
-    ["default", "acceptEdits", "bypassPermissions", "plan", "dontAsk", "auto"].includes(value)
-  );
+  return isClaudePermissionMode(value);
 }
 
 export function buildClaudePermissionModeOptions(
@@ -2369,7 +2370,8 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     delete cleanEnv.ANTHROPIC_API_KEY;
     delete cleanEnv.ANTHROPIC_AUTH_TOKEN;
 
-    const permissionMode = runPermissionMode ?? config.permissionMode ?? "default";
+    const permissionMode =
+      runPermissionMode ?? config.permissionMode ?? DEFAULT_CLAUDE_PERMISSION_MODE;
     const settingSources = config.settingSources ?? ["user", "project", "local"];
     const permissionBridge = runId
       ? createClaudePermissionBridge({

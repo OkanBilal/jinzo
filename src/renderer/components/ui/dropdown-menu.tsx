@@ -425,8 +425,15 @@ export function DropdownMenuItem({
       disabled={disabled}
       className={cn(
         "flex w-full items-center gap-3 px-3 py-2 text-s",
-        "transition-colors hover:bg-primary-200/40 focus:bg-primary-200/40 focus:outline-none",
-        "dark:hover:bg-primary/5 dark:focus:bg-primary/5",
+        // Button's standalone focus ring does not survive here: the row runs
+        // edge to edge inside an `overflow-hidden rounded-2xl` menu, so the
+        // ring's sides are clipped away and its offset band reads as two thick
+        // bars across the row. A menu marks the keyboard position by filling the
+        // row instead — which also needs to outrank hover, or the two states
+        // look identical while arrowing over a row the pointer happens to sit on.
+        "focus-visible:ring-0 focus-visible:ring-offset-0",
+        "transition-colors hover:bg-primary-200/40 focus:bg-primary-200/60 focus:outline-none",
+        "dark:hover:bg-primary/5 dark:focus:bg-primary/12",
         disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
         variantClasses[variant],
         className,

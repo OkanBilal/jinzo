@@ -14,23 +14,17 @@ import type { ClaudeCodeAdapterConfig } from "../../../../shared/adapter.types";
 import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 import { getProviderVariant } from "@/lib/provider-variants";
 import { useGetProviderAccountInfoQuery } from "@/lib/redux/api";
+import { CLAUDE_PERMISSION_MODES } from "@/lib/provider-modes";
+import {
+  DEFAULT_CLAUDE_PERMISSION_MODE,
+  type ClaudePermissionMode,
+} from "../../../../shared/claude-permission-modes";
 
-type ClaudePermissionMode = NonNullable<
-  ClaudeCodeAdapterConfig["permissionMode"]
->;
-
-const SETTINGS_PERMISSION_MODES: Array<{
-  value: ClaudePermissionMode;
-  label: string;
-  description: string;
-}> = [
-  { value: "default", label: "Ask permissions", description: "Always ask before making changes" },
-  { value: "auto", label: "Auto", description: "Claude Code picks when to prompt vs allow, based on risk" },
-  { value: "acceptEdits", label: "Auto accept edits", description: "Automatically accept all file edits" },
-  { value: "plan", label: "Plan mode", description: "Create a plan before making changes" },
-  { value: "bypassPermissions", label: "Bypass permissions", description: "Accepts all permissions" },
-  { value: "dontAsk", label: "Don't ask", description: "Deny unapproved tools silently" },
-];
+const SETTINGS_PERMISSION_MODES = CLAUDE_PERMISSION_MODES.map((mode) => ({
+  value: mode.value,
+  label: mode.label,
+  description: mode.description,
+}));
 
 export default function ClaudeSettings(
 ) {
@@ -51,7 +45,7 @@ export default function ClaudeSettings(
   const account = accountInfo?.account;
   const cli = accountInfo?.cli;
 
-  const permissionMode = config.permissionMode ?? "bypassPermissions";
+  const permissionMode = config.permissionMode ?? DEFAULT_CLAUDE_PERMISSION_MODE;
   const selectedSchemaName = selectedSchemaLabel(config);
 
   const handlePermissionModeChange = async (mode: ClaudePermissionMode) => {

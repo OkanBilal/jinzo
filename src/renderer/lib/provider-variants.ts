@@ -16,6 +16,7 @@
 import type { ComponentType } from "react";
 import { CopilotStatic, Codex, Cursor } from "@/components/ui/icons";
 import { Claude } from "@/components/ui/icons/space";
+import { DEFAULT_CLAUDE_PERMISSION_MODE } from "../../shared/claude-permission-modes";
 import { PROVIDER_IDS, type ProviderId } from "../../shared/provider-ids";
 
 export type ProviderVariant = "claude" | "copilot" | "codex" | "cursor";
@@ -103,7 +104,7 @@ export const PROVIDER_VARIANTS: Record<ProviderVariant, ProviderVariantDescripto
     icon: Claude,
     accentClassName: "text-claude",
     permissionKey: "permissionMode",
-    permissionDefault: "default",
+    permissionDefault: DEFAULT_CLAUDE_PERMISSION_MODE,
     effortKey: "effortLevel",
     effortDefault: "medium",
     thinkingCoupledToEffort: false,

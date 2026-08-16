@@ -117,3 +117,20 @@ describe("seed v2 — provider model/effort defaults", () => {
     expect(readProvider(PROVIDER_IDS.codex)).toBeUndefined();
   });
 });
+
+describe("claude provider seed", () => {
+  it("starts a fresh install on the shared default permission mode", async () => {
+    // The seed inserts with onConflictDoNothing, so this is a first-install
+    // value only — changing it never overwrites a mode a user already picked.
+    const { seedProviders } = await import("../data/providers");
+    const { DEFAULT_CLAUDE_PERMISSION_MODE } = await import(
+      "../../../shared/claude-permission-modes"
+    );
+    const { PROVIDER_IDS } = await import("../../../shared/provider-ids");
+
+    const claude = seedProviders.find((p) => p.id === PROVIDER_IDS.claude);
+    expect((claude?.config as { permissionMode?: string }).permissionMode).toBe(
+      DEFAULT_CLAUDE_PERMISSION_MODE,
+    );
+  });
+});

@@ -3,6 +3,8 @@
 // Agent/work runtime oriented interfaces for code-writing flows
 // ─────────────────────────────────────────────────────────────
 
+import type { ClaudePermissionMode } from "./claude-permission-modes";
+
 /**
  * Context item provided to a work run
  */
@@ -954,7 +956,7 @@ export interface ClaudeCodeAdapterConfig {
   /** Timeout in milliseconds */
   timeout?: number;
   /** Permission mode for tool access */
-  permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan" | "dontAsk" | "auto";
+  permissionMode?: ClaudePermissionMode;
   /**
    * Setting sources for loading skills and other filesystem settings.
    * - "user": Load from ~/.claude/skills/

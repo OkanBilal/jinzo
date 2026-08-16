@@ -105,3 +105,17 @@ describe("pickDefaultEffort", () => {
     expect(pickDefaultEffort(["low", "high"], "turbo")).toBe("high");
   });
 });
+
+describe("claude permission defaults", () => {
+  it("agrees with the shared install default", async () => {
+    // Four places used to carry this independently and had drifted: the seed,
+    // the driver fallback, the settings fallback, and this descriptor — which
+    // is what the composer toolbar shows before a run overrides it.
+    const { DEFAULT_CLAUDE_PERMISSION_MODE } = await import(
+      "../../shared/claude-permission-modes"
+    );
+    expect(getProviderVariant("claude").permissionDefault).toBe(
+      DEFAULT_CLAUDE_PERMISSION_MODE,
+    );
+  });
+});

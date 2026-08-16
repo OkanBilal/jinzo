@@ -8,6 +8,7 @@ import { useIsMobile } from "@/lib/platform";
 import {
   CURSOR_MODES as CURSOR_MODE_DEFS,
   CODEX_SANDBOX_MODES as CODEX_SANDBOX_MODE_DEFS,
+  CLAUDE_PERMISSION_MODES as CLAUDE_PERMISSION_MODE_DEFS,
   shortLabelMap,
 } from "@/lib/provider-modes";
 
@@ -34,6 +35,15 @@ const PERMISSION_MODES = [
   },
 ] as const;
 
+/**
+ * Claude's list is its own, not the shared one above: it carries `auto` and
+ * `dontAsk`, and Copilot — which reads the shared list — has no branch for
+ * either, so offering them there would quietly behave as `default` while the
+ * toolbar claimed otherwise.
+ */
+const CLAUDE_PERMISSION_MODES = CLAUDE_PERMISSION_MODE_DEFS;
+const CLAUDE_PERMISSION_LABELS = shortLabelMap(CLAUDE_PERMISSION_MODE_DEFS);
+
 /** Bypass trigger — sunburst (orange → amber → yellow), no filled background. */
 const BYPASS_TRIGGER = {
   trigger:
@@ -59,6 +69,22 @@ const CURSOR_MODES = CURSOR_MODE_DEFS;
 const CURSOR_MODE_LABELS = shortLabelMap(CURSOR_MODE_DEFS);
 const CODEX_SANDBOX_MODES = CODEX_SANDBOX_MODE_DEFS;
 const CODEX_SANDBOX_LABELS = shortLabelMap(CODEX_SANDBOX_MODE_DEFS);
+
+/** Variants whose mode list differs from the shared one; the rest fall through. */
+const MODES_BY_VARIANT: Record<
+  string,
+  readonly { value: string; label: string; description?: string }[]
+> = {
+  cursor: CURSOR_MODES,
+  codex: CODEX_SANDBOX_MODES,
+  claude: CLAUDE_PERMISSION_MODES,
+};
+
+const LABELS_BY_VARIANT: Record<string, Record<string, string>> = {
+  cursor: CURSOR_MODE_LABELS,
+  codex: CODEX_SANDBOX_LABELS,
+  claude: CLAUDE_PERMISSION_LABELS,
+};
 
 function PermissionModeIcon({
   mode,
@@ -139,26 +165,14 @@ export function PermissionModeDropdown({
   onPlanModeToggle,
   goalMode = false,
 }: PermissionModeDropdownProps) {
-  const isCursor = variant === "cursor";
   const isCodex = variant === "codex";
   const showPlanRow = isCodex && !!onPlanModeToggle;
   // Goal mode and plan mode are mutually exclusive — when goal is on, the plan
   // row is shown disabled with a tooltip pointing the user at the goal toggle.
   const planDisabled = goalMode;
-  const modes =
-    modesProp ??
-    (isCursor
-      ? CURSOR_MODES
-      : isCodex
-        ? CODEX_SANDBOX_MODES
-        : PERMISSION_MODES);
+  const modes = modesProp ?? MODES_BY_VARIANT[variant ?? ""] ?? PERMISSION_MODES;
   const modeLabels =
-    modeLabelsProp ??
-    (isCursor
-      ? CURSOR_MODE_LABELS
-      : isCodex
-        ? CODEX_SANDBOX_LABELS
-        : PERMISSION_MODE_LABELS);
+    modeLabelsProp ?? LABELS_BY_VARIANT[variant ?? ""] ?? PERMISSION_MODE_LABELS;
   const showPlanSuffix = showPlanRow && planMode && !planDisabled;
   const isBypass = isBypassPermissionMode(permissionMode);
   const isMobile = useIsMobile();
