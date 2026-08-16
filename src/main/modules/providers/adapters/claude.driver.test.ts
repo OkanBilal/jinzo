@@ -22,6 +22,7 @@ import {
   parseSimpleYaml,
   mapTaskMessage,
   mapContextUsageResponse,
+  buildFastModeEvent,
   buildContextUsageEvent,
   normalizeSubagentOutput,
   buildSubagentCompletionEvent,
@@ -1100,6 +1101,177 @@ describe("claude.driver / mapTaskMessage", () => {
 // request, so these cover the paths that make a request reach the user.
 // ─────────────────────────────────────────────────────────────
 
+describe("claude.driver / buildFastModeEvent", () => {
+  it("stays silent when the run never asked for fast mode", () => {
+    // The CLI reports `sdk_opt_in_required` on every ordinary run; treating that
+    // as a failure would warn users who never touched the button.
+    expect(
+      buildFastModeEvent(
+        { requested: false, state: "off", reason: "sdk_opt_in_required" },
+        1,
+      ),
+    ).toBeNull();
+  });
+
+  it("explains a refusal the CLI would otherwise swallow", () => {
+    // The measured case: the request is accepted, the run serves at standard
+    // speed, and nothing anywhere says so.
+    expect(
+      buildFastModeEvent(
+        { requested: true, state: "off", reason: "extra_usage_disabled" },
+        1,
+      ),
+    ).toEqual({
+      type: "log",
+      message:
+        "[fast-mode] requested but not active — extra usage is turned off for this account",
+      level: "warn",
+      ts: 1,
+      metadata: { source: "fast_mode", state: "off", reason: "extra_usage_disabled" },
+    });
+  });
+
+  it("names a mid-run cooldown rather than the stale reason", () => {
+    expect(
+      buildFastModeEvent({ requested: true, state: "cooldown" }, 1),
+    ).toMatchObject({
+      message: "[fast-mode] requested but not active — paused after a rate limit",
+      level: "warn",
+    });
+  });
+
+  it("still reports when the CLI gives no reason", () => {
+    expect(buildFastModeEvent({ requested: true, state: "off" }, 1)).toMatchObject({
+      message: "[fast-mode] requested but not active",
+      level: "warn",
+    });
+  });
+
+  it("confirms the happy path once", () => {
+    expect(buildFastModeEvent({ requested: true, state: "on" }, 1)).toMatchObject({
+      message: "[fast-mode] active",
+      level: "info",
+    });
+  });
+
+  it("repeats nothing while the state holds", () => {
+    // init and result both carry it, and a long run sees result more than once.
+    expect(
+      buildFastModeEvent({ requested: true, state: "off", lastState: "off" }, 1),
+    ).toBeNull();
+    expect(
+      buildFastModeEvent({ requested: true, state: "cooldown", lastState: "on" }, 1),
+    ).not.toBeNull();
+  });
+});
+
+describe("claude.driver / system messages that used to be dropped", () => {
+  function logs(msg: Record<string, unknown>) {
+    return mapSDKMessage({ type: "system", ...msg } as any, makeClaudeSession()).filter(
+      (event) => event.type === "log",
+    ) as Array<{ message: string; level?: string; metadata?: Record<string, unknown> }>;
+  }
+
+  it("surfaces a model refusal that moved the turn to another model", () => {
+    const [event] = logs({
+      subtype: "model_refusal_fallback",
+      original_model: "claude-opus-5",
+      fallback_model: "claude-opus-4-8",
+      api_refusal_category: "cyber",
+    });
+
+    expect(event.level).toBe("warn");
+    expect(event.message).toContain("claude-opus-5 declined (cyber)");
+    expect(event.message).toContain("continuing on claude-opus-4-8");
+  });
+
+  it("escalates a refusal with nowhere to fall back to", () => {
+    const [event] = logs({
+      subtype: "model_refusal_no_fallback",
+      original_model: "claude-opus-5",
+      api_refusal_category: "cyber",
+    });
+
+    expect(event.level).toBe("error");
+    expect(event.message).toContain("no fallback was available");
+  });
+
+  it("surfaces a rule-denied tool call", () => {
+    // Denied before canUseTool runs, so no approval dialog ever appears.
+    const [event] = logs({
+      subtype: "permission_denied",
+      tool_name: "Bash",
+      decision_reason: "matched deny rule Bash(rm:*)",
+    });
+
+    expect(event.level).toBe("warn");
+    expect(event.message).toBe("[permission] Bash denied — matched deny rule Bash(rm:*)");
+  });
+
+  it("passes an informational notice through at its own level", () => {
+    expect(logs({ subtype: "informational", content: "Heads up", level: "warning" })[0])
+      .toMatchObject({ message: "Heads up", level: "warn" });
+    expect(logs({ subtype: "informational", content: "FYI", level: "info" })[0])
+      .toMatchObject({ level: "info" });
+  });
+
+  it("keeps only the notifications the CLI marks urgent", () => {
+    expect(logs({ subtype: "notification", text: "Ambient", priority: "low" })).toEqual([]);
+    expect(logs({ subtype: "notification", text: "Act now", priority: "immediate" })[0])
+      .toMatchObject({ message: "[notice] Act now", level: "warn" });
+  });
+
+  it("drops CLI bookkeeping instead of logging it", () => {
+    // These carry nothing a reader of the transcript can act on.
+    expect(logs({ subtype: "thinking_tokens", estimated_tokens: 900 })).toEqual([]);
+    expect(logs({ subtype: "session_state_changed", state: "idle" })).toEqual([]);
+  });
+});
+
+describe("claude.driver / top-level messages that used to be raw JSON", () => {
+  function events(msg: Record<string, unknown>) {
+    return mapSDKMessage(msg as any, makeClaudeSession());
+  }
+
+  it("says nothing for a routine tool heartbeat", () => {
+    // One per tick per running tool — this was the loudest line in the transcript.
+    expect(events({ type: "tool_progress", tool_use_id: "t1", tool_name: "Bash" })).toEqual(
+      [],
+    );
+  });
+
+  it("reports a subagent quietly retrying", () => {
+    const [event] = events({
+      type: "tool_progress",
+      tool_name: "Agent",
+      subagent_retry: { agent_id: "a1", attempt: 2, max_retries: 3, error_category: "overloaded" },
+    });
+
+    expect(event).toMatchObject({
+      type: "log",
+      level: "warn",
+      message: "[subagent] retrying Agent (overloaded) — attempt 2/3",
+    });
+  });
+
+  it("passes a tool-use summary through as prose", () => {
+    expect(events({ type: "tool_use_summary", summary: "Read 4 files" })[0]).toMatchObject({
+      message: "Read 4 files",
+      level: "info",
+    });
+  });
+
+  it("bounds the dump for a genuinely unknown type", () => {
+    const [event] = events({ type: "something_new", blob: "x".repeat(5_000) }) as Array<{
+      message: string;
+    }>;
+
+    expect(event.message.length).toBeLessThan(600);
+    expect(event.message).toContain("[event] something_new");
+    expect(event.message.endsWith("…")).toBe(true);
+  });
+});
+
 describe("claude.driver / mapContextUsageResponse", () => {
   const response = {
     totalTokens: 11_236,
@@ -1441,11 +1613,13 @@ describe("normalizeSubagentOutput", () => {
 // Subagent event sequence (spawn → children → ack/result)
 // ─────────────────────────────────────────────────────────────
 
-function makeClaudeSession() {
+function makeClaudeSession(overrides: Record<string, unknown> = {}) {
   return {
     runId: "run-1",
     options: {},
     abortController: new AbortController(),
+    fastModeRequested: false,
+    ...overrides,
     state: { hasAssistantContent: false },
     toolCallIndex: new Map(),
     taskIndex: new Map(),

@@ -396,6 +396,19 @@ interface SDKPermissionDenial {
 
 type FastModeState = "off" | "cooldown" | "on";
 
+/** Why fast mode can't serve. Absent when nothing is blocking it. */
+type FastModeDisabledReason =
+  | "free"
+  | "preference"
+  | "extra_usage_disabled"
+  | "network_error"
+  | "unknown"
+  | "not_first_party"
+  | "disabled_by_env"
+  | "model_not_allowed"
+  | "sdk_opt_in_required"
+  | "pending";
+
 interface SDKResultBase {
   type: "result";
   uuid: string;
@@ -409,6 +422,7 @@ interface SDKResultBase {
   modelUsage: Record<string, SDKModelUsage>;
   permission_denials: SDKPermissionDenial[];
   fast_mode_state?: FastModeState;
+  fast_mode_disabled_reason?: FastModeDisabledReason;
 }
 
 interface SDKResultSuccess extends SDKResultBase {
@@ -439,7 +453,12 @@ export interface SDKSystemMessage {
     | "task_started"
     | "task_progress"
     | "task_updated"
-    | "task_notification";
+    | "task_notification"
+    | "model_refusal_fallback"
+    | "model_refusal_no_fallback"
+    | "permission_denied"
+    | "informational"
+    | "notification";
   uuid: string;
   session_id: string;
   model?: string;
@@ -456,6 +475,8 @@ export interface SDKSystemMessage {
   skills?: string[];
   // subtype: "init"
   plugins?: { name: string; path: string }[];
+  fast_mode_state?: FastModeState;
+  fast_mode_disabled_reason?: FastModeDisabledReason;
   // subtype: "compact_boundary"
   compact_metadata?: {
     trigger: "manual" | "auto";
@@ -491,6 +512,24 @@ export interface SDKSystemMessage {
     error?: string;
     is_backgrounded?: boolean;
   };
+  // subtypes: "model_refusal_fallback" | "model_refusal_no_fallback"
+  original_model?: string;
+  fallback_model?: string;
+  api_refusal_category?: string | null;
+  api_refusal_explanation?: string | null;
+  // subtypes: "model_refusal_*" | "informational" | "notification"
+  content?: string;
+  // subtype: "permission_denied"
+  tool_name?: string;
+  decision_reason?: string;
+  agent_id?: string;
+  message?: string;
+  // subtype: "informational"
+  level?: "info" | "notice" | "suggestion" | "warning";
+  prevent_continuation?: boolean;
+  // subtype: "notification"
+  text?: string;
+  priority?: "low" | "medium" | "high" | "immediate";
 }
 
 interface SDKRateLimitInfo {
@@ -617,6 +656,8 @@ interface ClaudeSession {
   abortController: AbortController;
   /** On-disk flag-settings snapshot inherited by dynamic Workflow agents. */
   runtimeSettingsPath?: string;
+  /** Whether this run asked for fast mode — the CLI only reports on it. */
+  fastModeRequested: boolean;
   /** Mutable: set during streaming. */
   state: {
     sessionId?: string;
@@ -624,6 +665,7 @@ interface ClaudeSession {
     lastUsage?: WorkRunUsage;
     terminalToolNonExecutionKind?: string;
     hasAssistantContent: boolean;
+    lastFastModeState?: FastModeState;
   };
   /** Per-run tool-call correlation index (toolCallId → toolName/input). */
   toolCallIndex: Map<string, { toolName: string; input?: unknown; startedAt?: number }>;
@@ -1020,6 +1062,68 @@ function safeParseJson(value: string): unknown {
   } catch {
     return null;
   }
+}
+
+/**
+ * Why the CLI would not serve fast mode, in words a user can act on.
+ *
+ * `sdk_opt_in_required` is absent on purpose: it means nothing asked for fast
+ * mode, which is not a failure and never reaches the reporter below.
+ */
+const FAST_MODE_REASONS: Record<FastModeDisabledReason, string> = {
+  extra_usage_disabled: "extra usage is turned off for this account",
+  free: "not available on the free plan",
+  model_not_allowed: "the selected model does not support it",
+  not_first_party: "not available on this API provider",
+  disabled_by_env: "disabled by an environment variable",
+  preference: "turned off in Claude Code settings",
+  network_error: "the availability check failed",
+  pending: "the availability check has not finished",
+  sdk_opt_in_required: "the request did not opt in",
+  unknown: "the CLI did not say why",
+};
+
+/**
+ * Report fast mode failing to engage.
+ *
+ * The CLI accepts the request and then silently serves at standard speed, so
+ * without this the button reads "on" for a whole run that never ran fast. Only
+ * speaks when the run actually asked for it, and only when the state changes,
+ * since init and result both carry it.
+ */
+export function buildFastModeEvent(
+  args: {
+    requested: boolean;
+    state?: FastModeState;
+    reason?: FastModeDisabledReason;
+    lastState?: FastModeState;
+  },
+  ts: number,
+): WorkRunEvent | null {
+  const { requested, state, reason, lastState } = args;
+  if (!requested || !state || state === lastState) return null;
+  if (state === "on") {
+    return {
+      type: "log",
+      message: "[fast-mode] active",
+      level: "info",
+      ts,
+      metadata: { source: "fast_mode", state },
+    };
+  }
+  const detail =
+    state === "cooldown"
+      ? "paused after a rate limit"
+      : reason
+        ? FAST_MODE_REASONS[reason]
+        : undefined;
+  return {
+    type: "log",
+    message: `[fast-mode] requested but not active${detail ? ` — ${detail}` : ""}`,
+    level: "warn",
+    ts,
+    metadata: { source: "fast_mode", state, reason },
+  };
 }
 
 /**
@@ -1431,6 +1535,19 @@ export function mapSDKMessage(
           ts,
           ...(plugins.length ? { metadata: { source: "init", plugins } } : {}),
         });
+        const fastModeEvent = buildFastModeEvent(
+          {
+            requested: cs.fastModeRequested,
+            state: systemMsg.fast_mode_state,
+            reason: systemMsg.fast_mode_disabled_reason,
+            lastState: cs.state.lastFastModeState,
+          },
+          ts,
+        );
+        if (fastModeEvent) {
+          cs.state.lastFastModeState = systemMsg.fast_mode_state;
+          events.push(fastModeEvent);
+        }
       } else if (systemMsg.subtype === "compact_boundary") {
         const meta = systemMsg.compact_metadata;
         const trigger = meta?.trigger ?? "auto";
@@ -1497,7 +1614,87 @@ export function mapSDKMessage(
       ) {
         const taskEvent = mapTaskMessage(systemMsg, cs.taskIndex, ts);
         if (taskEvent) events.push(taskEvent);
+      } else if (systemMsg.subtype === "model_refusal_fallback") {
+        // The model declined and the CLI moved the turn to another one. Without
+        // this the swap is invisible and the run silently answers on a model the
+        // user did not pick.
+        const category = systemMsg.api_refusal_category
+          ? ` (${systemMsg.api_refusal_category})`
+          : "";
+        events.push({
+          type: "log",
+          message: `[model] ${systemMsg.original_model ?? "the model"} declined${category} — continuing on ${systemMsg.fallback_model ?? "a fallback model"}`,
+          level: "warn",
+          ts,
+          metadata: {
+            source: "model_refusal_fallback",
+            originalModel: systemMsg.original_model,
+            fallbackModel: systemMsg.fallback_model,
+            category: systemMsg.api_refusal_category,
+            explanation: systemMsg.api_refusal_explanation,
+          },
+        });
+      } else if (systemMsg.subtype === "model_refusal_no_fallback") {
+        const category = systemMsg.api_refusal_category
+          ? ` (${systemMsg.api_refusal_category})`
+          : "";
+        events.push({
+          type: "log",
+          message: `[model] ${systemMsg.original_model ?? "the model"} declined${category} and no fallback was available`,
+          level: "error",
+          ts,
+          metadata: {
+            source: "model_refusal_no_fallback",
+            originalModel: systemMsg.original_model,
+            category: systemMsg.api_refusal_category,
+            explanation: systemMsg.api_refusal_explanation,
+          },
+        });
+      } else if (systemMsg.subtype === "permission_denied") {
+        // A rule denied the call before canUseTool could ask, so the approval
+        // dialog never appears and the refusal has no other way to surface.
+        const reason = systemMsg.decision_reason ?? systemMsg.message;
+        events.push({
+          type: "log",
+          message: `[permission] ${systemMsg.tool_name ?? "tool"} denied${reason ? ` — ${reason}` : ""}`,
+          level: "warn",
+          ts,
+          metadata: {
+            source: "permission_denied",
+            toolName: systemMsg.tool_name,
+            toolUseId: systemMsg.tool_use_id,
+            agentId: systemMsg.agent_id,
+            reason,
+          },
+        });
+      } else if (systemMsg.subtype === "informational" && systemMsg.content) {
+        events.push({
+          type: "log",
+          message: systemMsg.content,
+          level: systemMsg.level === "warning" ? "warn" : "info",
+          ts,
+          metadata: {
+            source: "informational",
+            informationalLevel: systemMsg.level,
+            preventContinuation: systemMsg.prevent_continuation,
+          },
+        });
+      } else if (systemMsg.subtype === "notification" && systemMsg.text) {
+        // Low/medium are ambient CLI chrome; only what the CLI itself marks
+        // urgent is worth a transcript line.
+        if (systemMsg.priority === "high" || systemMsg.priority === "immediate") {
+          events.push({
+            type: "log",
+            message: `[notice] ${systemMsg.text}`,
+            level: "warn",
+            ts,
+            metadata: { source: "notification", priority: systemMsg.priority },
+          });
+        }
       }
+      // Every other system subtype (thinking_tokens, session_state_changed,
+      // hook_*, memory_recall, files_persisted, commands_changed, …) is CLI
+      // bookkeeping with no reader here, and is dropped rather than logged.
       break;
     }
 
@@ -1556,6 +1753,61 @@ export function mapSDKMessage(
           message: `[error] ${resultMsg.errors.join(", ")}`,
           level: "error",
           ts,
+        });
+      }
+
+      // Also checked here: fast mode can drop to cooldown mid-run after a rate
+      // limit, long after init reported it active.
+      const fastModeEvent = buildFastModeEvent(
+        {
+          requested: cs.fastModeRequested,
+          state: resultMsg.fast_mode_state,
+          reason: resultMsg.fast_mode_disabled_reason,
+          lastState: cs.state.lastFastModeState,
+        },
+        ts,
+      );
+      if (fastModeEvent) {
+        cs.state.lastFastModeState = resultMsg.fast_mode_state;
+        events.push(fastModeEvent);
+      }
+      break;
+    }
+
+    case "tool_progress": {
+      // A heartbeat for a long-running tool call. The only part worth a line is
+      // a subagent quietly retrying — everything else would spam the transcript.
+      const progress = msg as {
+        tool_name?: string;
+        subagent_retry?: {
+          attempt: number;
+          max_retries: number;
+          error_category?: string;
+        };
+      };
+      const retry = progress.subagent_retry;
+      if (retry) {
+        const category = retry.error_category ? ` (${retry.error_category})` : "";
+        events.push({
+          type: "log",
+          message: `[subagent] retrying ${progress.tool_name ?? "call"}${category} — attempt ${retry.attempt}/${retry.max_retries}`,
+          level: "warn",
+          ts,
+          metadata: { source: "subagent_retry", ...retry },
+        });
+      }
+      break;
+    }
+
+    case "tool_use_summary": {
+      const summary = (msg as { summary?: string }).summary;
+      if (summary) {
+        events.push({
+          type: "log",
+          message: summary,
+          level: "info",
+          ts,
+          metadata: { source: "tool_use_summary" },
         });
       }
       break;
@@ -1679,9 +1931,13 @@ export function mapSDKMessage(
           );
         }
       } else {
+        // The net for a message type this driver has never seen. Bounded: an
+        // unknown payload can be arbitrarily large, and a transcript line is a
+        // poor place to discover that.
+        const dump = safeJson(msg);
         events.push({
           type: "log",
-          message: `[event] ${msg.type}: ${safeJson(msg)}`,
+          message: `[event] ${msg.type}: ${dump.length > 500 ? `${dump.slice(0, 500)}…` : dump}`,
           level: "info",
           ts,
         });
@@ -2230,6 +2486,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       abortController,
       runtimeSettingsPath:
         typeof options.settings === "string" ? options.settings : undefined,
+      fastModeRequested: !!config.fastMode,
       isInitial,
       state: { hasAssistantContent: false },
       toolCallIndex: new Map(),

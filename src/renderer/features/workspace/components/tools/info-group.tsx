@@ -559,9 +559,15 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
     );
   }
 
+  // A warning or an error is the one kind of log the reader has to notice, so
+  // it does not wear the same recessive tone as the rest of the system chrome.
+  const logLevel = event.type === "log" ? event.metadata?.level : undefined;
+  const tone =
+    logLevel === "error" ? "danger" : logLevel === "warn" ? "warning" : "subtle";
+
   return (
     <div className="py-1.5 flex items-start gap-2">
-      <Text as="span" tone="subtle">
+      <Text as="span" tone={tone}>
         {event.content}
       </Text>
     </div>
