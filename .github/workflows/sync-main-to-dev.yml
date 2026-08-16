@@ -1,0 +1,57 @@
+name: Sync main into dev
+
+# main receives commits dev does not have: the stable version bump, and any
+# hotfix branched straight off main. Left unmerged, the next preview silently
+# reverts them — so every push to main opens a forward-merge PR.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: sync-main-to-dev
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    name: Open forward-merge PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Open the sync PR when dev is behind
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git fetch origin "+refs/heads/dev:refs/remotes/origin/dev"
+
+          if git merge-base --is-ancestor origin/main origin/dev; then
+            echo "dev already contains main. Nothing to sync."
+            exit 0
+          fi
+
+          OPEN=$(gh pr list --base dev --head main --state open --json number --jq 'length')
+          if [ "$OPEN" != "0" ]; then
+            echo "A sync PR is already open."
+            exit 0
+          fi
+
+          gh pr create --base dev --head main \
+            --title "chore: sync main into dev" \
+            --body "$(cat <<'BODY'
+          Automated forward-merge. `main` has commits `dev` does not — a stable
+          release bump, a hotfix, or both.
+
+          **Merge this with a merge commit, not a squash.** Squashing rewrites the
+          commits under a new hash, so the two branches keep diverging and every
+          later promotion re-surfaces the same conflicts.
+
+          Opened by `.github/workflows/sync-main-to-dev.yml`.
+          BODY
+          )"

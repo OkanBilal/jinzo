@@ -24,11 +24,40 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Ensure tag is from main
+      # Preview releases are cut from dev, stable releases from main. The tag's
+      # prerelease suffix decides which branch has to contain it.
+      - name: Resolve release channel
+        id: channel
         run: |
-          git fetch origin main
-          if ! git merge-base --is-ancestor ${{ github.sha }} origin/main; then
-            echo "This tag is not on main. Release is blocked."
+          if [[ "$GITHUB_REF_NAME" == *-preview.* ]]; then
+            echo "name=preview" >> "$GITHUB_OUTPUT"
+            echo "base=dev" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=stable" >> "$GITHUB_OUTPUT"
+            echo "base=main" >> "$GITHUB_OUTPUT"
+          fi
+
+      # actions/checkout only fetches the tag itself, so origin/<base> has to be
+      # fetched explicitly before it can be used as an ancestry reference.
+      - name: Ensure tag is from ${{ steps.channel.outputs.base }}
+        env:
+          BASE: ${{ steps.channel.outputs.base }}
+          CHANNEL: ${{ steps.channel.outputs.name }}
+        run: |
+          git fetch origin "+refs/heads/$BASE:refs/remotes/origin/$BASE"
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" "origin/$BASE"; then
+            echo "::error::$GITHUB_REF_NAME is a $CHANNEL tag but is not on $BASE. Release is blocked."
+            exit 1
+          fi
+
+      # electron-forge's GitHub publisher names the release from package.json
+      # (`v${version}`), not from the pushed tag. When the two disagree, CI
+      # quietly creates a release for a version nobody tagged.
+      - name: Ensure package.json matches the tag
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "v$VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::package.json is $VERSION but the tag is $GITHUB_REF_NAME."
             exit 1
           fi
 
