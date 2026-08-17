@@ -58,4 +58,57 @@ export const getThemeVariant = (
   isDarkMode: boolean,
 ): ThemeVariant => (isDarkMode ? colorPair.dark : colorPair.light);
 
+/**
+ * Light pastel hex the theme's hue derives from. Always the light-mode value —
+ * dark swatch values are near-black and carry no usable hue. Returns `null`
+ * for gradients/unset themes.
+ */
+function themeHueSource(themeConfig: string | null): string | null {
+  const cfg = parseThemeConfig(themeConfig);
+  const base =
+    cfg.lightBackground ?? cfg.light?.value ?? cfg.backgroundColor ?? "";
+  if (!/^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(base)) return null;
+  return base.slice(0, 7);
+}
+
+/**
+ * Ambient glow color for the active space, used to backlight the empty-state
+ * composer. CSS relative color syntax re-tints the pastel per mode, and alpha
+ * scales with the pastel's own saturation so neutral themes (Rose Quartz,
+ * Light Brown) fade out instead of casting a gray shadow.
+ */
+export function spaceGlowColor(
+  themeConfig: string | null,
+  isDarkMode: boolean,
+): string | null {
+  const hex = themeHueSource(themeConfig);
+  if (!hex) return null;
+  return isDarkMode
+    ? `hsl(from ${hex} h calc(s * 1) 10% / calc(s * 0.5))`
+    : `hsl(from ${hex} h calc(s * 1) 90% / calc(s * 0.5))`;
+}
+
+/**
+ * User-message bubble background for the active space. An explicit
+ * `*UserMessageBackground` in the theme blob wins; otherwise the bubble is
+ * tinted from the same pastel as `spaceGlowColor`. Returns `null` when the
+ * theme carries no usable color so callers keep their static fallback classes.
+ */
+export function spaceUserMessageBackground(
+  themeConfig: string | null,
+  isDarkMode: boolean,
+): string | null {
+  const cfg = parseThemeConfig(themeConfig);
+  const explicit = isDarkMode
+    ? cfg.darkUserMessageBackground
+    : cfg.lightUserMessageBackground;
+  if (explicit) return explicit;
+  const hex = themeHueSource(themeConfig);
+  if (!hex) return null;
+  return isDarkMode
+    ? `hsl(from ${hex} h calc(s * 1.2) 65% / 0.12)`
+    : `hsl(from ${hex} h calc(s * 1.2) 85% / 0.6)`;
+}
+
+
 export type { ThemeVariant as SpaceThemeVariant, ThemeColor as SpaceThemeColor };

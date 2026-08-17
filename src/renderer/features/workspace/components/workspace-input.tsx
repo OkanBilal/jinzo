@@ -22,6 +22,9 @@ import {
   type RichCodeChipData,
 } from "@/components/ui";
 import { useSpaceProviderVariant } from "@/hooks/use-space-provider-variant";
+import { useActiveSpace } from "@/hooks/use-active-space";
+import { useDarkMode } from "@/hooks/use-dark-mode";
+import { spaceGlowColor } from "@/lib/space-themes";
 import { useIsMobile } from "@/lib/platform";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { Chat, Check, Plus } from "@/components/ui/icons";
@@ -176,6 +179,15 @@ export function WorkspaceInput({
   const spaceProvider = useSpaceProviderVariant();
   const providerVariant = spaceProvider.variant;
   const activeProviderId = providerId ?? spaceProvider.providerId;
+    // Empty-state backlight: the centered composer glows in the space's theme
+  // hue. Inline because the color is derived from per-space config at runtime.
+  const { activeSpace } = useActiveSpace();
+  const { darkMode } = useDarkMode();
+  const spaceGlow =
+    layout === "centered"
+      ? spaceGlowColor(activeSpace?.themeConfig ?? null, darkMode)
+      : null;
+
 
   const {
     selectedModelDisplayName,
@@ -694,6 +706,13 @@ export function WorkspaceInput({
         cursor-pointer transition-all
         ${layout === "default" ? "mb-4" : ""}
         ${isFileDragOver ? "ring-2 ring-primary/60 ring-offset-2 ring-offset-background" : ""}`}
+        style={
+          spaceGlow
+            ? {
+                boxShadow: `0 0 18px -9px ${spaceGlow}, 0 0 12px 6px ${spaceGlow}`,
+              }
+            : undefined
+        }
         onDragEnter={handleWrapperDragEnter}
         onDragLeave={handleWrapperDragLeave}
         onDragOver={handleWrapperDragOver}
