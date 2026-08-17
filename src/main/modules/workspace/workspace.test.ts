@@ -3417,6 +3417,7 @@ describe("workspaceService — git operations", () => {
     it("branches in the workspace's own path and announces the new name", async () => {
       const send = captureEmits();
       createWorkspace(db, { id: "ws-cb", rootPath: "/repos/cb" });
+      gitMock.getCurrentBranch.mockResolvedValue("dev");
       gitMock.createBranch.mockResolvedValue(undefined);
 
       await workspaceService.createBranch("ws-cb", "  feature/new  ");
@@ -3431,6 +3432,59 @@ describe("workspaceService — git operations", () => {
         branch: "feature/new",
         pathExists: true,
       });
+    });
+
+    // Work started from `dev` belongs back in `dev` — that's what baseBranch is.
+    it("makes the branch it forked off the workspace's PR base", async () => {
+      createWorkspace(db, {
+        id: "ws-cb-base",
+        rootPath: "/repos/cbbase",
+        baseBranch: "main",
+      });
+      gitMock.getCurrentBranch.mockResolvedValue("dev");
+      gitMock.createBranch.mockResolvedValue(undefined);
+
+      await workspaceService.createBranch("ws-cb-base", "feature/from-dev");
+
+      expect((await workspaceRepo.findById("ws-cb-base"))!.baseBranch).toBe(
+        "dev",
+      );
+    });
+
+    // Read before the checkout moves HEAD, or every branch would target itself.
+    it("records the parent, not the branch just created", async () => {
+      createWorkspace(db, {
+        id: "ws-cb-order",
+        rootPath: "/repos/cborder",
+        baseBranch: "main",
+      });
+      let currentBranch = "dev";
+      gitMock.getCurrentBranch.mockImplementation(async () => currentBranch);
+      gitMock.createBranch.mockImplementation(async () => {
+        currentBranch = "feature/ordered";
+      });
+
+      await workspaceService.createBranch("ws-cb-order", "feature/ordered");
+
+      expect((await workspaceRepo.findById("ws-cb-order"))!.baseBranch).toBe(
+        "dev",
+      );
+    });
+
+    it("leaves the base alone when HEAD is detached", async () => {
+      createWorkspace(db, {
+        id: "ws-cb-det",
+        rootPath: "/repos/cbdet",
+        baseBranch: "main",
+      });
+      gitMock.getCurrentBranch.mockResolvedValue("HEAD");
+      gitMock.createBranch.mockResolvedValue(undefined);
+
+      await workspaceService.createBranch("ws-cb-det", "feature/detached");
+
+      expect((await workspaceRepo.findById("ws-cb-det"))!.baseBranch).toBe(
+        "main",
+      );
     });
 
     // `checkout -b` leaves HEAD on the same commit, so the recorded diff still

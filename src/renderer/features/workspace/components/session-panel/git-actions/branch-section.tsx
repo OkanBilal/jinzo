@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Branch, Check, Plus, Refresh } from "@/components/ui/icons";
+import { Branch, Check, Close, Plus, Refresh } from "@/components/ui/icons";
 import { Alert, Input, Text, toast } from "@/components/ui";
 import {
   useCreateWorkspaceBranchMutation,
@@ -69,10 +69,17 @@ export function BranchSection({ panel }: { panel: GitActionsPanel }) {
   const handleCreateBranch = useCallback(async () => {
     const name = newBranchName.trim();
     if (!name || pending) return;
+    // Read before the mutation: this is the branch being forked from, and the
+    // one the workspace will target from now on.
+    const parent = status?.branch;
     setPending("newBranch");
     try {
       await createWorkspaceBranch({ workspaceId, branch: name }).unwrap();
-      toast.success(`Created and switched to ${name}`);
+      toast.success(
+        parent
+          ? `Created ${name} — pull requests will target ${parent}`
+          : `Created and switched to ${name}`,
+      );
       setNewBranchName("");
       closeSection("newBranch");
       refreshStatus();
@@ -86,6 +93,7 @@ export function BranchSection({ panel }: { panel: GitActionsPanel }) {
   }, [
     workspaceId,
     newBranchName,
+    status?.branch,
     pending,
     setPending,
     createWorkspaceBranch,
@@ -146,13 +154,21 @@ export function BranchSection({ panel }: { panel: GitActionsPanel }) {
         }
         // Branching needs no project — it forks whatever this checkout has —
         // so the action stays live even when the branch list can't be listed.
+        // Open, it becomes the form's own close button and stops hiding.
         hoverAction={{
-          icon: <Plus className="size-4" />,
+          icon: isCreating ? (
+            <Close className="size-4" />
+          ) : (
+            <Plus className="size-4" />
+          ),
           onClick: () => toggleSection("newBranch"),
-          title: status?.branch
-            ? `New branch from ${status.branch}`
-            : "New branch",
+          title: isCreating
+            ? "Close"
+            : status?.branch
+              ? `New branch from ${status.branch}`
+              : "New branch",
           pending: pending === "newBranch",
+          pinned: isCreating,
         }}
       />
 

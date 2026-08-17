@@ -942,19 +942,35 @@ export const workspaceService = {
    *
    * Safe from a worktree too: the branch is created in the shared repo, and a
    * name nothing has checked out yet can't be checked out twice.
+   *
+   * The branch it forked off becomes the workspace's `baseBranch`: work started
+   * from `dev` belongs back in `dev`, and that is exactly what `baseBranch`
+   * means (see CONTEXT.md "Branch model"). Best-effort — a detached HEAD has no
+   * name to record, and failing to store it must not undo a branch git already
+   * created.
    */
   async createBranch(workspaceId: string, branch: string): Promise<void> {
     const workspace = await workspaceRepo.findById(workspaceId);
     if (!workspace) throw new Error("Workspace not found");
     if (!workspace.rootPath) throw new Error("Workspace has no root path");
     if (!branch.trim()) throw new Error("Branch name is required");
+    const name = branch.trim();
 
-    await gitService.createBranch(workspace.rootPath, branch.trim());
-    emitGitStateChanged({
-      workspaceId,
-      branch: branch.trim(),
-      pathExists: true,
-    });
+    // Read the parent before the checkout moves HEAD off it.
+    const parent = await gitService
+      .getCurrentBranch(workspace.rootPath)
+      .catch(() => null);
+
+    await gitService.createBranch(workspace.rootPath, name);
+    emitGitStateChanged({ workspaceId, branch: name, pathExists: true });
+
+    if (parent && parent !== "HEAD" && parent !== workspace.baseBranch) {
+      await workspaceRepo
+        .update(workspaceId, { baseBranch: parent })
+        .catch((error) =>
+          console.error("[Workspace] Failed to record PR base branch:", error),
+        );
+    }
   },
 
   /** Rename the branch actually checked out in the workspace. */
