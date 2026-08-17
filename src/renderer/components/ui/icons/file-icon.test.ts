@@ -14,6 +14,7 @@ import {
   PnpmFileIcon,
   PythonFileIcon,
   ShellFileIcon,
+  TestFileIcon,
   TsFileIcon,
   TsconfigFileIcon,
   ViteFileIcon,
@@ -55,6 +56,18 @@ describe("resolveFileIcon", () => {
   it("keeps vitest out of the vite family", () => {
     // Both patterns could plausibly claim this one; vitest is checked first.
     expect(iconFor("vitest.config.mts")).toBe(VitestFileIcon);
+  });
+
+  it("marks test files ahead of their language", () => {
+    expect(iconFor("file-icon.test.ts")).toBe(TestFileIcon);
+    expect(iconFor("session-panel.test.tsx")).toBe(TestFileIcon);
+    expect(iconFor("codex-event-mapper.spec.js")).toBe(TestFileIcon);
+    expect(iconFor("run-cache.test.mts")).toBe(TestFileIcon);
+    // The config family keeps its own mark — `vitest.` is not `.test.`.
+    expect(iconFor("vitest.config.ts")).toBe(VitestFileIcon);
+    // …and a file merely named `test` is still plain TypeScript.
+    expect(iconFor("test.ts")).toBe(TsFileIcon);
+    expect(iconFor("latest.ts")).toBe(TsFileIcon);
   });
 
   it("covers the .env and Dockerfile families", () => {

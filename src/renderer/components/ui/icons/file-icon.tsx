@@ -51,7 +51,8 @@ import {
   LicenseFileIcon,
   GraphqlFileIcon,
   NextFileIcon,
-  PnpmFileIcon
+  PnpmFileIcon,
+  TestFileIcon
 } from "@/components/ui/icons/file-icons";
 
 type FileIconType = ComponentType<SVGProps<SVGSVGElement>>;
@@ -197,6 +198,9 @@ const FILENAME_ICONS: Record<string, FileIconType> = {
 const CONFIG = String.raw`(\..+)?\.config(\..+)?\.[cm]?[jt]s$`;
 
 const FILENAME_PATTERNS: Array<[RegExp, FileIconType]> = [
+  // `foo.test.ts` / `foo.spec.tsx` read as tests first and TS/React second —
+  // without this they're indistinguishable from the file under test in a tree.
+  [/\.(test|spec)\.[cm]?[jt]sx?$/, TestFileIcon],
   [/^\.eslintrc(\..+)?$/, EslintFileIcon],
   [new RegExp(`^eslint${CONFIG}`), EslintFileIcon],
   [/^tsconfig(\..+)?\.json$/, TsconfigFileIcon],
