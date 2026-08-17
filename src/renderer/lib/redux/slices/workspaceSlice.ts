@@ -59,6 +59,12 @@ export interface WorkspaceState {
     title?: string;
     instructions?: string;
   } | null;
+  /**
+   * The run tab to select once the workspace page mounts, instead of the newest
+   * one. Set when the user jumps to a specific run from outside the page — the
+   * background-runs dock — and consumed once by the run hook.
+   */
+  pendingRunId: string | null;
 }
 
 const initialState: WorkspaceState = {
@@ -82,6 +88,7 @@ const initialState: WorkspaceState = {
   pendingAutoExecute: false,
   pendingTerminalCommand: null,
   pendingReviewTarget: null,
+  pendingRunId: null,
 };
 
 const workspaceSlice = createSlice({
@@ -289,6 +296,12 @@ const workspaceSlice = createSlice({
     clearPendingReviewTarget: (state) => {
       state.pendingReviewTarget = null;
     },
+    setPendingRunId: (state, action: PayloadAction<string>) => {
+      state.pendingRunId = action.payload;
+    },
+    clearPendingRunId: (state) => {
+      state.pendingRunId = null;
+    },
   },
 });
 
@@ -328,6 +341,8 @@ export const {
   clearPendingTerminalCommand,
   setPendingReviewTarget,
   clearPendingReviewTarget,
+  setPendingRunId,
+  clearPendingRunId,
 } = workspaceSlice.actions;
 
 export default workspaceSlice.reducer;

@@ -31,6 +31,7 @@ import { useSpaceProviderVariant } from "@/hooks/use-space-provider-variant";
 import { useScriptNotifications } from "@/hooks/use-script-notifications";
 import { useSidebarSpaceSwipe } from "@/hooks/use-sidebar-space-swipe";
 import { UpdateBanner } from "./update-banner";
+import { BackgroundRunsDock } from "@/features/workspace/components/background-runs";
 import { Button, Text, Tooltip } from "@/components/ui";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { useAppSelector, useAppDispatch } from "@/lib/redux/hooks";
@@ -407,6 +408,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
               onDeleteWorkspace={deleteWorkspace.handleDeleteClick}
               onArchiveWorkspace={archiveWorkspace.handleArchiveClick}
             />
+            <BackgroundRunsDock />
             <UpdateBanner />
             <SidebarFooter
               spaces={spaces}
