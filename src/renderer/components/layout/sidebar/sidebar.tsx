@@ -32,6 +32,9 @@ import { useScriptNotifications } from "@/hooks/use-script-notifications";
 import { useSidebarSpaceSwipe } from "@/hooks/use-sidebar-space-swipe";
 import { UpdateBanner } from "./update-banner";
 import { BackgroundRunsDock } from "@/features/workspace/components/background-runs";
+import { SpaceModePicker } from "@/features/workspace/components/space-mode-picker";
+import { useUpdateSpaceMutation } from "@/lib/redux/api";
+import type { ModeId } from "../../../../shared/modes";
 import { Button, Text, Tooltip } from "@/components/ui";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { useAppSelector, useAppDispatch } from "@/lib/redux/hooks";
@@ -55,8 +58,14 @@ export default function Sidebar({ collapsed }: SidebarProps) {
   const dispatch = useAppDispatch();
   const sidebarWidth = useAppSelector((s) => s.appSettings.sidebarWidth);
   const sidebarConfig = useSidebarConfig();
-  const { spaces, activeSpaceId } = useActiveSpace();
+  const { spaces, activeSpaceId, activeSpace } = useActiveSpace();
   const spaceProvider = useSpaceProviderVariant();
+  const [updateSpace] = useUpdateSpaceMutation();
+
+  const handleSelectMode = (mode: ModeId) => {
+    if (!activeSpace || mode === activeSpace.mode) return;
+    updateSpace({ id: activeSpace.id, payload: { mode } });
+  };
 
   const {
     searchQuery,
@@ -187,6 +196,14 @@ export default function Sidebar({ collapsed }: SidebarProps) {
               onSearchChange={setSearchQuery}
               onSearchClear={handleSearchClear}
             />
+            {activeSpace && (
+              <div className="px-3 pb-1.5">
+                <SpaceModePicker
+                  value={activeSpace.mode}
+                  onChange={handleSelectMode}
+                />
+              </div>
+            )}
             <div className="px-3 py-px">
               <NewButton
                 onClick={handleNewClick}

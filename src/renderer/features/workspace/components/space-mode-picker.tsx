@@ -12,10 +12,10 @@ interface SpaceModePickerProps {
 }
 
 /**
- * Mode selector for the active space (developer / work / chat). Sibling of
- * SpaceThemePicker — both live in the space customizer and persist onto the
- * space row. Changing mode reshapes the agent's instructions (work adds a
- * non-technical delta) and, over time, the UI shape (see MODE_CONFIGS).
+ * Mode selector for the active space (developer / work / chat), rendered at
+ * the top of the sidebar. Persists onto the space row. Changing mode reshapes
+ * the agent's harness (see shared/mode-harness.ts) and the UI shape (see
+ * MODE_CONFIGS).
  */
 export function SpaceModePicker({ value, onChange }: SpaceModePickerProps) {
   return (
