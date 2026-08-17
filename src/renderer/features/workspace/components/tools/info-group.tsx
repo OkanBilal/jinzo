@@ -25,6 +25,9 @@ import {
   Text,
 } from "@/components/ui";
 import { useLazyGetAppsForFileQuery } from "@/lib/redux/api";
+import { useActiveSpace } from "@/hooks/use-active-space";
+import { useDarkMode } from "@/hooks/use-dark-mode";
+import { spaceUserMessageBackground } from "@/lib/space-themes";
 import { useLocalImageUrl } from "@/hooks/use-local-image-url";
 import { useCapabilities } from "@/lib/platform";
 import { DocumentArtifact } from "@/features/workspace/components/tools/document-artifact";
@@ -266,6 +269,14 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
     name: string;
     dataUrl: string;
   } | null>(null);
+    // User bubble is tinted from the space theme at runtime, so it can't be a
+  // static Tailwind class; null keeps the neutral fallback classes.
+  const { activeSpace } = useActiveSpace();
+  const { darkMode } = useDarkMode();
+  const userBubbleBg = spaceUserMessageBackground(
+    activeSpace?.themeConfig ?? null,
+    darkMode,
+  );
   if (!event) return null;
 
   if (event.type === "artifact" && event.metadata?.kind === "user-prompt") {
@@ -319,8 +330,12 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
       return (
         <div className="w-full overflow-hidden">
           <div className="w-full py-2 flex justify-end">
-            <div className="flex flex-col items-end gap-2 max-w-[80%]">
-              <div className="px-4 py-2 rounded-2xl bg-accent/10 dark:bg-accent/10 border border-accent/60 dark:border-accent/10">
+          <div
+              className="px-3.5 py-2 rounded-2xl bg-primary-50 dark:bg-primary/5"
+              style={
+                userBubbleBg ? { backgroundColor: userBubbleBg } : undefined
+              }
+            >              <div className="px-4 py-2 rounded-2xl bg-accent/10 dark:bg-accent/10 border border-accent/60 dark:border-accent/10">
                 <div className="flex items-center gap-2 text-accent">
                   <Codex className="size-3.5 shrink-0" />
                   <div className="flex items-center gap-1.5">
