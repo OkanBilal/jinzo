@@ -63,6 +63,8 @@ const CONFIG: ResourceWizardConfig = {
 
   identityForItem: (team) => team.key,
   identityForCurrent: (current) => current.key,
+  searchTextForItem: (team) =>
+    [team.name, team.key, team.description].filter(Boolean).join(" "),
 
   renderItemForSelect: (team) => (
     <div className="flex items-center gap-2">

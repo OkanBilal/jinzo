@@ -75,6 +75,9 @@ const CONFIG: ResourceWizardConfig = {
     "This will disconnect all boards and remove all Trello data. This action cannot be undone.",
 
   identityForItem: (board) => board.id,
+  // The id is opaque here, so the search text is the label the row renders.
+  searchTextForItem: (board) =>
+    [board.name, board.organizationName].filter(Boolean).join(" "),
   identityForCurrent: (current) => current.boardId,
 
   renderItemForSelect: (board) => (

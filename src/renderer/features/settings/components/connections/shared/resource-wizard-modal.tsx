@@ -82,6 +82,12 @@ export interface ResourceWizardConfig {
   identityForItem: (item: any) => string;
   /** Identity for items from "currently connected" list (used to filter dupes) */
   identityForCurrent: (current: any) => string;
+  /**
+   * Text the select step's search box matches a query against. Return
+   * everything the row shows (identity plus any secondary label) — an account
+   * with hundreds of repos is otherwise a scroll.
+   */
+  searchTextForItem: (item: any) => string;
 
   renderItemForSelect: (item: any) => ReactNode;
   renderItemForManage: (resource: any) => ReactNode;
@@ -376,6 +382,8 @@ function SelectStep({
       title={config.selectTitle}
       saveButtonLabel={saveLabel}
       renderResourceItem={(item) => config.renderItemForSelect(item)}
+      searchTextForResource={config.searchTextForItem}
+      searchPlaceholder={`Search ${config.resourceLabelPlural}`}
     />
   );
 }
