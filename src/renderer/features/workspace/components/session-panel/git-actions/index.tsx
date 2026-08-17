@@ -3,6 +3,7 @@ import { useAppSelector } from "@/lib/redux/hooks";
 import { ChangesSection } from "./changes-section";
 import { BranchSection } from "./branch-section";
 import { CommitSection } from "./commit-section";
+import { PullSection } from "./pull-section";
 import { PrSection } from "./pr-section";
 import { PublishSection } from "./publish-section";
 import { useGitActionsPanel } from "./use-git-actions-panel";
@@ -69,6 +70,8 @@ function GitActions({
       <ChangesSection panel={panel} />
       <BranchSection panel={panel} />
       <CommitSection panel={panel} providerId={providerId} />
+      {/* Nothing to pull from without a remote — the row goes with push/PR. */}
+      {panel.hasRemote && <PullSection panel={panel} />}
       {/* No remote yet — push/PR are impossible. Publish takes the slot. */}
       {panel.hasRemote ? (
         <PrSection panel={panel} providerId={providerId} onClose={onClose} />

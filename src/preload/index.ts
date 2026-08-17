@@ -321,6 +321,8 @@ const api = {
     unarchive: (id: string) =>
       ipcRenderer.invoke(CHANNELS.workspace.unarchive, id),
     // ── git operations (see CONTEXT.md "Workspace git operations") ──
+    createBranch: (id: string, branch: string) =>
+      ipcRenderer.invoke(CHANNELS.workspace.createBranch, id, branch),
     renameBranch: (id: string, newBranchName: string) =>
       ipcRenderer.invoke(CHANNELS.workspace.renameBranch, id, newBranchName),
     switchBranch: (id: string, branch: string) =>
@@ -690,6 +692,9 @@ const api = {
     /** Push the current branch (standalone Push action) */
     push: (workspaceId: string) =>
       ipcRenderer.invoke(CHANNELS.gitFlow.push, workspaceId),
+    /** Fetch + fast-forward the current branch from its upstream */
+    pull: (workspaceId: string) =>
+      ipcRenderer.invoke(CHANNELS.gitFlow.pull, workspaceId),
     /** Push (idempotent) then create a PR via gh, generating title/body if blank */
     createPr: (payload: {
       workspaceId: string;
@@ -712,6 +717,7 @@ const api = {
       workspaceId: string;
       providerId: string;
       model?: string;
+      base?: string;
     }) => ipcRenderer.invoke(CHANNELS.gitFlow.generatePrBody, payload),
   },
   // Terminal operations

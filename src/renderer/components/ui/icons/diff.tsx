@@ -6,16 +6,14 @@ const SvgComponent = (props: SVGProps<SVGSVGElement>) => (
     width={800}
     height={800}
     fill="none"
-    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={1.5}
+    viewBox="0 0 16 16"
     {...props}
   >
-    <path
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={1.5}
-      d="M18 15a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm0 0V8a2 2 0 0 0-2-2h-3M6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm0 0v12"
-    />
+    <path d="M3.75 13.75h8m0-7.5h-8m4-4v8" />
   </svg>
 )
 export default SvgComponent

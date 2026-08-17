@@ -967,7 +967,7 @@ async function initializeApp() {
             click: () => shell.openExternal("https://docs.mains.dev"),
           },
           {
-            label: "Report an Issue",
+            label: "Report a Bug",
             click: () => shell.openExternal("https://github.com/mainsdotdev/mains/issues"),
           },
         ],

@@ -60,7 +60,7 @@ export { CompactComposerControls } from "./input/compact-composer-controls";
 
 // Select (custom dropdown)
 export { default as Select } from "./select";
-export type { SelectOption, SelectProps } from "./select";
+export type { SelectOption, SelectProps, SelectSize } from "./select";
 
 // Checkbox
 export { Checkbox } from "./checkbox";

@@ -334,6 +334,69 @@ describe("push", () => {
   });
 });
 
+describe("pullFastForward", () => {
+  /** A repo tracking a bare origin, plus a second clone to push from. */
+  function makeTrackingPair(): { repo: string; other: string } {
+    const origin = path.join(sandbox, `origin-${++repoCounter}.git`);
+    fs.mkdirSync(origin);
+    git(origin, "init", "--bare", "-b", "main");
+    const repo = makeRepo();
+    git(repo, "remote", "add", "origin", origin);
+    git(repo, "push", "-u", "origin", "main");
+
+    const other = path.join(sandbox, `other-${repoCounter}`);
+    git(sandbox, "clone", origin, other);
+    git(other, "config", "user.email", "other@mains.local");
+    git(other, "config", "user.name", "Other");
+    return { repo, other };
+  }
+
+  it("reports nothing received when the branch is already current", async () => {
+    const { repo } = makeTrackingPair();
+    const head = git(repo, "rev-parse", "HEAD");
+
+    const result = await gitService.pullFastForward(repo);
+
+    expect(result).toEqual({ received: 0, head });
+  });
+
+  it("counts the commits it fast-forwarded in", async () => {
+    const { repo, other } = makeTrackingPair();
+    write(other, "remote-1.txt", "1\n");
+    git(other, "add", ".");
+    git(other, "commit", "-m", "remote one");
+    write(other, "remote-2.txt", "2\n");
+    git(other, "add", ".");
+    git(other, "commit", "-m", "remote two");
+    git(other, "push", "origin", "main");
+
+    const result = await gitService.pullFastForward(repo);
+
+    expect(result.received).toBe(2);
+    expect(fs.existsSync(path.join(repo, "remote-2.txt"))).toBe(true);
+  });
+
+  // The whole reason for --ff-only: a refusal leaves the repo untouched
+  // instead of mid-merge with a conflicted tree no UI here can resolve.
+  it("refuses a diverged branch without changing anything", async () => {
+    const { repo, other } = makeTrackingPair();
+    write(other, "theirs.txt", "theirs\n");
+    git(other, "add", ".");
+    git(other, "commit", "-m", "theirs");
+    git(other, "push", "origin", "main");
+    write(repo, "mine.txt", "mine\n");
+    git(repo, "add", ".");
+    git(repo, "commit", "-m", "mine");
+    const head = git(repo, "rev-parse", "HEAD");
+
+    await expect(gitService.pullFastForward(repo)).rejects.toThrow();
+
+    expect(git(repo, "rev-parse", "HEAD")).toBe(head);
+    expect(git(repo, "status", "--porcelain")).toBe("");
+    expect(fs.existsSync(path.join(repo, "theirs.txt"))).toBe(false);
+  });
+});
+
 // ─────────────────────────────────────────────────────────────
 // getBranchDiff / getBranchLog — base..HEAD semantics
 // ─────────────────────────────────────────────────────────────
@@ -530,6 +593,43 @@ describe("checkoutBranch", () => {
   it("rejects an unknown branch", async () => {
     const repo = makeRepo();
     await expect(gitService.checkoutBranch(repo, "nope")).rejects.toThrow();
+  });
+});
+
+describe("createBranch", () => {
+  // The panel promises the work in progress travels with you. It does so for
+  // free: the commit doesn't move, only the name pointing at it.
+  it("lands on a new branch at the same commit, tree untouched", async () => {
+    const repo = makeRepo();
+    write(repo, "README.md", "# edited\n");
+    write(repo, "scratch.txt", "wip\n");
+    const headBefore = git(repo, "rev-parse", "HEAD");
+
+    await gitService.createBranch(repo, "feature/carry");
+
+    expect(await gitService.getCurrentBranch(repo)).toBe("feature/carry");
+    expect(git(repo, "rev-parse", "HEAD")).toBe(headBefore);
+    expect(fs.readFileSync(path.join(repo, "README.md"), "utf-8")).toBe(
+      "# edited\n",
+    );
+    expect(fs.readFileSync(path.join(repo, "scratch.txt"), "utf-8")).toBe(
+      "wip\n",
+    );
+  });
+
+  it("rejects a name already taken, leaving the checkout where it was", async () => {
+    const repo = makeRepo();
+    git(repo, "branch", "taken");
+
+    await expect(gitService.createBranch(repo, "taken")).rejects.toThrow();
+    expect(await gitService.getCurrentBranch(repo)).toBe("main");
+  });
+
+  it("rejects a branch name that would parse as a git option", async () => {
+    const repo = makeRepo();
+    await expect(gitService.createBranch(repo, "--orphan")).rejects.toThrow(
+      "Invalid git ref",
+    );
   });
 });
 

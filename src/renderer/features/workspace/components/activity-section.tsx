@@ -25,6 +25,11 @@ function ActivityIcon({ type }: { type: WorkspaceActivity["type"] }) {
       return <PullRequest className="size-4 text-primary-700 dark:text-primary-300  shrink-0" />;
     case "push":
       return <ArrowUp className="size-4 text-primary-700 dark:text-primary-300  shrink-0" />;
+    // Same glyph as push, flipped — the pair reads as one axis.
+    case "pull":
+      return (
+        <ArrowUp className="size-4 rotate-180 text-primary-700 dark:text-primary-300 shrink-0" />
+      );
   }
 }
 
@@ -50,6 +55,8 @@ function activityDetail(activity: WorkspaceActivity): string | null {
       return activity.summary || null;
     case "push":
       return meta?.branch ? `Pushed ${meta.branch}` : null;
+    case "pull":
+      return meta?.branch ? `Fast-forwarded ${meta.branch}` : null;
     default:
       return null;
   }

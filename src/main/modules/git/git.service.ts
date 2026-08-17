@@ -549,6 +549,33 @@ export const gitService = {
   },
 
   /**
+   * Fetch and fast-forward the current branch onto its upstream.
+   *
+   * `--ff-only` is the point, not a limitation. A pull that cannot fast-forward
+   * changes *nothing*: no merge commit, no conflicted tree, nothing to undo.
+   * The alternatives can stop half-way and leave the repo in a state this app
+   * has no way out of — the diff surfaces would render conflict markers as
+   * ordinary work and a run would edit them — so git's refusal is the better
+   * outcome, in the same spirit as `checkoutBranch` not stashing for anyone.
+   *
+   * Returns how many commits arrived, so callers don't re-derive "already up
+   * to date" from a diffless HEAD comparison.
+   */
+  async pullFastForward(
+    rootPath: string,
+  ): Promise<{ received: number; head: string }> {
+    const git = getGit(rootPath);
+    const before = (await git.revparse(["HEAD"])).trim();
+    await git.raw(["pull", "--ff-only"]);
+    const head = (await git.revparse(["HEAD"])).trim();
+    if (head === before) return { received: 0, head };
+    const count = (
+      await git.raw(["rev-list", "--count", `${before}..${head}`])
+    ).trim();
+    return { received: Number(count) || 0, head };
+  },
+
+  /**
    * Add a new remote to the repository (e.g. `origin` when publishing a repo
    * that was created locally with no remote). Throws if the remote name already
    * exists, so callers should check `getRemotes` first when that matters.
@@ -593,6 +620,23 @@ export const gitService = {
   async checkoutBranch(rootPath: string, branch: string): Promise<void> {
     assertRef(branch);
     await getGit(rootPath).checkout(branch);
+  },
+
+  /**
+   * Create a branch at the current HEAD and check it out (`checkout -b`).
+   *
+   * Unlike `checkoutBranch` this can't collide with the working tree: the
+   * commit doesn't change, only the name pointing at it, so uncommitted work
+   * always comes along and git has nothing to refuse over. What it does refuse
+   * — a name already taken, a name git considers malformed — arrives as its own
+   * message, which is the one worth showing.
+   *
+   * A detached HEAD is a valid starting point: the new branch is created at
+   * whatever commit is checked out.
+   */
+  async createBranch(rootPath: string, branch: string): Promise<void> {
+    assertRef(branch);
+    await getGit(rootPath).checkoutLocalBranch(branch);
   },
 
   /**

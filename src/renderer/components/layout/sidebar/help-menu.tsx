@@ -24,14 +24,14 @@ export default function HelpMenu({ isOpen, position, onClose }: HelpMenuProps) {
       aria-label="Help"
       position={adjustedPosition}
       onClose={onClose}
-      minWidth={200}
+      minWidth={180}
     >
       <div className="">
         <DropdownMenuItem
           onClick={() => handleOpenExternal("https://github.com/mainsdotdev/mains/issues")}
         >
           <Bug className="size-4 shrink-0" />
-          <span className="flex-1 text-left">Report an Issue</span>
+          <span className="flex-1 text-left">Report a Bug</span>
           <External className="size-3 text-primary-900 dark:text-primary-100" />
         </DropdownMenuItem>
         <DropdownMenuItem

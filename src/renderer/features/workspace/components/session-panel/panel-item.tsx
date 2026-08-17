@@ -42,6 +42,11 @@ export interface PanelItemProps {
     title: string;
     /** Keeps the action visible and inert while it runs. */
     pending?: boolean;
+    /**
+     * Keeps it visible while it is the row's live affordance — the toggle for
+     * a form it already opened has to stay reachable without hovering back.
+     */
+    pinned?: boolean;
   };
 }
 
@@ -151,7 +156,9 @@ export function PanelItem({
               size="xs"
               tone="subtle"
               className={`tabular-nums transition-opacity ${
-                hoverAction.pending ? "opacity-0" : "group-hover:opacity-0"
+                hoverAction.pending || hoverAction.pinned
+                  ? "opacity-0"
+                  : "group-hover:opacity-0"
               }`}
             >
               {trailing}
@@ -162,7 +169,7 @@ export function PanelItem({
               title={hoverAction.title}
               aria-label={hoverAction.title}
               className={`absolute inset-y-0 right-0 flex items-center rounded-md px-1 text-primary-600 transition-opacity hover:text-primary-900 focus-visible:opacity-100 dark:text-primary-400 dark:hover:text-primary-100 ${
-                hoverAction.pending
+                hoverAction.pending || hoverAction.pinned
                   ? "opacity-100"
                   : "opacity-0 group-hover:opacity-100"
               }`}
