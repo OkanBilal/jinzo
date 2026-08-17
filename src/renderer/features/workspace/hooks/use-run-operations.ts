@@ -17,6 +17,7 @@ import { appApi } from "@/lib/transport";
 import { toast } from "@/components/ui";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { workspaceApi } from "@/lib/redux/api";
+import { useActiveSpace } from "@/hooks/use-active-space";
 import type { Run } from "../types";
 import type { ContextItem } from "../lib/composer-context";
 import {
@@ -50,6 +51,11 @@ export function useRunOperations({
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Stamped on every run this hook opens. The column existed and the payload
+  // accepted it, but nothing filled it — so every run read back as belonging to
+  // no space, and anything asking "which space is this run from?" got null.
+  // Forks inherit it from their source run; continues reuse the row.
+  const { activeSpaceId } = useActiveSpace();
 
   /** Wraps async run operations with loading state, account fetch, and error handling */
   const runOperation = useCallback(async <T>(
@@ -98,6 +104,7 @@ export function useRunOperations({
         const result = await appApi.runs.execute({
           accountId,
           workspaceId: selectedWorkspace,
+          spaceId: activeSpaceId || undefined,
           providerId: selectedProvider,
           goal: goal.trim(),
           model: model || undefined,
@@ -112,7 +119,7 @@ export function useRunOperations({
         return registerNewRun(result.data.runId);
       }, null, "Failed to execute run");
     },
-    [runOperation, registerNewRun],
+    [runOperation, registerNewRun, activeSpaceId],
   );
 
   const continueRun = useCallback(async (
@@ -201,6 +208,7 @@ export function useRunOperations({
         const result = await appApi.runs.executeReview({
           accountId,
           workspaceId: selectedWorkspace,
+          spaceId: activeSpaceId || undefined,
           providerId: selectedProvider,
           target,
           model: model || undefined,
@@ -213,7 +221,7 @@ export function useRunOperations({
         return registerNewRun(result.data.runId);
       }, null, "Failed to execute review");
     },
-    [runOperation, registerNewRun],
+    [runOperation, registerNewRun, activeSpaceId],
   );
 
   const checkCanResume = useCallback(

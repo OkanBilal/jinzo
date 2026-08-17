@@ -184,6 +184,66 @@ describe("runsService", () => {
     });
   });
 
+  describe("listActiveRuns", () => {
+    const registerSession = (runId: string) => {
+      runSessionRegistry.register(runId, {
+        runId,
+        project: vi.fn(),
+        abort: vi.fn(),
+        finalize: vi.fn(),
+        updateBaseRef: vi.fn(),
+      });
+      return () => runSessionRegistry.unregister(runId);
+    };
+
+    it("returns running runs with a live session, labelled with their workspace", async () => {
+      createWorkspace(db, { id: "ws1", name: "Website" });
+      createRun(db, { id: "r1", workspaceId: "ws1", status: "running" });
+      createRun(db, { id: "r2", status: "succeeded" });
+      const unregister = registerSession("r1");
+
+      const result = await runsService.listActiveRuns();
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({
+        id: "r1",
+        workspace: { id: "ws1", name: "Website" },
+      });
+      unregister();
+    });
+
+    it("drops running rows left behind by a crash", async () => {
+      createRun(db, { id: "r1", status: "running" });
+      // No session registered — the DB says running, the process disagrees.
+
+      expect(await runsService.listActiveRuns()).toEqual([]);
+    });
+
+    it("keeps queued runs, which have no session yet", async () => {
+      createRun(db, { id: "r1", status: "queued" });
+
+      const result = await runsService.listActiveRuns();
+
+      expect(result.map((run) => run.id)).toEqual(["r1"]);
+    });
+
+    it("skips archived runs", async () => {
+      createRun(db, { id: "r1", status: "running", isArchived: true });
+      const unregister = registerSession("r1");
+
+      expect(await runsService.listActiveRuns()).toEqual([]);
+      unregister();
+    });
+
+    it("reports a detached run with a null workspace rather than dropping it", async () => {
+      createRun(db, { id: "r1", status: "queued" });
+
+      const [result] = await runsService.listActiveRuns();
+
+      expect(result.workspace).toBeNull();
+    });
+  });
+
   describe("getRunById", () => {
     it("returns run when found", async () => {
       createRun(db, { id: "r1" });
@@ -1202,10 +1262,14 @@ describe("runsService", () => {
       await expect(runsService.abortRun("r1")).rejects.toThrow("not running");
     });
 
-    it("returns error when run is queued", async () => {
+    it("cancels a queued run, which has no session to interrupt", async () => {
       createRun(db, { id: "r1", status: "queued" });
 
-      await expect(runsService.abortRun("r1")).rejects.toThrow("not running");
+      await runsService.abortRun("r1");
+
+      const run = await runsRepo.findRunById("r1");
+      expect(run!.status).toBe("canceled");
+      expect(run!.lastError).toContain("before it started");
     });
 
     it("returns error when run is failed", async () => {

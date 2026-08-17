@@ -423,6 +423,8 @@ const api = {
   // Runs operations
   runs: {
     listArchived: () => ipcRenderer.invoke(CHANNELS.runs.listArchived),
+    /** Runs with a live session right now, across every space and workspace. */
+    listActive: () => ipcRenderer.invoke(CHANNELS.runs.listActive),
     getAll: (limit?: number) => ipcRenderer.invoke(CHANNELS.runs.getAll, limit),
     getById: (id: string) => ipcRenderer.invoke(CHANNELS.runs.getById, id),
     getByAccount: (accountId: string, limit?: number) =>
@@ -583,7 +585,8 @@ const api = {
       ipcRenderer.on(CHANNELS.runs.eventPersisted, listener);
       return () => ipcRenderer.removeListener(CHANNELS.runs.eventPersisted, listener);
     },
-    // Fired when a run reaches a terminal status (succeeded / failed / canceled).
+    // Fired when a run's session starts ("running") and when it reaches a
+    // terminal status (succeeded / failed / canceled).
     onStatusChanged: (callback: (data: { runId: string; status: string; ts: number }) => void) => {
       const listener = (_: any, data: any) => callback(data);
       ipcRenderer.on(CHANNELS.runs.statusChanged, listener);

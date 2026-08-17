@@ -19,6 +19,7 @@ import type {
   UpdateRunPayload,
   RunResponse,
   ArchivedRunResponse,
+  ActiveRunResponse,
   CreateRunContextPayload,
   RunContextResponse,
   CreateRunArtifactPayload,
@@ -226,6 +227,46 @@ export const runsService = {
               isArchived: workspace.isArchived,
             }
           : null,
+      };
+    });
+  },
+
+  /**
+   * The runs that are still working, whichever space or workspace they belong
+   * to — what the sidebar's background-runs dock lists.
+   *
+   * The DB row says a run is `running`; the session registry says it *still* is.
+   * A crash (or a kill -9 that skips the before-quit finalize) leaves rows that
+   * satisfy the first and not the second, and a card for one of those would
+   * offer the user a session that no longer exists. Queued runs have no session
+   * yet by definition, so they pass on the row alone.
+   */
+  async listActiveRuns(): Promise<ActiveRunResponse[]> {
+    const pending = await runsRepo.findPendingRuns();
+    const live = pending.filter(
+      (run) => run.status === "queued" || runSessionRegistry.get(run.id) !== undefined,
+    );
+    if (live.length === 0) return [];
+
+    const workspaceIds = [
+      ...new Set(
+        live
+          .map((run) => run.workspaceId)
+          .filter((id): id is string => id !== null),
+      ),
+    ];
+    const workspaceEntries = await Promise.all(
+      workspaceIds.map(async (id) => [id, await workspaceService.get(id)] as const),
+    );
+    const workspaceById = new Map(workspaceEntries);
+
+    return live.map((run) => {
+      const workspace = run.workspaceId
+        ? workspaceById.get(run.workspaceId)
+        : null;
+      return {
+        ...run,
+        workspace: workspace ? { id: workspace.id, name: workspace.name } : null,
       };
     });
   },
@@ -817,7 +858,7 @@ export const runsService = {
   async abortRun(runId: string): Promise<void> {
     const run = await runsRepo.findRunById(runId);
     if (!run) throw new Error("Run not found");
-    if (run.status !== "running") {
+    if (run.status !== "running" && run.status !== "queued") {
       throw new Error(`Run is not running (status: ${run.status})`);
     }
 
@@ -827,11 +868,17 @@ export const runsService = {
       return;
     }
 
-    // DB says running but no live session — process restart edge case.
+    // No live session to abort, for one of two reasons: the run never started
+    // (queued), or the process restarted mid-run and the DB row outlived its
+    // session. Both cancel the row directly — the background-runs dock offers
+    // stop on either, and neither has anything left to interrupt.
     await runsRepo.updateRun(runId, {
       status: "canceled",
       endedAt: new Date(),
-      lastError: "Run had no live session (likely process restart mid-run)",
+      lastError:
+        run.status === "queued"
+          ? "Run canceled before it started"
+          : "Run had no live session (likely process restart mid-run)",
     });
     broadcastStatusChangedPreSession(runId, "canceled");
   },

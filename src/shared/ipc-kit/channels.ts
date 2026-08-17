@@ -252,6 +252,7 @@ export const CHANNELS = {
     getByStatus: "runs:getByStatus",
     getByWorkspace: "runs:getByWorkspace",
     getDetails: "runs:getDetails",
+    listActive: "runs:listActive",
     start: "runs:start",
     statusChanged: "runs:statusChanged",
     toolApprovalRequest: "runs:toolApprovalRequest",

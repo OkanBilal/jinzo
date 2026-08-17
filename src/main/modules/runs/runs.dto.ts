@@ -74,6 +74,21 @@ export interface ArchivedRunResponse extends RunResponse {
   workspace: ArchivedRunWorkspaceResponse | null;
 }
 
+/**
+ * A run that is still going, enriched with the workspace name the dock labels
+ * it with. Only runs with a live session in the registry are reported — a
+ * `running` row left behind by a crash is not something the user can jump back
+ * into, so it never becomes a card.
+ */
+export interface ActiveRunResponse extends RunResponse {
+  workspace: ActiveRunWorkspaceResponse | null;
+}
+
+export interface ActiveRunWorkspaceResponse {
+  id: string;
+  name: string;
+}
+
 // ─────────────────────────────────────────────────────────────
 // Run Context DTOs
 // ─────────────────────────────────────────────────────────────

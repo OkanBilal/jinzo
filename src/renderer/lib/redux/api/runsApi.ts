@@ -54,6 +54,16 @@ export interface ArchivedRun extends Run {
   workspace: ArchivedRunWorkspace | null;
 }
 
+export interface ActiveRunWorkspace {
+  id: string;
+  name: string;
+}
+
+/** A run with a live session, labelled with the workspace it is working in. */
+export interface ActiveRun extends Run {
+  workspace: ActiveRunWorkspace | null;
+}
+
 export interface CreateRunPayload {
   id: string;
   accountId: string;
@@ -175,6 +185,13 @@ export const runsApi = baseApi.injectEndpoints({
       query: () => ({ handler: CHANNELS.runs.listArchived }),
       // The response embeds workspace archive state, so either aggregate can
       // make this list stale.
+      providesTags: ["Runs", "Workspaces"],
+    }),
+
+    listActiveRuns: builder.query<ActiveRun[], void>({
+      query: () => ({ handler: CHANNELS.runs.listActive }),
+      // Workspace renames change the label the dock prints, so both aggregates
+      // can make this list stale.
       providesTags: ["Runs", "Workspaces"],
     }),
 
@@ -418,6 +435,7 @@ export const {
   useGetRunsQuery,
   useLazyGetRunsQuery,
   useListArchivedRunsQuery,
+  useListActiveRunsQuery,
   useGetRunByIdQuery,
   useLazyGetRunByIdQuery,
   useGetRunsByAccountQuery,

@@ -1,4 +1,4 @@
-import { eq, desc, and, sql, asc, gt, gte } from "drizzle-orm";
+import { eq, desc, and, sql, asc, gt, gte, inArray } from "drizzle-orm";
 import { getDb } from "../../db/client";
 import { safeJsonParse } from "../../db/utils";
 import { runs, runContext, runArtifacts, toolCalls, runTurns } from "../../db/schema";
@@ -41,6 +41,25 @@ export const runsRepo = {
       .from(runs)
       .where(eq(runs.isArchived, true))
       .orderBy(desc(runs.updatedAt));
+    return rows.map(mapRunRowToResponse);
+  },
+
+  /**
+   * Every unfinished run, oldest first — the order the background-runs dock
+   * stacks them in, so a card never jumps position while another run starts.
+   */
+  async findPendingRuns(): Promise<RunResponse[]> {
+    const db = getDb();
+    const rows = await db
+      .select()
+      .from(runs)
+      .where(
+        and(
+          inArray(runs.status, ["queued", "running"]),
+          eq(runs.isArchived, false),
+        ),
+      )
+      .orderBy(asc(runs.createdAt));
     return rows.map(mapRunRowToResponse);
   },
 
