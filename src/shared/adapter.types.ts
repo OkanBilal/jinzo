@@ -397,10 +397,17 @@ export interface WorkRunContinueRequest {
   message: string;
   /** Model to use for this continuation (overrides provider default) */
   model?: string | null;
+  /** The run's original system prompt, re-applied by drivers that rebuild
+   * their session config on resume (copilot). */
+  systemPrompt?: string | null;
   /** Experience mode snapshot from the run row (see `src/shared/modes.ts`). */
   mode?: ModeId;
   /** Mode-resolved instruction delta, re-applied on resume (new threads inherit it). */
   extraInstructions?: string | null;
+  /** Per-run tool policy, re-derived from the run row (see WorkRunRequest). */
+  toolPolicy?: WorkRunToolPolicy | null;
+  /** Per-run config snapshot, re-derived from the run row (see WorkRunRequest). */
+  configSnapshot?: Record<string, unknown> | null;
   /** Additional context to add */
   context?: WorkRunContextItem[];
   /** File attachments (images/documents) to include in the prompt */
@@ -453,6 +460,14 @@ export interface WorkRunForkRequest {
   message: string;
   /** Model to use for this fork (overrides provider default) */
   model?: string | null;
+  /** Experience mode inherited from the source run (see `src/shared/modes.ts`). */
+  mode?: ModeId;
+  /** Mode-resolved instruction delta, re-applied on the forked session. */
+  extraInstructions?: string | null;
+  /** Per-run tool policy inherited from the source run (see WorkRunRequest). */
+  toolPolicy?: WorkRunToolPolicy | null;
+  /** Per-run config snapshot inherited from the source run (see WorkRunRequest). */
+  configSnapshot?: Record<string, unknown> | null;
   /** Additional context to add */
   context?: WorkRunContextItem[];
   /** File attachments (images/documents) to include in the prompt */

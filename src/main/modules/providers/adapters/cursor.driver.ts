@@ -1742,12 +1742,17 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
   }
 
   async function buildForkPrompt(request: WorkRunForkRequest): Promise<string> {
+    // A fork is a fresh Cursor session, so the mode/space delta must ride this
+    // prompt too — the replayed transcript alone doesn't carry it.
+    const modePrefix = request.extraInstructions
+      ? `<mode_instructions>\n${request.extraInstructions}\n</mode_instructions>\n\n`
+      : "";
     const transcript = await buildSourceTranscript(request.sourceRunId);
-    const preamble = transcript
+    const preamble = modePrefix + (transcript
       ? "This run was forked from a previous Cursor conversation. Cursor has no native " +
         "session fork, so the prior context is replayed below for continuity.\n\n" +
         `${transcript}\n\n---\n\n`
-      : "";
+      : "");
 
     let body = request.message;
     if (request.context && request.context.length > 0) {
@@ -2025,8 +2030,11 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
         }
       }
 
-      // Continue requests carry no per-run snapshot, so selections come from
-      // the persisted provider config only.
+      // Same precedence as createSession: the run's config snapshot beats the
+      // provider config, so a resumed chat run stays in "ask" mode.
+      const resumeOverrides = (request.configSnapshot ?? {}) as Record<string, unknown>;
+      const resumeMode =
+        (typeof resumeOverrides.mode === "string" && resumeOverrides.mode) || config.mode;
       const sessionConfigOptions = loadResult?.configOptions as
         | CursorConfigOption[]
         | undefined;
@@ -2034,9 +2042,9 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
         server,
         sessionId,
         resolvedModel,
-        config.mode,
+        resumeMode,
         sessionConfigOptions,
-        resolveCursorSelection({}, config),
+        resolveCursorSelection(resumeOverrides, config),
       );
 
       const session: CursorSession = {
@@ -2071,7 +2079,7 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
         rootPath: request.workspace.rootPath,
         runId,
       };
-      const mainsMcp = await ensureMcpServer(mainsCtx);
+      const mainsMcp = await ensureMcpServer(mainsCtx, request.mode);
       const server = await ensureServer();
 
       const sessionResult = (await server.sendRequest("session/new", {
@@ -2084,6 +2092,10 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
       }
       sessionIdMap.set(runId, sessionId);
 
+      // The fork inherits the source run's harness snapshot.
+      const forkOverrides = (request.configSnapshot ?? {}) as Record<string, unknown>;
+      const forkMode =
+        (typeof forkOverrides.mode === "string" && forkOverrides.mode) || config.mode;
       const sessionConfigOptions = sessionResult?.configOptions as
         | CursorConfigOption[]
         | undefined;
@@ -2091,9 +2103,9 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
         server,
         sessionId,
         resolvedModel,
-        config.mode,
+        forkMode,
         sessionConfigOptions,
-        resolveCursorSelection({}, config),
+        resolveCursorSelection(forkOverrides, config),
       );
 
       const session: CursorSession = {

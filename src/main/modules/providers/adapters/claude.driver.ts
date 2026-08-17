@@ -2887,6 +2887,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       }
 
       const abortController = new AbortController();
+      const resumePermissionMode = request.configSnapshot?.permissionMode;
       const options = await buildOptions({
         model: getModel(request.model ?? config.defaultModel),
         workspacePath: request.workspace.rootPath,
@@ -2896,8 +2897,12 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
         runAgents: request.agents,
         runId: request.runId,
         workspaceId: request.workspace.id,
+        permissionMode: isSDKPermissionMode(resumePermissionMode)
+          ? resumePermissionMode
+          : undefined,
         extraInstructions: request.extraInstructions,
         mode: request.mode,
+        toolPolicy: request.toolPolicy,
       });
 
       const session = newSession(request.runId, options, abortController, false);
@@ -2922,6 +2927,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       // A fork gets a new id, and the CLI lets us name it — so the fork is
       // identified before it produces anything, same as a fresh session.
       const sessionId = randomUUID();
+      const forkPermissionMode = request.configSnapshot?.permissionMode;
       const options = await buildOptions({
         model: getModel(request.model ?? config.defaultModel),
         workspacePath: request.workspace.rootPath,
@@ -2933,6 +2939,12 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
         workspaceId: request.workspace.id,
         forkSession: true,
         newSessionId: sessionId,
+        permissionMode: isSDKPermissionMode(forkPermissionMode)
+          ? forkPermissionMode
+          : undefined,
+        extraInstructions: request.extraInstructions,
+        mode: request.mode,
+        toolPolicy: request.toolPolicy,
       });
 
       const session = newSession(request.runId, options, abortController, true);

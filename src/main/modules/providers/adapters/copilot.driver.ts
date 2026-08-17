@@ -1566,11 +1566,31 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
       const { runId } = request;
 
       const copilotClient = await ensureClient(request.workspace.rootPath);
-      const permissionMode = config.permissionMode || "default";
+      // Same precedence as createSession: run snapshot beats provider config,
+      // so a resumed run keeps the permission mode it started with.
+      const resumeOverrides = (request.configSnapshot ?? {}) as Record<string, unknown>;
+      const permissionMode =
+        (typeof resumeOverrides.permissionMode === "string" && resumeOverrides.permissionMode) ||
+        config.permissionMode ||
+        "default";
 
       const resumeConfig: Omit<SessionConfig, "sessionId"> = {
-        ...buildBaseSessionConfig(runId, request.workspace, permissionMode, request.mode),
+        ...buildBaseSessionConfig(
+          runId,
+          request.workspace,
+          permissionMode,
+          request.mode,
+          request.toolPolicy,
+        ),
       };
+      // Re-apply the composed system message: resumeSession rebuilds the
+      // session config from scratch, so without this the mode delta and the
+      // run's system prompt would silently drop off on the second turn.
+      resumeConfig.systemMessage = buildSystemMessage(
+        request.workspace.rootPath,
+        request.systemPrompt,
+        request.extraInstructions,
+      );
 
       const resumeModel = request.model || config.defaultModel;
       if (resumeModel) resumeConfig.model = resumeModel;

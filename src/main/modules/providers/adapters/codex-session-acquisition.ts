@@ -520,11 +520,22 @@ export function createCodexSessionAcquisition(
     }
 
     const settings = commonThreadSettings();
+    // Same precedence as createSession: the run's config snapshot beats the
+    // provider config, so a resumed chat run keeps its read-only sandbox.
+    const resumeOverrides = (
+      request.configSnapshot ?? {}
+    ) as Record<string, unknown>;
+    const resumeSandbox = mapSandboxMode(
+      typeof resumeOverrides.sandboxMode === "string"
+        ? resumeOverrides.sandboxMode as CodexAdapterConfig["sandboxMode"]
+        : config.sandboxMode,
+    );
     try {
       await server.sendRequest("thread/resume", {
         threadId,
         cwd: request.workspace.rootPath,
         ...settings,
+        sandbox: resumeSandbox,
         ...(model ? { model } : {}),
         ...buildDeveloperInstructionsParam(request.extraInstructions),
       });
@@ -541,6 +552,7 @@ export function createCodexSessionAcquisition(
       const threadStartParams: CodexThreadStartParams = {
         cwd: request.workspace.rootPath,
         ...settings,
+        sandbox: resumeSandbox,
         ...(model ? { model } : {}),
         ...buildDeveloperInstructionsParam(request.extraInstructions),
         dynamicTools: toCodexDynamicTools(request.mode),
@@ -630,12 +642,21 @@ export function createCodexSessionAcquisition(
     runCoordinator.attachThread(sourceRunId, sourceThreadId);
 
     const settings = commonThreadSettings();
+    const forkOverrides = (
+      request.configSnapshot ?? {}
+    ) as Record<string, unknown>;
+    const forkSandbox = mapSandboxMode(
+      typeof forkOverrides.sandboxMode === "string"
+        ? forkOverrides.sandboxMode as CodexAdapterConfig["sandboxMode"]
+        : config.sandboxMode,
+    );
     const forkResult = await server.sendRequest("thread/fork", {
       threadId: sourceThreadId,
       cwd: request.workspace.rootPath,
       approvalPolicy: settings.approvalPolicy,
-      sandbox: settings.sandbox,
+      sandbox: forkSandbox,
       ...(model ? { model } : {}),
+      ...buildDeveloperInstructionsParam(request.extraInstructions),
       config: settings.config,
     });
     const forkedThreadId = forkResult.thread.id;

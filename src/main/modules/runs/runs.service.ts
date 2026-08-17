@@ -805,8 +805,13 @@ export const runsService = {
           workspace: workspaceCtx,
           message,
           model: payload.model,
+          systemPrompt: run.systemPrompt,
           mode: run.mode,
           extraInstructions: composeExtraInstructions(run.mode, space?.systemPrompt),
+          toolPolicy:
+            (run.toolPolicySnapshot as WorkRunToolPolicy | null) ??
+            getModeHarness(run.mode).toolPolicy,
+          configSnapshot: composeConfigSnapshot(run.mode, run.providerId, run.configSnapshot),
           context: additionalContext as any,
           attachments: payload.attachments,
           contextIssues: payload.contextIssues,
@@ -883,6 +888,8 @@ export const runsService = {
         goal: message,
         status: "running",
         systemPrompt: sourceRun.systemPrompt ?? undefined,
+        configSnapshot: sourceRun.configSnapshot ?? undefined,
+        toolPolicySnapshot: sourceRun.toolPolicySnapshot ?? undefined,
       });
 
       const workspaceCtx = workspace
@@ -901,6 +908,10 @@ export const runsService = {
         console.error(`[RunsService] Title generation failed for forked run ${newRunId}:`, err),
       );
 
+      // The fork inherits the source run's harness wholesale — same mode
+      // snapshot, same composed policy/config (the fork row copied them).
+      const sourceSpace = await findSpaceForRun(sourceRun.spaceId);
+
       const runPromise = adapter.forkRun(
         {
           runId: newRunId,
@@ -908,6 +919,16 @@ export const runsService = {
           accountId,
           workspace: workspaceCtx,
           message,
+          mode: sourceRun.mode,
+          extraInstructions: composeExtraInstructions(sourceRun.mode, sourceSpace?.systemPrompt),
+          toolPolicy:
+            (sourceRun.toolPolicySnapshot as WorkRunToolPolicy | null) ??
+            getModeHarness(sourceRun.mode).toolPolicy,
+          configSnapshot: composeConfigSnapshot(
+            sourceRun.mode,
+            sourceRun.providerId,
+            sourceRun.configSnapshot,
+          ),
           context: payload.additionalContext as any,
           attachments: payload.attachments,
         },
