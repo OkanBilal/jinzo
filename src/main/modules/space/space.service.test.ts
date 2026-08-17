@@ -113,6 +113,21 @@ describe("spaceService", () => {
         spaceService.update(space.id, { slug: "taken" }),
       ).rejects.toThrow("slug: A space with this slug already exists");
     });
+
+    it("switches a space's mode", async () => {
+      const space = createSpace(db, { accountId: "default", mode: "developer" });
+
+      const updated = await spaceService.update(space.id, { mode: "work" });
+      expect(updated.mode).toBe("work");
+    });
+
+    it("rejects unknown mode on update", async () => {
+      const space = createSpace(db, { accountId: "default" });
+
+      await expect(
+        spaceService.update(space.id, { mode: "gaming" }),
+      ).rejects.toThrow();
+    });
   });
 
   describe("delete", () => {

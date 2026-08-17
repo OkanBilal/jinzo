@@ -4,6 +4,10 @@ import { PROVIDER_IDS } from "../../../shared/provider-ids";
 import { runsRepo } from "./runs.repo";
 import { providersService } from "../providers";
 import { workspaceService, assertWorkspacePathExists } from "../workspace";
+import { spaceService } from "../space";
+import { appSettingsService } from "../appSettings";
+import { DEFAULT_MODE_ID, type ModeId } from "../../../shared/modes";
+import { getModeExtraInstructions } from "../../../shared/mode-instructions";
 import {
   createWorkAdapter,
   type WorkRunContextItem,
@@ -54,6 +58,32 @@ function generateRunId(): string {
 
 function hashContent(content: string): string {
   return createHash("sha256").update(content).digest("hex").substring(0, 16);
+}
+
+/**
+ * Resolve the experience mode for a new run: the payload's space if given,
+ * otherwise the active space. Snapshotted onto the run row so resume/fork
+ * keep behaving under the mode the run started with. Best-effort — a missing
+ * space must not block a run, so failures fall back to the default mode.
+ */
+async function resolveRunMode(
+  spaceId: string | undefined,
+): Promise<{ spaceId: string | undefined; mode: ModeId }> {
+  try {
+    let resolvedSpaceId = spaceId;
+    if (!resolvedSpaceId) {
+      const settings = await appSettingsService.getSettings();
+      resolvedSpaceId = settings.activeSpaceId ?? undefined;
+    }
+    if (resolvedSpaceId) {
+      const space = await spaceService.getById(resolvedSpaceId);
+      if (space) return { spaceId: resolvedSpaceId, mode: space.mode };
+    }
+    return { spaceId: resolvedSpaceId, mode: DEFAULT_MODE_ID };
+  } catch (err) {
+    console.error("[RunsService] Mode resolution failed, using default:", err);
+    return { spaceId, mode: DEFAULT_MODE_ID };
+  }
 }
 
 function fallbackTitle(goal: string): string {
@@ -461,12 +491,16 @@ export const runsService = {
 
       await workspaceService.update(payload.workspaceId, { status: "in_progress" });
 
+      const { spaceId: resolvedSpaceId, mode } = await resolveRunMode(payload.spaceId);
+      const extraInstructions = getModeExtraInstructions(mode) ?? null;
+
       await runsRepo.insertRun({
         id: runId,
         accountId: payload.accountId,
         workspaceId: payload.workspaceId,
-        spaceId: payload.spaceId,
+        spaceId: resolvedSpaceId,
         providerId: payload.providerId,
+        mode,
         model: payload.model,
         goal: payload.goal,
         status: "running",
@@ -510,6 +544,8 @@ export const runsService = {
           goal: payload.goal,
           model: payload.model,
           systemPrompt: payload.systemPrompt,
+          mode,
+          extraInstructions,
           context: payload.initialContext as WorkRunContextItem[] | undefined,
           toolPolicy: payload.toolPolicySnapshot,
           configSnapshot: payload.configSnapshot ?? null,
@@ -731,6 +767,8 @@ export const runsService = {
           workspace: workspaceCtx,
           message,
           model: payload.model,
+          mode: run.mode,
+          extraInstructions: getModeExtraInstructions(run.mode) ?? null,
           context: additionalContext as any,
           attachments: payload.attachments,
           contextIssues: payload.contextIssues,
@@ -802,6 +840,7 @@ export const runsService = {
         workspaceId: sourceRun.workspaceId ?? undefined,
         spaceId: sourceRun.spaceId ?? undefined,
         providerId: sourceRun.providerId,
+        mode: sourceRun.mode,
         model: sourceRun.model ?? undefined,
         goal: message,
         status: "running",

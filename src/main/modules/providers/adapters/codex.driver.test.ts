@@ -13,6 +13,7 @@ import { describe, it, expect } from "vitest";
 import {
   buildCollaborationMode,
   buildCodexReviewTarget,
+  buildDeveloperInstructionsParam,
   CODEX_APP_SERVER_PROTOCOL_VERSION,
   CODEX_ARCHIVED_CHAT_MESSAGE,
   isCodexArchivedThreadError,
@@ -477,6 +478,20 @@ describe("codex.driver / mapRateLimitResponse", () => {
         }],
       },
     });
+  });
+});
+
+describe("codex.driver / buildDeveloperInstructionsParam", () => {
+  it("wraps a mode delta as the top-level developerInstructions param", () => {
+    expect(buildDeveloperInstructionsParam("# Work mode rules")).toEqual({
+      developerInstructions: "# Work mode rules",
+    });
+  });
+
+  it("spreads to nothing when there is no delta", () => {
+    expect(buildDeveloperInstructionsParam(null)).toEqual({});
+    expect(buildDeveloperInstructionsParam(undefined)).toEqual({});
+    expect(buildDeveloperInstructionsParam("")).toEqual({});
   });
 });
 

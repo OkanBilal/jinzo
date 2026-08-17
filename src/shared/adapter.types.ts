@@ -4,6 +4,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import type { ClaudePermissionMode } from "./claude-permission-modes";
+import type { ModeId } from "./modes";
 import type {
   PluginAvailability,
   PluginDisabledReason,
@@ -49,6 +50,13 @@ export interface WorkRunRequest {
   goal: string;
   model?: string | null;
   systemPrompt?: string | null;
+  /** Experience mode snapshot for this run (see `src/shared/modes.ts`). */
+  mode?: ModeId;
+  /**
+   * Mode-resolved instruction delta (see `src/shared/mode-instructions.ts`).
+   * Adapters attach it via their provider's native prompt-layer mechanism.
+   */
+  extraInstructions?: string | null;
   context?: WorkRunContextItem[];
   toolPolicy?: Record<string, unknown> | null;
   /**
@@ -381,6 +389,10 @@ export interface WorkRunContinueRequest {
   message: string;
   /** Model to use for this continuation (overrides provider default) */
   model?: string | null;
+  /** Experience mode snapshot from the run row (see `src/shared/modes.ts`). */
+  mode?: ModeId;
+  /** Mode-resolved instruction delta, re-applied on resume (new threads inherit it). */
+  extraInstructions?: string | null;
   /** Additional context to add */
   context?: WorkRunContextItem[];
   /** File attachments (images/documents) to include in the prompt */

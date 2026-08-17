@@ -65,6 +65,7 @@ export {
   CODEX_ARCHIVED_CHAT_MESSAGE,
   buildCodexReviewTarget,
   buildCollaborationMode,
+  buildDeveloperInstructionsParam,
   isCodexArchivedThreadError,
   isCodexUnavailableThreadError,
   mapSandboxMode,

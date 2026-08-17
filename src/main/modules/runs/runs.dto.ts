@@ -2,6 +2,8 @@
 // Run Types
 // ─────────────────────────────────────────────────────────────
 
+import type { ModeId } from "../../../shared/modes";
+
 export type RunStatus = "queued" | "running" | "succeeded" | "failed" | "canceled";
 export type RunContextKind = "file" | "selection" | "diff" | "git" | "terminal" | "env" | "note";
 export type RunArtifactKind = "patch" | "file" | "log" | "report" | "command_result" | "result" | "prompt_suggestion" | "image" | "document";
@@ -16,6 +18,7 @@ export interface CreateRunPayload {
   workspaceId?: string;
   spaceId?: string;
   providerId: string;
+  mode?: ModeId;
   model?: string;
   title?: string;
   goal?: string;
@@ -46,6 +49,7 @@ export interface RunResponse {
   workspaceId: string | null;
   spaceId: string | null;
   providerId: string;
+  mode: ModeId;
   model: string | null;
   title: string | null;
   goal: string | null;

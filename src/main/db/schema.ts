@@ -294,6 +294,10 @@ export const runs = sqliteTable(
       .notNull()
       .references(() => providers.id, { onDelete: "restrict" }),
 
+    // experience mode snapshot from the space at run start — the run keeps
+    // rendering/resuming under its original mode even if the space changes
+    mode: text("mode", { enum: MODE_IDS }).notNull().default(DEFAULT_MODE_ID),
+
     model: text("model"), // snapshot
     title: text("title"),
     goal: text("goal"), // user intent
@@ -329,6 +333,7 @@ export const runs = sqliteTable(
     index("idx_runs_account_created").on(t.accountId, t.createdAt),
     index("idx_runs_account_status").on(t.accountId, t.status),
     index("idx_runs_provider").on(t.providerId),
+    index("idx_runs_mode").on(t.mode),
     index("idx_runs_workspace").on(t.workspaceId),
     index("idx_runs_space").on(t.spaceId),
     index("idx_runs_updated").on(t.updatedAt),

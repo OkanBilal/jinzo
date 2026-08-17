@@ -5,6 +5,7 @@ import {
   createAccount,
   createProvider,
   createWorkspace,
+  createSpace,
   createRun,
   createRunContext,
   createRunArtifact,
@@ -413,6 +414,90 @@ describe("runsService", () => {
 
     it("returns error for nonexistent run", async () => {
       await expect(runsService.startRun("nonexistent")).rejects.toThrow("Run not found");
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // Mode snapshot (work mode) — executeRun resolves the space's mode,
+  // stamps it on the run row, and hands the resolved instruction delta
+  // to the adapter; continueRun re-applies the stored snapshot.
+  // ─────────────────────────────────────────────────────────────
+  describe("executeRun mode snapshot", () => {
+    function mockStartAdapter() {
+      const startRun = vi.fn().mockResolvedValue({ status: "succeeded" });
+      vi.mocked(createWorkAdapter).mockReturnValue({ startRun } as any);
+      return startRun;
+    }
+
+    it("snapshots work mode from the space and passes the delta to the adapter", async () => {
+      createWorkspace(db, { id: "ws-work", accountId: "default" });
+      createSpace(db, { id: "sp-work", accountId: "default", mode: "work" });
+      const startRun = mockStartAdapter();
+
+      const { runId } = await runsService.executeRun({
+        accountId: "default",
+        workspaceId: "ws-work",
+        spaceId: "sp-work",
+        providerId: "copilot_cli",
+        goal: "write a report",
+      });
+      await flushBackground();
+
+      const run = await runsService.getRunById(runId);
+      expect(run?.mode).toBe("work");
+      const request = startRun.mock.calls[0][0];
+      expect(request.mode).toBe("work");
+      expect(request.extraInstructions).toContain("non-technical");
+    });
+
+    it("defaults to developer mode with no delta when no space resolves", async () => {
+      createWorkspace(db, { id: "ws-dev", accountId: "default" });
+      const startRun = mockStartAdapter();
+
+      const { runId } = await runsService.executeRun({
+        accountId: "default",
+        workspaceId: "ws-dev",
+        providerId: "copilot_cli",
+        goal: "fix the bug",
+      });
+      await flushBackground();
+
+      const run = await runsService.getRunById(runId);
+      expect(run?.mode).toBe("developer");
+      const request = startRun.mock.calls[0][0];
+      expect(request.mode).toBe("developer");
+      expect(request.extraInstructions).toBeNull();
+    });
+  });
+
+  describe("continueRun mode propagation", () => {
+    it("re-applies the run's stored mode and delta on resume", async () => {
+      createWorkspace(db, { id: "ws-cont", accountId: "default" });
+      createRun(db, {
+        id: "run-work",
+        accountId: "default",
+        workspaceId: "ws-cont",
+        providerId: "copilot_cli",
+        mode: "work",
+        status: "succeeded",
+        sessionId: "sess-1",
+      });
+      const continueRun = vi.fn().mockResolvedValue({ status: "succeeded" });
+      vi.mocked(createWorkAdapter).mockReturnValue({
+        continueRun,
+        canResumeSession: vi.fn().mockResolvedValue(true),
+      } as any);
+
+      await runsService.continueRun({
+        runId: "run-work",
+        accountId: "default",
+        message: "add a summary section",
+      });
+      await flushBackground();
+
+      const request = continueRun.mock.calls[0][0];
+      expect(request.mode).toBe("work");
+      expect(request.extraInstructions).toContain("non-technical");
     });
   });
 

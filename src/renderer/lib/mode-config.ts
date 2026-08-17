@@ -30,6 +30,8 @@ export interface ModeRightPanelConfig {
 
 export interface ModeConfigDescriptor {
   mode: ModeId;
+  /** Human-facing name for the mode picker. */
+  label: string;
   sidebar: ModeSidebarConfig;
   rightPanel: ModeRightPanelConfig;
 }
@@ -37,18 +39,23 @@ export interface ModeConfigDescriptor {
 export const MODE_CONFIGS: Record<ModeId, ModeConfigDescriptor> = {
   developer: {
     mode: "developer",
+    label: "Developer",
     sidebar: { title: "Project", itemType: "workspace", defaultRoute: "/code" },
     rightPanel: { component: "workspace" },
   },
-  // Work and chat currently mirror developer; they diverge as their surfaces
-  // land (work: deliverables panel, non-technical run view; chat: /chat route).
+  // Work and chat currently mirror developer's UI shape; they diverge as their
+  // surfaces land (work: deliverables panel, non-technical run view; chat:
+  // /chat route). Work already changes agent behavior via its instructions
+  // delta (see shared/mode-instructions.ts).
   work: {
     mode: "work",
+    label: "Work",
     sidebar: { title: "Project", itemType: "workspace", defaultRoute: "/code" },
     rightPanel: { component: "workspace" },
   },
   chat: {
     mode: "chat",
+    label: "Chat",
     sidebar: { title: "Project", itemType: "workspace", defaultRoute: "/code" },
     rightPanel: { component: "workspace" },
   },

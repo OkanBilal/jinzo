@@ -9,6 +9,8 @@ import { ParticleLogoCanvas } from "./particle-logo-canvas";
 import { Mains } from "@/components/ui/icons";
 import { Button } from "@/components/ui";
 import { SpaceThemePicker } from "./space-theme-picker";
+import { SpaceModePicker } from "./space-mode-picker";
+import type { ModeId } from "../../../../shared/modes";
 import ClaudeSettings from "@/features/settings/components/claude";
 import CodexSettings from "@/features/settings/components/codex";
 import CopilotSettings from "@/features/settings/components/copilot";
@@ -68,6 +70,11 @@ export function WorkspaceEmptyState({
     updateSpace({ id: activeSpace.id, payload: { themeConfig } });
   };
 
+  const handleSelectMode = (mode: ModeId) => {
+    if (!activeSpace || mode === activeSpace.mode) return;
+    updateSpace({ id: activeSpace.id, payload: { mode } });
+  };
+
   if (presentation === "headline") {
     const customizerEase = "cubic-bezier(0.22, 1, 0.36, 1)";
     const customizerDuration = "650ms";
@@ -111,10 +118,14 @@ export function WorkspaceEmptyState({
                   transitionTimingFunction: customizerEase,
                 }}
               >
-                <div className="flex justify-center pb-8">
+                <div className="flex flex-col items-center gap-4 pb-8">
                   <SpaceThemePicker
                     selectedColorIndex={colorIndex}
                     onSelectColor={handleSelectTheme}
+                  />
+                  <SpaceModePicker
+                    value={activeSpace.mode}
+                    onChange={handleSelectMode}
                   />
                 </div>
 

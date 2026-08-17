@@ -162,6 +162,18 @@ function buildCodexConfigOverrides(
   };
 }
 
+/**
+ * Mode-resolved instruction delta as `thread/start` / `thread/resume` params.
+ * Uses the app-server's top-level `developerInstructions` field — deliberately
+ * NOT `collaboration_mode.settings.developer_instructions`, which the plan
+ * toggle resets (see buildCollaborationMode); the two stay orthogonal.
+ */
+export function buildDeveloperInstructionsParam(
+  extraInstructions: string | null | undefined,
+): Record<string, unknown> {
+  return extraInstructions ? { developerInstructions: extraInstructions } : {};
+}
+
 export function buildCollaborationMode(
   planEnabled: boolean,
   model: string | undefined,
@@ -430,6 +442,7 @@ export function createCodexSessionAcquisition(
         overrideSandboxMode ?? config.sandboxMode,
       ),
       ...(model ? { model } : {}),
+      ...buildDeveloperInstructionsParam(request.extraInstructions),
       dynamicTools: MAINS_DYNAMIC_TOOLS,
     };
 
@@ -513,6 +526,7 @@ export function createCodexSessionAcquisition(
         cwd: request.workspace.rootPath,
         ...settings,
         ...(model ? { model } : {}),
+        ...buildDeveloperInstructionsParam(request.extraInstructions),
       });
     } catch (resumeError) {
       if (isCodexArchivedThreadError(resumeError)) {
@@ -528,6 +542,7 @@ export function createCodexSessionAcquisition(
         cwd: request.workspace.rootPath,
         ...settings,
         ...(model ? { model } : {}),
+        ...buildDeveloperInstructionsParam(request.extraInstructions),
         dynamicTools: MAINS_DYNAMIC_TOOLS,
       };
       const threadResult = await server.sendRequest(
