@@ -23,6 +23,7 @@ import { BrowserPanel } from "./features/workspace/components/browser-panel";
 import { useDocumentViewer, DocumentViewerProvider } from "./hooks/use-document-viewer";
 import { DocumentViewerPanel } from "./features/workspace/components/document-viewer-panel";
 import { useWorkspaceVariant } from "./hooks/use-workspace-variant";
+import { useModeConfig } from "./hooks/use-mode-config";
 import { ReduxProvider } from "./providers/redux-provider";
 import { ErrorBoundary, Toaster } from "@/components/ui";
 import { useAppSelector, useAppDispatch } from "./lib/redux/hooks";
@@ -89,7 +90,8 @@ function AppContent() {
   const bottomTerminal = useBottomTerminal();
   const browserPanel = useBrowserPanel();
   const docViewer = useDocumentViewer();
-  const showTerminalToggle = variant !== "default";
+  const modeConfig = useModeConfig();
+  const showTerminalToggle = variant !== "default" && modeConfig.showTerminal;
   const showBrowserToggle = variant !== "default";
   const dispatch = useAppDispatch();
   const sidebarCollapsed = useAppSelector(
@@ -120,9 +122,14 @@ function AppContent() {
         ? RIGHT_PANEL_WIDTH
         : EDGE_GUTTER;
   // The box renders nothing without a workspace, and not at all on the routes
-  // that hide the right panel.
+  // that hide the right panel. Work/chat modes hide the git ceremony entirely
+  // (which also spares the panel's gitFlow status query — it throws on
+  // repo-less trees).
   const sessionPanelShown =
-    isSessionPanelOpen && !!activeWorkspaceId && !hideRightPanel;
+    isSessionPanelOpen &&
+    !!activeWorkspaceId &&
+    !hideRightPanel &&
+    modeConfig.showGitActions;
   // The box floats — overlays the content instead of taking a column — when
   // there is no room to share (another panel already holds the right edge), or
   // nothing to share *with*: the empty state and the other non-run tabs centre

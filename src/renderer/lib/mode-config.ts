@@ -13,7 +13,7 @@
 // (`providerId`, `mode`, `themeConfig`, ...).
 // ─────────────────────────────────────────────────────────────
 
-import { DEFAULT_MODE_ID, type ModeId } from "../../shared/modes";
+import { DEFAULT_MODE_ID, isModeId, type ModeId } from "../../shared/modes";
 
 export type SidebarItemType = "workspace";
 
@@ -34,6 +34,18 @@ export interface ModeConfigDescriptor {
   label: string;
   sidebar: ModeSidebarConfig;
   rightPanel: ModeRightPanelConfig;
+  /** Session panel with the git-actions menu, and its trigger. */
+  showGitActions: boolean;
+  /** Terminal section + the right-panel terminal toggle. */
+  showTerminal: boolean;
+  /** The right panel's Changes (git diff) tab. */
+  showChangesTab: boolean;
+  /** Permission/sandbox dropdown in the composer toolbar. */
+  showPermissionControls: boolean;
+  /** Plan-mode toggle in the composer toolbar. */
+  showPlanControls: boolean;
+  /** Goal-mode toggle in the composer toolbar. */
+  showGoalControls: boolean;
 }
 
 export const MODE_CONFIGS: Record<ModeId, ModeConfigDescriptor> = {
@@ -42,26 +54,47 @@ export const MODE_CONFIGS: Record<ModeId, ModeConfigDescriptor> = {
     label: "Developer",
     sidebar: { title: "Project", itemType: "workspace", defaultRoute: "/code" },
     rightPanel: { component: "workspace" },
+    showGitActions: true,
+    showTerminal: true,
+    showChangesTab: true,
+    showPermissionControls: true,
+    showPlanControls: true,
+    showGoalControls: true,
   },
-  // Work and chat currently mirror developer's UI shape; they diverge as their
-  // surfaces land (work: deliverables panel, non-technical run view; chat:
-  // /chat route). Work already changes agent behavior via its instructions
-  // delta (see shared/mode-harness.ts).
+  // Work: same surfaces minus the developer ceremony — no git actions, no
+  // terminal, no diff tab, no permission dropdown (the harness pins
+  // acceptEdits). Plan mode goes with the permission dropdown, whose menu
+  // hosts it. Files + Activity stay: deliverables are files. Model-level
+  // controls (model select, effort, thinking, fast mode) stay in every mode.
   work: {
     mode: "work",
     label: "Work",
     sidebar: { title: "Project", itemType: "workspace", defaultRoute: "/code" },
     rightPanel: { component: "workspace" },
+    showGitActions: false,
+    showTerminal: false,
+    showChangesTab: false,
+    showPermissionControls: false,
+    showPlanControls: false,
+    showGoalControls: true,
   },
+  // Chat: plain conversation — read-only harness, so every write-adjacent
+  // affordance goes. Files tab stays for viewing.
   chat: {
     mode: "chat",
     label: "Chat",
     sidebar: { title: "Project", itemType: "workspace", defaultRoute: "/code" },
     rightPanel: { component: "workspace" },
+    showGitActions: false,
+    showTerminal: false,
+    showChangesTab: false,
+    showPermissionControls: false,
+    showPlanControls: false,
+    showGoalControls: false,
   },
 };
 
 /** Descriptor for a mode id; unknown/absent ids resolve to the default mode. */
 export function getModeConfig(mode: string | null | undefined): ModeConfigDescriptor {
-  return MODE_CONFIGS[(mode as ModeId) ?? DEFAULT_MODE_ID] ?? MODE_CONFIGS[DEFAULT_MODE_ID];
+  return MODE_CONFIGS[isModeId(mode) ? mode : DEFAULT_MODE_ID];
 }

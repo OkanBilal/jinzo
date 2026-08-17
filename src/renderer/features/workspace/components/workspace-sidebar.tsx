@@ -20,6 +20,7 @@ import { FolderIcon } from "@/components/ui/icons/file-icons";
 
 import { DiffSection } from "@/features/workspace/components/diff-section";
 import { useActiveSpace } from "@/hooks/use-active-space";
+import { useModeConfig } from "@/hooks/use-mode-config";
 import { useOpenDiffInEditor } from "@/features/workspace/hooks/use-open-diff-in-editor";
 import { Button, Text } from "@/components/ui";
 import { ActivitySection } from "./activity-section";
@@ -36,7 +37,12 @@ export function WorkspaceSidebar() {
     (state) => state.workspace.activeWorkspaceId,
   );
 
-  const [sidebarTab, setSidebarTab] = useState<SidebarTab>("files");
+  const [selectedTab, setSidebarTab] = useState<SidebarTab>("files");
+  const { showChangesTab } = useModeConfig();
+  // Derived, not reset: if the mode hides Changes while it is selected,
+  // Files takes over without touching state.
+  const sidebarTab: SidebarTab =
+    !showChangesTab && selectedTab === "changes" ? "files" : selectedTab;
   const openDiffInEditor = useOpenDiffInEditor();
 
   // Get workspace data from the selected workspace ID
@@ -48,7 +54,7 @@ export function WorkspaceSidebar() {
   const { currentData: diff } = useGetLatestWorkspaceDiffSummaryQuery(
     workspaceId || "",
     {
-      skip: !workspaceId,
+      skip: !workspaceId || !showChangesTab,
     },
   );
 
@@ -134,8 +140,13 @@ export function WorkspaceSidebar() {
     );
   }
 
+  const tabCount = showChangesTab ? 3 : 2;
   const tabIndex =
-    sidebarTab === "files" ? 0 : sidebarTab === "changes" ? 1 : 2;
+    sidebarTab === "files"
+      ? 0
+      : sidebarTab === "changes"
+        ? 1
+        : tabCount - 1;
 
   return (
     <div className="flex-1 flex flex-col h-[calc(100%-1rem)] mt-2 -pb-4 rounded-xl overflow-hidden">
@@ -144,7 +155,7 @@ export function WorkspaceSidebar() {
           <div
             className={`absolute top-0.5 bottom-0.5 rounded-[10px] glass-outline dark:bg-primary/10 bg-primary  transition-transform duration-200 ease-out`}
             style={{
-              width: "calc((100% - 0.75rem) / 3)",
+              width: `calc((100% - ${tabCount * 0.25}rem) / ${tabCount})`,
               left: "0.125rem",
               transform: `translateX(calc(${tabIndex} * (100% + 0.25rem)))`,
             }}
@@ -159,20 +170,22 @@ export function WorkspaceSidebar() {
           >
             Files
           </Button>
-          <Button
-            onClick={() => setSidebarTab("changes")}
-            className={`relative z-(--z-base) flex-1 min-w-0 flex items-center justify-center gap-1 whitespace-nowrap text-xs font-medium py-1 px-2  transition-colors ${
-              sidebarTab === "changes"
-                ? "text-primary-900 dark:text-primary-100"
-                : "text-primary-800 dark:text-primary-200 hover:text-primary-800 dark:hover:text-primary-200"
-            }`}
-          >
-            {/* The label may truncate under a narrow panel; the count never does. */}
-            <span className="truncate">Changes</span>
-            {changedFilesCount > 0 && (
-              <span className="shrink-0">({changedFilesCount})</span>
-            )}
-          </Button>
+          {showChangesTab && (
+            <Button
+              onClick={() => setSidebarTab("changes")}
+              className={`relative z-(--z-base) flex-1 min-w-0 flex items-center justify-center gap-1 whitespace-nowrap text-xs font-medium py-1 px-2  transition-colors ${
+                sidebarTab === "changes"
+                  ? "text-primary-900 dark:text-primary-100"
+                  : "text-primary-800 dark:text-primary-200 hover:text-primary-800 dark:hover:text-primary-200"
+              }`}
+            >
+              {/* The label may truncate under a narrow panel; the count never does. */}
+              <span className="truncate">Changes</span>
+              {changedFilesCount > 0 && (
+                <span className="shrink-0">({changedFilesCount})</span>
+              )}
+            </Button>
+          )}
           <Button
             onClick={() => setSidebarTab("reviews")}
             className={`relative z-(--z-base) flex-1 min-w-0 whitespace-nowrap truncate text-xs font-medium py-1 px-2 rounded-lg transition-colors ${

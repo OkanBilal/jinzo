@@ -2,6 +2,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { getProviderVariant } from "@/lib/provider-variants";
 import { useIsMobile } from "@/lib/platform";
+import { useModeConfig } from "@/hooks/use-mode-config";
 import {
   CompactComposerControls,
   SendButton,
@@ -99,6 +100,7 @@ export function InputToolbar({
   disabled,
 }: InputToolbarProps) {
   const isMobile = useIsMobile();
+  const modeConfig = useModeConfig();
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [showFileDropdown, setShowFileDropdown] = useState(false);
   const [showPermissionDropdown, setShowPermissionDropdown] = useState(false);
@@ -239,20 +241,24 @@ export function InputToolbar({
               )}
             </>
           )}
-          <PermissionModeDropdown
-            permissionMode={permissionMode}
-            onPermissionModeChange={onPermissionModeChange}
-            isOpen={showPermissionDropdown}
-            onToggle={() => setShowPermissionDropdown(!showPermissionDropdown)}
-            dropdownRef={permissionDropdownRef}
-            variant={variant}
-            planMode={planMode}
-            onPlanModeToggle={onPlanModeToggle}
-            goalMode={goalMode}
-          />
-          {getProviderVariant(variant).supportsGoalMode && onGoalModeToggle && (
-            <GoalButton goalMode={!!goalMode} onToggle={onGoalModeToggle} />
+          {modeConfig.showPermissionControls && (
+            <PermissionModeDropdown
+              permissionMode={permissionMode}
+              onPermissionModeChange={onPermissionModeChange}
+              isOpen={showPermissionDropdown}
+              onToggle={() => setShowPermissionDropdown(!showPermissionDropdown)}
+              dropdownRef={permissionDropdownRef}
+              variant={variant}
+              planMode={planMode}
+              onPlanModeToggle={onPlanModeToggle}
+              goalMode={goalMode}
+            />
           )}
+          {getProviderVariant(variant).supportsGoalMode &&
+            modeConfig.showGoalControls &&
+            onGoalModeToggle && (
+              <GoalButton goalMode={!!goalMode} onToggle={onGoalModeToggle} />
+            )}
         </div>
         <div className="flex items-center ">
           <SendButton

@@ -2,6 +2,7 @@ import { Toggle, Terminal, TerminalOpen, ToggleClose, Web } from "@/components/u
 import { Button, toast } from "@/components/ui";
 import { useAppSelector } from "@/lib/redux/hooks";
 import { useCapabilities } from "@/lib/platform";
+import { useModeConfig } from "@/hooks/use-mode-config";
 import { SessionPanelTrigger } from "@/features/workspace/components/session-panel";
 
 interface ToggleButtonProps {
@@ -23,6 +24,7 @@ export function ToggleButton({
 }: ToggleButtonProps) {
   const activeWorkspaceId = useAppSelector((state) => state.workspace.activeWorkspaceId);
   const { embeddedBrowser } = useCapabilities();
+  const { showGitActions } = useModeConfig();
   return (
     <div
       data-layout-toggle
@@ -34,7 +36,7 @@ export function ToggleButton({
           : "0.8125rem",
       }}
     >
-      <SessionPanelTrigger />
+      {showGitActions && <SessionPanelTrigger />}
       <div className="flex items-center gap-1.5 glass-outline rounded-full p-0.5">
       {onBrowserToggle && embeddedBrowser && (
         <Button

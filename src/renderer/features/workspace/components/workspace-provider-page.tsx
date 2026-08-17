@@ -28,6 +28,7 @@ import { useAppSelector } from "@/lib/redux/hooks";
 import { useSetMainHeader } from "@/hooks/use-main-header";
 import { useWorkspaceRouteTopRounding } from "@/hooks/use-workspace-route-top-rounding";
 import { useBottomTerminal } from "@/hooks/use-bottom-terminal";
+import { useModeConfig } from "@/hooks/use-mode-config";
 import {
   isExitPlanApproval,
   respondToExitPlanApproval,
@@ -43,12 +44,14 @@ export function WorkspaceProviderPage({
   variant,
 }: WorkspaceProviderPageProps) {
   // Per-variant page behavior comes straight from the descriptor table —
-  // no props to forget or default divergently.
+  // no props to forget or default divergently. Per-mode shape comes from its
+  // sibling table the same way.
   const {
     planExit: planExitConfig,
     enableForkRun,
     enableSuggestions,
   } = getProviderVariant(variant);
+  const modeConfig = useModeConfig();
   const onboardingCompleted = useAppSelector(
     (state) => state.appSettings.onboardingCompleted,
   );
@@ -359,7 +362,7 @@ export function WorkspaceProviderPage({
       ) : null}
       </div>
 
-      {ws.currentWorkspace && (
+      {ws.currentWorkspace && modeConfig.showTerminal && (
         <TerminalSection
           workspaceId={ws.currentWorkspace.id}
           rootPath={ws.currentWorkspace.rootPath}
