@@ -21,13 +21,13 @@ import {
   Trash,
   Option,
   Connect,
-  Branch,
   Archive,
   Settings,
   External,
   OpenWith,
   Edit,
   WorkspaceStatusIcon,
+  ProjectFolder,
 } from "@/components/ui/icons";
 import { useGetInstalledAppsQuery } from "@/lib/redux/api";
 import { useGetLatestWorkspaceDiffSummaryQuery } from "@/lib/redux/api/workspaceApi";
@@ -202,7 +202,7 @@ export default function WorkspaceItem({
             {grouping !== "project" && (
               <><span className="shrink-0 ">
                 {projectIcon ?? (
-                  <Branch className="size-3.5 text-primary-800 dark:text-primary-200" />
+                  <ProjectFolder className="size-3.5 text-primary-800 dark:text-primary-200" />
                 )}
               </span><Text as="span" size="s" tone="contrast" className="truncate">
                   {name}

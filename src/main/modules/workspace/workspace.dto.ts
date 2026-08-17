@@ -161,7 +161,14 @@ export interface ScriptCompleteEvent {
 // ── Activity ──
 // ─────────────────────────────────────────────────────────────
 
-export type ActivityType = "diff" | "review" | "finding" | "commit" | "pr" | "push";
+export type ActivityType =
+  | "diff"
+  | "review"
+  | "finding"
+  | "commit"
+  | "pr"
+  | "push"
+  | "pull";
 
 export interface ActivityResponse {
   id: string;

@@ -108,7 +108,14 @@ export interface WorkspaceIntakePayload {
 // ── Activity ──
 // ─────────────────────────────────────────────────────────────
 
-export type ActivityType = "diff" | "review" | "finding" | "commit" | "pr" | "push";
+export type ActivityType =
+  | "diff"
+  | "review"
+  | "finding"
+  | "commit"
+  | "pr"
+  | "push"
+  | "pull";
 
 export interface WorkspaceActivity {
   id: string;
@@ -374,6 +381,26 @@ export const workspaceApi = baseApi.injectEndpoints({
         args: [id, newBranchName],
       }),
       invalidatesTags: ["WorkspaceGitStates"],
+    }),
+
+    // Branches off the workspace's HEAD and checks the new branch out. Touches
+    // three caches: the workspace row (the branch forked from becomes its PR
+    // base), the live git states, and Projects — the branch list this was
+    // launched from is a project read, and it has a new name to show.
+    createWorkspaceBranch: builder.mutation<
+      void,
+      { workspaceId: string; branch: string }
+    >({
+      query: ({ workspaceId, branch }) => ({
+        handler: CHANNELS.workspace.createBranch,
+        args: [workspaceId, branch],
+      }),
+      invalidatesTags: (_result, _error, { workspaceId }) => [
+        "Workspaces",
+        "WorkspaceGitStates",
+        "Projects",
+        { type: "Workspaces", id: workspaceId },
+      ],
     }),
 
     // Checks out an existing branch in the workspace and re-records its diff.
@@ -647,6 +674,7 @@ export const {
   useArchiveWorkspaceMutation,
   useUnarchiveWorkspaceMutation,
   useSelectWorkspaceDirectoryMutation,
+  useCreateWorkspaceBranchMutation,
   useRenameWorkspaceBranchMutation,
   useSwitchWorkspaceBranchMutation,
   useDiscardWorkspacePathsMutation,

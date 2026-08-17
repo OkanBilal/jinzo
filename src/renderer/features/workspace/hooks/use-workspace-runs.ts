@@ -19,8 +19,9 @@ import { appApi } from "@/lib/transport";
 import type { Run, RunEvent, RunArtifact, ToolCall } from "../types";
 import type { RunTurn } from "@/lib/redux/api";
 import { toast } from "@/components/ui";
-import { useAppDispatch } from "@/lib/redux/hooks";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { workspaceApi, useArchiveRunMutation } from "@/lib/redux/api";
+import { clearPendingRunId } from "@/lib/redux/slices/workspaceSlice";
 import { mergeRunEvents } from "../lib/run-event-mappers";
 import { createRunCache, pruneRunMap } from "../lib/run-cache";
 import { useRunOperations } from "./use-run-operations";
@@ -47,6 +48,14 @@ export function useWorkspaceRuns(
   const [archiveRun] = useArchiveRunMutation();
 
   const eventsEndRef = useRef<HTMLDivElement>(null);
+  // Which run a jump asked for, held in a ref: the mount effect depends on
+  // `loadWorkspaceRuns`, so reading this from state would re-clear the page
+  // every time the request is set or consumed.
+  const pendingRunId = useAppSelector((s) => s.workspace.pendingRunId);
+  const pendingRunIdRef = useRef(pendingRunId);
+  useEffect(() => {
+    pendingRunIdRef.current = pendingRunId;
+  }, [pendingRunId]);
   // All run bookkeeping — LRU, incremental cursors, in-flight dedup, finalized
   // set — lives in this framework-free state machine (see lib/run-cache.ts).
   // A lazy `useState` rather than a ref: the box is never reassigned (only the
@@ -193,17 +202,24 @@ export function useWorkspaceRuns(
             : result.data;
 
           setRuns(filteredRuns);
-          if (filteredRuns.length > 0) {
-            const firstRunId = filteredRuns[0].id;
-            setActiveRunId(firstRunId);
-            loadRunDetails(firstRunId);
+          // A jump from outside the page (the background-runs dock) names the
+          // run to open; every other arrival lands on the newest one. Read
+          // through a ref so the request can't re-trigger the mount effect.
+          const requestedId = pendingRunIdRef.current;
+          if (requestedId) dispatch(clearPendingRunId());
+          const target =
+            filteredRuns.find((run: Run) => run.id === requestedId) ??
+            filteredRuns[0];
+          if (target) {
+            setActiveRunId(target.id);
+            loadRunDetails(target.id);
           }
         }
       } catch (err) {
         console.error("Failed to load workspace runs:", err);
       }
     },
-    [loadRunDetails, providerId],
+    [loadRunDetails, providerId, dispatch],
   );
 
   useEffect(() => {

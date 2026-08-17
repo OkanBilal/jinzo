@@ -104,6 +104,7 @@ vi.mock("../git/git.service", () => ({
     renameBranch: vi.fn(),
     discardPaths: vi.fn(),
     checkoutBranch: vi.fn(),
+    createBranch: vi.fn(),
     captureDiffSnapshot: vi.fn(),
     removeWorktree: vi.fn(),
   },
@@ -3399,6 +3400,135 @@ describe("workspaceService — git operations", () => {
         "workspace:gitStateChanged",
         expect.anything(),
       );
+    });
+  });
+
+  describe("createBranch", () => {
+    /** The file's existing pattern for capturing an emitted event. */
+    function captureEmits() {
+      const send = vi.fn();
+      vi.mocked(BrowserWindow.getAllWindows).mockReturnValue([
+        { isDestroyed: () => false, webContents: { send } } as any,
+      ]);
+      registerBrowserWindowSink();
+      return send;
+    }
+
+    it("branches in the workspace's own path and announces the new name", async () => {
+      const send = captureEmits();
+      createWorkspace(db, { id: "ws-cb", rootPath: "/repos/cb" });
+      gitMock.getCurrentBranch.mockResolvedValue("dev");
+      gitMock.createBranch.mockResolvedValue(undefined);
+
+      await workspaceService.createBranch("ws-cb", "  feature/new  ");
+
+      // Trimmed once, at the seam — git would take the padded name literally.
+      expect(gitMock.createBranch).toHaveBeenCalledWith(
+        "/repos/cb",
+        "feature/new",
+      );
+      expect(send).toHaveBeenCalledWith("workspace:gitStateChanged", {
+        workspaceId: "ws-cb",
+        branch: "feature/new",
+        pathExists: true,
+      });
+    });
+
+    // Work started from `dev` belongs back in `dev` — that's what baseBranch is.
+    it("makes the branch it forked off the workspace's PR base", async () => {
+      createWorkspace(db, {
+        id: "ws-cb-base",
+        rootPath: "/repos/cbbase",
+        baseBranch: "main",
+      });
+      gitMock.getCurrentBranch.mockResolvedValue("dev");
+      gitMock.createBranch.mockResolvedValue(undefined);
+
+      await workspaceService.createBranch("ws-cb-base", "feature/from-dev");
+
+      expect((await workspaceRepo.findById("ws-cb-base"))!.baseBranch).toBe(
+        "dev",
+      );
+    });
+
+    // Read before the checkout moves HEAD, or every branch would target itself.
+    it("records the parent, not the branch just created", async () => {
+      createWorkspace(db, {
+        id: "ws-cb-order",
+        rootPath: "/repos/cborder",
+        baseBranch: "main",
+      });
+      let currentBranch = "dev";
+      gitMock.getCurrentBranch.mockImplementation(async () => currentBranch);
+      gitMock.createBranch.mockImplementation(async () => {
+        currentBranch = "feature/ordered";
+      });
+
+      await workspaceService.createBranch("ws-cb-order", "feature/ordered");
+
+      expect((await workspaceRepo.findById("ws-cb-order"))!.baseBranch).toBe(
+        "dev",
+      );
+    });
+
+    it("leaves the base alone when HEAD is detached", async () => {
+      createWorkspace(db, {
+        id: "ws-cb-det",
+        rootPath: "/repos/cbdet",
+        baseBranch: "main",
+      });
+      gitMock.getCurrentBranch.mockResolvedValue("HEAD");
+      gitMock.createBranch.mockResolvedValue(undefined);
+
+      await workspaceService.createBranch("ws-cb-det", "feature/detached");
+
+      expect((await workspaceRepo.findById("ws-cb-det"))!.baseBranch).toBe(
+        "main",
+      );
+    });
+
+    // `checkout -b` leaves HEAD on the same commit, so the recorded diff still
+    // describes the same tree — recapturing it would be pure cost.
+    it("leaves the recorded diff alone", async () => {
+      createWorkspace(db, { id: "ws-cb2", rootPath: "/repos/cb2" });
+      createWorkspaceDiff(db, {
+        workspaceId: "ws-cb2",
+        baseRef: "sha-head",
+        diffText: "diff",
+      });
+      gitMock.createBranch.mockResolvedValue(undefined);
+
+      await workspaceService.createBranch("ws-cb2", "feature/keep");
+
+      expect(gitMock.captureDiffSnapshot).not.toHaveBeenCalled();
+      expect(
+        (await workspaceRepo.findLatestDiffByWorkspace("ws-cb2"))?.diffText,
+      ).toBe("diff");
+    });
+
+    it("does not announce a branch when git refuses the name", async () => {
+      const send = captureEmits();
+      createWorkspace(db, { id: "ws-cb3", rootPath: "/repos/cb3" });
+      gitMock.createBranch.mockRejectedValue(
+        new Error("a branch named 'feature' already exists"),
+      );
+
+      await expect(
+        workspaceService.createBranch("ws-cb3", "feature"),
+      ).rejects.toThrow("already exists");
+      expect(send).not.toHaveBeenCalledWith(
+        "workspace:gitStateChanged",
+        expect.anything(),
+      );
+    });
+
+    it("rejects an empty name before touching git", async () => {
+      createWorkspace(db, { id: "ws-cb4", rootPath: "/repos/cb4" });
+
+      await expect(
+        workspaceService.createBranch("ws-cb4", "   "),
+      ).rejects.toThrow("Branch name is required");
+      expect(gitMock.createBranch).not.toHaveBeenCalled();
     });
   });
 

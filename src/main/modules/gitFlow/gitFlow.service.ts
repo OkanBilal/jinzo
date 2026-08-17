@@ -108,6 +108,12 @@ export interface CommitResult {
   pushed: boolean;
 }
 
+export interface PullResult {
+  branch: string;
+  /** Commits fast-forwarded in. 0 means the branch was already up to date. */
+  received: number;
+}
+
 /** What to stage before committing. */
 type StageMode = "all" | "none" | string[];
 
@@ -475,6 +481,12 @@ export const gitFlowService = {
     workspaceId: string;
     providerId: string;
     model?: string;
+    /**
+     * The base the PR will target, when the form's picker has moved it off the
+     * workspace default. The description has to describe the diff the PR will
+     * actually contain, so the chosen base wins here too.
+     */
+    base?: string;
   }): Promise<{ title: string; body: string }> {
     const { rootPath } = await this.resolveRoot(params.workspaceId);
 
@@ -483,7 +495,8 @@ export const gitFlowService = {
     // after the branch is committed and the tree is clean. Try the remote
     // base first (the PR target), then the local base. Fall back to the
     // working-tree + staged diff only when no base is known.
-    const baseBranch = await this.resolveBaseBranch(params.workspaceId);
+    const baseBranch =
+      params.base?.trim() || (await this.resolveBaseBranch(params.workspaceId));
     let diff = "";
     let baseRef: string | null = null;
     if (baseBranch) {
@@ -721,6 +734,45 @@ export const gitFlowService = {
     return { hash: "", summary: "Pushed", pushed: true };
   },
 
+  /**
+   * Fast-forward the current branch from its upstream (see
+   * `gitService.pullFastForward` for why nothing else is on offer).
+   *
+   * When commits actually arrive, HEAD has moved and the recorded diff is
+   * anchored to where it used to be — left alone, the Changes tab would show
+   * every pulled commit as local work. `resyncDiff` re-anchors it to the new
+   * HEAD, the same correction a commit makes.
+   */
+  async pull(workspaceId: string): Promise<PullResult> {
+    const { rootPath } = await this.resolveRoot(workspaceId);
+    const branch = await gitService.getCurrentBranch(rootPath);
+    if (!branch || branch === "HEAD") {
+      throw new Error("Cannot pull while HEAD is detached");
+    }
+    // Never pull from a remote the project doesn't recognize.
+    await this.assertRemoteMatches(workspaceId, rootPath);
+
+    const { received } = await gitService.pullFastForward(rootPath);
+    if (received === 0) return { branch, received };
+
+    try {
+      await workspaceService.resyncDiff(workspaceId);
+    } catch (err) {
+      // Best-effort: the pull itself landed, which is the part that can't be
+      // retried for free. A stale diff row is fixed by the next resync.
+      console.error("[GitFlow] Post-pull diff resync failed:", err);
+    }
+
+    logWorkspaceActivity({
+      workspaceId,
+      type: "pull",
+      title: `You pulled ${received} commit${received === 1 ? "" : "s"}`,
+      metadata: { branch, commits: received },
+    });
+
+    return { branch, received };
+  },
+
   // ───────────────────────────────────────────────────────────
   // Publish (create the GitHub repo for a repo with no remote)
   // ───────────────────────────────────────────────────────────
@@ -890,6 +942,9 @@ export const gitFlowService = {
           workspaceId: params.workspaceId,
           providerId: params.providerId,
           model: params.model,
+          // Same base the PR will target — otherwise the generated summary
+          // describes a diff against a branch we aren't opening against.
+          base: params.base,
         });
         title = gen.title;
         if (!body) body = gen.body;

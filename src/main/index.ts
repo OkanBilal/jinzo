@@ -77,6 +77,7 @@ import {
   createMainWindow,
   createSplashWindow,
   closeSplashWindow,
+  openAboutWindow,
 } from "./windows";
 import {
   registerImageProxyScheme,
@@ -902,20 +903,7 @@ async function initializeApp() {
             submenu: [
               {
                 label: "About Mains",
-                click: () => {
-                  const iconPath = !app.isPackaged
-                    ? path.join(app.getAppPath(), "src/renderer/public/icon.png")
-                    : fs.existsSync(path.join(process.resourcesPath, "icon.png"))
-                      ? path.join(process.resourcesPath, "icon.png")
-                      : path.join(app.getAppPath(), ".vite/renderer/icon.png");
-                  dialog.showMessageBox({
-                    type: "info",
-                    title: "About Mains",
-                    message: "Mains",
-                    detail: `Version ${app.getVersion()}\n`,
-                    icon: nativeImage.createFromPath(iconPath),
-                  });
-                },
+                click: () => openAboutWindow(),
               },
               {
                 label: "Check for Updates…",
@@ -967,7 +955,7 @@ async function initializeApp() {
             click: () => shell.openExternal("https://docs.mains.dev"),
           },
           {
-            label: "Report an Issue",
+            label: "Report a Bug",
             click: () => shell.openExternal("https://github.com/mainsdotdev/mains/issues"),
           },
         ],

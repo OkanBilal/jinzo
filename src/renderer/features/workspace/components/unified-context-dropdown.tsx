@@ -623,7 +623,7 @@ export function UnifiedContextDropdown({
                                       as="span"
                                       size="t"
                                       tone="subtle"
-                                      className="px-1.5 py-px rounded-full bg-primary-200/50 dark:bg-primary-700/50"
+                                      className="px-1.5 py-px rounded-full glass-outline bg-primary-200/50 dark:bg-primary-700/20"
                                     >
                                       {scopeLabel}
                                     </Text>

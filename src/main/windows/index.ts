@@ -10,3 +10,5 @@ export {
   getSplashWindow,
   type SplashWindowOptions,
 } from "./splashWindow";
+
+export { openAboutWindow, getAboutWindow } from "./aboutWindow";

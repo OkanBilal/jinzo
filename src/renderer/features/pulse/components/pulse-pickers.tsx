@@ -525,6 +525,7 @@ export function SchedulePicker({
               Frequency
             </FieldLabel>
             <Select<PulseFrequency>
+              size="sm"
               value={frequency}
               aria-label="Frequency"
               options={FREQUENCY_OPTIONS}
@@ -554,6 +555,7 @@ export function SchedulePicker({
                 Time
               </FieldLabel>
               <Select<string>
+                size="sm"
                 value={`${hour}:${minute}`}
                 aria-label="Time"
                 options={TIME_OPTIONS}

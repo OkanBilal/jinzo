@@ -35,6 +35,11 @@ export function registerRunsIpc(): void {
   );
 
   ipcMain.handle(
+    CHANNELS.runs.listActive,
+    handle(() => runsService.listActiveRuns()),
+  );
+
+  ipcMain.handle(
     CHANNELS.runs.getById,
     handle((id: string) => runsService.getRunById(id)),
   );
@@ -198,6 +203,7 @@ export function unregisterRunsIpc(): void {
   [
     CHANNELS.runs.getAll,
     CHANNELS.runs.listArchived,
+    CHANNELS.runs.listActive,
     CHANNELS.runs.getById,
     CHANNELS.runs.getByAccount,
     CHANNELS.runs.getByWorkspace,

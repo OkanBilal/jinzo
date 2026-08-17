@@ -77,6 +77,8 @@ const CONFIG: ResourceWizardConfig = {
     "This will disconnect all projects and remove all Sentry data. This action cannot be undone.",
 
   identityForItem: (project) => project.slug,
+  searchTextForItem: (project) =>
+    [project.name, project.slug, project.platform].filter(Boolean).join(" "),
   identityForCurrent: (current) => current.slug,
 
   renderItemForSelect: (project) => (

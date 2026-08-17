@@ -63,6 +63,7 @@ const CONFIG: ResourceWizardConfig = {
     "This will disconnect all organizations and remove Socket.dev data. This action cannot be undone.",
 
   identityForItem: (org) => org.slug,
+  searchTextForItem: (org) => [org.name, org.slug].filter(Boolean).join(" "),
   identityForCurrent: (current) => current.slug,
 
   renderItemForSelect: (org) => (

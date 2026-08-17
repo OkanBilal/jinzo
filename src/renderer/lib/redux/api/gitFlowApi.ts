@@ -59,6 +59,12 @@ export interface CommitResult {
   pushed: boolean;
 }
 
+export interface PullResult {
+  branch: string;
+  /** Commits fast-forwarded in. 0 means the branch was already up to date. */
+  received: number;
+}
+
 export interface CommitGitFlowPayload {
   workspaceId: string;
   message?: string;
@@ -115,6 +121,20 @@ export const gitFlowApi = baseApi.injectEndpoints({
       ],
     }),
 
+    // Fast-forward from the upstream. Invalidates the same pair as push, plus
+    // the diff: a pull that lands moves HEAD, and the recorded diff is
+    // re-anchored to it main-side.
+    pullGitFlow: builder.mutation<PullResult, string>({
+      query: (workspaceId) => ({
+        handler: CHANNELS.gitFlow.pull,
+        args: [workspaceId],
+      }),
+      invalidatesTags: (_result, _error, workspaceId) => [
+        { type: "WorkspaceDiffs", id: workspaceId },
+        { type: "WorkspaceActivity", id: workspaceId },
+      ],
+    }),
+
     createPrGitFlow: builder.mutation<{ url: string }, CreatePrGitFlowPayload>({
       query: (payload) => ({
         handler: CHANNELS.gitFlow.createPr,
@@ -145,7 +165,13 @@ export const gitFlowApi = baseApi.injectEndpoints({
 
     generatePrBodyGitFlow: builder.mutation<
       { title: string; body: string },
-      { workspaceId: string; providerId: string; model?: string }
+      {
+        workspaceId: string;
+        providerId: string;
+        model?: string;
+        /** Base the PR will target — the summary describes the diff against it. */
+        base?: string;
+      }
     >({
       query: (payload) => ({
         handler: CHANNELS.gitFlow.generatePrBody,
@@ -180,6 +206,7 @@ export const {
   useGetGitFlowStatusQuery,
   useCommitGitFlowMutation,
   usePushGitFlowMutation,
+  usePullGitFlowMutation,
   useCreatePrGitFlowMutation,
   useGenerateCommitMessageGitFlowMutation,
   useGeneratePrBodyGitFlowMutation,

@@ -862,6 +862,11 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   // ─── Initialize ───
   const session: RunSession = { runId, project, abort, finalize, updateBaseRef };
   runSessionRegistry.register(runId, session);
+  // Announce the live session, not just its terminal status. Clients that did
+  // not start this run (another window, a remote client, the background-runs
+  // dock) learn about it from this event — the DB row alone is invisible until
+  // something refetches.
+  broadcastStatusChanged("running");
 
   // Fire-and-forget initialization. Each helper handles its own errors.
   // Keep the baseRef-capture promise so finalize can await it (see persistFinalDiff).

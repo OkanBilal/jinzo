@@ -83,6 +83,8 @@ const CONFIG: ResourceWizardConfig = {
 
   identityForItem: (project) => project.key,
   identityForCurrent: (current) => current.key,
+  searchTextForItem: (project) =>
+    [project.name, project.key].filter(Boolean).join(" "),
 
   renderItemForSelect: (project) => (
     <div className="flex items-center gap-2">

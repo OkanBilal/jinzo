@@ -89,6 +89,9 @@ const CONFIG: ResourceWizardConfig = {
 
   identityForItem: (project) => String(project.id),
   identityForCurrent: (current) => current.externalId,
+  // The id is opaque here, so the search text is the label the row renders.
+  searchTextForItem: (project) =>
+    [project.pathWithNamespace, project.name].filter(Boolean).join(" "),
 
   renderItemForSelect: (project) => (
     <div className="flex items-center gap-2">

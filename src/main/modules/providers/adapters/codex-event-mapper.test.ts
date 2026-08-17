@@ -127,6 +127,60 @@ describe("Codex event mapper", () => {
     expect(state.agentMessageBuffer).toBe("");
   });
 
+  it("strips citation annotations from streamed and flushed messages", () => {
+    const { mapper } = createHarness();
+
+    // Web-search answers wrap citations in private-use markers whose payload
+    // spans deltas — the live preview must not flash the half-received block.
+    const partial = mapper.mapNotification(
+      "item/agentMessage/delta",
+      {
+        threadId: "thread-parent",
+        itemId: "message-1",
+        delta: "Buy once and play on Xbox and PC \uE200cite\uE202turn1",
+      },
+      "run-1",
+    );
+    const rest = mapper.mapNotification(
+      "item/agentMessage/delta",
+      {
+        threadId: "thread-parent",
+        itemId: "message-1",
+        delta: "view0\uE202turn2view3\uE201 Included at launch.",
+      },
+      "run-1",
+    );
+    const completed = mapper.mapNotification(
+      "item/completed",
+      {
+        threadId: "thread-parent",
+        item: { id: "message-1", type: "agentMessage" },
+      },
+      "run-1",
+    );
+
+    expect(partial).toContainEqual(
+      expect.objectContaining({
+        content: "Buy once and play on Xbox and PC",
+        ephemeral: true,
+      }),
+    );
+    expect(rest).toContainEqual(
+      expect.objectContaining({
+        content: "Buy once and play on Xbox and PC Included at launch.",
+        ephemeral: true,
+      }),
+    );
+    expect(completed).toContainEqual(
+      expect.objectContaining({
+        type: "artifact",
+        kind: "report",
+        content: "Buy once and play on Xbox and PC Included at launch.",
+        metadata: { source: "agent_message", itemId: "message-1" },
+      }),
+    );
+  });
+
   it("deduplicates live usage snapshots for the same turn", () => {
     const { mapper } = createHarness();
 
