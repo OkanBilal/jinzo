@@ -221,10 +221,10 @@ Core tables:
 - Semantics-bearing methods are tested against real temporary git repos, not a mocked `simple-git`
 
 **Git Flow Module** (`src/main/modules/gitFlow/`)
-- Deterministic commit / push / PR orchestration for the UI git-actions panel: `getStatus`, `generateCommitMessage`, `generatePrBody`, `commit`, `push`, `createPr`, `publish`, `getPublishPreflight`
+- Deterministic commit / push / pull / PR orchestration for the UI git-actions panel: `getStatus`, `generateCommitMessage`, `generatePrBody`, `commit`, `push`, `pull`, `createPr`, `publish`, `getPublishPreflight`
 - Also the shared building blocks the mains tools (`CommitChanges` / `CreatePR`) delegate to, so git work lives in one place
 - Stages with `simple-git`, generates messages via a one-shot headless `adapter.generateText` call, creates PRs with `gh`
-- Renderer side: `features/workspace/components/session-panel/git-actions/` — one component per row (changes / branch / commit / pr / publish), each owning its own form state. `useGitActionsPanel` holds only what several rows share: the status query + `refreshStatus`, the accordion, and the single `pending` action. Publish replaces PR when the repo has no remote. See CONTEXT.md for the rules.
+- Renderer side: `features/workspace/components/session-panel/git-actions/` — one component per row (changes / branch / commit / pull / pr / publish), each owning its own form state (pull owns none — it is the one row that takes no input). `useGitActionsPanel` holds only what several rows share: the status query + `refreshStatus`, the accordion, and the single `pending` action. Publish replaces PR when the repo has no remote. See CONTEXT.md for the rules.
 
 **Remote Backend** (`src/main/modules/localBackend/`, `ssh/`, `tailscale/`, `backendAuth/`)
 - `localBackend` — turns the running desktop app into a backend other clients can drive (phone browser, LAN device, another mains over SSH), via an in-process WS host on a fixed port over the same handler registry + DB. Two access paths: network bind (token-gated) and Tailscale HTTPS.

@@ -17,6 +17,7 @@ export type PendingAction =
   | "commit"
   | "commitPush"
   | "push"
+  | "pull"
   | "pr"
   | "publish"
   | "newBranch"
@@ -148,6 +149,12 @@ export function useGitActionsPanel(workspaceId: string) {
     changedFilePaths: status?.files ?? [],
     hasChanges: (status?.changedFiles ?? 0) > 0,
     canPush: (status?.ahead ?? 0) > 0 || (status ? !status.hasUpstream : false),
+    // Behind is only as fresh as the last fetch, so it decides what the Pull
+    // row *shows*, never whether it can run — pulling is how it gets fresh.
+    behind: status?.behind ?? 0,
+    // Without an upstream there is nothing to pull from: the branch exists
+    // only locally until it's pushed.
+    hasUpstream: status?.hasUpstream ?? false,
     // Default to "has remote" until status loads so we don't flash the Publish
     // action for normal repos. Only a loaded status with hasRemote:false swaps
     // in the Publish flow (push/PR are impossible without a remote).

@@ -34,6 +34,11 @@ export function registerGitFlowIpc(): void {
   );
 
   ipcMain.handle(
+    CHANNELS.gitFlow.pull,
+    handle((workspaceId: string) => gitFlowService.pull(workspaceId)),
+  );
+
+  ipcMain.handle(
     CHANNELS.gitFlow.createPr,
     handle(
       (payload: {
@@ -99,6 +104,7 @@ export function unregisterGitFlowIpc(): void {
     CHANNELS.gitFlow.getStatus,
     CHANNELS.gitFlow.commit,
     CHANNELS.gitFlow.push,
+    CHANNELS.gitFlow.pull,
     CHANNELS.gitFlow.createPr,
     CHANNELS.gitFlow.generateCommitMessage,
     CHANNELS.gitFlow.generatePrBody,

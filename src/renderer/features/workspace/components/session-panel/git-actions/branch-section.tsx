@@ -57,8 +57,12 @@ export function BranchSection({ panel }: { panel: GitActionsPanel }) {
   // The form is opened by a deliberate click on a single-field form; landing in
   // the field is the only thing that click can have meant. (It can't autoFocus:
   // `PanelCollapse` renders its children while closed.)
+  //
+  // `preventScroll` because the row is still mid-collapse when this runs: a
+  // plain focus makes the panel's own scroll container jump to "reveal" a field
+  // whose height is still animating, which reads as the form sliding in late.
   useEffect(() => {
-    if (isCreating) newBranchInputRef.current?.focus();
+    if (isCreating) newBranchInputRef.current?.focus({ preventScroll: true });
   }, [isCreating]);
 
   /**

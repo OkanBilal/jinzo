@@ -23,6 +23,12 @@ export interface SelectOption<T extends string = string> {
    */
   selectedLabel?: string;
   icon?: ReactNode;
+  /**
+   * Trigger-only glyph, falling back to `icon`. Set it alone when the glyph
+   * says what *kind* of thing is selected: repeated down a list where every row
+   * is that kind, it marks nothing and is pure noise.
+   */
+  selectedIcon?: ReactNode;
   description?: string;
 }
 
@@ -297,7 +303,7 @@ export default function Select<T extends string = string>({
         `}
       >
         <div className="flex min-w-0 items-center gap-2">
-          {selectedOption?.icon}
+          {selectedOption?.selectedIcon ?? selectedOption?.icon}
           <Text
             as="span"
             size="inherit"

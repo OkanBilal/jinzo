@@ -692,6 +692,9 @@ const api = {
     /** Push the current branch (standalone Push action) */
     push: (workspaceId: string) =>
       ipcRenderer.invoke(CHANNELS.gitFlow.push, workspaceId),
+    /** Fetch + fast-forward the current branch from its upstream */
+    pull: (workspaceId: string) =>
+      ipcRenderer.invoke(CHANNELS.gitFlow.pull, workspaceId),
     /** Push (idempotent) then create a PR via gh, generating title/body if blank */
     createPr: (payload: {
       workspaceId: string;

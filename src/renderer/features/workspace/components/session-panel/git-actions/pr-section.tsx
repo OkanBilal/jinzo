@@ -16,7 +16,7 @@ import {
 } from "@/lib/redux/api";
 import { extractErrorMessage } from "@/lib/extract-error-message";
 import { PanelItem, PanelCollapse, PANEL_ROW_X } from "../panel-item";
-import { CheckboxOption, GenerateButton } from "./controls";
+import { CheckboxOption, GenerateButton, ShinePlaceholder } from "./controls";
 import type { GitActionsPanel } from "./use-git-actions-panel";
 
 /**
@@ -83,11 +83,13 @@ export function PrSection({
     // already unambiguously a list of targets.
     const withHead = (target: string) =>
       headBranch ? `${target} ← ${headBranch}` : target;
+    // The glyph rides the trigger only: down a list of nothing but branches it
+    // distinguishes no row from another.
     const options: SelectOption[] = names.map((name) => ({
       value: name,
       label: name,
       selectedLabel: withHead(name),
-      icon: <Branch className="size-3.5 shrink-0" />,
+      selectedIcon: <Branch className="size-3.5 shrink-0" />,
     }));
     // Nothing resolved: `gh` falls back to the remote's default branch, and
     // this entry says so rather than pretending a branch was chosen.
@@ -96,7 +98,7 @@ export function PrSection({
         value: "",
         label: "Repository default",
         selectedLabel: withHead("Repository default"),
-        icon: <Branch className="size-3.5 shrink-0" />,
+        selectedIcon: <Branch className="size-3.5 shrink-0" />,
         description: "Whatever the remote calls its default branch",
       });
     }
@@ -191,17 +193,23 @@ export function PrSection({
               aria-label="Base branch"
             />
           </div>
-          <Input
-            type="text"
-            value={prTitle}
-            onChange={(e) => setPrTitle(e.target.value)}
-            placeholder={
-              generatingPr
-                ? "Generating PR title…"
-                : "PR title (leave blank to generate)…"
-            }
-            className="w-full text-xs"
-          />
+          {/* While the model writes, the waiting line shimmers instead of
+              sitting there as a static placeholder. It only stands in for an
+              empty field, exactly as a placeholder does. */}
+          <div className="relative">
+            <Input
+              type="text"
+              value={prTitle}
+              onChange={(e) => setPrTitle(e.target.value)}
+              placeholder={
+                generatingPr ? "" : "PR title (leave blank to generate)…"
+              }
+              className="w-full text-xs"
+            />
+            {generatingPr && !prTitle && (
+              <ShinePlaceholder>Generating PR title…</ShinePlaceholder>
+            )}
+          </div>
           <div className="relative">
             <Textarea
               value={prBody}
@@ -209,11 +217,14 @@ export function PrSection({
               rows={4}
               placeholder={
                 generatingPr
-                  ? "Generating description…"
+                  ? ""
                   : "Description (optional, leave blank to generate)…"
               }
               className="w-full text-xs pb-8"
             />
+            {generatingPr && !prBody && (
+              <ShinePlaceholder>Generating description…</ShinePlaceholder>
+            )}
             <GenerateButton
               onClick={handleGeneratePr}
               disabled={busy || generatingPr}

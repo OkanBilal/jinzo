@@ -96,6 +96,7 @@ export const CHANNELS = {
     getStatus: "gitFlow:getStatus",
     commit: "gitFlow:commit",
     push: "gitFlow:push",
+    pull: "gitFlow:pull",
     createPr: "gitFlow:createPr",
     generateCommitMessage: "gitFlow:generateCommitMessage",
     generatePrBody: "gitFlow:generatePrBody",

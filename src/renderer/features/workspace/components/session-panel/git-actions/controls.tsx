@@ -32,6 +32,30 @@ export function CheckboxOption({
 }
 
 /**
+ * A placeholder that shimmers while the model writes the field's contents.
+ *
+ * It has to be a real element: `.shine-text` paints text through
+ * `background-clip`, which `::placeholder` can't carry. So the field's own
+ * placeholder steps aside for the duration and this lies over it, matching the
+ * control's padding (`px-3 py-2`) so the line lands exactly where the
+ * placeholder was. Inert to the pointer and hidden from assistive tech — the
+ * field underneath is still the thing being clicked and read.
+ */
+export function ShinePlaceholder({ children }: { children: ReactNode }) {
+  return (
+    <Text
+      as="span"
+      size="xs"
+      tone="inherit"
+      aria-hidden
+      className="shine-text pointer-events-none absolute inset-x-3 top-2 truncate"
+    >
+      {children}
+    </Text>
+  );
+}
+
+/**
  * The "Generate" affordance tucked into the bottom-right of a textarea — one in
  * the commit form, one in the PR form. Same size, same placement, same spinner:
  * two copies of this markup had already been kept in sync by hand.
