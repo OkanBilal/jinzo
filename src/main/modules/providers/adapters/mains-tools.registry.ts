@@ -19,6 +19,7 @@
 
 import { z } from "zod";
 import { PROVIDER_IDS, type ProviderId } from "../../../../shared/provider-ids";
+import { DEFAULT_MODE_ID, type ModeId } from "../../../../shared/modes";
 import {
   TOOL_DESCRIPTIONS,
   handleGetWorkspaceDiff,
@@ -54,6 +55,8 @@ export interface MainsToolDef {
   handler: (args: any, ctx: MainsToolContext) => Promise<MainsToolResult>;
   /** Which drivers expose this tool. */
   providers: ProviderId[];
+  /** Which experience modes expose this tool. Absent = every mode. */
+  modes?: ModeId[];
 }
 
 // Availability groups, named so the asymmetry is self-documenting.
@@ -73,6 +76,11 @@ const REVIEW_FLOW: ProviderId[] = [
 // they need no explicit tool; Codex/Cursor cannot hook that path. Deliberate.
 const PACKAGE_GUARD: ProviderId[] = [PROVIDER_IDS.codex, PROVIDER_IDS.cursor];
 
+// Mode groups. Git/review ceremony belongs to the developer experience; work
+// keeps CheckPackage because codex/cursor can still install packages there.
+const DEVELOPER_ONLY: ModeId[] = ["developer"];
+const COMMAND_CAPABLE: ModeId[] = ["developer", "work"];
+
 export const MAINS_TOOLS: MainsToolDef[] = [
   {
     name: "GetWorkspaceDiff",
@@ -80,6 +88,7 @@ export const MAINS_TOOLS: MainsToolDef[] = [
     schema: GetWorkspaceDiffSchema,
     handler: handleGetWorkspaceDiff,
     providers: REVIEW_FLOW,
+    modes: DEVELOPER_ONLY,
   },
   {
     name: "SaveReview",
@@ -87,6 +96,7 @@ export const MAINS_TOOLS: MainsToolDef[] = [
     schema: SaveReviewSchema,
     handler: handleSaveReview,
     providers: REVIEW_FLOW,
+    modes: DEVELOPER_ONLY,
   },
   {
     name: "SaveFinding",
@@ -94,6 +104,7 @@ export const MAINS_TOOLS: MainsToolDef[] = [
     schema: SaveFindingSchema,
     handler: handleSaveFinding,
     providers: REVIEW_FLOW,
+    modes: DEVELOPER_ONLY,
   },
   {
     name: "SaveFindings",
@@ -101,6 +112,7 @@ export const MAINS_TOOLS: MainsToolDef[] = [
     schema: SaveFindingsSchema,
     handler: handleSaveFindings,
     providers: REVIEW_FLOW,
+    modes: DEVELOPER_ONLY,
   },
   {
     name: "CommitChanges",
@@ -108,6 +120,7 @@ export const MAINS_TOOLS: MainsToolDef[] = [
     schema: CommitChangesSchema,
     handler: handleCommitChanges,
     providers: ALL_PROVIDERS,
+    modes: DEVELOPER_ONLY,
   },
   {
     name: "CreatePR",
@@ -115,6 +128,7 @@ export const MAINS_TOOLS: MainsToolDef[] = [
     schema: CreatePRSchema,
     handler: handleCreatePR,
     providers: ALL_PROVIDERS,
+    modes: DEVELOPER_ONLY,
   },
   {
     name: "CheckPackage",
@@ -122,13 +136,19 @@ export const MAINS_TOOLS: MainsToolDef[] = [
     schema: CheckPackageSchema,
     handler: handleCheckPackage,
     providers: PACKAGE_GUARD,
+    modes: COMMAND_CAPABLE,
   },
 ];
 
 const BY_NAME = new Map(MAINS_TOOLS.map((t) => [t.name, t]));
 
-function forProvider(provider: ProviderId): MainsToolDef[] {
-  return MAINS_TOOLS.filter((t) => t.providers.includes(provider));
+function forProvider(
+  provider: ProviderId,
+  mode: ModeId = DEFAULT_MODE_ID,
+): MainsToolDef[] {
+  return MAINS_TOOLS.filter(
+    (t) => t.providers.includes(provider) && (t.modes?.includes(mode) ?? true),
+  );
 }
 
 /**
@@ -181,8 +201,11 @@ export interface ClaudeToolSpec {
   handler: (args: any) => Promise<MainsToolResult>;
 }
 
-export function toClaudeTools(ctx: MainsToolContext): ClaudeToolSpec[] {
-  return forProvider(PROVIDER_IDS.claude).map((t) => ({
+export function toClaudeTools(
+  ctx: MainsToolContext,
+  mode: ModeId = DEFAULT_MODE_ID,
+): ClaudeToolSpec[] {
+  return forProvider(PROVIDER_IDS.claude, mode).map((t) => ({
     name: t.name,
     description: t.description,
     shape: t.schema.shape,
@@ -198,8 +221,11 @@ export interface CopilotToolSpec {
   handler: (args: any) => Promise<string>;
 }
 
-export function toCopilotTools(ctx: MainsToolContext): CopilotToolSpec[] {
-  return forProvider(PROVIDER_IDS.copilot).map((t) => ({
+export function toCopilotTools(
+  ctx: MainsToolContext,
+  mode: ModeId = DEFAULT_MODE_ID,
+): CopilotToolSpec[] {
+  return forProvider(PROVIDER_IDS.copilot, mode).map((t) => ({
     name: `mcp__mains__${t.name}`,
     description: t.description,
     parameters: toJsonSchema(t.schema),
@@ -217,8 +243,8 @@ export interface McpToolDef {
   inputSchema: Record<string, unknown>;
 }
 
-export function toMcpToolDefs(): McpToolDef[] {
-  return forProvider(PROVIDER_IDS.cursor).map((t) => ({
+export function toMcpToolDefs(mode: ModeId = DEFAULT_MODE_ID): McpToolDef[] {
+  return forProvider(PROVIDER_IDS.cursor, mode).map((t) => ({
     name: t.name,
     description: t.description,
     inputSchema: toJsonSchema(t.schema),
@@ -226,8 +252,8 @@ export function toMcpToolDefs(): McpToolDef[] {
 }
 
 /** Codex dynamic tools — same JSON-Schema shape as the MCP defs. */
-export function toCodexDynamicTools(): McpToolDef[] {
-  return forProvider(PROVIDER_IDS.codex).map((t) => ({
+export function toCodexDynamicTools(mode: ModeId = DEFAULT_MODE_ID): McpToolDef[] {
+  return forProvider(PROVIDER_IDS.codex, mode).map((t) => ({
     name: t.name,
     description: t.description,
     inputSchema: toJsonSchema(t.schema),

@@ -10,6 +10,7 @@ import { DEFAULT_MODE_ID, type ModeId } from "../../../shared/modes";
 import {
   composeConfigSnapshot,
   composeExtraInstructions,
+  getModeHarness,
 } from "../../../shared/mode-harness";
 import {
   createWorkAdapter,
@@ -17,7 +18,7 @@ import {
   type WorkRunAdapter,
   type WorkRunEvent,
 } from "../providers/adapters";
-import type { WorkRunResult } from "../../../shared/adapter.types";
+import type { WorkRunResult, WorkRunToolPolicy } from "../../../shared/adapter.types";
 import { createRunSession, type RunSession, type RunSessionResult } from "./run-session";
 import { emit } from "../../ipc-kit";
 import { runSessionRegistry } from "./run-session-registry";
@@ -516,8 +517,11 @@ export const runsService = {
 
       const { spaceId: resolvedSpaceId, mode, space } = await resolveRunMode(payload.spaceId);
       const extraInstructions = composeExtraInstructions(mode, space?.systemPrompt);
-      // Persist the *composed* snapshot — the run row records what actually ran.
+      // Persist the *composed* values — the run row records what actually ran.
       const configSnapshot = composeConfigSnapshot(mode, payload.providerId, payload.configSnapshot);
+      const toolPolicy =
+        (payload.toolPolicySnapshot as WorkRunToolPolicy | undefined) ??
+        getModeHarness(mode).toolPolicy;
 
       await runsRepo.insertRun({
         id: runId,
@@ -531,7 +535,7 @@ export const runsService = {
         status: "running",
         systemPrompt: payload.systemPrompt,
         configSnapshot: configSnapshot ?? undefined,
-        toolPolicySnapshot: payload.toolPolicySnapshot,
+        toolPolicySnapshot: toolPolicy ?? undefined,
       });
       await runsRepo.updateRun(runId, { startedAt: new Date() });
 
@@ -572,7 +576,7 @@ export const runsService = {
           mode,
           extraInstructions,
           context: payload.initialContext as WorkRunContextItem[] | undefined,
-          toolPolicy: payload.toolPolicySnapshot,
+          toolPolicy,
           configSnapshot,
           attachments: payload.attachments,
           contextIssues: payload.contextIssues,

@@ -34,8 +34,6 @@ const VALID_SANDBOX_MODES = new Set([
   "workspace-write",
   "danger-full-access",
 ]);
-const MAINS_DYNAMIC_TOOLS = toCodexDynamicTools();
-
 type CodexConfigOverrides = NonNullable<
   CodexAppServerParams<"thread/start">["config"]
 >;
@@ -45,7 +43,9 @@ type CodexOutputSchema = Exclude<
 >;
 type CodexThreadStartParams =
   CodexAppServerParams<"thread/start"> & {
-    dynamicTools?: typeof MAINS_DYNAMIC_TOOLS;
+    // Rendered per session, not at module scope — the mains tool set is
+    // mode-filtered, so it must be recomputed for each run's mode.
+    dynamicTools?: ReturnType<typeof toCodexDynamicTools>;
   };
 type CodexTurnStartParams =
   CodexAppServerParams<"turn/start"> & {
@@ -443,7 +443,7 @@ export function createCodexSessionAcquisition(
       ),
       ...(model ? { model } : {}),
       ...buildDeveloperInstructionsParam(request.extraInstructions),
-      dynamicTools: MAINS_DYNAMIC_TOOLS,
+      dynamicTools: toCodexDynamicTools(request.mode),
     };
 
     logger.info(
@@ -543,7 +543,7 @@ export function createCodexSessionAcquisition(
         ...settings,
         ...(model ? { model } : {}),
         ...buildDeveloperInstructionsParam(request.extraInstructions),
-        dynamicTools: MAINS_DYNAMIC_TOOLS,
+        dynamicTools: toCodexDynamicTools(request.mode),
       };
       const threadResult = await server.sendRequest(
         "thread/start",
@@ -696,7 +696,7 @@ export function createCodexSessionAcquisition(
       cwd: request.workspace.rootPath,
       ...settings,
       ...(model ? { model } : {}),
-      dynamicTools: MAINS_DYNAMIC_TOOLS,
+      dynamicTools: toCodexDynamicTools(),
     };
 
     logger.info(

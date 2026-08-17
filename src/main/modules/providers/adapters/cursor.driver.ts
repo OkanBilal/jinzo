@@ -54,6 +54,7 @@ import {
   resolveCatalogDefaultId,
 } from "./adapter.shared";
 import { MainsMcpStdioServer } from "./mains-mcp-server";
+import type { ModeId } from "../../../../shared/modes";
 import type { MainsToolContext } from "./mains-tools.core";
 
 // ─────────────────────────────────────────────────────────────
@@ -734,11 +735,14 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
    * config per-session, and the .cursor/mcp.json file is only needed for
    * the user-runs-cursor-manually auto-discovery path.
    */
-  async function ensureMcpServer(ctx: MainsToolContext): Promise<typeof mcpServer> {
+  async function ensureMcpServer(
+    ctx: MainsToolContext,
+    mode?: ModeId,
+  ): Promise<typeof mcpServer> {
     if (mcpServer?.isRunning) {
       await mcpServer.stop();
     }
-    mcpServer = new MainsMcpStdioServer(ctx);
+    mcpServer = new MainsMcpStdioServer(ctx, mode);
     await mcpServer.start();
     logInfo(`Mains MCP stdio bridge started`);
     return mcpServer;
@@ -1921,7 +1925,7 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
         rootPath: request.workspace.rootPath,
         runId,
       };
-      const mainsMcp = await ensureMcpServer(mainsCtx);
+      const mainsMcp = await ensureMcpServer(mainsCtx, request.mode);
       const server = await ensureServer();
 
       logInfo(
@@ -1975,7 +1979,7 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
         rootPath: request.workspace.rootPath,
         runId,
       };
-      const mainsMcp = await ensureMcpServer(mainsCtx);
+      const mainsMcp = await ensureMcpServer(mainsCtx, request.mode);
       const mcpServersConfig = mainsMcp ? [mainsMcp.mcpConfig] : [];
       const server = await ensureServer();
 

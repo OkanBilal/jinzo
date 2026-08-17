@@ -33,13 +33,16 @@ import { PROVIDER_IDS, type ProviderId } from "./provider-ids";
  * minus disallowedTools` — computed driver-side, since the default list is an
  * adapter concern. Codex and cursor have no allowlist; their harness rides
  * `configSnapshot` (sandbox / agent mode) instead.
+ *
+ * A type alias, not an interface, so it stays assignable to the
+ * `Record<string, unknown>` snapshot columns it is persisted into.
  */
-export interface ModeToolPolicy {
+export type ModeToolPolicy = {
   /** Replaces the provider's default allowlist. null = provider default. */
   allowedTools: readonly string[] | null;
   /** Hard-denied tools: claude `disallowedTools`, copilot pre-hook deny. */
   disallowedTools: readonly string[];
-}
+};
 
 export interface ModeHarnessDescriptor {
   mode: ModeId;

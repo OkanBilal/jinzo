@@ -50,6 +50,7 @@ import type {
   WorkRunEventHandler,
   WorkRunForkRequest,
   WorkRunRequest,
+  WorkRunToolPolicy,
   WorkRunUsage,
 } from "../../../../shared/adapter.types";
 import {
@@ -58,6 +59,7 @@ import {
   resolveCandidate,
 } from "../providers.utils";
 import { AGENT_ID_IN_RESULT } from "../../../../shared/subagent";
+import type { ModeId } from "../../../../shared/modes";
 import {
   DEFAULT_CLAUDE_PERMISSION_MODE,
   isClaudePermissionMode,
@@ -72,7 +74,7 @@ import {
   adoptConfig,
   createLogger,
   ALLOWED_TOOLS_SET,
-  DEFAULT_ALLOWED_TOOLS,
+  resolveEffectiveAllowedTools,
   safeJson,
   extractArtifactsFromToolOutput,
   formatContextSection,
@@ -224,22 +226,31 @@ function isSDKPermissionMode(
 export function buildClaudePermissionModeOptions(
   permissionMode: NonNullable<SDKOptions["permissionMode"]>,
   canUseTool?: SDKCanUseTool,
+  toolPolicy?: WorkRunToolPolicy | null,
 ): Pick<
   SDKOptions,
   | "permissionMode"
   | "allowDangerouslySkipPermissions"
   | "allowedTools"
+  | "disallowedTools"
   | "canUseTool"
   | "settings"
 > {
+  const effectiveAllowedTools = resolveEffectiveAllowedTools(toolPolicy);
   return {
     permissionMode,
-    allowedTools: [...DEFAULT_ALLOWED_TOOLS],
+    allowedTools: effectiveAllowedTools,
+    ...(toolPolicy && toolPolicy.disallowedTools.length > 0
+      ? { disallowedTools: [...toolPolicy.disallowedTools] }
+      : {}),
     // Build the run-scoped permission snapshot here. buildOptions materializes
     // it to disk because Workflow children do not inherit the inline form.
     settings: {
       permissions: {
-        allow: [...DEFAULT_ALLOWED_TOOLS],
+        allow: [...effectiveAllowedTools],
+        ...(toolPolicy && toolPolicy.disallowedTools.length > 0
+          ? { deny: [...toolPolicy.disallowedTools] }
+          : {}),
       },
     },
     ...(permissionMode === "bypassPermissions"
@@ -2296,13 +2307,16 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     workspaceId: string | null,
     rootPath: string | null,
     runId: string | null,
+    mode?: ModeId,
   ): any {
     const ctx: MainsToolContext = { workspaceId, rootPath, runId };
 
+    const tools = toClaudeTools(ctx, mode);
+    if (tools.length === 0) return null;
     return createSdkMcpServerFn!({
       name: "mains",
       version: "1.0.0",
-      tools: toClaudeTools(ctx).map((t) =>
+      tools: tools.map((t) =>
         toolFn!(t.name, t.description, t.shape, t.handler),
       ),
     });
@@ -2328,6 +2342,10 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     permissionMode?: NonNullable<SDKOptions["permissionMode"]>;
     /** Mode/space instruction delta, appended to the claude_code preset. */
     extraInstructions?: string | null;
+    /** Experience mode — filters which mains tools the MCP server exposes. */
+    mode?: ModeId;
+    /** Per-run tool policy from the mode harness. */
+    toolPolicy?: WorkRunToolPolicy | null;
   }): Promise<SDKOptions> {
     const {
       model,
@@ -2343,6 +2361,8 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       onEvent,
       permissionMode: runPermissionMode,
       extraInstructions,
+      mode,
+      toolPolicy,
     } = args;
 
     const packagedSdkBinary = config.binary
@@ -2376,18 +2396,27 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     const permissionMode =
       runPermissionMode ?? config.permissionMode ?? DEFAULT_CLAUDE_PERMISSION_MODE;
     const settingSources = config.settingSources ?? ["user", "project", "local"];
+    // The bridge auto-allows this set, so it must see the *effective* list —
+    // handing it the global default would auto-approve tools the run's policy
+    // just denied.
+    const effectiveAllowedTools = toolPolicy
+      ? new Set(resolveEffectiveAllowedTools(toolPolicy))
+      : ALLOWED_TOOLS_SET;
     const permissionBridge = runId
       ? createClaudePermissionBridge({
           runId,
-          allowedTools: ALLOWED_TOOLS_SET,
+          allowedTools: effectiveAllowedTools,
           bypassMode: permissionMode === "bypassPermissions",
         })
       : null;
 
     const mcpServers = readMcpServersFromSettings(settingSources, workspacePath);
     if (!mcpServers["mains"] && createSdkMcpServerFn && toolFn) {
-      mcpServers["mains"] = buildMainsMcpServer(workspaceId ?? null, workspacePath ?? null, runId ?? null);
-      logInfo("Injected mains MCP server (in-process)");
+      const mainsServer = buildMainsMcpServer(workspaceId ?? null, workspacePath ?? null, runId ?? null, mode);
+      if (mainsServer) {
+        mcpServers["mains"] = mainsServer;
+        logInfo("Injected mains MCP server (in-process)");
+      }
     }
 
     const options: SDKOptions = {
@@ -2395,6 +2424,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       ...buildClaudePermissionModeOptions(
         permissionMode,
         permissionBridge?.canUseTool,
+        toolPolicy,
       ),
       abortController,
       ...executableOptions,
@@ -2835,6 +2865,8 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
           ? overridePermissionMode
           : undefined,
         extraInstructions: request.extraInstructions,
+        mode: request.mode,
+        toolPolicy: request.toolPolicy,
       });
 
       const session = newSession(request.runId, options, abortController, true);
@@ -2865,6 +2897,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
         runId: request.runId,
         workspaceId: request.workspace.id,
         extraInstructions: request.extraInstructions,
+        mode: request.mode,
       });
 
       const session = newSession(request.runId, options, abortController, false);

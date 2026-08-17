@@ -26,6 +26,7 @@ import crypto from "node:crypto";
 import { execSync } from "node:child_process";
 import type { MainsToolContext } from "./mains-tools.core";
 import type { WorkRunEventHandler } from "../../../../shared/adapter.types";
+import type { ModeId } from "../../../../shared/modes";
 import {
   toMcpToolDefs,
   dispatchMainsTool,
@@ -239,7 +240,10 @@ export class MainsMcpStdioServer {
   /** Tracks original content for each .cursor/mcp.json we modified */
   private mcpJsonBackups = new Map<string, string | null>();
 
-  constructor(private ctx: MainsToolContext) {
+  constructor(
+    private ctx: MainsToolContext,
+    private mode?: ModeId,
+  ) {
     const id = crypto.randomUUID().slice(0, 8);
     const tmpDir = os.tmpdir();
     this.socketPath = path.join(tmpDir, `mains-mcp-${id}.sock`);
@@ -249,8 +253,8 @@ export class MainsMcpStdioServer {
   }
 
   async start(): Promise<void> {
-    // 1. Write the MCP script to a temp file
-    const script = buildMcpScript(toMcpToolDefs());
+    // 1. Write the MCP script to a temp file (tool list is mode-filtered)
+    const script = buildMcpScript(toMcpToolDefs(this.mode));
     fs.writeFileSync(this.scriptPath, script, "utf8");
 
     // 2. Start the Unix socket bridge

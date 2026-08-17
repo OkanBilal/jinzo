@@ -11,6 +11,7 @@ import {
   type WorkRunRequest,
   type WorkRunResult,
   type WorkRunContextItem,
+  type WorkRunToolPolicy,
 } from "../../modules/providers/adapters";
 import { createRunWriteback } from "../writeback/runWriteback";
 import type { RunStatus, StartRunContextItem } from "../../modules/runs";
@@ -26,7 +27,7 @@ export interface DispatchRunRequest {
   initialContext?: StartRunContextItem[];
   spaceId?: string;
   configSnapshot?: Record<string, unknown>;
-  toolPolicySnapshot?: Record<string, unknown>;
+  toolPolicySnapshot?: WorkRunToolPolicy;
 }
 
 export interface DispatchRunResult {

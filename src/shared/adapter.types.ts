@@ -5,10 +5,18 @@
 
 import type { ClaudePermissionMode } from "./claude-permission-modes";
 import type { ModeId } from "./modes";
+import type { ModeToolPolicy } from "./mode-harness";
 import type {
   PluginAvailability,
   PluginDisabledReason,
 } from "./plugin-install-availability";
+
+/**
+ * Per-run tool policy (see `src/shared/mode-harness.ts`). Applied by the
+ * drivers with an allowlist mechanism (claude, copilot); codex/cursor enforce
+ * their harness through `configSnapshot` (sandbox / agent mode) instead.
+ */
+export type WorkRunToolPolicy = ModeToolPolicy;
 
 /**
  * Context item provided to a work run
@@ -58,7 +66,7 @@ export interface WorkRunRequest {
    */
   extraInstructions?: string | null;
   context?: WorkRunContextItem[];
-  toolPolicy?: Record<string, unknown> | null;
+  toolPolicy?: WorkRunToolPolicy | null;
   /**
    * Per-run config snapshot. Adapters use these values to override their
    * cached provider config when present (e.g. Pulse forces specific

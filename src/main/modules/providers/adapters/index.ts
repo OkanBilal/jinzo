@@ -7,6 +7,7 @@ export type {
   FileAttachment,
   WorkRunContextItem,
   WorkRunRequest,
+  WorkRunToolPolicy,
   WorkRunContinueRequest,
   WorkRunForkRequest,
   WorkRunReviewTarget,
