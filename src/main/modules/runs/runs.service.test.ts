@@ -468,6 +468,73 @@ describe("runsService", () => {
       expect(request.mode).toBe("developer");
       expect(request.extraInstructions).toBeNull();
     });
+
+    it("hands work mode's tool policy to the adapter and persists it on the row", async () => {
+      createWorkspace(db, { id: "ws-pol", accountId: "default" });
+      createSpace(db, { id: "sp-pol", accountId: "default", mode: "work" });
+      const startRun = mockStartAdapter();
+
+      const { runId } = await runsService.executeRun({
+        accountId: "default",
+        workspaceId: "ws-pol",
+        spaceId: "sp-pol",
+        providerId: "copilot_cli",
+        goal: "summarize the docs",
+      });
+      await flushBackground();
+
+      const request = startRun.mock.calls[0][0];
+      expect(request.toolPolicy?.disallowedTools).toContain("Bash");
+      expect(request.toolPolicy?.allowedTools).toBeNull();
+      const run = await runsService.getRunById(runId);
+      expect(run?.toolPolicySnapshot).toEqual(request.toolPolicy);
+    });
+
+    it("chat's overrides beat the caller's snapshot — codex stays read-only", async () => {
+      createProvider(db, { id: "codex", displayName: "Codex" });
+      createWorkspace(db, { id: "ws-chat", accountId: "default" });
+      createSpace(db, { id: "sp-chat", accountId: "default", mode: "chat" });
+      const startRun = mockStartAdapter();
+
+      const { runId } = await runsService.executeRun({
+        accountId: "default",
+        workspaceId: "ws-chat",
+        spaceId: "sp-chat",
+        providerId: "codex",
+        goal: "explain this repo",
+        configSnapshot: { sandboxMode: "danger-full-access" },
+      });
+      await flushBackground();
+
+      const request = startRun.mock.calls[0][0];
+      expect(request.configSnapshot).toEqual({ sandboxMode: "read-only" });
+      const run = await runsService.getRunById(runId);
+      expect(run?.configSnapshot).toEqual({ sandboxMode: "read-only" });
+    });
+
+    it("layers the space's custom system prompt after the mode delta", async () => {
+      createWorkspace(db, { id: "ws-sys", accountId: "default" });
+      createSpace(db, {
+        id: "sp-sys",
+        accountId: "default",
+        mode: "work",
+        systemPrompt: "Always answer in Turkish.",
+      });
+      const startRun = mockStartAdapter();
+
+      await runsService.executeRun({
+        accountId: "default",
+        workspaceId: "ws-sys",
+        spaceId: "sp-sys",
+        providerId: "copilot_cli",
+        goal: "draft the weekly update",
+      });
+      await flushBackground();
+
+      const request = startRun.mock.calls[0][0];
+      expect(request.extraInstructions).toContain("non-technical");
+      expect(request.extraInstructions.endsWith("Always answer in Turkish.")).toBe(true);
+    });
   });
 
   describe("continueRun mode propagation", () => {
@@ -498,6 +565,37 @@ describe("runsService", () => {
       const request = continueRun.mock.calls[0][0];
       expect(request.mode).toBe("work");
       expect(request.extraInstructions).toContain("non-technical");
+    });
+
+    it("re-derives tool policy and config snapshot from the run row's mode", async () => {
+      createProvider(db, { id: "codex", displayName: "Codex" });
+      createWorkspace(db, { id: "ws-cont2", accountId: "default" });
+      createRun(db, {
+        id: "run-chat",
+        accountId: "default",
+        workspaceId: "ws-cont2",
+        providerId: "codex",
+        mode: "chat",
+        status: "succeeded",
+        sessionId: "sess-2",
+      });
+      const continueRun = vi.fn().mockResolvedValue({ status: "succeeded" });
+      vi.mocked(createWorkAdapter).mockReturnValue({
+        continueRun,
+        canResumeSession: vi.fn().mockResolvedValue(true),
+      } as any);
+
+      await runsService.continueRun({
+        runId: "run-chat",
+        accountId: "default",
+        message: "and what about the tests?",
+      });
+      await flushBackground();
+
+      const request = continueRun.mock.calls[0][0];
+      expect(request.configSnapshot).toEqual({ sandboxMode: "read-only" });
+      expect(request.toolPolicy?.allowedTools).not.toBeNull();
+      expect(request.toolPolicy?.disallowedTools).toContain("Bash");
     });
   });
 

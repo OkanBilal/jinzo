@@ -1941,3 +1941,40 @@ describe("mapSDKMessage subagent sequence", () => {
     ).toHaveLength(0);
   });
 });
+
+describe("claude.driver / buildClaudePermissionModeOptions with a tool policy", () => {
+  it("removes disallowed tools from the effective allowlist and denies them", () => {
+    const options = buildClaudePermissionModeOptions("acceptEdits", undefined, {
+      allowedTools: null,
+      disallowedTools: ["Bash"],
+    });
+
+    expect(options.allowedTools).not.toContain("Bash");
+    expect(options.allowedTools).toEqual(
+      DEFAULT_ALLOWED_TOOLS.filter((t) => t !== "Bash"),
+    );
+    expect(options.disallowedTools).toEqual(["Bash"]);
+    const settings = options.settings as {
+      permissions: { allow: string[]; deny?: string[] };
+    };
+    expect(settings.permissions.allow).not.toContain("Bash");
+    expect(settings.permissions.deny).toEqual(["Bash"]);
+  });
+
+  it("replaces the allowlist wholesale when the policy provides one", () => {
+    const options = buildClaudePermissionModeOptions("default", undefined, {
+      allowedTools: ["Read", "Glob", "Grep"],
+      disallowedTools: ["Bash", "Write", "Edit"],
+    });
+
+    expect(options.allowedTools).toEqual(["Read", "Glob", "Grep"]);
+    expect(options.disallowedTools).toEqual(["Bash", "Write", "Edit"]);
+  });
+
+  it("stays byte-identical to today without a policy", () => {
+    expect(buildClaudePermissionModeOptions("default", undefined, null)).toEqual(
+      buildClaudePermissionModeOptions("default"),
+    );
+    expect(buildClaudePermissionModeOptions("default").disallowedTools).toBeUndefined();
+  });
+});

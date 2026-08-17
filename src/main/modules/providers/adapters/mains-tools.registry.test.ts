@@ -113,3 +113,36 @@ describe("mains tool registry — dispatch", () => {
     }
   });
 });
+
+describe("mains tool registry — mode dimension", () => {
+  it("defaults to developer: mode-less renderer calls match today's sets", () => {
+    expect(toClaudeTools(CTX).map((t) => t.name).sort()).toEqual(
+      toClaudeTools(CTX, "developer").map((t) => t.name).sort(),
+    );
+    expect(toCodexDynamicTools().map((t) => t.name).sort()).toEqual(
+      toCodexDynamicTools("developer").map((t) => t.name).sort(),
+    );
+  });
+
+  it("work drops the git/review ceremony but keeps CheckPackage for codex/cursor", () => {
+    expect(toClaudeTools(CTX, "work")).toHaveLength(0);
+    expect(toCopilotTools(CTX, "work")).toHaveLength(0);
+    expect(toCodexDynamicTools("work").map((t) => t.name)).toEqual(["CheckPackage"]);
+    expect(toMcpToolDefs("work").map((t) => t.name)).toEqual(["CheckPackage"]);
+  });
+
+  it("chat exposes no mains tools on any provider", () => {
+    expect(toClaudeTools(CTX, "chat")).toHaveLength(0);
+    expect(toCopilotTools(CTX, "chat")).toHaveLength(0);
+    expect(toMcpToolDefs("chat")).toHaveLength(0);
+    expect(toCodexDynamicTools("chat")).toHaveLength(0);
+  });
+
+  it("every tool's modes list (when present) only names known modes", () => {
+    for (const tool of MAINS_TOOLS) {
+      for (const mode of tool.modes ?? []) {
+        expect(["developer", "work", "chat"]).toContain(mode);
+      }
+    }
+  });
+});

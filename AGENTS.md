@@ -77,7 +77,7 @@ Mains is an Electron 41 desktop app (React 19 renderer, SQLite + Drizzle ORM). C
 - React app with Redux Toolkit, React Router (HashRouter), `@/` alias → `src/renderer/`
 - Routes: `/` (default route), `/code[/:workspaceId]` (unified agent workspace — all providers), `/settings`, `/plugins`, `/pulse`, `/relay`, `/tasks` (issue + pull-request inbox)
 - `/code` hosts every agent provider; which provider it drives comes from the active space's `providerId` column (`claude_code`, `copilot_cli`, `codex`, `cursor`) — switching space via the space picker switches the provider. There are no per-provider routes.
-- The space's `mode` column (`developer`, `work`, `chat` — see `src/shared/modes.ts`) selects the UI shape via `src/renderer/lib/mode-config.ts` (`MODE_CONFIGS`), including which route `/` redirects to
+- The space's `mode` column (`developer`, `work`, `chat` — see `src/shared/modes.ts`) selects the UI shape via `src/renderer/lib/mode-config.ts` (`MODE_CONFIGS`, read through `useModeConfig`): which route `/` redirects to, plus per-mode capability flags (`showGitActions`, `showTerminal`, `showChangesTab`, `showPermissionControls`, `showPlanControls`, `showGoalControls`). Developer is all-true; work hides the git ceremony; chat hides every write-adjacent affordance. The agent-side half of a mode is the **mode harness** (`src/shared/mode-harness.ts`, see Provider Adapters)
 - Route table lives in `src/renderer/components/layout/main/main-routes.tsx`; page components in `src/renderer/routes/`
 
 ### IPC Transport (`src/main/ipc-kit/`, `src/shared/ipc-kit/`)
@@ -192,6 +192,7 @@ Core tables:
 - `run-session.ts` / `run-session-registry.ts` own the live session lifecycle and event persistence
 - Tool approval broker (`user-input-broker.ts`) bridges main↔renderer for interactive tool approvals
 - Runs support session resumption and continuation via `sessionId`
+- Every run snapshots its space's `mode` (`runs.mode`) at start; `resolveRunMode` + the mode-harness composition in `runs.service` decide the prompt delta, tool policy, and config snapshot a run carries — resume and fork re-derive from the row, so a run keeps its harness even if the space's mode changes
 - Run archiving: `runs:archive` / `runs:listArchived` / `runs:unarchive`, surfaced in Settings → Archive alongside archived workspaces. The service keeps the provider-side session in sync via the adapter's optional `archiveSession` / `unarchiveSession` (Codex threads are archived/unarchived on the app server)
 
 **Projects System** (`src/main/modules/projects/`)
@@ -209,7 +210,8 @@ Core tables:
 - `fake.driver.ts` — in-memory driver used by tests
 - `work-run-core.ts` — shared run loop / event plumbing used by every driver
 - `adapter.shared.ts` — common helpers used by every driver
-- `mains-mcp-server.ts`, `mains-tools.core.ts`, `mains-tools.schemas.ts`, `mains-tools.registry.ts` — in-process MCP server and the **mains tools** (`GetWorkspaceDiff`, `SaveReview`, `SaveFinding`, `SaveFindings`, `CommitChanges`, `CreatePR`, `CheckPackage`). Handler logic lives once in core, the Zod schema once in schemas, assembly once in the registry with a `providers` allowlist. Never hand-write a tool definition inside a driver.
+- `mains-mcp-server.ts`, `mains-tools.core.ts`, `mains-tools.schemas.ts`, `mains-tools.registry.ts` — in-process MCP server and the **mains tools** (`GetWorkspaceDiff`, `SaveReview`, `SaveFinding`, `SaveFindings`, `CommitChanges`, `CreatePR`, `CheckPackage`). Handler logic lives once in core, the Zod schema once in schemas, assembly once in the registry with `providers` and `modes` allowlists (git/review tools are developer-mode-only; `CheckPackage` also serves work mode). Never hand-write a tool definition inside a driver.
+- **Mode harness** (`src/shared/mode-harness.ts`) — per-mode prompt delta, tool policy, and per-provider config defaults/overrides, resolved once per run in `runs.service` (never inside a driver, never via the cached `AdapterConfig`). Drivers receive the resolved values on the per-run request (`extraInstructions`, `toolPolicy`, `configSnapshot`) and apply them natively: claude appends to the `claude_code` system-prompt preset + allow/disallow lists, copilot layers the session `systemMessage` + PreToolUse deny, codex sends `developerInstructions` + sandbox override (chat = `read-only`), cursor prefixes the prompt + agent mode (chat = `ask`). Continue/fork re-derive the harness from the run row's `mode` snapshot.
 - Hook system for pre/post tool execution and subagent coordination; pre-approved tool list (Bash, Read, Glob, Grep, …) with interactive approval for others
 
 **Git Module** (`src/main/modules/git/`)
@@ -244,7 +246,7 @@ Core tables:
 - `fileExplorer:writeFileText` backs auto-save in the code viewer: overwrites an existing regular file only (no creation), same 2MB cap as reads, optional `expectedMtimeMs` optimistic-concurrency guard ("File changed on disk") so a stale editor buffer can't clobber agent writes
 
 **Space System** (`src/main/modules/space/`)
-- User-defined profiles with systemPrompt, model, icon, themeConfig, `providerId`, `mode`, sortOrder, archive flag
+- User-defined profiles with systemPrompt, model, icon, themeConfig, `providerId`, `mode`, sortOrder, archive flag; `mode` is user-switchable via `SpaceModePicker` in the space customizer, and `systemPrompt` reaches every run through the mode-harness composition
 - Space-level overrides for connections, resources, apps, and tool permissions
 - Active space set via `appSettings.activeSpaceId`
 
