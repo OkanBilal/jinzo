@@ -2326,6 +2326,8 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     newSessionId?: string;
     onEvent?: WorkRunEventHandler;
     permissionMode?: NonNullable<SDKOptions["permissionMode"]>;
+    /** Mode/space instruction delta, appended to the claude_code preset. */
+    extraInstructions?: string | null;
   }): Promise<SDKOptions> {
     const {
       model,
@@ -2340,6 +2342,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       newSessionId,
       onEvent,
       permissionMode: runPermissionMode,
+      extraInstructions,
     } = args;
 
     const packagedSdkBinary = config.binary
@@ -2503,6 +2506,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     options.systemPrompt = {
       type: "preset",
       preset: "claude_code",
+      ...(extraInstructions ? { append: extraInstructions } : {}),
     };
 
     if (runId && options.settings && typeof options.settings !== "string") {
@@ -2830,6 +2834,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
         permissionMode: isSDKPermissionMode(overridePermissionMode)
           ? overridePermissionMode
           : undefined,
+        extraInstructions: request.extraInstructions,
       });
 
       const session = newSession(request.runId, options, abortController, true);
@@ -2859,6 +2864,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
         runAgents: request.agents,
         runId: request.runId,
         workspaceId: request.workspace.id,
+        extraInstructions: request.extraInstructions,
       });
 
       const session = newSession(request.runId, options, abortController, false);

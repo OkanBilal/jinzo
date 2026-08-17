@@ -7,7 +7,10 @@ import { workspaceService, assertWorkspacePathExists } from "../workspace";
 import { spaceService } from "../space";
 import { appSettingsService } from "../appSettings";
 import { DEFAULT_MODE_ID, type ModeId } from "../../../shared/modes";
-import { getModeExtraInstructions } from "../../../shared/mode-instructions";
+import {
+  composeConfigSnapshot,
+  composeExtraInstructions,
+} from "../../../shared/mode-harness";
 import {
   createWorkAdapter,
   type WorkRunContextItem,
@@ -61,28 +64,48 @@ function hashContent(content: string): string {
 }
 
 /**
+ * Best-effort space lookup for harness composition: a missing space must not
+ * block a run, so failures resolve to null (default-mode harness, no custom
+ * system prompt).
+ */
+async function findSpaceForRun(spaceId: string | null | undefined) {
+  if (!spaceId) return null;
+  try {
+    return await spaceService.getById(spaceId);
+  } catch (err) {
+    console.error("[RunsService] Space lookup failed for harness:", err);
+    return null;
+  }
+}
+
+/**
  * Resolve the experience mode for a new run: the payload's space if given,
  * otherwise the active space. Snapshotted onto the run row so resume/fork
  * keep behaving under the mode the run started with. Best-effort — a missing
  * space must not block a run, so failures fall back to the default mode.
+ * Returns the space row too, so harness composition reads it without a
+ * second lookup.
  */
-async function resolveRunMode(
-  spaceId: string | undefined,
-): Promise<{ spaceId: string | undefined; mode: ModeId }> {
+async function resolveRunMode(spaceId: string | undefined): Promise<{
+  spaceId: string | undefined;
+  mode: ModeId;
+  space: Awaited<ReturnType<typeof spaceService.getById>> | null;
+}> {
   try {
     let resolvedSpaceId = spaceId;
     if (!resolvedSpaceId) {
       const settings = await appSettingsService.getSettings();
       resolvedSpaceId = settings.activeSpaceId ?? undefined;
     }
-    if (resolvedSpaceId) {
-      const space = await spaceService.getById(resolvedSpaceId);
-      if (space) return { spaceId: resolvedSpaceId, mode: space.mode };
-    }
-    return { spaceId: resolvedSpaceId, mode: DEFAULT_MODE_ID };
+    const space = await findSpaceForRun(resolvedSpaceId);
+    return {
+      spaceId: resolvedSpaceId,
+      mode: space?.mode ?? DEFAULT_MODE_ID,
+      space,
+    };
   } catch (err) {
     console.error("[RunsService] Mode resolution failed, using default:", err);
-    return { spaceId, mode: DEFAULT_MODE_ID };
+    return { spaceId, mode: DEFAULT_MODE_ID, space: null };
   }
 }
 
@@ -491,8 +514,10 @@ export const runsService = {
 
       await workspaceService.update(payload.workspaceId, { status: "in_progress" });
 
-      const { spaceId: resolvedSpaceId, mode } = await resolveRunMode(payload.spaceId);
-      const extraInstructions = getModeExtraInstructions(mode) ?? null;
+      const { spaceId: resolvedSpaceId, mode, space } = await resolveRunMode(payload.spaceId);
+      const extraInstructions = composeExtraInstructions(mode, space?.systemPrompt);
+      // Persist the *composed* snapshot — the run row records what actually ran.
+      const configSnapshot = composeConfigSnapshot(mode, payload.providerId, payload.configSnapshot);
 
       await runsRepo.insertRun({
         id: runId,
@@ -505,7 +530,7 @@ export const runsService = {
         goal: payload.goal,
         status: "running",
         systemPrompt: payload.systemPrompt,
-        configSnapshot: payload.configSnapshot,
+        configSnapshot: configSnapshot ?? undefined,
         toolPolicySnapshot: payload.toolPolicySnapshot,
       });
       await runsRepo.updateRun(runId, { startedAt: new Date() });
@@ -548,7 +573,7 @@ export const runsService = {
           extraInstructions,
           context: payload.initialContext as WorkRunContextItem[] | undefined,
           toolPolicy: payload.toolPolicySnapshot,
-          configSnapshot: payload.configSnapshot ?? null,
+          configSnapshot,
           attachments: payload.attachments,
           contextIssues: payload.contextIssues,
           contextSignals: payload.contextSignals,
@@ -608,12 +633,17 @@ export const runsService = {
               : "code changes"
       }`;
 
+      // Reviews are a developer-mode surface, but the row still records the
+      // truthful mode so continueRun re-derives the same harness.
+      const { spaceId: resolvedSpaceId, mode } = await resolveRunMode(payload.spaceId);
+
       await runsRepo.insertRun({
         id: runId,
         accountId: payload.accountId,
         workspaceId: payload.workspaceId,
-        spaceId: payload.spaceId,
+        spaceId: resolvedSpaceId,
         providerId: payload.providerId,
+        mode,
         model: payload.model,
         goal: goalDescription,
         status: "running",
@@ -760,6 +790,10 @@ export const runsService = {
         seedTurnIndex,
       });
 
+      // Re-derive the harness from the run row's mode snapshot — the space's
+      // current mode is irrelevant, but its system prompt is re-read live.
+      const space = await findSpaceForRun(run.spaceId);
+
       const runPromise = adapter.continueRun(
         {
           runId,
@@ -768,7 +802,7 @@ export const runsService = {
           message,
           model: payload.model,
           mode: run.mode,
-          extraInstructions: getModeExtraInstructions(run.mode) ?? null,
+          extraInstructions: composeExtraInstructions(run.mode, space?.systemPrompt),
           context: additionalContext as any,
           attachments: payload.attachments,
           contextIssues: payload.contextIssues,

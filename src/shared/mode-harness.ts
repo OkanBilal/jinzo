@@ -1,0 +1,183 @@
+/**
+ * Mode harness — everything a mode contributes to a run: a prompt delta, a
+ * tool policy, and per-provider config defaults/overrides. The prompt-layer
+ * and policy half of a mode (`src/shared/modes.ts`); the UI half lives in the
+ * renderer's MODE_CONFIGS.
+ *
+ * Resolution happens once, in runs.service, when a run starts or resumes;
+ * drivers receive the resolved values on the per-run request
+ * (`extraInstructions`, `toolPolicy`, `configSnapshot`) and apply them through
+ * their provider's native mechanism (codex: `developerInstructions` +
+ * sandbox; claude: system-prompt preset append + tool lists; copilot:
+ * systemMessage + tool hook; cursor: prompt prefix + agent mode). Drivers
+ * never branch on the mode itself, and the harness never rides
+ * `AdapterConfig` — adapters are cached per provider and shared across
+ * concurrent spaces, so per-mode state there would race.
+ *
+ * Mains-tool availability per mode is NOT decided here: the tool registry
+ * (`mains-tools.registry.ts`) carries a per-tool `modes` allowlist, so a tool
+ * a mode excludes is never registered with the provider in the first place.
+ */
+
+import type { ModeId } from "./modes";
+import { DEFAULT_MODE_ID } from "./modes";
+import { PROVIDER_IDS, type ProviderId } from "./provider-ids";
+
+// ─────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Tool policy for drivers with an allowlist mechanism (claude, copilot).
+ * The effective set a driver applies is `(allowedTools ?? provider default)
+ * minus disallowedTools` — computed driver-side, since the default list is an
+ * adapter concern. Codex and cursor have no allowlist; their harness rides
+ * `configSnapshot` (sandbox / agent mode) instead.
+ */
+export interface ModeToolPolicy {
+  /** Replaces the provider's default allowlist. null = provider default. */
+  allowedTools: readonly string[] | null;
+  /** Hard-denied tools: claude `disallowedTools`, copilot pre-hook deny. */
+  disallowedTools: readonly string[];
+}
+
+export interface ModeHarnessDescriptor {
+  mode: ModeId;
+  /** Prompt delta attached via each provider's native prompt layer. null = none. */
+  promptDelta: string | null;
+  /** null = provider defaults untouched (developer). */
+  toolPolicy: ModeToolPolicy | null;
+  /** configSnapshot keys merged UNDER the caller's snapshot (caller wins). */
+  configDefaults: Partial<Record<ProviderId, Record<string, unknown>>>;
+  /**
+   * configSnapshot keys merged OVER the caller's snapshot. Mode-critical
+   * settings only — a stale client asking a chat space for
+   * `bypassPermissions` must not win.
+   */
+  configOverrides: Partial<Record<ProviderId, Record<string, unknown>>>;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Prompt deltas
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Work mode: same agent, non-technical collaboration contract. Modeled on the
+ * delta OpenAI's desktop app injects for "Codex for Work" — tone + deliverable
+ * rules only, deliberately small.
+ */
+const WORK_INSTRUCTIONS = `# Working with a non-technical user
+
+You are assisting with knowledge work rather than software development. The user may not be technical.
+
+- Prefer non-technical language. Don't name the commands or tools you run — describe what they do in plain terms (say "scanning the folder for documents", not "running grep").
+- When you write code as an intermediate step of a non-coding task (for example a script that builds a document, chart, or summary), don't narrate or cite that code — focus on the outcome it produced.
+- If the user asks for technical detail, or it would genuinely help them fix a problem, you may switch to technical language.
+
+# Deliverables
+
+- Finish work into concrete files the user can open, share, or reuse (documents, reports, summaries). Save them inside the workspace and tell the user where they are.
+- Prefer polished, complete outputs over fragments in chat: when the user asks for a report, the file is the deliverable and your reply summarizes it.`;
+
+/**
+ * Chat mode: plain conversation over the workspace. Read-only by contract —
+ * and mechanically where the provider allows (claude/copilot tool policy,
+ * codex read-only sandbox, cursor "ask" mode).
+ */
+const CHAT_INSTRUCTIONS = `# Conversation, not modification
+
+You are chatting with the user — answering questions and thinking through problems. This session is read-only.
+
+- Never modify files, run commands, or change any state, even when asked. If the user wants changes made, explain that this is a chat space and suggest switching to a developer or work space.
+- You may read files and search the workspace or the web to ground your answers.
+- Your reply is the deliverable: answer fully in chat rather than producing files.`;
+
+// ─────────────────────────────────────────────────────────────
+// The table
+// ─────────────────────────────────────────────────────────────
+
+export const MODE_HARNESSES: Record<ModeId, ModeHarnessDescriptor> = {
+  // Developer is the current behavior, locked to all-null/empty: drivers take
+  // their existing paths untouched.
+  developer: {
+    mode: "developer",
+    promptDelta: null,
+    toolPolicy: null,
+    configDefaults: {},
+    configOverrides: {},
+  },
+  // Work: file tools stay, Bash goes, git ceremony goes (the git/PR mains
+  // tools disappear via the registry's modes allowlist). acceptEdits is a
+  // default, not an override — an explicit caller choice still wins.
+  work: {
+    mode: "work",
+    promptDelta: WORK_INSTRUCTIONS,
+    toolPolicy: {
+      allowedTools: null,
+      disallowedTools: ["Bash"],
+    },
+    configDefaults: {
+      [PROVIDER_IDS.claude]: { permissionMode: "acceptEdits" },
+      [PROVIDER_IDS.copilot]: { permissionMode: "acceptEdits" },
+      [PROVIDER_IDS.codex]: { sandboxMode: "workspace-write" },
+      [PROVIDER_IDS.cursor]: { mode: "agent" },
+    },
+    configOverrides: {},
+  },
+  // Chat: read-only, enforced. Overrides beat the caller's snapshot so no
+  // client can escalate a chat space into a writing one.
+  chat: {
+    mode: "chat",
+    promptDelta: CHAT_INSTRUCTIONS,
+    toolPolicy: {
+      allowedTools: ["Read", "Glob", "Grep", "LSP", "WebFetch", "WebSearch"],
+      disallowedTools: ["Bash", "Write", "Edit", "MultiEdit", "NotebookEdit", "Task"],
+    },
+    configDefaults: {},
+    configOverrides: {
+      [PROVIDER_IDS.claude]: { permissionMode: "default" },
+      [PROVIDER_IDS.copilot]: { permissionMode: "default" },
+      [PROVIDER_IDS.codex]: { sandboxMode: "read-only" },
+      [PROVIDER_IDS.cursor]: { mode: "ask" },
+    },
+  },
+};
+
+export function getModeHarness(mode: ModeId | null | undefined): ModeHarnessDescriptor {
+  return MODE_HARNESSES[mode ?? DEFAULT_MODE_ID] ?? MODE_HARNESSES[DEFAULT_MODE_ID];
+}
+
+// ─────────────────────────────────────────────────────────────
+// Composition — called once per run in runs.service
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * The instruction text a run carries: the mode's delta first, then the
+ * space's custom system prompt. null when both are absent.
+ */
+export function composeExtraInstructions(
+  mode: ModeId | null | undefined,
+  spaceSystemPrompt?: string | null,
+): string | null {
+  const delta = getModeHarness(mode).promptDelta;
+  const custom = spaceSystemPrompt?.trim() || null;
+  const parts = [delta, custom].filter((part): part is string => Boolean(part));
+  return parts.length > 0 ? parts.join("\n\n") : null;
+}
+
+/**
+ * The config snapshot a run carries: mode defaults under the caller's
+ * snapshot, mode overrides on top (`overrides > payload > defaults`).
+ * null when the result is empty, matching the "no snapshot" wire shape.
+ */
+export function composeConfigSnapshot(
+  mode: ModeId | null | undefined,
+  providerId: string,
+  payloadSnapshot?: Record<string, unknown> | null,
+): Record<string, unknown> | null {
+  const harness = getModeHarness(mode);
+  const defaults = harness.configDefaults[providerId as ProviderId] ?? {};
+  const overrides = harness.configOverrides[providerId as ProviderId] ?? {};
+  const merged = { ...defaults, ...(payloadSnapshot ?? {}), ...overrides };
+  return Object.keys(merged).length > 0 ? merged : null;
+}

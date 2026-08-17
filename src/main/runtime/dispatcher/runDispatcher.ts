@@ -14,6 +14,7 @@ import {
 } from "../../modules/providers/adapters";
 import { createRunWriteback } from "../writeback/runWriteback";
 import type { RunStatus, StartRunContextItem } from "../../modules/runs";
+import { DEFAULT_MODE_ID } from "../../../shared/modes";
 
 export interface DispatchRunRequest {
   accountId: string;
@@ -123,6 +124,10 @@ export async function dispatchRun(request: DispatchRunRequest): Promise<Dispatch
     goal: request.goal,
     model: request.model,
     systemPrompt: request.systemPrompt,
+    // The dispatcher is not mode-aware: it has no spaceId and no IPC caller.
+    // A future caller must resolve the harness via shared/mode-harness
+    // composition (see runs.service) instead of leaning on this default.
+    mode: DEFAULT_MODE_ID,
     context: request.initialContext as WorkRunContextItem[] | undefined,
     toolPolicy: request.toolPolicySnapshot,
   };
@@ -270,6 +275,8 @@ async function dispatchRunInternal(
         goal: request.goal,
         model: request.model,
         systemPrompt: request.systemPrompt,
+        // Not mode-aware — see the note on dispatchRun's adapterRequest.
+        mode: DEFAULT_MODE_ID,
         context: request.initialContext as WorkRunContextItem[] | undefined,
         toolPolicy: request.toolPolicySnapshot,
       },

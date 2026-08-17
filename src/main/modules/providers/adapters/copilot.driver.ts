@@ -1450,6 +1450,22 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
   // ProviderDriver implementation
   // ─────────────────────────────────────────────────────────────
 
+  /**
+   * The session's system message: workspace context first, then the
+   * mode/space instruction delta, then the per-run system prompt.
+   */
+  function buildSystemMessage(
+    rootPath: string,
+    systemPrompt: string | null | undefined,
+    extraInstructions: string | null | undefined,
+  ): { content: string } {
+    const workspaceContext = `You are working in the directory: ${rootPath}\nAll file operations should be relative to this workspace root.`;
+    const parts = [workspaceContext, extraInstructions, systemPrompt].filter(
+      (part): part is string => Boolean(part),
+    );
+    return { content: parts.join("\n\n") };
+  }
+
   return {
     async createSession(request: WorkRunRequest): Promise<AcquiredSession> {
       const { runId, model, systemPrompt } = request;
@@ -1484,12 +1500,11 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
         sessionConfig.reasoningEffort = reasoningEffort;
       }
 
-      const workspaceContext = `You are working in the directory: ${request.workspace.rootPath}\nAll file operations should be relative to this workspace root.`;
-      sessionConfig.systemMessage = {
-        content: systemPrompt
-          ? `${workspaceContext}\n\n${systemPrompt}`
-          : workspaceContext,
-      };
+      sessionConfig.systemMessage = buildSystemMessage(
+        request.workspace.rootPath,
+        systemPrompt,
+        request.extraInstructions,
+      );
 
       const sdkSession = await copilotClient.createSession(sessionConfig);
       const agentMode = agentModeForPermission(permissionMode);

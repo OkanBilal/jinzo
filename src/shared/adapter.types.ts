@@ -53,7 +53,7 @@ export interface WorkRunRequest {
   /** Experience mode snapshot for this run (see `src/shared/modes.ts`). */
   mode?: ModeId;
   /**
-   * Mode-resolved instruction delta (see `src/shared/mode-instructions.ts`).
+   * Mode-resolved instruction delta (see `src/shared/mode-harness.ts`).
    * Adapters attach it via their provider's native prompt-layer mechanism.
    */
   extraInstructions?: string | null;

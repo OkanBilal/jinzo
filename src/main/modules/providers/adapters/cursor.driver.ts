@@ -1641,7 +1641,13 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
   // ─────────────────────────────────────────────────────────────
 
   function buildStartPrompt(request: WorkRunRequest): string {
-    const workspaceInfo = `Working directory: ${request.workspace.rootPath}`;
+    // Cursor's ACP surface has no system-prompt slot, so the mode/space
+    // instruction delta rides the first prompt; the session transcript
+    // carries it for follow-up turns.
+    const modePrefix = request.extraInstructions
+      ? `<mode_instructions>\n${request.extraInstructions}\n</mode_instructions>\n\n`
+      : "";
+    const workspaceInfo = `${modePrefix}Working directory: ${request.workspace.rootPath}`;
     let prompt: string;
 
     if (request.context && request.context.length > 0) {

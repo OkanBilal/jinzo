@@ -46,7 +46,7 @@ export const MODE_CONFIGS: Record<ModeId, ModeConfigDescriptor> = {
   // Work and chat currently mirror developer's UI shape; they diverge as their
   // surfaces land (work: deliverables panel, non-technical run view; chat:
   // /chat route). Work already changes agent behavior via its instructions
-  // delta (see shared/mode-instructions.ts).
+  // delta (see shared/mode-harness.ts).
   work: {
     mode: "work",
     label: "Work",
