@@ -932,6 +932,31 @@ export const workspaceService = {
     await this.resyncDiff(workspaceId);
   },
 
+  /**
+   * Branch off the workspace's current HEAD and check the new branch out.
+   *
+   * The counterpart to `switchBranch` for a name that doesn't exist yet. It
+   * needs no diff resync: `checkout -b` leaves HEAD on the same commit, so the
+   * recorded diff still describes the same tree against the same base — only
+   * the branch *name* changed, which is what the git-state event carries.
+   *
+   * Safe from a worktree too: the branch is created in the shared repo, and a
+   * name nothing has checked out yet can't be checked out twice.
+   */
+  async createBranch(workspaceId: string, branch: string): Promise<void> {
+    const workspace = await workspaceRepo.findById(workspaceId);
+    if (!workspace) throw new Error("Workspace not found");
+    if (!workspace.rootPath) throw new Error("Workspace has no root path");
+    if (!branch.trim()) throw new Error("Branch name is required");
+
+    await gitService.createBranch(workspace.rootPath, branch.trim());
+    emitGitStateChanged({
+      workspaceId,
+      branch: branch.trim(),
+      pathExists: true,
+    });
+  },
+
   /** Rename the branch actually checked out in the workspace. */
   async renameBranch(
     workspaceId: string,

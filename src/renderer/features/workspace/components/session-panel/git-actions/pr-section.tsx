@@ -1,9 +1,18 @@
-import { useCallback, useState } from "react";
-import { PullRequest } from "@/components/ui/icons";
-import { Input, Textarea, toast } from "@/components/ui";
+import { useCallback, useMemo, useState } from "react";
+import { Branch, PullRequest } from "@/components/ui/icons";
+import {
+  Input,
+  Select,
+  Text,
+  Textarea,
+  toast,
+  type SelectOption,
+} from "@/components/ui";
 import {
   useCreatePrGitFlowMutation,
   useGeneratePrBodyGitFlowMutation,
+  useGetWorkspaceQuery,
+  useListProjectBranchesQuery,
 } from "@/lib/redux/api";
 import { extractErrorMessage } from "@/lib/extract-error-message";
 import { PanelItem, PanelCollapse, PANEL_ROW_X } from "../panel-item";
@@ -26,6 +35,7 @@ export function PrSection({
 }) {
   const {
     workspaceId,
+    status,
     isDefaultBranch,
     pending,
     setPending,
@@ -33,10 +43,65 @@ export function PrSection({
     isSectionOpen,
     toggleSection,
   } = panel;
+  const isOpen = isSectionOpen("pr");
 
   const [prTitle, setPrTitle] = useState("");
   const [prBody, setPrBody] = useState("");
   const [prDraft, setPrDraft] = useState(false);
+  /**
+   * The base picked in this form. Empty means "whatever the workspace resolves
+   * to" — the form doesn't pin a branch the user never touched, so a workspace
+   * whose base changes underneath still opens against the right target.
+   */
+  const [pickedBase, setPickedBase] = useState("");
+
+  // Same source as the branch row: the project's repo, whose refs a worktree
+  // workspace shares. Scoped to the row being open — `git branch` isn't free.
+  const { data: workspace } = useGetWorkspaceQuery(workspaceId);
+  const projectId = workspace?.projectId ?? null;
+  const { data: branchNames } = useListProjectBranchesQuery(projectId!, {
+    skip: !projectId || !isOpen,
+  });
+
+  const headBranch = status?.branch ?? "";
+  const resolvedBase = status?.baseBranch ?? "";
+  // A pick that has become the checked-out branch is no pick at all: the branch
+  // row can move HEAD while this form is open, and the select drops the head
+  // from its options — the value it sends has to drop it too.
+  const base = (pickedBase !== headBranch ? pickedBase : "") || resolvedBase;
+
+  const baseOptions = useMemo(() => {
+    const names = (branchNames ?? []).filter((name) => name !== headBranch);
+    // The resolved base is what we default to, so it has to be selectable even
+    // when it isn't in the list — it can live only on the remote, and the list
+    // is still empty while the branches load.
+    if (resolvedBase && resolvedBase !== headBranch && !names.includes(resolvedBase)) {
+      names.unshift(resolvedBase);
+    }
+    // Only the closed trigger spells out the direction — `main ← dev`. In the
+    // open list every row would repeat the same head branch, and the list is
+    // already unambiguously a list of targets.
+    const withHead = (target: string) =>
+      headBranch ? `${target} ← ${headBranch}` : target;
+    const options: SelectOption[] = names.map((name) => ({
+      value: name,
+      label: name,
+      selectedLabel: withHead(name),
+      icon: <Branch className="size-3.5 shrink-0" />,
+    }));
+    // Nothing resolved: `gh` falls back to the remote's default branch, and
+    // this entry says so rather than pretending a branch was chosen.
+    if (!resolvedBase) {
+      options.unshift({
+        value: "",
+        label: "Repository default",
+        selectedLabel: withHead("Repository default"),
+        icon: <Branch className="size-3.5 shrink-0" />,
+        description: "Whatever the remote calls its default branch",
+      });
+    }
+    return options;
+  }, [branchNames, headBranch, resolvedBase]);
 
   const [createPrGitFlow] = useCreatePrGitFlowMutation();
   const [generatePrBody, { isLoading: generatingPr }] =
@@ -45,7 +110,8 @@ export function PrSection({
   /** Explicit generation for the PR form — fills title + body. */
   const handleGeneratePr = useCallback(() => {
     if (!providerId || generatingPr) return;
-    generatePrBody({ workspaceId, providerId })
+    // Against the chosen base, so the description matches the PR's own diff.
+    generatePrBody({ workspaceId, providerId, base: base || undefined })
       .unwrap()
       .then((generated) => {
         setPrTitle(generated.title);
@@ -54,7 +120,7 @@ export function PrSection({
       .catch((err) =>
         toast.error(extractErrorMessage(err, "Failed to generate the PR description.")),
       );
-  }, [workspaceId, providerId, generatingPr, generatePrBody]);
+  }, [workspaceId, providerId, generatingPr, generatePrBody, base]);
 
   const handleCreatePr = useCallback(async () => {
     if (pending) return;
@@ -65,6 +131,7 @@ export function PrSection({
         workspaceId,
         title: prTitle.trim() || undefined,
         body: prBody.trim() || undefined,
+        base: base || undefined,
         draft: prDraft,
         providerId,
       }).unwrap();
@@ -86,6 +153,7 @@ export function PrSection({
     prTitle,
     prBody,
     prDraft,
+    base,
     providerId,
     onClose,
   ]);
@@ -96,7 +164,7 @@ export function PrSection({
         icon={<PullRequest className="size-4" />}
         label="Create pull request"
         expandable
-        expanded={isSectionOpen("pr")}
+        expanded={isOpen}
         onClick={() => toggleSection("pr")}
         disabled={isDefaultBranch}
         title={
@@ -105,8 +173,24 @@ export function PrSection({
             : undefined
         }
       />
-      <PanelCollapse isOpen={isSectionOpen("pr")}>
+      <PanelCollapse isOpen={isOpen}>
         <div className={`space-y-2 pt-2 pb-1 ${PANEL_ROW_X}`}>
+          {/* Where the PR lands. "Merge … into" described the eventual merge,
+              which this button doesn't perform — the row opens a PR. */}
+          <div className="space-y-1.5">
+            <Text as="span" size="xs" tone="subtle" className="block truncate">
+              Open the pull request into
+            </Text>
+            <Select
+              value={base}
+              options={baseOptions}
+              onChange={setPickedBase}
+              disabled={busy}
+              size="sm"
+              placeholder="Repository default"
+              aria-label="Base branch"
+            />
+          </div>
           <Input
             type="text"
             value={prTitle}

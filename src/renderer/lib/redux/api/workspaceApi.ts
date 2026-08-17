@@ -376,6 +376,20 @@ export const workspaceApi = baseApi.injectEndpoints({
       invalidatesTags: ["WorkspaceGitStates"],
     }),
 
+    // Branches off the workspace's HEAD and checks the new branch out. Also
+    // invalidates Projects: the branch list this was launched from is a project
+    // read, and it has a new name to show.
+    createWorkspaceBranch: builder.mutation<
+      void,
+      { workspaceId: string; branch: string }
+    >({
+      query: ({ workspaceId, branch }) => ({
+        handler: CHANNELS.workspace.createBranch,
+        args: [workspaceId, branch],
+      }),
+      invalidatesTags: ["WorkspaceGitStates", "Projects"],
+    }),
+
     // Checks out an existing branch in the workspace and re-records its diff.
     switchWorkspaceBranch: builder.mutation<
       void,
@@ -647,6 +661,7 @@ export const {
   useArchiveWorkspaceMutation,
   useUnarchiveWorkspaceMutation,
   useSelectWorkspaceDirectoryMutation,
+  useCreateWorkspaceBranchMutation,
   useRenameWorkspaceBranchMutation,
   useSwitchWorkspaceBranchMutation,
   useDiscardWorkspacePathsMutation,

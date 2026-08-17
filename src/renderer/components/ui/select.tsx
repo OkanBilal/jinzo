@@ -17,9 +17,31 @@ import { SelectOption as SelectOptionIcon } from "./icons";
 export interface SelectOption<T extends string = string> {
   value: T;
   label: string;
+  /**
+   * What the closed trigger shows instead of `label`, for a choice that has to
+   * restate its context once the list it was picked from is gone.
+   */
+  selectedLabel?: string;
   icon?: ReactNode;
   description?: string;
 }
+
+/**
+ * How much room the control takes. `sm` carries the exact metrics of `Input` /
+ * `Textarea`, so a select dropped into a compact form lines up with the fields
+ * around it instead of standing a row taller than all of them.
+ */
+export type SelectSize = "sm" | "md";
+
+const TRIGGER_SIZE: Record<SelectSize, string> = {
+  md: "min-w-52 px-2.5 py-2 text-sm",
+  sm: "px-3 py-2 text-xs",
+};
+
+const OPTION_SIZE: Record<SelectSize, string> = {
+  md: "text-s",
+  sm: "text-xs",
+};
 
 interface SelectBaseProps<T extends string = string> {
   id?: string;
@@ -28,6 +50,9 @@ interface SelectBaseProps<T extends string = string> {
   onChange: (value: T) => void;
   placeholder?: string;
   title?: string;
+  /** Inert trigger — for a control an in-flight action has taken over. */
+  disabled?: boolean;
+  size?: SelectSize;
 }
 
 export type SelectProps<T extends string = string> = SelectBaseProps<T> &
@@ -43,6 +68,8 @@ export default function Select<T extends string = string>({
   onChange,
   placeholder = "Select an option",
   title,
+  disabled,
+  size = "md",
   "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledBy,
 }: SelectProps<T>) {
@@ -70,6 +97,10 @@ export default function Select<T extends string = string>({
     setPrevIsOpen(isOpen);
     setAnimateIn(isOpen && !isAppReady());
   }
+
+  // A control that goes disabled mid-interaction closes its list: the portaled
+  // options outlive the trigger, and would stay clickable above an inert one.
+  if (disabled && isOpen) setIsOpen(false);
 
   const selectedIndex = options.findIndex((option) => option.value === value);
   const selectedOption =
@@ -247,16 +278,18 @@ export default function Select<T extends string = string>({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-controls={listboxId}
+        disabled={disabled}
         onClick={() => {
           if (isOpen) closeMenu(false);
           else openMenu(selectedIndex >= 0 ? selectedIndex : 0);
         }}
         onKeyDown={handleTriggerKeyDown}
         className={`
-          w-full min-w-52 px-2.5 py-2
+          w-full ${TRIGGER_SIZE[size]}
           glass-button
           text-primary-900 dark:text-primary
-          text-sm cursor-pointer
+          cursor-pointer
+          disabled:cursor-not-allowed disabled:opacity-60
           flex items-center justify-between
           transition-[color,background-color,border-radius,box-shadow]
           focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2
@@ -271,7 +304,7 @@ export default function Select<T extends string = string>({
             tone={selectedOption ? "inherit" : "subtle"}
             className="truncate"
           >
-            {selectedOption?.label || placeholder}
+            {selectedOption?.selectedLabel || selectedOption?.label || placeholder}
           </Text>
         </div>
         <Caption
@@ -325,7 +358,7 @@ export default function Select<T extends string = string>({
                     onFocus={() => setActiveIndex(index)}
                     onClick={() => selectOption(option)}
                     className={`
-                      flex w-full cursor-pointer items-center gap-2 px-3 py-1 text-left text-s
+                      flex w-full cursor-pointer items-center gap-2 px-3 py-1 text-left ${OPTION_SIZE[size]}
                       text-primary-900 transition-colors focus:outline-none dark:text-primary
                       hover:bg-primary-950/5 focus:bg-primary-950/5 dark:hover:bg-primary/5 dark:focus:bg-primary/5
                       ${isSelected || isActive ? "bg-primary-950/5 dark:bg-primary/10" : ""}

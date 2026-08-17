@@ -26,6 +26,9 @@ vi.mock("../git", () => ({
     stageFiles: vi.fn(),
     getStagedDiff: vi.fn(),
     getDiff: vi.fn(),
+    getBranchDiff: vi.fn(),
+    getBranchLog: vi.fn(),
+    getLog: vi.fn(),
     commit: vi.fn(),
     getHeadSha: vi.fn(),
     push: vi.fn(),
@@ -173,6 +176,36 @@ describe("gitFlowService — live branch invariants", () => {
     );
   });
 
+  it("targets the base the PR form picked instead of the workspace default", async () => {
+    await gitFlowService.createPr({
+      workspaceId: "ws-1",
+      title: "Live branch PR",
+      body: "Body",
+      base: "release/2026-08",
+    });
+
+    expect(execFileMock).toHaveBeenCalledWith(
+      "gh",
+      [
+        "pr",
+        "create",
+        "--title",
+        "Live branch PR",
+        "--head",
+        "feature/live",
+        "--body",
+        "Body",
+        "--base",
+        "release/2026-08",
+      ],
+      {
+        cwd: "/repo",
+        timeout: 30_000,
+      },
+      expect.any(Function),
+    );
+  });
+
   it("rejects a PR whose live head equals its base before pushing", async () => {
     gitMock.getCurrentBranch.mockResolvedValue("main");
 
@@ -220,6 +253,51 @@ describe("gitFlowService — live branch invariants", () => {
 
       expect(gitMock.stageFiles).toHaveBeenCalledWith("/repo");
       expect(gitMock.getDiff).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("generatePrBody", () => {
+    it("summarizes the diff against the picked base, not the workspace's", async () => {
+      gitMock.getBranchDiff.mockImplementation(async (_root, ref) =>
+        ref === "origin/release/2026-08" ? "release-diff" : "",
+      );
+      gitMock.getBranchLog.mockResolvedValue(["feat: the thing"]);
+      generateTextMock.mockResolvedValue("PR title\n\nPR body");
+
+      const result = await gitFlowService.generatePrBody({
+        workspaceId: "ws-1",
+        providerId: "claude_code",
+        base: "release/2026-08",
+      });
+
+      expect(result).toEqual({ title: "PR title", body: "PR body" });
+      // The workspace's own base ("main") is never consulted once the form
+      // picked one — otherwise the summary describes a different changeset
+      // than the PR contains.
+      expect(gitMock.getBranchDiff).toHaveBeenCalledWith(
+        "/repo",
+        "origin/release/2026-08",
+      );
+      expect(gitMock.getBranchDiff).not.toHaveBeenCalledWith(
+        "/repo",
+        "origin/main",
+      );
+      expect(generateTextMock.mock.calls[0][0]).toContain("release-diff");
+    });
+
+    it("falls back to the workspace base branch when none is picked", async () => {
+      gitMock.getBranchDiff.mockImplementation(async (_root, ref) =>
+        ref === "origin/main" ? "main-diff" : "",
+      );
+      gitMock.getBranchLog.mockResolvedValue([]);
+      generateTextMock.mockResolvedValue("PR title\n\nPR body");
+
+      await gitFlowService.generatePrBody({
+        workspaceId: "ws-1",
+        providerId: "claude_code",
+      });
+
+      expect(gitMock.getBranchDiff).toHaveBeenCalledWith("/repo", "origin/main");
     });
   });
 });

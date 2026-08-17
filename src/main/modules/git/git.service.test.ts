@@ -533,6 +533,43 @@ describe("checkoutBranch", () => {
   });
 });
 
+describe("createBranch", () => {
+  // The panel promises the work in progress travels with you. It does so for
+  // free: the commit doesn't move, only the name pointing at it.
+  it("lands on a new branch at the same commit, tree untouched", async () => {
+    const repo = makeRepo();
+    write(repo, "README.md", "# edited\n");
+    write(repo, "scratch.txt", "wip\n");
+    const headBefore = git(repo, "rev-parse", "HEAD");
+
+    await gitService.createBranch(repo, "feature/carry");
+
+    expect(await gitService.getCurrentBranch(repo)).toBe("feature/carry");
+    expect(git(repo, "rev-parse", "HEAD")).toBe(headBefore);
+    expect(fs.readFileSync(path.join(repo, "README.md"), "utf-8")).toBe(
+      "# edited\n",
+    );
+    expect(fs.readFileSync(path.join(repo, "scratch.txt"), "utf-8")).toBe(
+      "wip\n",
+    );
+  });
+
+  it("rejects a name already taken, leaving the checkout where it was", async () => {
+    const repo = makeRepo();
+    git(repo, "branch", "taken");
+
+    await expect(gitService.createBranch(repo, "taken")).rejects.toThrow();
+    expect(await gitService.getCurrentBranch(repo)).toBe("main");
+  });
+
+  it("rejects a branch name that would parse as a git option", async () => {
+    const repo = makeRepo();
+    await expect(gitService.createBranch(repo, "--orphan")).rejects.toThrow(
+      "Invalid git ref",
+    );
+  });
+});
+
 describe("renameBranch", () => {
   it("renames the branch", async () => {
     const repo = makeRepo();

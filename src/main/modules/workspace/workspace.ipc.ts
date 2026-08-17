@@ -94,6 +94,13 @@ export function registerWorkspaceIpc(): void {
 
   // ── git operations (see CONTEXT.md "Workspace git operations") ──
   ipcMain.handle(
+    CHANNELS.workspace.createBranch,
+    handle((id: string, branch: string) =>
+      workspaceService.createBranch(id, branch),
+    ),
+  );
+
+  ipcMain.handle(
     CHANNELS.workspace.renameBranch,
     handle((id: string, newBranchName: string) =>
       workspaceService.renameBranch(id, newBranchName),
@@ -297,6 +304,7 @@ export function unregisterWorkspaceIpc(): void {
     CHANNELS.workspace.delete,
     CHANNELS.workspace.archive,
     CHANNELS.workspace.unarchive,
+    CHANNELS.workspace.createBranch,
     CHANNELS.workspace.renameBranch,
     CHANNELS.workspace.switchBranch,
     CHANNELS.workspace.discardPaths,

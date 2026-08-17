@@ -340,6 +340,7 @@ export const CHANNELS = {
     selectDirectory: "workspace:selectDirectory",
     unarchive: "workspace:unarchive",
     update: "workspace:update",
+    createBranch: "workspace:createBranch",
     renameBranch: "workspace:renameBranch",
     switchBranch: "workspace:switchBranch",
     discardPaths: "workspace:discardPaths",

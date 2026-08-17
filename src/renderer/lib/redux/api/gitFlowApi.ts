@@ -145,7 +145,13 @@ export const gitFlowApi = baseApi.injectEndpoints({
 
     generatePrBodyGitFlow: builder.mutation<
       { title: string; body: string },
-      { workspaceId: string; providerId: string; model?: string }
+      {
+        workspaceId: string;
+        providerId: string;
+        model?: string;
+        /** Base the PR will target — the summary describes the diff against it. */
+        base?: string;
+      }
     >({
       query: (payload) => ({
         handler: CHANNELS.gitFlow.generatePrBody,

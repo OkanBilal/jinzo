@@ -321,6 +321,8 @@ const api = {
     unarchive: (id: string) =>
       ipcRenderer.invoke(CHANNELS.workspace.unarchive, id),
     // ── git operations (see CONTEXT.md "Workspace git operations") ──
+    createBranch: (id: string, branch: string) =>
+      ipcRenderer.invoke(CHANNELS.workspace.createBranch, id, branch),
     renameBranch: (id: string, newBranchName: string) =>
       ipcRenderer.invoke(CHANNELS.workspace.renameBranch, id, newBranchName),
     switchBranch: (id: string, branch: string) =>
@@ -712,6 +714,7 @@ const api = {
       workspaceId: string;
       providerId: string;
       model?: string;
+      base?: string;
     }) => ipcRenderer.invoke(CHANNELS.gitFlow.generatePrBody, payload),
   },
   // Terminal operations

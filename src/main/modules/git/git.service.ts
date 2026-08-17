@@ -596,6 +596,23 @@ export const gitService = {
   },
 
   /**
+   * Create a branch at the current HEAD and check it out (`checkout -b`).
+   *
+   * Unlike `checkoutBranch` this can't collide with the working tree: the
+   * commit doesn't change, only the name pointing at it, so uncommitted work
+   * always comes along and git has nothing to refuse over. What it does refuse
+   * — a name already taken, a name git considers malformed — arrives as its own
+   * message, which is the one worth showing.
+   *
+   * A detached HEAD is a valid starting point: the new branch is created at
+   * whatever commit is checked out.
+   */
+  async createBranch(rootPath: string, branch: string): Promise<void> {
+    assertRef(branch);
+    await getGit(rootPath).checkoutLocalBranch(branch);
+  },
+
+  /**
    * Discard the working-tree changes to specific files, restoring each to its
    * HEAD state.
    *

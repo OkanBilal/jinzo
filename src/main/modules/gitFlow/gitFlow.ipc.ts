@@ -64,8 +64,12 @@ export function registerGitFlowIpc(): void {
   ipcMain.handle(
     CHANNELS.gitFlow.generatePrBody,
     handle(
-      (payload: { workspaceId: string; providerId: string; model?: string }) =>
-        gitFlowService.generatePrBody(payload),
+      (payload: {
+        workspaceId: string;
+        providerId: string;
+        model?: string;
+        base?: string;
+      }) => gitFlowService.generatePrBody(payload),
     ),
   );
 

@@ -475,6 +475,12 @@ export const gitFlowService = {
     workspaceId: string;
     providerId: string;
     model?: string;
+    /**
+     * The base the PR will target, when the form's picker has moved it off the
+     * workspace default. The description has to describe the diff the PR will
+     * actually contain, so the chosen base wins here too.
+     */
+    base?: string;
   }): Promise<{ title: string; body: string }> {
     const { rootPath } = await this.resolveRoot(params.workspaceId);
 
@@ -483,7 +489,8 @@ export const gitFlowService = {
     // after the branch is committed and the tree is clean. Try the remote
     // base first (the PR target), then the local base. Fall back to the
     // working-tree + staged diff only when no base is known.
-    const baseBranch = await this.resolveBaseBranch(params.workspaceId);
+    const baseBranch =
+      params.base?.trim() || (await this.resolveBaseBranch(params.workspaceId));
     let diff = "";
     let baseRef: string | null = null;
     if (baseBranch) {
@@ -890,6 +897,9 @@ export const gitFlowService = {
           workspaceId: params.workspaceId,
           providerId: params.providerId,
           model: params.model,
+          // Same base the PR will target — otherwise the generated summary
+          // describes a diff against a branch we aren't opening against.
+          base: params.base,
         });
         title = gen.title;
         if (!body) body = gen.body;

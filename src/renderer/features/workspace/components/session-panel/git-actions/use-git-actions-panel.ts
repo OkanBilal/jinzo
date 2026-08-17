@@ -19,10 +19,20 @@ export type PendingAction =
   | "push"
   | "pr"
   | "publish"
+  | "newBranch"
   | null;
 
-/** The panel rows that open in place. */
-export type Section = "changes" | "branch" | "commit" | "pr" | "publish";
+/**
+ * The panel rows that open in place. `newBranch` is the odd one out: it has no
+ * row of its own, it's the form the branch row's own action opens under it.
+ */
+export type Section =
+  | "changes"
+  | "branch"
+  | "newBranch"
+  | "commit"
+  | "pr"
+  | "publish";
 
 // Commit and PR are mutually exclusive — both forms answer "what happens to
 // my changes next", so opening one closes the other. The rest stack freely.
