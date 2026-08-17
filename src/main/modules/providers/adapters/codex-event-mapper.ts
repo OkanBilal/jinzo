@@ -101,6 +101,27 @@ function settleSubAgent(
   };
 }
 
+/**
+ * Web-search-backed answers carry OpenAI's citation annotations inline:
+ * private-use markers wrap a payload the ChatGPT UI resolves into source
+ * chips — U+E200 `cite` U+E202 `turn1view0` … U+E201. They are transport
+ * syntax, not prose, and no client outside ChatGPT can resolve them, so here
+ * they render as tofu glyphs mid-sentence ("play on PC ṆciteÖturn1view0Ọ").
+ *
+ * Strip the whole block plus the space that preceded it (the marker sits
+ * after the sentence's punctuation, so leaving it behind adds a stray trailing
+ * space that markdown may read as a hard break). An unterminated block is
+ * stripped too: streaming deltas cut a marker mid-payload, and the live
+ * preview must not flash the raw syntax while waiting for U+E201.
+ */
+const ANNOTATION_MARKER = /[\uE200-\uE20F]/;
+const ANNOTATION_BLOCK = /[ \t]*\uE200[\s\S]*?(?:\uE201|$)/g;
+
+export function stripAnnotationMarkers(text: string): string {
+  if (!ANNOTATION_MARKER.test(text)) return text;
+  return text.replace(ANNOTATION_BLOCK, "").replace(/[\uE200-\uE20F]/g, "");
+}
+
 interface Usage {
   inputTokens?: number;
   cachedInputTokens?: number;
@@ -1028,8 +1049,10 @@ export function createCodexEventMapper(
           runState.pendingFlush = [];
 
           // Emit remaining buffer
-          if (runState.agentMessageBuffer.trim()) {
-            const messageText = runState.agentMessageBuffer.trim();
+          const messageText = stripAnnotationMarkers(
+            runState.agentMessageBuffer,
+          ).trim();
+          if (messageText) {
             events.push({
               type: "artifact",
               kind: "report",
@@ -1099,14 +1122,17 @@ export function createCodexEventMapper(
             // and persist each as an artifact tagged with the spawn anchor —
             // that is what the subagent detail tab renders as chat flow. The
             // main transcript's grouping drops `isFromSubagent` artifacts.
+            const subMessage =
+              typeof item?.text === "string"
+                ? stripAnnotationMarkers(item.text).trim()
+                : "";
             if (
               meta &&
               method === "item/completed" &&
               (item?.type === "agentMessage" || item?.type === "agent_message") &&
-              typeof item.text === "string" &&
-              item.text.trim()
+              subMessage
             ) {
-              meta.lastMessage = item.text.trim();
+              meta.lastMessage = subMessage;
               if (meta.spawnItemId) {
                 events.push({
                   type: "artifact",
@@ -1174,11 +1200,14 @@ export function createCodexEventMapper(
           incomingId !== rsItem.currentMessageItemId &&
           (incomingType === "agentMessage" || incomingType === "agent_message");
 
-        if (rsItem && rsItem.agentMessageBuffer.trim() && isCompetingAgentMessage) {
+        const competingText = rsItem
+          ? stripAnnotationMarkers(rsItem.agentMessageBuffer).trim()
+          : "";
+        if (rsItem && competingText && isCompetingAgentMessage) {
           events.push({
             type: "artifact",
             kind: "report",
-            content: rsItem.agentMessageBuffer.trim(),
+            content: competingText,
             metadata: { source: "agent_message", itemId: rsItem.currentMessageItemId },
           });
           rsItem.agentMessageBuffer = "";
@@ -1214,7 +1243,9 @@ export function createCodexEventMapper(
           if (runState) {
             // New message item started — flush previous one
             if (itemId && runState.currentMessageItemId && itemId !== runState.currentMessageItemId) {
-              const text = runState.agentMessageBuffer.trim();
+              const text = stripAnnotationMarkers(
+                runState.agentMessageBuffer,
+              ).trim();
               if (text) {
                 runState.pendingFlush.push({
                   type: "artifact",
@@ -1232,7 +1263,7 @@ export function createCodexEventMapper(
             events.push({
               type: "artifact",
               kind: "report",
-              content: runState.agentMessageBuffer,
+              content: stripAnnotationMarkers(runState.agentMessageBuffer),
               metadata: { source: "agent_message_streaming" },
               ephemeral: true,
               streamId: `codex-msg-${runId}-${runState.currentMessageItemId ?? "default"}`,
@@ -1774,8 +1805,10 @@ export function createCodexEventMapper(
         // item arrive first and split ordering).
         if (phase === "complete" && runId) {
           const rs = getRunState(runId);
-          if (rs && rs.currentMessageItemId === item.id && rs.agentMessageBuffer.trim()) {
-            const messageText = rs.agentMessageBuffer.trim();
+          const messageText = rs
+            ? stripAnnotationMarkers(rs.agentMessageBuffer).trim()
+            : "";
+          if (rs && rs.currentMessageItemId === item.id && messageText) {
             events.push({
               type: "artifact",
               kind: "report",
@@ -1854,7 +1887,8 @@ export function createCodexEventMapper(
       }
 
       case "reasoning": {
-        const text = typeof item.text === "string" ? item.text : "";
+        const text =
+          typeof item.text === "string" ? stripAnnotationMarkers(item.text) : "";
         if (text && phase === "complete") {
           events.push({ type: "log", message: `[reasoning] ${text}`, level: "info", ts });
         }

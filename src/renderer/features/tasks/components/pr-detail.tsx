@@ -62,6 +62,14 @@ const STATE_BADGE: Record<string, string> = {
   closed: "bg-primary-100 dark:bg-danger/30 text-danger",
 };
 
+/**
+ * A draft is technically open, but nothing is being asked of the reader yet —
+ * so it reads neutral rather than green. Same greys the list row uses for its
+ * draft icon (`pr-list-item.tsx`).
+ */
+const DRAFT_BADGE =
+  "bg-primary-100 dark:bg-primary/10 text-primary-600 dark:text-primary-400";
+
 const CHECK_DOT: Record<string, string> = {
   passing: "bg-success",
   failing: "bg-danger",
@@ -234,7 +242,10 @@ export function PrDetail({ pr }: PrDetailProps) {
   };
 
   const current = detail ?? pr;
-  const stateBadge = STATE_BADGE[current.state] ?? STATE_BADGE.open;
+  const isDraft = current.isDraft && current.state === "open";
+  const stateBadge = isDraft
+    ? DRAFT_BADGE
+    : (STATE_BADGE[current.state] ?? STATE_BADGE.open);
   const canMerge = current.state === "open" && !current.isDraft;
 
   const statusText =
@@ -287,9 +298,7 @@ export function PrDetail({ pr }: PrDetailProps) {
               <span
                 className={`inline-flex capitalize items-center px-2 py-0.5 rounded-full text-xxs font-medium ${stateBadge}`}
               >
-                {current.isDraft && current.state === "open"
-                  ? "Draft"
-                  : current.state}
+                {isDraft ? "Draft" : current.state}
               </span>
             </div>
             <Heading3

@@ -40,6 +40,15 @@ export const DIFF_TYPOGRAPHY_STYLE = {
  * long and easy to mistype, which is the main reason this lives in one place.
  * `disableFileHeader` is part of the baseline because every surface renders its
  * own header chrome; a caller that wants the library's can override it.
+ *
+ * Only the containers are painted. The per-line elements (`[data-line]`,
+ * `[data-column-number]`) must NOT appear in that selector list: the library
+ * paints them with `var(--diffs-line-bg, var(--diffs-bg))`, which is where the
+ * added/removed row tint (and hover/selection blending) lives, and `unsafeCSS`
+ * lands in the last cascade layer, so naming them here flattens a changed row
+ * back to plain background — leaving only the word-level emphasis spans
+ * colored. `--diffs-bg` is inherited from `:host`, so the tint still mixes
+ * against our background.
  */
 export function diffSurfaceOptions(isDarkMode: boolean): BaseCodeOptions {
   const bg = `var(--color-${isDarkMode ? "primary-950" : "primary"})`;
@@ -47,7 +56,7 @@ export function diffSurfaceOptions(isDarkMode: boolean): BaseCodeOptions {
     theme: isDarkMode ? "pierre-dark" : "pierre-light",
     themeType: isDarkMode ? "dark" : "light",
     disableFileHeader: true,
-    unsafeCSS: `:host, [data-diffs], [data-diffs-header], [data-error-wrapper], [data-line], [data-column-number], [data-code] { --diffs-bg: ${bg}; background-color: ${bg}; }`,
+    unsafeCSS: `:host, [data-diffs], [data-diffs-header], [data-error-wrapper], [data-code] { --diffs-bg: ${bg}; background-color: ${bg}; }`,
   };
 }
 

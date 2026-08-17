@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About Mains</title>
+  <style>
+    /* Same Inter build the app renderer loads. `about.html` sits next to the
+       fonts dir in dev (src/renderer/public) and in the packaged renderer
+       root, so one relative URL covers both. */
+    @font-face {
+      font-family: 'Inter';
+      font-style: normal;
+      font-weight: 100 900;
+      font-display: swap;
+      src: url('./fonts/InterVariable.woff2') format('woff2');
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      /* --color-primary-* from the renderer's index.css. */
+      --text: #141414;
+      --muted: #6f6e69;
+      --faint: #878580;
+      --scrim: rgba(255, 255, 255, 0.7);
+      --link: #2563eb;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --text: #f7f7f6;
+        --muted: #a09d95;
+        --faint: #6f6e69;
+        --scrim: rgba(0, 0, 0, 0.44);
+        --link: #7aa2f7;
+      }
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+      /* The window is chrome-less apart from the traffic lights, so the panel
+         itself is the drag handle. */
+      -webkit-app-region: drag;
+      user-select: none;
+      cursor: default;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      font-optical-sizing: auto;
+      -webkit-font-smoothing: antialiased;
+      color: var(--text);
+    }
+
+    .panel {
+      height: 100%;
+      width: 100%;
+      background: var(--scrim);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 56px 28px 22px;
+    }
+
+    .icon {
+      width: 92px;
+      height: 92px;
+      border-radius: 21px;
+      margin-bottom: 22px;
+    }
+
+    .name {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+    }
+
+    .version {
+      margin-top: 4px;
+      font-size: 12px;
+      color: var(--muted);
+      /* Preview versions are one long unbreakable token; wrap rather than
+         spill past the fixed window width. */
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      text-align: center;
+    }
+
+    /* Two columns, label right-aligned against its value — the shape macOS
+       uses so the reader scans one seam instead of two ragged edges. */
+    .specs {
+      margin-top: 26px;
+      max-width: 100%;
+      display: grid;
+      /* Labels size to their content, values take what's left — otherwise a
+         long Chromium build widens the grid past the window. */
+      grid-template-columns: max-content minmax(0, max-content);
+      column-gap: 10px;
+      row-gap: 5px;
+      font-size: 12.5px;
+      line-height: 1.45;
+    }
+
+    .specs dt {
+      text-align: right;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .specs dd {
+      color: var(--muted);
+      /* Version strings are digits; tabular figures keep the column steady. */
+      font-variant-numeric: tabular-nums;
+      overflow-wrap: anywhere;
+      -webkit-user-select: text;
+      user-select: text;
+      -webkit-app-region: no-drag;
+    }
+
+    .footer {
+      margin-top: auto;
+      padding-top: 20px;
+      text-align: center;
+      font-size: 11px;
+      line-height: 1.5;
+      color: var(--faint);
+    }
+
+    .footer a {
+      color: var(--color-primary);
+      text-decoration: none;
+      -webkit-app-region: no-drag;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <img class="icon" src="./icon.png" alt="">
+    <div class="name">Mains</div>
+    <div class="version">Version <span id="version"></span></div>
+
+    <dl class="specs">
+      <dt>Electron</dt><dd id="electron"></dd>
+      <dt>Chromium</dt><dd id="chromium"></dd>
+      <dt>Node</dt><dd id="node"></dd>
+      <dt>macOS</dt><dd id="os"></dd>
+      <dt>Architecture</dt><dd id="arch"></dd>
+    </dl>
+
+    <div class="footer">
+      <a href="https://mains.dev" target="_blank" rel="noreferrer">mains.dev</a><br>
+      <span id="copyright"></span>
+    </div>
+  </div>
+
+  <script>
+    // Values are handed in as query params by aboutWindow.ts — this page has no
+    // preload and no IPC, so there is nothing for it to ask for at runtime.
+    const params = new URLSearchParams(location.search);
+    for (const id of ["version", "electron", "chromium", "node", "os", "arch", "copyright"]) {
+      document.getElementById(id).textContent = params.get(id) ?? "—";
+    }
+
+    // Esc closes, matching every other transient panel in the app.
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") window.close();
+    });
+  </script>
+</body>
+</html>
