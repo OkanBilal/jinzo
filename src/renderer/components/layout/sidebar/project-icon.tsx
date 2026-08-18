@@ -1,13 +1,16 @@
 import type { ReactNode } from "react";
 import { iconColorClass, parseIcon, type IconComponent } from "@/lib/icon-registry";
-import { ProjectFolder } from "@/components/ui/icons";
+import { ProjectFolder, ProjectFolderOpen } from "@/components/ui/icons";
 
 export function ProjectIcon({
   icon,
   projectName,
+  expanded = false,
 }: {
   icon: string | null;
   projectName: string;
+  /** Only the default folder reacts: open lid while its group is expanded. */
+  expanded?: boolean;
 }): ReactNode {
   if (icon) {
     const parsed = parseIcon(icon);
@@ -27,5 +30,6 @@ export function ProjectIcon({
     }
   }
   void projectName;
-  return <ProjectFolder className="size-3.5 text-primary-950 dark:text-primary" />;
+  const Folder = expanded ? ProjectFolderOpen : ProjectFolder;
+  return <Folder className="size-3.5 text-primary-950 dark:text-primary" />;
 }

@@ -28,7 +28,8 @@ import { WorkspaceGroupDropdown, type GroupingMode } from "./workspace-group-dro
 type WorkspaceGroup = {
   key: string;
   label: string;
-  icon?: ReactNode;
+  /** Function form tracks the section's open state (see SidebarGroupSection). */
+  icon?: ReactNode | ((expanded: boolean) => ReactNode);
   workspaces: WorkspaceResponse[];
   project?: Project;
 };
@@ -222,7 +223,13 @@ export default function WorkspacesList({
         result.push({
           key: `project-${pid}`,
           label: projectName,
-          icon: <ProjectIcon icon={data?.icon ?? null} projectName={projectName} />,
+          icon: (expanded: boolean) => (
+            <ProjectIcon
+              icon={data?.icon ?? null}
+              projectName={projectName}
+              expanded={expanded}
+            />
+          ),
           workspaces: wsList,
           project: data,
         });

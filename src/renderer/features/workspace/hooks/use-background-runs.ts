@@ -11,7 +11,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { appEvents } from "@/lib/transport";
 import { toast } from "@/components/ui";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
@@ -19,6 +19,7 @@ import {
   useAbortRunMutation,
   useListActiveRunsQuery,
   useSetActiveSpaceMutation,
+  useUpdateSpaceMutation,
   type ActiveRun,
 } from "@/lib/redux/api";
 import {
@@ -26,12 +27,13 @@ import {
   setSelectedCollectionId,
 } from "@/lib/redux/slices/workspaceSlice";
 import { useActiveSpace } from "@/hooks/use-active-space";
-import { getRouteType, WORKSPACE_BASE_PATH } from "@/lib/route-utils";
+import { getRouteRunId, getRouteType, WORKSPACE_BASE_PATH } from "@/lib/route-utils";
 import {
   mergeLingeringRuns,
-  resolveRunSpaceId,
+  resolveRunSpaceTarget,
   selectBackgroundRuns,
 } from "../lib/background-runs";
+import { isRunTab } from "../lib/repo-utils";
 import { useBackgroundRunActivity } from "./use-background-run-activity";
 
 /** Fallback refresh: picks up generated titles and any missed status push. */
@@ -55,10 +57,10 @@ export interface BackgroundRunsView {
 export function useBackgroundRuns(): BackgroundRunsView {
   const navigate = useNavigate();
   const location = useLocation();
-  const { runId: routeRunId } = useParams<{ runId?: string }>();
   const dispatch = useAppDispatch();
   const { activeSpaceId, activeSpace, spaces } = useActiveSpace();
   const [setActiveSpace] = useSetActiveSpaceMutation();
+  const [updateSpace] = useUpdateSpaceMutation();
   const [abortRun] = useAbortRunMutation();
   const [requestedStops, setRequestedStops] = useState<string[]>([]);
 
@@ -122,8 +124,20 @@ export function useBackgroundRuns(): BackgroundRunsView {
   const activeWorkspaceId = useAppSelector(
     (state) => state.workspace.activeWorkspaceId,
   );
-  const visibleWorkspaceId =
-    getRouteType(location.pathname) === "code" ? activeWorkspaceId : null;
+  const activeTab = useAppSelector((state) => state.workspace.activeTab);
+  const isCodeRoute = getRouteType(location.pathname) === "code";
+  const visibleWorkspaceId = isCodeRoute ? activeWorkspaceId : null;
+
+  // Same story for the workspace-less run the chat modes render, with one extra
+  // reason the route param can't answer it: this hook runs in the sidebar,
+  // outside the `<Routes>` tree, so `useParams` here has no match to read at
+  // all. The URL is still consulted first — a sidebar jump names the run a beat
+  // before the page adopts it — and `activeTab` covers the case the URL never
+  // names, a run started on `/code` with no param.
+  const visibleRunId = isCodeRoute
+    ? getRouteRunId(location.pathname) ??
+      (isRunTab(activeTab) ? activeTab : null)
+    : null;
 
   const runs = useMemo(
     () =>
@@ -132,10 +146,9 @@ export function useBackgroundRuns(): BackgroundRunsView {
         visibleWorkspaceId,
         visibleProviderId: activeSpace?.providerId ?? null,
         visibleMode: activeSpace?.mode ?? null,
-        visibleRunId:
-          getRouteType(location.pathname) === "code" ? routeRunId ?? null : null,
+        visibleRunId,
       }),
-    [activeRuns, lingeringRuns, activeSpace, visibleWorkspaceId, routeRunId, location.pathname],
+    [activeRuns, lingeringRuns, activeSpace, visibleWorkspaceId, visibleRunId],
   );
 
   const runIds = useMemo(() => runs.map((run) => run.id), [runs]);
@@ -143,11 +156,12 @@ export function useBackgroundRuns(): BackgroundRunsView {
 
   const jumpToRun = useCallback(
     async (run: ActiveRun) => {
-      // The page shows one provider at a time, so landing on the workspace is
-      // only half the jump — without the right space, the run is filtered out
-      // of the tab list and the page falls back to the newest one it can show.
-      const targetSpaceId = resolveRunSpaceId(run, spaces, activeSpaceId || null);
-      if (!targetSpaceId) {
+      // The page shows one provider and one mode at a time, so landing on the
+      // workspace is only half the jump — without the right space, the run is
+      // filtered out of the tab list and the page falls back to the newest one
+      // it can show.
+      const target = resolveRunSpaceTarget(run, spaces, activeSpaceId || null);
+      if (!target) {
         toast.error("No space is set up for this run's agent");
         return;
       }
@@ -155,13 +169,22 @@ export function useBackgroundRuns(): BackgroundRunsView {
       dispatch(setPendingRunId(run.id));
       dispatch(setSelectedCollectionId(run.collectionId));
 
-      if (targetSpaceId !== activeSpaceId) {
+      const needsSpaceSwitch = target.spaceId !== activeSpaceId;
+      if (needsSpaceSwitch || target.modeSwitch) {
         try {
           // Same ordering as the space picker: leave `/code/:workspaceId`
           // before switching, so the incoming space's provider never renders
           // against the outgoing space's workspace param.
           navigate("/", { replace: true });
-          await setActiveSpace(targetSpaceId).unwrap();
+          // The dock is the one surface that spans modes, so it is also the one
+          // that has to put a space back into the mode its run was started in.
+          if (target.modeSwitch) {
+            await updateSpace({
+              id: target.spaceId,
+              payload: { mode: target.modeSwitch },
+            }).unwrap();
+          }
+          if (needsSpaceSwitch) await setActiveSpace(target.spaceId).unwrap();
         } catch (error) {
           console.error("Failed to switch space for background run:", error);
           toast.error("Failed to switch space");
@@ -175,7 +198,7 @@ export function useBackgroundRuns(): BackgroundRunsView {
           : `${WORKSPACE_BASE_PATH}/runs/${run.id}`,
       );
     },
-    [activeSpaceId, spaces, dispatch, navigate, setActiveSpace],
+    [activeSpaceId, spaces, dispatch, navigate, setActiveSpace, updateSpace],
   );
 
   const stopRun = useCallback(

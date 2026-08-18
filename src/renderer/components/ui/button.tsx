@@ -47,7 +47,7 @@ const variantStyles: Record<ButtonVariant, string> = {
 // Even a fully custom `bare` button must remain visibly focusable and expose a
 // consistent disabled state.
 const interactionStyles =
-  "cursor-pointer duration-200 transition-[color,background-color,border-color,box-shadow,transform] disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none ";
+  "cursor-pointer duration-200 transition-[color,background-color,border-color,box-shadow,transform] disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500";
 
 const controlStyles =
   "px-3 py-1.5 text-s font-medium rounded-xl items-center justify-center";

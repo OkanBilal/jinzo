@@ -21,7 +21,8 @@ export function SidebarGroupSection({
 }: {
   groupKey: string;
   label: string;
-  icon?: ReactNode;
+  /** A function form gets the open state, so the glyph can track the accordion. */
+  icon?: ReactNode | ((expanded: boolean) => ReactNode);
   count: number;
   /** Hover-revealed "+" on the header (e.g. "Create new worktree", "New chat"). */
   action?: { label: string; onClick: () => void };
@@ -52,7 +53,11 @@ export function SidebarGroupSection({
         }}
         className="group/section w-full flex items-center gap-1.5 px-2 py-1 mb-px rounded-lg cursor-pointer hover:bg-primary/50 dark:hover:bg-primary/5 transition-colors"
       >
-        {icon && <span className="shrink-0 text-xs">{icon}</span>}
+        {icon && (
+          <span className="shrink-0 text-xs">
+            {typeof icon === "function" ? icon(expanded) : icon}
+          </span>
+        )}
         <Text as="span" size="s" tone="contrast" className="truncate">
           {label}
         </Text>

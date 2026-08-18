@@ -9,6 +9,7 @@ import {
   useListCollectionsQuery,
   useMoveRunToCollectionMutation,
   useSetActiveSpaceMutation,
+  useUpdateSpaceMutation,
   type Collection,
   type RecentRun,
 } from "@/lib/redux/api";
@@ -18,7 +19,7 @@ import {
   setSelectedCollectionId,
 } from "@/lib/redux/slices/workspaceSlice";
 import { useActiveSpace } from "@/hooks/use-active-space";
-import { resolveRunSpaceId } from "@/features/workspace/lib/background-runs";
+import { resolveRunSpaceTarget } from "@/features/workspace/lib/background-runs";
 import { getProviderVariantById } from "@/lib/provider-variants";
 import { WORKSPACE_BASE_PATH } from "@/lib/route-utils";
 import { SidebarGroupSection } from "./sidebar-group-section";
@@ -53,6 +54,7 @@ export function SidebarChatList({
   const { spaces, activeSpaceId } = useActiveSpace();
   const { data: account } = useGetAccountQuery();
   const [setActiveSpace] = useSetActiveSpaceMutation();
+  const [updateSpace] = useUpdateSpaceMutation();
   const [archiveRun] = useArchiveRunMutation();
   const [moveRunToCollection] = useMoveRunToCollectionMutation();
   const [sourcesCollection, setSourcesCollection] =
@@ -107,18 +109,24 @@ export function SidebarChatList({
   const handleSelectChat = async (run: RecentRun) => {
     dispatch(setSelectedCollectionId(run.collectionId));
 
-    // The page shows one provider at a time — a chat from another provider's
-    // space needs the space switch first, same flow as the background dock.
-    const targetSpaceId = resolveRunSpaceId(run, spaces, activeSpaceId || null);
-    if (!targetSpaceId) {
+    // The page shows one provider and one mode at a time — a chat from another
+    // space needs that switch first, same flow as the background dock.
+    const target = resolveRunSpaceTarget(run, spaces, activeSpaceId || null);
+    if (!target) {
       toast.error("No space is set up for this chat's agent");
       return;
     }
-    const needsSpaceSwitch = targetSpaceId !== activeSpaceId;
-    if (needsSpaceSwitch) {
+    const needsSpaceSwitch = target.spaceId !== activeSpaceId;
+    if (needsSpaceSwitch || target.modeSwitch) {
       try {
         navigate("/", { replace: true });
-        await setActiveSpace(targetSpaceId).unwrap();
+        if (target.modeSwitch) {
+          await updateSpace({
+            id: target.spaceId,
+            payload: { mode: target.modeSwitch },
+          }).unwrap();
+        }
+        if (needsSpaceSwitch) await setActiveSpace(target.spaceId).unwrap();
       } catch (error) {
         console.error("Failed to switch space for chat:", error);
         toast.error("Failed to switch space");
@@ -218,12 +226,13 @@ export function SidebarChatList({
                   key={collection.id}
                   groupKey={`collection-${collection.id}`}
                   label={collection.name}
-                  icon={
+                  icon={(expanded) => (
                     <ProjectIcon
                       icon={collection.icon}
                       projectName={collection.name}
+                      expanded={expanded}
                     />
-                  }
+                  )}
                   count={collectionRuns.length}
                   action={{
                     label: "New chat in project",

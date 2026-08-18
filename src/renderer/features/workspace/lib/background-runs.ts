@@ -101,40 +101,57 @@ export interface SpaceChoice {
   mode: ModeId;
 }
 
+export interface RunSpaceTarget {
+  /** The space to make active before opening the run. */
+  spaceId: string;
+  /**
+   * Mode that space has to be put into first, or null when it is already in the
+   * run's. `mode` is a mutable column on the space row — the sidebar picker
+   * writes it, and there is one space per provider — so the space a run started
+   * in has usually moved on by the time its card is clicked. Putting it back is
+   * what "open this run" means; rendering the run under another mode's UI is
+   * not the experience it was started in.
+   */
+  modeSwitch: ModeId | null;
+}
+
 /**
- * Which space to switch to before opening a run, or null when no space can
- * drive it (its provider's spaces are all archived).
+ * Which space to open a run in, and whether that space needs its mode switched
+ * first. Null when no space can drive it at all (its provider's spaces are all
+ * archived) — the one case the caller has to refuse.
  *
- * The run's own space when it has one — runs started before that field was
- * filled have none, and a run must still be reachable. Failing that, any space
- * driving the run's provider, preferring the active one so a jump inside the
- * same agent doesn't move the user out of the space they are working in.
+ * Preference order, applied twice: the run's own space (runs started before
+ * that field was filled have none), then the active one so a jump inside the
+ * same agent doesn't move the user out of the space they are working in, then
+ * any space of the provider. The first pass only accepts a space already in the
+ * run's mode; the second accepts one that has to be switched.
  */
-export function resolveRunSpaceId(
+export function resolveRunSpaceTarget(
   run: Pick<ActiveRun, "spaceId" | "providerId" | "mode">,
   spaces: SpaceChoice[],
   activeSpaceId: string | null,
-): string | null {
-  if (
-    run.spaceId &&
-    spaces.some(
-      (space) =>
-        space.id === run.spaceId &&
-        space.providerId === run.providerId &&
-        space.mode === run.mode,
-    )
-  ) {
-    return run.spaceId;
-  }
-  const active = spaces.find((space) => space.id === activeSpaceId);
-  if (active?.providerId === run.providerId && active.mode === run.mode) {
-    return active.id;
-  }
-  return (
-    spaces.find(
-      (space) => space.providerId === run.providerId && space.mode === run.mode,
-    )?.id ?? null
-  );
+): RunSpaceTarget | null {
+  const drivesProvider = (space: SpaceChoice) =>
+    space.providerId === run.providerId;
+  const showsRunAsIs = (space: SpaceChoice) =>
+    drivesProvider(space) && space.mode === run.mode;
+
+  const ownSpace = run.spaceId
+    ? (spaces.find((space) => space.id === run.spaceId) ?? null)
+    : null;
+  const activeSpace = spaces.find((space) => space.id === activeSpaceId) ?? null;
+  const preferred = (accepts: (space: SpaceChoice) => boolean) =>
+    [ownSpace, activeSpace, spaces.find(accepts) ?? null].find(
+      (space): space is SpaceChoice => space !== null && accepts(space),
+    ) ?? null;
+
+  const asIs = preferred(showsRunAsIs);
+  if (asIs) return { spaceId: asIs.id, modeSwitch: null };
+
+  const needsSwitch = preferred(drivesProvider);
+  return needsSwitch
+    ? { spaceId: needsSwitch.id, modeSwitch: run.mode }
+    : null;
 }
 
 /** What the card prints as the run's name — title, else the goal's first line. */

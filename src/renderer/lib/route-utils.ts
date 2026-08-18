@@ -20,6 +20,14 @@ const ROUTE_PATTERNS = {
 /** Base path of the unified agent workspace route (all providers, space-driven). */
 export const WORKSPACE_BASE_PATH = getBaseRoutePath("code");
 
+/** The workspace-less run route (work/chat modes). */
+const CODE_RUN_PATTERN = `${WORKSPACE_BASE_PATH}/runs/:runId`;
+
+/** Run id named by the URL, or null when the path names no run. */
+export function getRouteRunId(pathname: string): string | null {
+  return matchPath(CODE_RUN_PATTERN, pathname)?.params.runId ?? null;
+}
+
 export function getRouteType(pathname: string): RouteType {
   if (pathname === "/") return "home";
   if (pathname === "/settings" || pathname.startsWith("/settings"))
