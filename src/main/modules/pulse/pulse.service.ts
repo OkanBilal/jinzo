@@ -186,6 +186,16 @@ export const pulseService = {
       input.dayOfWeek !== undefined;
 
     const merged = { ...existing, ...input };
+    // Mode is fixed at creation; an update must keep the target shape
+    // consistent with it (developer ⇄ workspace, work/chat ⇄ collection).
+    if (merged.mode === "developer") {
+      if (!merged.workspaceId) throw new Error("workspaceId is required");
+      if (merged.collectionId) {
+        throw new Error("collectionId is only allowed for work/chat pulses");
+      }
+    } else if (merged.workspaceId) {
+      throw new Error("workspaceId is only allowed for developer pulses");
+    }
     const nextRunAt = scheduleChanged
       ? computeNextRunAt(merged, new Date())
       : undefined;
@@ -221,30 +231,34 @@ export const pulseService = {
     try {
       const settings = await appSettingsService.getSettings();
       const configSnapshot = buildConfigSnapshot(pulse.providerId, pulse);
+      // The run must execute under a space of the pulse's own mode — a work
+      // digest must not inherit the developer harness (or vice versa). Prefer
+      // the active space when it matches, else any live space of that pair.
       const spaces = await spaceService.getAll();
       const activeSpace = settings.activeSpaceId
         ? spaces.find((space) => space.id === settings.activeSpaceId)
         : undefined;
+      const matchesPulse = (space: (typeof spaces)[number]) =>
+        space.providerId === pulse.providerId &&
+        space.mode === pulse.mode &&
+        !space.isArchived;
       const runSpace =
-        activeSpace?.providerId === pulse.providerId &&
-        activeSpace.mode === "developer" &&
-        !activeSpace.isArchived
+        activeSpace && matchesPulse(activeSpace)
           ? activeSpace
-          : spaces.find(
-              (space) =>
-                space.providerId === pulse.providerId &&
-                space.mode === "developer" &&
-                !space.isArchived,
-            );
+          : spaces.find(matchesPulse);
       if (!runSpace) {
         throw new Error(
-          `No Developer space is available for provider "${pulse.providerId}"`,
+          `No ${pulse.mode} space is available for provider "${pulse.providerId}"`,
         );
       }
 
       const result = await runsService.executeRun({
         accountId: pulse.accountId,
-        workspaceId: pulse.workspaceId,
+        // Developer pulses run in their workspace; work/chat pulses run
+        // workspace-less (managed execution dir) with an optional collection,
+        // whose sources travel into the run like any collection chat.
+        workspaceId: pulse.workspaceId ?? undefined,
+        collectionId: pulse.collectionId ?? undefined,
         spaceId: runSpace.id,
         providerId: pulse.providerId,
         model: pulse.model,

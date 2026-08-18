@@ -1,10 +1,24 @@
 import type { CreatePulseInput, UpdatePulseInput, PulseFrequency } from "./pulse.dto";
+import { DEFAULT_MODE_ID, isModeId } from "../../../shared/modes";
 
 const FREQUENCIES: PulseFrequency[] = ["hourly", "daily", "weekdays", "weekly"];
 const EFFORT_LEVELS = ["", "minimal", "low", "medium", "high", "max", "xhigh"];
 
 export function validateCreate(input: CreatePulseInput): string | null {
-  if (!input.workspaceId) return "workspaceId is required";
+  if (input.mode !== undefined && !isModeId(input.mode)) {
+    return `Invalid mode: ${input.mode}`;
+  }
+  const mode = input.mode ?? DEFAULT_MODE_ID;
+  // Developer pulses run inside a workspace; work/chat pulses run
+  // workspace-less and may target a collection instead.
+  if (mode === "developer") {
+    if (!input.workspaceId) return "workspaceId is required";
+    if (input.collectionId) {
+      return "collectionId is only allowed for work/chat pulses";
+    }
+  } else if (input.workspaceId) {
+    return "workspaceId is only allowed for developer pulses";
+  }
   if (!input.providerId) return "providerId is required";
   if (!input.model) return "model is required";
   if (!input.title?.trim()) return "title is required";

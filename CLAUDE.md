@@ -168,7 +168,7 @@ Core tables:
 - `runs` / `runTurns` / `runContext` / `runArtifacts` — Agent run flow with session resumption via `sessionId` and turn tracking
 - `toolCalls` — Tool invocation tracking with nested calls (`parentToolCallId`). There is no `tools` table — the registry is in-code.
 - `automations` / `automationRuns` — Scheduled/triggered automation definitions and their execution records
-- `pulses` — Aggregated activity-feed records backing the `/pulse` route
+- `pulses` — Scheduled automation definitions backing the `/pulse` route; each carries a `mode` (fixed at creation) and targets a workspace (developer) or an optional collection (work/chat)
 - `workspaceActivity` — Workspace activity log (types: diff, review, finding, commit, pr)
 - `workspaceDiffs` — Git diffs captured per workspace/run (base ref, diff text, files, stats)
 - `reviews` / `reviewFindings` — Workspace-level review notes (open → in_review → approved/rejected) and their findings
@@ -270,7 +270,8 @@ Core tables:
 - User-defined scheduled / triggered automations (cron-style routines that fan out into runs) plus their run records
 
 **Pulse Module** (`src/main/modules/pulse/`)
-- Aggregated activity feed across workspaces, runs, and connections — backs the `/pulse` route
+- Scheduled prompts that fan out into runs — backs the `/pulse` route (templates, single-timer scheduler, catch-up on start)
+- Mode-aware: a pulse snapshots its `mode` at creation and executes under a space of that provider+mode pair. Developer pulses require a workspace; work/chat pulses run workspace-less (managed execution dir) and may target a collection, whose sources travel into the run. Templates carry a `modes` allowlist (`features/pulse/templates.ts`) — the original corpus is developer-only, work/chat get folder/source-centric sets
 
 **Image Proxy** (`src/main/modules/imageProxy/`)
 - Custom protocol handler that fetches and serves remote images to the renderer (avoids CSP / mixed-content issues)

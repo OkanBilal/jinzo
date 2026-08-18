@@ -157,7 +157,7 @@ export function ChatItem({
           label={
             <>
               <Project className="size-3.5" />
-              <span>Move to project</span>
+              <span>Move</span>
             </>
           }
         >
@@ -185,7 +185,7 @@ export function ChatItem({
           }}
         >
           <Archive className="size-3.5" />
-          <span>Delete chat</span>
+          <span>Delete</span>
         </DropdownMenuItem>
       </DropdownMenu>
     </>

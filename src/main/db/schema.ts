@@ -1288,9 +1288,18 @@ export const pulses = sqliteTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
 
-    workspaceId: text("workspace_id")
-      .notNull()
-      .references(() => workspaces.id, { onDelete: "cascade" }),
+    // Developer pulses run in a workspace; work/chat pulses run workspace-less
+    // (managed execution dir) and may target a collection instead.
+    workspaceId: text("workspace_id").references(() => workspaces.id, {
+      onDelete: "cascade",
+    }),
+
+    collectionId: text("collection_id").references(() => collections.id, {
+      onDelete: "set null",
+    }),
+
+    // Experience mode the pulse's runs execute under (see shared/modes.ts).
+    mode: text("mode", { enum: MODE_IDS }).notNull().default(DEFAULT_MODE_ID),
 
     providerId: text("provider_id")
       .notNull()

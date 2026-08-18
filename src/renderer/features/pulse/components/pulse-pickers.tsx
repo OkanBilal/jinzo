@@ -23,6 +23,8 @@ import {
   type ModelIconVariant,
 } from "@/lib/model-icons";
 import { useListProjectsQuery } from "@/lib/redux/api/projectsApi";
+import { useGetAccountQuery } from "@/lib/redux/api/accountApi";
+import { useListCollectionsQuery } from "@/lib/redux/api/collectionsApi";
 import {
   useListWorkspaceGitStatesQuery,
   useListWorkspacesQuery,
@@ -248,6 +250,82 @@ function workspaceProjectIcon(
   const pd = projectDataMap.get(workspace.projectId);
   if (!pd) return undefined;
   return <ProjectIcon icon={pd.icon} projectName={pd.name} />;
+}
+
+// ── Collection picker (work/chat pulses) ────────────────────────
+
+/**
+ * Optional target for a work/chat pulse: a collection ("" = standalone).
+ * The run inherits the collection's sources, exactly like a collection chat.
+ */
+export function CollectionPicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const { open, ref, toggle, close } = usePickerState();
+  const { data: account } = useGetAccountQuery();
+  const { data: collections = [] } = useListCollectionsQuery(
+    { accountId: account?.id ?? "" },
+    { skip: !account },
+  );
+  const active = collections.filter((collection) => !collection.isArchived);
+  const selected = active.find((collection) => collection.id === value);
+
+  return (
+    <div className="relative" ref={ref}>
+      <PickerTrigger tooltip="Select project" onClick={toggle} expanded={open}>
+        {selected ? (
+          <div className="flex items-center gap-2">
+            <ProjectIcon icon={selected.icon} projectName={selected.name} />
+            <span className="truncate max-w-50">{selected.name}</span>
+          </div>
+        ) : (
+          <>
+            <Project className="size-3.5 shrink-0" />
+            <span className="truncate max-w-50">Standalone</span>
+          </>
+        )}
+      </PickerTrigger>
+      <DropdownWrapper isOpen={open} aria-label="Project" minWidth="min-w-44">
+        <div className="max-h-64 overflow-auto noscrollbar">
+          <PickerOption
+            selected={!value}
+            onSelect={() => {
+              onChange("");
+              close();
+            }}
+          >
+            Standalone
+          </PickerOption>
+          {active.map((collection) => (
+            <PickerOption
+              key={collection.id}
+              selected={value === collection.id}
+              onSelect={() => {
+                onChange(collection.id);
+                close();
+              }}
+            >
+              <span className="shrink-0 self-center flex items-center justify-center">
+                <ProjectIcon
+                  icon={collection.icon}
+                  projectName={collection.name}
+                />
+              </span>
+              <div className="min-w-0 flex-1 text-left leading-tight">
+                <div className="truncate" title={collection.name}>
+                  {collection.name}
+                </div>
+              </div>
+            </PickerOption>
+          ))}
+        </div>
+      </DropdownWrapper>
+    </div>
+  );
 }
 
 export function WorkspacePicker({

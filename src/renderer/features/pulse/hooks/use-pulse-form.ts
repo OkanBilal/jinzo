@@ -3,12 +3,18 @@ import type {
   Pulse,
   PulseFrequency,
 } from "@/lib/redux/api/pulseApi";
+import type { ModeId } from "../../../../shared/modes";
 import type { PulseTemplate } from "../templates";
 
 export interface PulseFormState {
   title: string;
   prompt: string;
+  /** Experience mode the pulse runs under — fixed at creation. */
+  mode: ModeId;
+  /** Developer pulses target a workspace… */
   workspaceId: string;
+  /** …work/chat pulses optionally target a collection ("" = standalone). */
+  collectionId: string;
   providerId: string;
   model: string;
   frequency: PulseFrequency;
@@ -30,7 +36,9 @@ const getLocalTimezone = () => {
 export const EMPTY_PULSE_FORM: PulseFormState = {
   title: "",
   prompt: "",
+  mode: "developer",
   workspaceId: "",
+  collectionId: "",
   providerId: "",
   model: "",
   frequency: "daily",
@@ -45,7 +53,9 @@ export function pulseToForm(pulse: Pulse): PulseFormState {
   return {
     title: pulse.title,
     prompt: pulse.prompt,
-    workspaceId: pulse.workspaceId,
+    mode: pulse.mode,
+    workspaceId: pulse.workspaceId ?? "",
+    collectionId: pulse.collectionId ?? "",
     providerId: pulse.providerId,
     model: pulse.model,
     frequency: pulse.frequency,
@@ -76,10 +86,13 @@ export function applyTemplate(
 }
 
 export function formToCreateInput(form: PulseFormState): CreatePulseInput {
+  const isDeveloper = form.mode === "developer";
   return {
     title: form.title.trim(),
     prompt: form.prompt.trim(),
-    workspaceId: form.workspaceId,
+    mode: form.mode,
+    workspaceId: isDeveloper ? form.workspaceId : null,
+    collectionId: !isDeveloper && form.collectionId ? form.collectionId : null,
     providerId: form.providerId,
     model: form.model,
     frequency: form.frequency,
@@ -93,12 +106,13 @@ export function formToCreateInput(form: PulseFormState): CreatePulseInput {
   };
 }
 
-/** A pulse can be saved once it has a title, a prompt, and a full run target. */
+/** A pulse can be saved once it has a title, a prompt, and a full run target.
+ *  Only developer pulses need a workspace; work/chat run workspace-less. */
 export function isPulseFormValid(form: PulseFormState): boolean {
   return (
     form.title.trim().length > 0 &&
     form.prompt.trim().length > 0 &&
-    !!form.workspaceId &&
+    (form.mode !== "developer" || !!form.workspaceId) &&
     !!form.providerId &&
     !!form.model
   );

@@ -104,7 +104,6 @@ export function SpaceModePicker({ value, onChange }: SpaceModePickerProps) {
         {MODE_OPTIONS.map(({ mode, shortcutLabel }) => (
           <DropdownMenuItem
             key={mode}
-            selected={mode === value}
             className=" py-2 px-4 gap-2"
             onClick={() => handleModeChange(mode)}
           >
