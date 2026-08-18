@@ -1832,15 +1832,19 @@ export function mapSDKMessage(
             ? ` — resets ${new Date(rl.resetsAt * 1000).toLocaleTimeString()}`
             : "";
         const scope = rl.rateLimitType ? ` [${rl.rateLimitType}]` : "";
-        // Only surface warnings/rejections; "allowed" is the silent happy path.
-        if (rl.status !== "allowed") {
+        // Only a rejection earns a transcript line. `allowed_warning` fires on
+        // every turn once you are anywhere near the limit, so it landed twice
+        // per message in warn styling to say something you cannot act on
+        // mid-run. A percentage belongs in ambient UI — where Codex and Copilot
+        // already show it — not in the middle of a conversation.
+        if (rl.status === "rejected") {
           // Remembered so the turn's own `rate_limit` error does not repeat what
           // this line already said with the scope and the reset time attached.
           cs.state.sawRateLimitNotice = true;
           events.push({
             type: "log",
-            message: `[rate-limit] ${rl.status === "rejected" ? "Rate limit reached" : "Approaching rate limit"}${scope}${util}${resets}`,
-            level: rl.status === "rejected" ? "error" : "warn",
+            message: `[rate-limit] Rate limit reached${scope}${util}${resets}`,
+            level: "error",
             ts,
             metadata: { source: "rate_limit_event", ...rl },
           });
