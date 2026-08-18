@@ -24,7 +24,7 @@ export function ToggleButton({
 }: ToggleButtonProps) {
   const activeWorkspaceId = useAppSelector((state) => state.workspace.activeWorkspaceId);
   const { embeddedBrowser } = useCapabilities();
-  const { showGitActions } = useModeConfig();
+  const { showGitActions, showRightPanel } = useModeConfig();
   return (
     <div
       data-layout-toggle
@@ -73,19 +73,21 @@ export function ToggleButton({
           {terminalOpen ? <TerminalOpen className="size-4 text-primary-800 dark:text-primary-200" /> : <Terminal className="size-4 text-primary-700 dark:text-primary-300" />}
         </Button>
       )}
-      <Button
-        tooltip={isOpen ? "Close right panel" : "Open right panel"}
-        tooltipPosition="left"
-        onClick={onClick}
-        className="rounded-full cursor-pointer hover:bg-primary-50 dark:hover:bg-primary/10 p-1  transition-all duration-300 ease-out"
-        aria-label={isOpen ? "Close right panel" : "Open right panel"}
-      >
-        {isOpen ? (
-          <Toggle  className="size-4 text-primary-800 dark:text-primary-200" />
-        ) : (
-          <ToggleClose  className="size-4 text-primary-700 dark:text-primary-300" />
-        )}
-      </Button>
+      {showRightPanel && (
+        <Button
+          tooltip={isOpen ? "Close right panel" : "Open right panel"}
+          tooltipPosition="left"
+          onClick={onClick}
+          className="rounded-full cursor-pointer hover:bg-primary-50 dark:hover:bg-primary/10 p-1  transition-all duration-300 ease-out"
+          aria-label={isOpen ? "Close right panel" : "Open right panel"}
+        >
+          {isOpen ? (
+            <Toggle  className="size-4 text-primary-800 dark:text-primary-200" />
+          ) : (
+            <ToggleClose  className="size-4 text-primary-700 dark:text-primary-300" />
+          )}
+        </Button>
+      )}
       </div>
     </div>
   );

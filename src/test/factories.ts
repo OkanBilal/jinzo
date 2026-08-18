@@ -2,6 +2,8 @@ import { randomUUID } from "crypto";
 import {
   accounts,
   projects,
+  collections,
+  collectionSources,
   workspaces,
   appSettings,
   connectionStates,
@@ -64,6 +66,45 @@ export function createProject(
   return data;
 }
 
+export function createCollection(
+  db: DatabaseInstance,
+  overrides: Partial<typeof collections.$inferInsert> = {},
+) {
+  const accountId = overrides.accountId ?? "default";
+  createAccount(db, { id: accountId });
+  const data = {
+    id: overrides.id ?? randomUUID(),
+    accountId,
+    name: overrides.name ?? "Test Collection",
+    ...overrides,
+  };
+  db.insert(collections).values(data).onConflictDoNothing().run();
+  return data;
+}
+
+export function createCollectionSource(
+  db: DatabaseInstance,
+  overrides: Partial<typeof collectionSources.$inferInsert> = {},
+) {
+  const collectionId = overrides.collectionId ?? randomUUID();
+  createCollection(db, { id: collectionId });
+  const data = {
+    id: overrides.id ?? randomUUID(),
+    collectionId,
+    kind: overrides.kind ?? ("file" as const),
+    name: overrides.name ?? "source.txt",
+    mimeType: overrides.mimeType ?? "text/plain",
+    byteSize: overrides.byteSize ?? 4,
+    contentHash: overrides.contentHash ?? randomUUID().replace(/-/g, ""),
+    storageKey:
+      overrides.storageKey ??
+      `collections/${collectionId}/sources/${randomUUID()}/content.txt`,
+    ...overrides,
+  };
+  db.insert(collectionSources).values(data).onConflictDoNothing().run();
+  return data;
+}
+
 export function createWorkspace(
   db: DatabaseInstance,
   overrides: Partial<typeof workspaces.$inferInsert> = {},
@@ -72,11 +113,23 @@ export function createWorkspace(
   const accountId = overrides.accountId ?? "default";
   createAccount(db, { id: accountId });
 
-  const data = {
-    id: overrides.id ?? randomUUID(),
+  const id = overrides.id ?? randomUUID();
+  const rootPath = overrides.rootPath ?? `/tmp/ws/${randomUUID()}`;
+  const projectId = overrides.projectId ?? `project-${id}`;
+  createProject(db, {
+    id: projectId,
     accountId,
+    name: overrides.name ?? "Test Project",
+    rootPath,
+    remoteOrigin: null,
+  });
+
+  const data = {
+    id,
+    accountId,
+    projectId,
     name: overrides.name ?? "Test Workspace",
-    rootPath: overrides.rootPath ?? `/tmp/ws/${randomUUID()}`,
+    rootPath,
     ...overrides,
   };
   db.insert(workspaces).values(data).onConflictDoNothing().run();

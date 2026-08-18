@@ -16,9 +16,11 @@ import {
   Relay,
   Plugin,
   Box,
+  New,
 } from "@/components/ui/icons";
 import CloneRepoModal from "./clone-repo-modal";
 import CreateProjectModal from "./create-project-modal";
+import CreateCollectionModal from "./create-collection-modal";
 import { useDeleteWorkspace } from "@/features/workspace/hooks";
 import { useArchiveWorkspace } from "@/features/workspace/hooks";
 import { useSidebarSearch } from "@/hooks/use-sidebar-search";
@@ -26,15 +28,13 @@ import { useSettingsNavigation } from "@/hooks/use-settings-navigation";
 import { useSidebarData } from "@/hooks/use-sidebar-data";
 import { useSidebarActions } from "@/hooks/use-sidebar-actions";
 import { useSidebarConfig } from "@/hooks/use-sidebar-config";
+import { useModeConfig } from "@/hooks/use-mode-config";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import { useSpaceProviderVariant } from "@/hooks/use-space-provider-variant";
 import { useScriptNotifications } from "@/hooks/use-script-notifications";
 import { useSidebarSpaceSwipe } from "@/hooks/use-sidebar-space-swipe";
 import { UpdateBanner } from "./update-banner";
 import { BackgroundRunsDock } from "@/features/workspace/components/background-runs";
-import { SpaceModePicker } from "@/features/workspace/components/space-mode-picker";
-import { useUpdateSpaceMutation } from "@/lib/redux/api";
-import type { ModeId } from "../../../../shared/modes";
 import { Button, Text, Tooltip } from "@/components/ui";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { useAppSelector, useAppDispatch } from "@/lib/redux/hooks";
@@ -58,14 +58,10 @@ export default function Sidebar({ collapsed }: SidebarProps) {
   const dispatch = useAppDispatch();
   const sidebarWidth = useAppSelector((s) => s.appSettings.sidebarWidth);
   const sidebarConfig = useSidebarConfig();
-  const { spaces, activeSpaceId, activeSpace } = useActiveSpace();
+  const modeConfig = useModeConfig();
+  const isChatShell = sidebarConfig.itemType === "chat";
+  const { spaces, activeSpaceId } = useActiveSpace();
   const spaceProvider = useSpaceProviderVariant();
-  const [updateSpace] = useUpdateSpaceMutation();
-
-  const handleSelectMode = (mode: ModeId) => {
-    if (!activeSpace || mode === activeSpace.mode) return;
-    updateSpace({ id: activeSpace.id, payload: { mode } });
-  };
 
   const {
     searchQuery,
@@ -114,6 +110,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
   const {
     handleSpaceChange,
     handleNewClick,
+    handleNewChat,
     handleAddProject,
     handleCloneRepo,
     handleOpenCloneModal,
@@ -125,6 +122,11 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     handleCloseCreateProjectModal,
     isCreateProjectModalOpen,
     isCreatingProject,
+    handleCreateCollection,
+    handleOpenCreateCollectionModal,
+    handleCloseCreateCollectionModal,
+    isCreateCollectionModalOpen,
+    isCreatingCollection,
   } = useSidebarActions();
 
   const deleteWorkspace = useDeleteWorkspace();
@@ -196,86 +198,90 @@ export default function Sidebar({ collapsed }: SidebarProps) {
               onSearchChange={setSearchQuery}
               onSearchClear={handleSearchClear}
             />
-            {activeSpace && (
-              <div className="px-3 pb-1.5">
-                <SpaceModePicker
-                  value={activeSpace.mode}
-                  onChange={handleSelectMode}
-                />
-              </div>
-            )}
             <div className="px-3 py-px">
               <NewButton
-                onClick={handleNewClick}
+                onClick={isChatShell ? () => handleNewChat() : handleNewClick}
                 icon={
-                  <Project className="size-3.5 text-primary-900 dark:text-primary-100" />
+                  isChatShell ? (
+                    <New className="size-3.5 text-primary-900 dark:text-primary-100" />
+                  ) : (
+                    <Project className="size-3.5 text-primary-900 dark:text-primary-100" />
+                  )
                 }
                 title={sidebarConfig.title}
-                actionPrefix="Add"
-                dropdownItems={[
-                  ...(nativeDialogs
-                    ? [
+                actionPrefix={sidebarConfig.actionPrefix}
+                // An empty list turns the button into a direct action (\u2318N
+                // included) \u2014 the chat shell's "New chat".
+                dropdownItems={
+                  isChatShell
+                    ? []
+                    : [
+                        ...(nativeDialogs
+                          ? [
+                              {
+                                label: "Add from local",
+                                icon: (
+                                  <Plus className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
+                                ),
+                                shortcut: "o",
+                                shortcutLabel: "\u2318\u21e7O",
+                                onClick: handleAddProject,
+                              },
+                            ]
+                          : []),
                         {
-                          label: "Add from local",
+                          label: "Clone from URL",
                           icon: (
-                            <Plus className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
+                            <Connect className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
                           ),
-                          shortcut: "o",
-                          shortcutLabel: "\u2318\u21e7O",
-                          onClick: handleAddProject,
+                          shortcut: "u",
+                          shortcutLabel: "\u2318\u21e7U",
+                          onClick: handleOpenCloneModal,
+                        },
+                        {
+                          label: "Create new project",
+                          icon: (
+                            <Project className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
+                          ),
+                          shortcut: "n",
+                          shortcutLabel: "\u2318\u21e7N",
+                          onClick: handleOpenCreateProjectModal,
                         },
                       ]
-                    : []),
-                  {
-                    label: "Clone from URL",
-                    icon: (
-                      <Connect className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
-                    ),
-                    shortcut: "u",
-                    shortcutLabel: "\u2318\u21e7U",
-                    onClick: handleOpenCloneModal,
-                  },
-                  {
-                    label: "Create new project",
-                    icon: (
-                      <Project className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
-                    ),
-                    shortcut: "n",
-                    shortcutLabel: "\u2318\u21e7N",
-                    onClick: handleOpenCreateProjectModal,
-                  },
-                ]}
+                }
               />
             </div>
-            <div className="px-3 mb-px">
-              <Button
-                variant="subtle"
-                tooltip="Issues and pull requests"
-                className={`justify-start flex items-center gap-2 w-full rounded-xl transition-colors ${
-                  isTasksRoute
-                    ? "bg-primary/50 glass-outline dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/10"
-                    : ""
-                }`}
-                onClick={() => navigate("/tasks")}
-                aria-current={isTasksRoute ? "page" : undefined}
-              >
-                <Box
-                  className={`w-4 h-4 -ml-1 ${
+            {modeConfig.showTasksNav && (
+              <div className="px-3 mb-px">
+                <Button
+                  variant="subtle"
+                  tooltip="Issues and pull requests"
+                  className={`justify-start flex items-center gap-2 w-full rounded-xl transition-colors ${
                     isTasksRoute
-                      ? "text-primary-950 dark:text-primary"
-                      : "text-primary-900 dark:text-primary-100"
+                      ? "bg-primary/50 glass-outline dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/10"
+                      : ""
                   }`}
-                />
-                <Text
-                  as="span"
-                  size="s"
-                  weight="normal"
-                  tone={isTasksRoute ? "contrast" : "default"}
+                  onClick={() => navigate("/tasks")}
+                  aria-current={isTasksRoute ? "page" : undefined}
                 >
-                  Tasks
-                </Text>
-              </Button>
-            </div>
+                  <Box
+                    className={`w-4 h-4 -ml-1 ${
+                      isTasksRoute
+                        ? "text-primary-950 dark:text-primary"
+                        : "text-primary-900 dark:text-primary-100"
+                    }`}
+                  />
+                  <Text
+                    as="span"
+                    size="s"
+                    weight="normal"
+                    tone={isTasksRoute ? "contrast" : "default"}
+                  >
+                    Tasks
+                  </Text>
+                </Button>
+              </div>
+            )}
             <div className="px-3 mb-px">
               <Button
                 variant="subtle"
@@ -424,6 +430,9 @@ export default function Sidebar({ collapsed }: SidebarProps) {
               isLoadingWorkspaces={isLoadingWorkspaces}
               onDeleteWorkspace={deleteWorkspace.handleDeleteClick}
               onArchiveWorkspace={archiveWorkspace.handleArchiveClick}
+              searchQuery={searchQuery}
+              onNewChatInCollection={handleNewChat}
+              onCreateCollection={handleOpenCreateCollectionModal}
             />
             <BackgroundRunsDock />
             <UpdateBanner />
@@ -479,6 +488,13 @@ export default function Sidebar({ collapsed }: SidebarProps) {
         isCreating={isCreatingProject}
         onCreate={handleCreateProject}
         onClose={handleCloseCreateProjectModal}
+      />
+
+      <CreateCollectionModal
+        isOpen={isCreateCollectionModalOpen}
+        isCreating={isCreatingCollection}
+        onCreate={handleCreateCollection}
+        onClose={handleCloseCreateCollectionModal}
       />
     </>
   );

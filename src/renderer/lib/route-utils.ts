@@ -25,7 +25,9 @@ export function getRouteType(pathname: string): RouteType {
   if (pathname === "/settings" || pathname.startsWith("/settings"))
     return "settings";
 
-  if (matchPath(ROUTE_PATTERNS.code, pathname)) return "code";
+  if (pathname === WORKSPACE_BASE_PATH || pathname.startsWith(`${WORKSPACE_BASE_PATH}/`)) {
+    return "code";
+  }
   if (matchPath(ROUTE_PATTERNS.plugins, pathname)) return "plugins";
   if (matchPath(ROUTE_PATTERNS.pulse, pathname)) return "pulse";
 

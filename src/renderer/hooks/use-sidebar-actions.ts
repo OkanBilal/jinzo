@@ -5,9 +5,15 @@ import {
   useCreateWorkspaceFromSourceMutation,
   useSelectWorkspaceDirectoryMutation,
   useGetAccountQuery,
+  useCreateCollectionMutation,
 } from "@/lib/redux/api";
 import { toast } from "@/components/ui";
 import { useActiveSpace } from "@/hooks/use-active-space";
+import { useAppDispatch } from "@/lib/redux/hooks";
+import {
+  openNewRunTab,
+  setSelectedCollectionId,
+} from "@/lib/redux/slices/workspaceSlice";
 import { getSpaceDefaultRoute, WORKSPACE_BASE_PATH } from "@/lib/route-utils";
 
 /** Pull a human message out of an RTK/IPC rejection (string | {error} | Error). */
@@ -27,17 +33,22 @@ function getErrorMessage(error: unknown, fallback: string): string {
 
 export function useSidebarActions() {
   const navigate = useNavigate();
-  const { spaces } = useActiveSpace();
+  const dispatch = useAppDispatch();
+  const { spaces, activeSpace } = useActiveSpace();
   const { data: account } = useGetAccountQuery();
 
   const [setActiveSpace] = useSetActiveSpaceMutation();
   const [selectDirectory] = useSelectWorkspaceDirectoryMutation();
   const [createWorkspaceFromSource] = useCreateWorkspaceFromSourceMutation();
+  const [createCollection] = useCreateCollectionMutation();
 
   const [isCloneModalOpen, setIsCloneModalOpen] = useState(false);
   const [isCloning, setIsCloning] = useState(false);
   const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
   const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [isCreateCollectionModalOpen, setIsCreateCollectionModalOpen] =
+    useState(false);
+  const [isCreatingCollection, setIsCreatingCollection] = useState(false);
 
   const handleSpaceChange = async (spaceId: string) => {
     try {
@@ -76,6 +87,39 @@ export function useSidebarActions() {
     } catch (error) {
       console.error("Failed to create workspace:", error);
       toast.error(getErrorMessage(error, "Failed to create workspace"));
+    }
+  };
+
+  /** Top-level New is standalone; a Collection row's + supplies its id. */
+  const handleNewChat = (collectionId?: string) => {
+    dispatch(setSelectedCollectionId(collectionId ?? null));
+    navigate(WORKSPACE_BASE_PATH);
+    dispatch(openNewRunTab());
+  };
+
+  const handleOpenCreateCollectionModal = () => {
+    setIsCreateCollectionModalOpen(true);
+  };
+
+  const handleCloseCreateCollectionModal = () => {
+    setIsCreateCollectionModalOpen(false);
+  };
+
+  const handleCreateCollection = async (name: string) => {
+    if (!activeSpace || activeSpace.mode === "developer") return;
+    setIsCreatingCollection(true);
+    try {
+      const collection = await createCollection({
+        accountId: account?.id || "default",
+        name,
+      }).unwrap();
+      setIsCreateCollectionModalOpen(false);
+      handleNewChat(collection.id);
+    } catch (error) {
+      console.error("Failed to create collection:", error);
+      toast.error(getErrorMessage(error, "Failed to create project"));
+    } finally {
+      setIsCreatingCollection(false);
     }
   };
 
@@ -139,6 +183,7 @@ export function useSidebarActions() {
   return {
     handleSpaceChange,
     handleNewClick,
+    handleNewChat,
     handleAddProject,
     handleCloneRepo,
     handleOpenCloneModal,
@@ -150,5 +195,10 @@ export function useSidebarActions() {
     handleCloseCreateProjectModal,
     isCreateProjectModalOpen,
     isCreatingProject,
+    handleCreateCollection,
+    handleOpenCreateCollectionModal,
+    handleCloseCreateCollectionModal,
+    isCreateCollectionModalOpen,
+    isCreatingCollection,
   };
 }

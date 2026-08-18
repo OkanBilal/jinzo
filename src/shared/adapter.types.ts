@@ -46,15 +46,21 @@ export interface FileAttachment {
 }
 
 /**
+ * The filesystem context every coding-agent adapter needs. A real domain
+ * Workspace is optional, but a resolved cwd is never implicit.
+ */
+export interface RunExecutionContext {
+  cwd: string;
+  workspaceId: string | null;
+}
+
+/**
  * Request to start a work run
  */
 export interface WorkRunRequest {
   runId: string;
   accountId: string;
-  workspace: {
-    id: string;
-    rootPath: string;
-  };
+  execution: RunExecutionContext;
   goal: string;
   model?: string | null;
   systemPrompt?: string | null;
@@ -389,10 +395,7 @@ export type WorkRunEventHandler = (event: WorkRunEvent) => void | Promise<void>;
 export interface WorkRunContinueRequest {
   runId: string;
   accountId: string;
-  workspace: {
-    id: string;
-    rootPath: string;
-  };
+  execution: RunExecutionContext;
   /** The follow-up message/goal */
   message: string;
   /** Model to use for this continuation (overrides provider default) */
@@ -452,10 +455,7 @@ export interface WorkRunForkRequest {
   /** The source run whose session will be forked */
   sourceRunId: string;
   accountId: string;
-  workspace: {
-    id: string;
-    rootPath: string;
-  };
+  execution: RunExecutionContext;
   /** The message/goal for the forked session */
   message: string;
   /** Model to use for this fork (overrides provider default) */
@@ -499,10 +499,7 @@ export interface WorkRunReviewTarget {
 export interface WorkRunReviewRequest {
   runId: string;
   accountId: string;
-  workspace: {
-    id: string;
-    rootPath: string;
-  };
+  execution: RunExecutionContext;
   target: WorkRunReviewTarget;
   /** inline = review on same thread (default), detached = fork new review thread */
   delivery?: "inline" | "detached";

@@ -63,6 +63,10 @@ import { registerRunsIpc, unregisterRunsIpc } from "./modules/runs";
 import { runSessionRegistry } from "./modules/runs/run-session-registry";
 import { registerProjectsIpc, unregisterProjectsIpc } from "./modules/projects";
 import {
+  registerCollectionsIpc,
+  unregisterCollectionsIpc,
+} from "./modules/collections";
+import {
   registerFileExplorerIpc,
   unregisterFileExplorerIpc,
 } from "./modules/fileExplorer";
@@ -742,6 +746,7 @@ async function initializeApp() {
     registerToolsIpc();
     registerWorkspaceIpc();
     registerProjectsIpc();
+    registerCollectionsIpc();
     registerRunsIpc();
     registerFileExplorerIpc();
     registerGitFlowIpc();
@@ -1053,6 +1058,7 @@ async function cleanupApp() {
     unregisterToolsIpc();
     unregisterWorkspaceIpc();
     unregisterProjectsIpc();
+    unregisterCollectionsIpc();
     unregisterRunsIpc();
     unregisterFileExplorerIpc();
     unregisterGitFlowIpc();

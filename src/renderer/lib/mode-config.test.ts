@@ -8,6 +8,10 @@ import { MODE_IDS, DEFAULT_MODE_ID } from "../../shared/modes";
 import { MODE_CONFIGS, getModeConfig } from "./mode-config";
 
 describe("MODE_CONFIGS table invariants", () => {
+  it("presents the internal developer mode as Code", () => {
+    expect(MODE_CONFIGS.developer.label).toBe("Code");
+  });
+
   it("has an entry for every mode id, keyed consistently", () => {
     for (const mode of MODE_IDS) {
       expect(MODE_CONFIGS[mode]).toBeDefined();
@@ -24,6 +28,18 @@ describe("MODE_CONFIGS table invariants", () => {
     expect(dev.showPermissionControls).toBe(true);
     expect(dev.showPlanControls).toBe(true);
     expect(dev.showGoalControls).toBe(true);
+    expect(dev.showTasksNav).toBe(true);
+    expect(dev.showTabs).toBe(true);
+    expect(dev.showRightPanel).toBe(true);
+  });
+
+  it("locks developer's sidebar shape — the pixel-identity tripwire", () => {
+    expect(MODE_CONFIGS.developer.sidebar).toEqual({
+      title: "Project",
+      itemType: "workspace",
+      actionPrefix: "Add",
+      defaultRoute: "/code",
+    });
   });
 
   it("hides the git ceremony in work and chat", () => {
@@ -32,6 +48,17 @@ describe("MODE_CONFIGS table invariants", () => {
       expect(MODE_CONFIGS[mode].showTerminal).toBe(false);
       expect(MODE_CONFIGS[mode].showChangesTab).toBe(false);
       expect(MODE_CONFIGS[mode].showPermissionControls).toBe(false);
+    }
+  });
+
+  it("gives work and chat the ChatGPT-style shell", () => {
+    for (const mode of ["work", "chat"] as const) {
+      expect(MODE_CONFIGS[mode].showTasksNav).toBe(false);
+      expect(MODE_CONFIGS[mode].showTabs).toBe(false);
+      expect(MODE_CONFIGS[mode].showRightPanel).toBe(false);
+      expect(MODE_CONFIGS[mode].sidebar.itemType).toBe("chat");
+      expect(MODE_CONFIGS[mode].sidebar.actionPrefix).toBe("New");
+      expect(MODE_CONFIGS[mode].sidebar.title).toBe("chat");
     }
   });
 

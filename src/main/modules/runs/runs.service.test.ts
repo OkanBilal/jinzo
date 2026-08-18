@@ -3,7 +3,9 @@ import { existsSync } from "fs";
 import { createTestDb } from "../../../test/setup-db";
 import {
   createAccount,
+  createCollection,
   createProvider,
+  createProject,
   createWorkspace,
   createSpace,
   createRun,
@@ -430,13 +432,16 @@ describe("runsService", () => {
     }
 
     it("snapshots work mode from the space and passes the delta to the adapter", async () => {
-      createWorkspace(db, { id: "ws-work", accountId: "default" });
-      createSpace(db, { id: "sp-work", accountId: "default", mode: "work" });
+      createSpace(db, {
+        id: "sp-work",
+        accountId: "default",
+        providerId: "copilot_cli",
+        mode: "work",
+      });
       const startRun = mockStartAdapter();
 
       const { runId } = await runsService.executeRun({
         accountId: "default",
-        workspaceId: "ws-work",
         spaceId: "sp-work",
         providerId: "copilot_cli",
         goal: "write a report",
@@ -445,18 +450,74 @@ describe("runsService", () => {
 
       const run = await runsService.getRunById(runId);
       expect(run?.mode).toBe("work");
+      expect(run?.workspaceId).toBeNull();
       const request = startRun.mock.calls[0][0];
       expect(request.mode).toBe("work");
+      expect(request.execution.workspaceId).toBeNull();
+      expect(request.execution.cwd).toContain(`/runs/${runId}/work`);
       expect(request.extraInstructions).toContain("non-technical");
+      expect(gitService.getHeadSha).not.toHaveBeenCalled();
     });
 
-    it("defaults to developer mode with no delta when no space resolves", async () => {
+    it("rejects a Workspace on a new Work run", async () => {
+      createWorkspace(db, { id: "ws-work" });
+      createSpace(db, {
+        id: "sp-work-with-workspace",
+        accountId: "default",
+        providerId: "copilot_cli",
+        mode: "work",
+      });
+      mockStartAdapter();
+
+      await expect(
+        runsService.executeRun({
+          accountId: "default",
+          workspaceId: "ws-work",
+          spaceId: "sp-work-with-workspace",
+          providerId: "copilot_cli",
+          goal: "write a report",
+        }),
+      ).rejects.toThrow("do not use a workspace");
+    });
+
+    it("stores optional Collection membership for a Work run", async () => {
+      createSpace(db, {
+        id: "sp-collected-work",
+        accountId: "default",
+        providerId: "copilot_cli",
+        mode: "work",
+      });
+      createCollection(db, { id: "collection-work" });
+      mockStartAdapter();
+
+      const { runId } = await runsService.executeRun({
+        accountId: "default",
+        collectionId: "collection-work",
+        spaceId: "sp-collected-work",
+        providerId: "copilot_cli",
+        goal: "write a report",
+      });
+
+      expect((await runsService.getRunById(runId))?.collectionId).toBe(
+        "collection-work",
+      );
+      await flushBackground();
+    });
+
+    it("runs Developer mode with no delta from a valid Developer space", async () => {
       createWorkspace(db, { id: "ws-dev", accountId: "default" });
+      createSpace(db, {
+        id: "sp-dev",
+        accountId: "default",
+        providerId: "copilot_cli",
+        mode: "developer",
+      });
       const startRun = mockStartAdapter();
 
       const { runId } = await runsService.executeRun({
         accountId: "default",
         workspaceId: "ws-dev",
+        spaceId: "sp-dev",
         providerId: "copilot_cli",
         goal: "fix the bug",
       });
@@ -470,13 +531,16 @@ describe("runsService", () => {
     });
 
     it("hands work mode's tool policy to the adapter and persists it on the row", async () => {
-      createWorkspace(db, { id: "ws-pol", accountId: "default" });
-      createSpace(db, { id: "sp-pol", accountId: "default", mode: "work" });
+      createSpace(db, {
+        id: "sp-pol",
+        accountId: "default",
+        providerId: "copilot_cli",
+        mode: "work",
+      });
       const startRun = mockStartAdapter();
 
       const { runId } = await runsService.executeRun({
         accountId: "default",
-        workspaceId: "ws-pol",
         spaceId: "sp-pol",
         providerId: "copilot_cli",
         goal: "summarize the docs",
@@ -492,13 +556,16 @@ describe("runsService", () => {
 
     it("chat's overrides beat the caller's snapshot — codex stays read-only", async () => {
       createProvider(db, { id: "codex", displayName: "Codex" });
-      createWorkspace(db, { id: "ws-chat", accountId: "default" });
-      createSpace(db, { id: "sp-chat", accountId: "default", mode: "chat" });
+      createSpace(db, {
+        id: "sp-chat",
+        accountId: "default",
+        providerId: "codex",
+        mode: "chat",
+      });
       const startRun = mockStartAdapter();
 
       const { runId } = await runsService.executeRun({
         accountId: "default",
-        workspaceId: "ws-chat",
         spaceId: "sp-chat",
         providerId: "codex",
         goal: "explain this repo",
@@ -513,10 +580,10 @@ describe("runsService", () => {
     });
 
     it("layers the space's custom system prompt after the mode delta", async () => {
-      createWorkspace(db, { id: "ws-sys", accountId: "default" });
       createSpace(db, {
         id: "sp-sys",
         accountId: "default",
+        providerId: "copilot_cli",
         mode: "work",
         systemPrompt: "Always answer in Turkish.",
       });
@@ -524,7 +591,6 @@ describe("runsService", () => {
 
       await runsService.executeRun({
         accountId: "default",
-        workspaceId: "ws-sys",
         spaceId: "sp-sys",
         providerId: "copilot_cli",
         goal: "draft the weekly update",
@@ -596,6 +662,143 @@ describe("runsService", () => {
       expect(request.configSnapshot).toEqual({ sandboxMode: "read-only" });
       expect(request.toolPolicy?.allowedTools).not.toBeNull();
       expect(request.toolPolicy?.disallowedTools).toContain("Bash");
+    });
+  });
+
+  describe("listRecentRuns", () => {
+    it("filters by account/provider/mode and skips archived runs", async () => {
+      createProject(db, { id: "proj-1", accountId: "default", name: "Life" });
+      createWorkspace(db, {
+        id: "ws-rec",
+        accountId: "default",
+        projectId: "proj-1",
+        name: "life-notes",
+      });
+      createRun(db, {
+        id: "run-chat-1",
+        accountId: "default",
+        workspaceId: "ws-rec",
+        providerId: "claude_code",
+        mode: "chat",
+        status: "succeeded",
+      });
+      createRun(db, {
+        id: "run-dev-1",
+        accountId: "default",
+        workspaceId: "ws-rec",
+        providerId: "claude_code",
+        mode: "developer",
+        status: "succeeded",
+      });
+      createRun(db, {
+        id: "run-chat-archived",
+        accountId: "default",
+        workspaceId: "ws-rec",
+        providerId: "claude_code",
+        mode: "chat",
+        status: "succeeded",
+        isArchived: true,
+      });
+      createRun(db, {
+        id: "run-chat-other-provider",
+        accountId: "default",
+        workspaceId: "ws-rec",
+        providerId: "cursor",
+        mode: "chat",
+        status: "succeeded",
+      });
+
+      const result = await runsService.listRecentRuns({
+        accountId: "default",
+        providerId: "claude_code",
+        mode: "chat",
+      });
+
+      expect(result.map((r) => r.id)).toEqual(["run-chat-1"]);
+      expect(result[0].workspaceId).toBe("ws-rec");
+    });
+
+    it("orders by updatedAt desc, honors the limit, tolerates a lost workspace", async () => {
+      createWorkspace(db, { id: "ws-rec2", accountId: "default" });
+      createRun(db, {
+        id: "run-old",
+        accountId: "default",
+        workspaceId: "ws-rec2",
+        mode: "work",
+        status: "succeeded",
+        updatedAt: new Date("2026-01-01T00:00:00Z"),
+      });
+      createRun(db, {
+        id: "run-new",
+        accountId: "default",
+        workspaceId: null,
+        mode: "work",
+        status: "succeeded",
+        updatedAt: new Date("2026-02-01T00:00:00Z"),
+      });
+
+      const all = await runsService.listRecentRuns({
+        accountId: "default",
+        providerId: "copilot_cli",
+        mode: "work",
+      });
+      expect(all.map((r) => r.id)).toEqual(["run-new", "run-old"]);
+      expect(all[0].workspaceId).toBeNull();
+
+      const limited = await runsService.listRecentRuns({
+        accountId: "default",
+        providerId: "copilot_cli",
+        mode: "work",
+        limit: 1,
+      });
+      expect(limited.map((r) => r.id)).toEqual(["run-new"]);
+    });
+  });
+
+  describe("moveRunToCollection", () => {
+    it("moves a Work run to a same-account Collection", async () => {
+      createCollection(db, { id: "shared-project" });
+      createRun(db, { id: "work-run", mode: "work" });
+
+      const result = await runsService.moveRunToCollection({
+        runId: "work-run",
+        accountId: "default",
+        collectionId: "shared-project",
+      });
+
+      expect(result.collectionId).toBe("shared-project");
+    });
+
+    it("lets Work and Chat runs share one Collection", async () => {
+      createCollection(db, { id: "shared-project" });
+      createRun(db, { id: "work-run", mode: "work" });
+      createRun(db, { id: "chat-run", mode: "chat" });
+
+      const work = await runsService.moveRunToCollection({
+        runId: "work-run",
+        accountId: "default",
+        collectionId: "shared-project",
+      });
+      const chat = await runsService.moveRunToCollection({
+        runId: "chat-run",
+        accountId: "default",
+        collectionId: "shared-project",
+      });
+
+      expect(work.collectionId).toBe("shared-project");
+      expect(chat.collectionId).toBe("shared-project");
+    });
+
+    it("rejects Developer runs", async () => {
+      createRun(db, { id: "dev-run", mode: "developer" });
+
+      await expect(
+        runsService.moveRunToCollection({
+          runId: "dev-run",
+          accountId: "default",
+          collectionId: null,
+        }),
+      ).rejects.toThrow("Developer runs");
     });
   });
 
@@ -827,7 +1030,7 @@ describe("runsService", () => {
       vi.mocked(createWorkAdapter).mockReturnValue({ unarchiveSession } as any);
 
       await expect(runsService.unarchiveRun("r1")).rejects.toThrow(
-        "Cannot restore a run without a workspace",
+        "Cannot restore a developer run without a workspace",
       );
       expect(unarchiveSession).not.toHaveBeenCalled();
       expect((await runsService.getRunById("r1"))!.isArchived).toBe(true);
@@ -1196,8 +1399,18 @@ describe("runsService", () => {
     const basePayload = () => ({
       accountId: "default",
       workspaceId: "ws1",
+      spaceId: "sp-execute-dev",
       providerId: "copilot_cli",
       goal: "Fix the bug",
+    });
+
+    beforeEach(() => {
+      createSpace(db, {
+        id: "sp-execute-dev",
+        accountId: "default",
+        providerId: "copilot_cli",
+        mode: "developer",
+      });
     });
 
     function setupMockAdapter(overrides: Record<string, unknown> = {}) {
@@ -1285,7 +1498,8 @@ describe("runsService", () => {
       expect(mockAdapter.startRun).toHaveBeenCalled();
       const callArgs = mockAdapter.startRun.mock.calls[0][0];
       expect(callArgs.goal).toBe("Fix the bug");
-      expect(callArgs.workspace.id).toBe("ws1");
+      expect(callArgs.execution.workspaceId).toBe("ws1");
+      expect(callArgs.execution.cwd).toBe("/tmp/ws/test");
       await flushBackground();
     });
 
@@ -1622,14 +1836,16 @@ describe("runsService", () => {
     });
 
     it("returns error when adapter has no continueRun", async () => {
-      createRun(db, { id: "r1", accountId: "default" });
+      createWorkspace(db, { id: "ws1" });
+      createRun(db, { id: "r1", accountId: "default", workspaceId: "ws1" });
       vi.mocked(createWorkAdapter).mockReturnValue({} as any);
 
       await expect(runsService.continueRun({ runId: "r1", accountId: "default", message: "continue", })).rejects.toThrow("Provider does not support session resumption");
     });
 
     it("returns error when canResumeSession returns false", async () => {
-      createRun(db, { id: "r1", accountId: "default" });
+      createWorkspace(db, { id: "ws1" });
+      createRun(db, { id: "r1", accountId: "default", workspaceId: "ws1" });
       setupContinueAdapter({
         canResumeSession: vi.fn().mockResolvedValue(false),
       });
@@ -1740,7 +1956,7 @@ describe("runsService", () => {
     });
 
     it("works when no workspace attached to run", async () => {
-      createRun(db, { id: "r1", accountId: "default" });
+      createRun(db, { id: "r1", accountId: "default", mode: "work" });
       setupContinueAdapter();
 
       await runsService.continueRun({
@@ -1765,7 +1981,7 @@ describe("runsService", () => {
     });
 
     it("returns error on outer catch", async () => {
-      createRun(db, { id: "r1", accountId: "default" });
+      createRun(db, { id: "r1", accountId: "default", mode: "work" });
       setupContinueAdapter();
       // Make updateRun throw during the "set running" step
       const originalUpdateRun = runsRepo.updateRun.bind(runsRepo);
@@ -1943,7 +2159,7 @@ describe("runsService", () => {
     });
 
     it("works when no workspace attached to source run", async () => {
-      createRun(db, { id: "r1", accountId: "default" });
+      createRun(db, { id: "r1", accountId: "default", mode: "work" });
       setupForkAdapter();
 
       await runsService.forkRun({
@@ -1955,7 +2171,7 @@ describe("runsService", () => {
     });
 
     it("returns error on outer catch", async () => {
-      createRun(db, { id: "r1", accountId: "default" });
+      createRun(db, { id: "r1", accountId: "default", mode: "work" });
       setupForkAdapter();
       vi.spyOn(runsRepo, "insertRun").mockRejectedValueOnce(new Error("insert failed"));
 

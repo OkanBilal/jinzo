@@ -233,9 +233,11 @@ describe("workspaceRepo — workspace lifecycle", () => {
 
   describe("insert", () => {
     it("inserts a workspace and returns the id", async () => {
+      createProject(db, { id: "project-new-1", rootPath: "/tmp/ws/new" });
       const id = await workspaceRepo.insert({
         id: "new-1",
         accountId: "default",
+        projectId: "project-new-1",
         name: "New Workspace",
         rootPath: "/tmp/ws/new",
       });
@@ -248,9 +250,11 @@ describe("workspaceRepo — workspace lifecycle", () => {
     });
 
     it("stores metadata as JSON", async () => {
+      createProject(db, { id: "project-meta-1", rootPath: "/tmp/ws/meta" });
       await workspaceRepo.insert({
         id: "meta-1",
         accountId: "default",
+        projectId: "project-meta-1",
         name: "Meta WS",
         rootPath: "/tmp/ws/meta",
         metadata: { branch: "feature-x" },
@@ -420,33 +424,63 @@ describe("workspaceService — workspace lifecycle", () => {
   });
 
   describe("create", () => {
+    it("rejects a Workspace without a Developer Project", async () => {
+      await expect(
+        workspaceService.create({
+          accountId: "default",
+          name: "Orphan",
+          rootPath: "/projects/orphan",
+        } as never),
+      ).rejects.toThrow("requires a Developer Project");
+    });
+
+    it("rejects a Project owned by another account", async () => {
+      const project = createProject(db, {
+        id: "other-project",
+        accountId: "other",
+      });
+      await expect(
+        workspaceService.create({
+          accountId: "default",
+          name: "Wrong owner",
+          rootPath: "/projects/wrong-owner",
+          projectId: project.id,
+        }),
+      ).rejects.toThrow("does not belong to this account");
+    });
+
     it("creates a new workspace", async () => {
+      const project = createProject(db, { rootPath: "/projects/new-ws" });
       const result = await workspaceService.create({
         accountId: "default",
         name: "New Workspace",
         rootPath: "/projects/new-ws",
+        projectId: project.id,
       });
       expect(result.name).toBe("New Workspace");
       expect(result.id).toBeTruthy();
     });
 
     it("rejects duplicate root path", async () => {
-      createWorkspace(db, { id: "ws1", rootPath: "/projects/existing" });
+      const workspace = createWorkspace(db, { id: "ws1", rootPath: "/projects/existing" });
 
       await expect(
         workspaceService.create({
           accountId: "default",
           name: "Duplicate",
           rootPath: "/projects/existing",
+          projectId: workspace.projectId,
         }),
       ).rejects.toThrow("Workspace with this path already exists");
     });
 
     it("generates ID if not provided", async () => {
+      const project = createProject(db, { rootPath: "/projects/auto-id" });
       const result = await workspaceService.create({
         accountId: "default",
         name: "Auto ID",
         rootPath: "/projects/auto-id",
+        projectId: project.id,
       });
       expect(result.id).toBeTruthy();
     });
@@ -574,11 +608,12 @@ describe("workspaceService — workspace lifecycle", () => {
       expect(row.projectName).toBe("Mains");
     });
 
-    it("reports a null project name for a workspace with no project", async () => {
-      createWorkspace(db, { id: "ws1", isArchived: true });
+    it("always resolves an owning project for an archived Workspace", async () => {
+      const workspace = createWorkspace(db, { id: "ws1", isArchived: true });
 
       const [row] = await workspaceService.listArchived();
-      expect(row.projectName).toBeNull();
+      expect(row.projectId).toBe(workspace.projectId);
+      expect(row.projectName).toBe("Test Project");
     });
 
     it("exposes worktree metadata only for worktree workspaces", async () => {
@@ -716,11 +751,13 @@ describe("workspaceService — workspace lifecycle", () => {
     });
 
     it("uses provided id when given", async () => {
+      const project = createProject(db, { rootPath: "/projects/custom-id" });
       const result = await workspaceService.create({
         id: "custom-id",
         accountId: "default",
         name: "Custom ID",
         rootPath: "/projects/custom-id",
+        projectId: project.id,
       });
       expect(result.id).toBe("custom-id");
     });
@@ -752,9 +789,10 @@ describe("workspaceService — workspace lifecycle", () => {
     });
 
     it("create returns error on failure", async () => {
+      const project = createProject(db, { rootPath: "/fail" });
       vi.spyOn(workspaceRepo, "findByRootPath").mockResolvedValueOnce(null);
       vi.spyOn(workspaceRepo, "insert").mockRejectedValueOnce(new Error("db"));
-      await expect(workspaceService.create({ accountId: "default", name: "Fail", rootPath: "/fail", })).rejects.toThrow("db");
+      await expect(workspaceService.create({ accountId: "default", name: "Fail", rootPath: "/fail", projectId: project.id })).rejects.toThrow("db");
     });
 
     it("update returns error on failure", async () => {
@@ -775,6 +813,7 @@ describe("workspaceService — workspace lifecycle", () => {
 
   describe("create — post-insert findById returns null", () => {
     it("returns error when workspace cannot be retrieved after insert", async () => {
+      const project = createProject(db, { rootPath: "/projects/ghost" });
       vi.spyOn(workspaceRepo, "findByRootPath").mockResolvedValueOnce(null);
       vi.spyOn(workspaceRepo, "insert").mockResolvedValueOnce("new-id");
       vi.spyOn(workspaceRepo, "findById").mockResolvedValueOnce(null);
@@ -784,6 +823,7 @@ describe("workspaceService — workspace lifecycle", () => {
           accountId: "default",
           name: "Ghost",
           rootPath: "/projects/ghost",
+          projectId: project.id,
         }),
       ).rejects.toThrow("Failed to retrieve created workspace");
     });
@@ -880,7 +920,7 @@ describe("workspaceService — workspace lifecycle", () => {
       );
     });
 
-    it("silently catches projectsRepo.findById rejection in create", async () => {
+    it("fails creation when the owning Project cannot be verified", async () => {
       const project = createProject(db, {
         id: "p-create-catch",
         name: "CreateCatch",
@@ -889,13 +929,14 @@ describe("workspaceService — workspace lifecycle", () => {
         new Error("db fail"),
       );
 
-      await workspaceService.create({
-        accountId: "default",
-        name: "WS project fail",
-        rootPath: "/projects/project-fail",
-        projectId: project.id,
-      });
-      await new Promise((r) => setTimeout(r, 50));
+      await expect(
+        workspaceService.create({
+          accountId: "default",
+          name: "WS project fail",
+          rootPath: "/projects/project-fail",
+          projectId: project.id,
+        }),
+      ).rejects.toThrow("db fail");
     });
   });
 

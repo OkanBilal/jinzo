@@ -86,7 +86,7 @@ describe("gitFlowService — live branch invariants", () => {
     workspaceMock.get.mockResolvedValue({
       id: "ws-1",
       accountId: "default",
-      projectId: null,
+      projectId: "project-1",
       name: "repo",
       rootPath: "/repo",
       repoUrl: "https://github.com/acme/repo.git",

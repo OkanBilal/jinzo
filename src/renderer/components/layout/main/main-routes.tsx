@@ -33,6 +33,7 @@ export function MainRoutes() {
       <Routes>
         <Route path="/" element={<DefaultRoute />} />
         <Route path="/code" element={<CodePage />} />
+        <Route path="/code/runs/:runId" element={<CodePage />} />
         <Route path="/code/:workspaceId" element={<CodePage />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/plugins" element={<PluginsPage />} />

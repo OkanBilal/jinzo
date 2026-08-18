@@ -462,11 +462,13 @@ export const workspaceService = {
 
     return archived.map((workspace) => {
       const worktree = workspace.metadata?.worktree;
+      const projectName = nameByProject.get(workspace.projectId);
+      if (!projectName) {
+        throw new Error("Workspace project not found");
+      }
       return {
         ...workspace,
-        projectName: workspace.projectId
-          ? (nameByProject.get(workspace.projectId) ?? null)
-          : null,
+        projectName,
         pathExists: workspacePathExists(workspace.rootPath),
         worktree: worktree?.enabled ? worktree : null,
       };
@@ -533,6 +535,14 @@ export const workspaceService = {
   async create(
     payload: CreateWorkspacePayload,
   ): Promise<WorkspaceResponse> {
+    if (!payload.projectId) {
+      throw new Error("Workspace requires a Developer Project");
+    }
+    const project = await projectsRepo.findById(payload.projectId);
+    if (!project) throw new Error("Project not found");
+    if (project.accountId !== payload.accountId) {
+      throw new Error("Project does not belong to this account");
+    }
     const existing = await workspaceRepo.findByRootPath(
       payload.accountId,
       payload.rootPath,
@@ -551,17 +561,15 @@ export const workspaceService = {
     if (!workspace) throw new Error("Failed to retrieve created workspace");
 
     // Fire-and-forget: run project setupScript in background
-    if (workspace.projectId) {
+    if (project.setupScript) {
       const wsId = id;
       const rootPath = workspace.rootPath;
-      projectsRepo
-        .findById(workspace.projectId)
-        .then((project) => {
-          if (!project?.setupScript) return;
+      Promise.resolve()
+        .then(() => {
           console.log(
             `[WorkspaceService] Running setup script for workspace ${wsId} in ${rootPath}`,
           );
-          executeScript(project.setupScript, rootPath)
+          executeScript(project.setupScript!, rootPath)
             .then(() => {
               console.log(
                 `[WorkspaceService] Setup script completed for workspace ${wsId}`,
@@ -785,6 +793,17 @@ export const workspaceService = {
     id: string,
     payload: UpdateWorkspacePayload,
   ): Promise<WorkspaceResponse> {
+    if (payload.projectId !== undefined) {
+      const [workspace, project] = await Promise.all([
+        workspaceRepo.findById(id),
+        projectsRepo.findById(payload.projectId),
+      ]);
+      if (!workspace) throw new Error("Workspace not found");
+      if (!project) throw new Error("Project not found");
+      if (workspace.accountId !== project.accountId) {
+        throw new Error("Project does not belong to this account");
+      }
+    }
     const updated = await workspaceRepo.update(id, payload);
     if (!updated) throw new Error("Workspace not found");
     return updated;

@@ -35,9 +35,9 @@ function request(runId: string): WorkRunRequest {
   return {
     runId,
     accountId: "account-1",
-    workspace: {
-      id: "workspace-1",
-      rootPath: process.cwd(),
+    execution: {
+      workspaceId: "workspace-1",
+      cwd: process.cwd(),
     },
     goal: "Return structured output",
   };
@@ -483,9 +483,9 @@ describe("codex.driver / app-server protocol", () => {
     const acquired = await driver.reviewSession?.({
       runId: "run-detached-review",
       accountId: "account-1",
-      workspace: {
-        id: "workspace-1",
-        rootPath: process.cwd(),
+      execution: {
+        workspaceId: "workspace-1",
+        cwd: process.cwd(),
       },
       target: { type: "uncommittedChanges" },
       delivery: "detached",
@@ -544,9 +544,9 @@ describe("codex.driver / app-server protocol", () => {
       runId: "run-fork-target",
       sourceRunId: "run-fork-source",
       accountId: "account-1",
-      workspace: {
-        id: "workspace-1",
-        rootPath: process.cwd(),
+      execution: {
+        workspaceId: "workspace-1",
+        cwd: process.cwd(),
       },
       message: "continue from the fork",
       model: "gpt-5.4",
@@ -604,9 +604,9 @@ describe("codex.driver / app-server protocol", () => {
     const acquired = await driver.resumeSession?.({
       runId: "run-continue-context",
       accountId: "account-1",
-      workspace: {
-        id: "workspace-1",
-        rootPath: process.cwd(),
+      execution: {
+        workspaceId: "workspace-1",
+        cwd: process.cwd(),
       },
       message: "Continue with this evidence",
       context: [{
@@ -658,9 +658,9 @@ describe("codex.driver / app-server protocol", () => {
       runId: "run-fork-context-target",
       sourceRunId: "run-fork-context-source",
       accountId: "account-1",
-      workspace: {
-        id: "workspace-1",
-        rootPath: process.cwd(),
+      execution: {
+        workspaceId: "workspace-1",
+        cwd: process.cwd(),
       },
       message: "Fork with this evidence",
       context: [{
@@ -1096,9 +1096,9 @@ describe("codex.driver / app-server protocol", () => {
     const continued = await driver.resumeSession?.({
       runId,
       accountId: "account-1",
-      workspace: {
-        id: "workspace-1",
-        rootPath: process.cwd(),
+      execution: {
+        workspaceId: "workspace-1",
+        cwd: process.cwd(),
       },
       message: "continue interrupted subagent",
     });

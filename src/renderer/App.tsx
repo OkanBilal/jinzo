@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect } from "react";
 import { HashRouter as Router, useLocation } from "react-router-dom";
 import Sidebar from "./components/layout/sidebar";
 import RightPanel from "./components/layout/right-panel";
+import { ToggleButton } from "./components/layout/right-panel/toggle-button";
 import { SessionPanel } from "@/features/workspace/components/session-panel";
 import { SubagentPanel } from "@/features/workspace/components/subagent-panel/subagent-panel";
 import { useHasSessionSubagents } from "./features/workspace/hooks/use-session-subagents";
@@ -41,6 +42,10 @@ import { MainHeaderProvider } from "./hooks/use-main-header";
 import { useLayoutWidthVars } from "./hooks/use-layout-width-vars";
 import { useAppearanceFonts } from "./hooks/use-appearance-fonts";
 import { getProviderVariant } from "./lib/provider-variants";
+import { getRouteType } from "./lib/route-utils";
+import { useActiveSpace } from "./hooks/use-active-space";
+import { useUpdateSpaceMutation } from "./lib/redux/api";
+import type { ModeId } from "../shared/modes";
 
 /** Layout widths live in CSS (`--sidebar-width`, `--panel-width`, `--browser-panel-width`) — see index.css. */
 const SIDEBAR_WIDTH = "var(--sidebar-width)";
@@ -83,6 +88,7 @@ function AppContent() {
   useLayoutWidthVars();
   useAppearanceFonts();
   const location = useLocation();
+  const showSpaceModePicker = getRouteType(location.pathname) !== "settings";
   const hideRightPanel = shouldHideRightPanel(location.pathname);
   const variant = useWorkspaceVariant();
   const activeProviderId =
@@ -91,6 +97,8 @@ function AppContent() {
   const browserPanel = useBrowserPanel();
   const docViewer = useDocumentViewer();
   const modeConfig = useModeConfig();
+  const { activeSpace } = useActiveSpace();
+  const [updateSpace] = useUpdateSpaceMutation();
   const showTerminalToggle = variant !== "default" && modeConfig.showTerminal;
   const showBrowserToggle = variant !== "default";
   const dispatch = useAppDispatch();
@@ -112,13 +120,23 @@ function AppContent() {
   );
   const isMobile = useIsMobile();
 
+  const handleSelectMode = (mode: ModeId) => {
+    if (!activeSpace || mode === activeSpace.mode) return;
+    void updateSpace({ id: activeSpace.id, payload: { mode } });
+  };
+
+  // Chat/work hide the right panel entirely; a persisted rightPanelOpen from a
+  // developer session must not inset the content there (and is left untouched
+  // so switching back to developer restores it).
+  const rightPanelVisible =
+    !hideRightPanel && modeConfig.showRightPanel && isRightPanelOpen;
   // Whatever currently owns the right edge — the content stops there, and the
   // session box aligns to the same edge just inside it.
   const rightLaneWidth = docViewer.isOpen
     ? DOC_VIEWER_PANEL_WIDTH
     : browserPanel.isOpen
       ? BROWSER_PANEL_WIDTH
-      : !hideRightPanel && isRightPanelOpen
+      : rightPanelVisible
         ? RIGHT_PANEL_WIDTH
         : EDGE_GUTTER;
   // The box renders nothing without a workspace, and not at all on the routes
@@ -234,7 +252,7 @@ function AppContent() {
             aria-hidden
           />
         )}
-        {isMobile && !hideRightPanel && isRightPanelOpen && (
+        {isMobile && rightPanelVisible && (
           <div
             className="fixed inset-0 bg-primary-950/40"
             style={{ zIndex: 45 }}
@@ -244,13 +262,13 @@ function AppContent() {
         )}
         {!(
           isMobile &&
-          ((!hideRightPanel && isRightPanelOpen) ||
-            browserPanel.isOpen ||
-            docViewer.isOpen)
+          (rightPanelVisible || browserPanel.isOpen || docViewer.isOpen)
         ) && (
           <SidebarToggleButton
             isOpen={!sidebarCollapsed}
             onClick={() => dispatch(setSidebarCollapsed(!sidebarCollapsed))}
+            mode={showSpaceModePicker ? activeSpace?.mode : undefined}
+            onModeChange={handleSelectMode}
           />
         )}
         <Sidebar collapsed={sidebarCollapsed} />
@@ -259,7 +277,7 @@ function AppContent() {
           marginRight={contentRight}
           contentInsetRight={contentInsetRight}
           hasRightPanel={
-            !hideRightPanel && !isRightPanelOpen && !browserPanel.isOpen && !docViewer.isOpen
+            !hideRightPanel && !rightPanelVisible && !browserPanel.isOpen && !docViewer.isOpen
           }
           browserOpen={browserPanel.isOpen || docViewer.isOpen}
           sidebarCollapsed={sidebarCollapsed}
@@ -268,10 +286,14 @@ function AppContent() {
             <MainRoutes />
           </ErrorBoundary>
         </MainContent>
-        {!hideRightPanel && (
-          <RightPanel
-            isOpen={isRightPanelOpen}
-            onToggle={(open) => {
+        {/* The toggle cluster lives here (not inside RightPanel) so the
+            browser button survives modes that hide the panel entirely. On
+            mobile it hides behind the open sidebar drawer. */}
+        {!hideRightPanel && !(isMobile && !sidebarCollapsed) && (
+          <ToggleButton
+            isOpen={rightPanelVisible}
+            onClick={() => {
+              const open = !isRightPanelOpen;
               if (open) {
                 browserPanel.close();
                 docViewer.close();
@@ -280,7 +302,6 @@ function AppContent() {
               }
               dispatch(setRightPanelOpen(open));
             }}
-            width={RIGHT_PANEL_WIDTH}
             terminalOpen={showTerminalToggle ? bottomTerminal.isOpen : undefined}
             onTerminalToggle={showTerminalToggle ? bottomTerminal.toggle : undefined}
             browserOpen={showBrowserToggle ? browserPanel.isOpen : undefined}
@@ -292,6 +313,9 @@ function AppContent() {
               browserPanel.toggle();
             } : undefined}
           />
+        )}
+        {!hideRightPanel && modeConfig.showRightPanel && (
+          <RightPanel isOpen={isRightPanelOpen} width={RIGHT_PANEL_WIDTH} />
         )}
         {!hideRightPanel && (
           <SessionPanel

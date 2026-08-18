@@ -2,6 +2,7 @@ import { pulseRepo } from "./pulse.repo";
 import { validateCreate, validateUpdate } from "./pulse.validation";
 import { runsService } from "../runs/runs.service";
 import { appSettingsService } from "../appSettings";
+import { spaceService } from "../space";
 import { PROVIDER_IDS } from "../../../shared/provider-ids";
 import type {
   CreatePulseInput,
@@ -220,11 +221,31 @@ export const pulseService = {
     try {
       const settings = await appSettingsService.getSettings();
       const configSnapshot = buildConfigSnapshot(pulse.providerId, pulse);
+      const spaces = await spaceService.getAll();
+      const activeSpace = settings.activeSpaceId
+        ? spaces.find((space) => space.id === settings.activeSpaceId)
+        : undefined;
+      const runSpace =
+        activeSpace?.providerId === pulse.providerId &&
+        activeSpace.mode === "developer" &&
+        !activeSpace.isArchived
+          ? activeSpace
+          : spaces.find(
+              (space) =>
+                space.providerId === pulse.providerId &&
+                space.mode === "developer" &&
+                !space.isArchived,
+            );
+      if (!runSpace) {
+        throw new Error(
+          `No Developer space is available for provider "${pulse.providerId}"`,
+        );
+      }
 
       const result = await runsService.executeRun({
         accountId: pulse.accountId,
         workspaceId: pulse.workspaceId,
-        spaceId: settings.activeSpaceId ?? undefined,
+        spaceId: runSpace.id,
         providerId: pulse.providerId,
         model: pulse.model,
         goal: pulse.prompt,

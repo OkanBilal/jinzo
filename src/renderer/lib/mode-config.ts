@@ -15,11 +15,15 @@
 
 import { DEFAULT_MODE_ID, isModeId, type ModeId } from "../../shared/modes";
 
-export type SidebarItemType = "workspace";
+export type SidebarItemType = "workspace" | "chat";
 
 export interface ModeSidebarConfig {
+  /** Noun after the new-button prefix ("Add Project", "New chat"). */
   title: string;
+  /** What the sidebar lists: workspaces (developer) or chats (= runs). */
   itemType: SidebarItemType;
+  /** New-button verb: developer "Add", chat/work "New". */
+  actionPrefix: string;
   defaultRoute: string;
 }
 
@@ -46,13 +50,27 @@ export interface ModeConfigDescriptor {
   showPlanControls: boolean;
   /** Goal-mode toggle in the composer toolbar. */
   showGoalControls: boolean;
+  /** Tasks entry in the sidebar nav block. */
+  showTasksNav: boolean;
+  /** Tab strip above the content; false = tab-less single-chat view. */
+  showTabs: boolean;
+  /**
+   * The right panel (Files/Changes/Activity) and its open/close toggle.
+   * The browser toggle is independent and survives without it.
+   */
+  showRightPanel: boolean;
 }
 
 export const MODE_CONFIGS: Record<ModeId, ModeConfigDescriptor> = {
   developer: {
     mode: "developer",
-    label: "Developer",
-    sidebar: { title: "Project", itemType: "workspace", defaultRoute: "/code" },
+    label: "Code",
+    sidebar: {
+      title: "Project",
+      itemType: "workspace",
+      actionPrefix: "Add",
+      defaultRoute: "/code",
+    },
     rightPanel: { component: "workspace" },
     showGitActions: true,
     showTerminal: true,
@@ -60,6 +78,9 @@ export const MODE_CONFIGS: Record<ModeId, ModeConfigDescriptor> = {
     showPermissionControls: true,
     showPlanControls: true,
     showGoalControls: true,
+    showTasksNav: true,
+    showTabs: true,
+    showRightPanel: true,
   },
   // Work: same surfaces minus the developer ceremony — no git actions, no
   // terminal, no diff tab, no permission dropdown (the harness pins
@@ -69,7 +90,12 @@ export const MODE_CONFIGS: Record<ModeId, ModeConfigDescriptor> = {
   work: {
     mode: "work",
     label: "Work",
-    sidebar: { title: "Project", itemType: "workspace", defaultRoute: "/code" },
+    sidebar: {
+      title: "chat",
+      itemType: "chat",
+      actionPrefix: "New",
+      defaultRoute: "/code",
+    },
     rightPanel: { component: "workspace" },
     showGitActions: false,
     showTerminal: false,
@@ -77,13 +103,21 @@ export const MODE_CONFIGS: Record<ModeId, ModeConfigDescriptor> = {
     showPermissionControls: false,
     showPlanControls: false,
     showGoalControls: true,
+    showTasksNav: false,
+    showTabs: false,
+    showRightPanel: false,
   },
   // Chat: plain conversation — read-only harness, so every write-adjacent
   // affordance goes. Files tab stays for viewing.
   chat: {
     mode: "chat",
     label: "Chat",
-    sidebar: { title: "Project", itemType: "workspace", defaultRoute: "/code" },
+    sidebar: {
+      title: "chat",
+      itemType: "chat",
+      actionPrefix: "New",
+      defaultRoute: "/code",
+    },
     rightPanel: { component: "workspace" },
     showGitActions: false,
     showTerminal: false,
@@ -91,6 +125,9 @@ export const MODE_CONFIGS: Record<ModeId, ModeConfigDescriptor> = {
     showPermissionControls: false,
     showPlanControls: false,
     showGoalControls: false,
+    showTasksNav: false,
+    showTabs: false,
+    showRightPanel: false,
   },
 };
 

@@ -11,7 +11,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { appEvents } from "@/lib/transport";
 import { toast } from "@/components/ui";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
@@ -21,7 +21,10 @@ import {
   useSetActiveSpaceMutation,
   type ActiveRun,
 } from "@/lib/redux/api";
-import { setPendingRunId } from "@/lib/redux/slices/workspaceSlice";
+import {
+  setPendingRunId,
+  setSelectedCollectionId,
+} from "@/lib/redux/slices/workspaceSlice";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import { getRouteType, WORKSPACE_BASE_PATH } from "@/lib/route-utils";
 import {
@@ -52,6 +55,7 @@ export interface BackgroundRunsView {
 export function useBackgroundRuns(): BackgroundRunsView {
   const navigate = useNavigate();
   const location = useLocation();
+  const { runId: routeRunId } = useParams<{ runId?: string }>();
   const dispatch = useAppDispatch();
   const { activeSpaceId, activeSpace, spaces } = useActiveSpace();
   const [setActiveSpace] = useSetActiveSpaceMutation();
@@ -127,8 +131,11 @@ export function useBackgroundRuns(): BackgroundRunsView {
         activeRuns: mergeLingeringRuns(activeRuns, lingeringRuns),
         visibleWorkspaceId,
         visibleProviderId: activeSpace?.providerId ?? null,
+        visibleMode: activeSpace?.mode ?? null,
+        visibleRunId:
+          getRouteType(location.pathname) === "code" ? routeRunId ?? null : null,
       }),
-    [activeRuns, lingeringRuns, activeSpace?.providerId, visibleWorkspaceId],
+    [activeRuns, lingeringRuns, activeSpace, visibleWorkspaceId, routeRunId, location.pathname],
   );
 
   const runIds = useMemo(() => runs.map((run) => run.id), [runs]);
@@ -136,10 +143,6 @@ export function useBackgroundRuns(): BackgroundRunsView {
 
   const jumpToRun = useCallback(
     async (run: ActiveRun) => {
-      if (!run.workspaceId) return;
-      // The page picks the newest run by default; this names the one to open.
-      dispatch(setPendingRunId(run.id));
-
       // The page shows one provider at a time, so landing on the workspace is
       // only half the jump — without the right space, the run is filtered out
       // of the tab list and the page falls back to the newest one it can show.
@@ -148,6 +151,9 @@ export function useBackgroundRuns(): BackgroundRunsView {
         toast.error("No space is set up for this run's agent");
         return;
       }
+
+      dispatch(setPendingRunId(run.id));
+      dispatch(setSelectedCollectionId(run.collectionId));
 
       if (targetSpaceId !== activeSpaceId) {
         try {
@@ -163,7 +169,11 @@ export function useBackgroundRuns(): BackgroundRunsView {
         }
       }
 
-      navigate(`${WORKSPACE_BASE_PATH}/${run.workspaceId}`);
+      navigate(
+        run.mode === "developer" && run.workspaceId
+          ? `${WORKSPACE_BASE_PATH}/${run.workspaceId}`
+          : `${WORKSPACE_BASE_PATH}/runs/${run.id}`,
+      );
     },
     [activeSpaceId, spaces, dispatch, navigate, setActiveSpace],
   );

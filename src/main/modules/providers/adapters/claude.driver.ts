@@ -2334,7 +2334,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     runHooks?: HooksConfig;
     runAgents?: AgentsConfig;
     runId?: string;
-    workspaceId?: string;
+    workspaceId?: string | null;
     forkSession?: boolean;
     /** UUID to open the new (or forked) session on. Omitted when resuming. */
     newSessionId?: string;
@@ -2854,12 +2854,12 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       const sessionId = randomUUID();
       const options = await buildOptions({
         model: getModel(request.model),
-        workspacePath: request.workspace.rootPath,
+        workspacePath: request.execution.cwd,
         abortController,
         runHooks: request.hooks,
         runAgents: request.agents,
         runId: request.runId,
-        workspaceId: request.workspace.id,
+        workspaceId: request.execution.workspaceId,
         newSessionId: sessionId,
         permissionMode: isSDKPermissionMode(overridePermissionMode)
           ? overridePermissionMode
@@ -2890,13 +2890,13 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       const resumePermissionMode = request.configSnapshot?.permissionMode;
       const options = await buildOptions({
         model: getModel(request.model ?? config.defaultModel),
-        workspacePath: request.workspace.rootPath,
+        workspacePath: request.execution.cwd,
         abortController,
         resumeSessionId: sessionId,
         runHooks: request.hooks,
         runAgents: request.agents,
         runId: request.runId,
-        workspaceId: request.workspace.id,
+        workspaceId: request.execution.workspaceId,
         permissionMode: isSDKPermissionMode(resumePermissionMode)
           ? resumePermissionMode
           : undefined,
@@ -2930,13 +2930,13 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       const forkPermissionMode = request.configSnapshot?.permissionMode;
       const options = await buildOptions({
         model: getModel(request.model ?? config.defaultModel),
-        workspacePath: request.workspace.rootPath,
+        workspacePath: request.execution.cwd,
         abortController,
         resumeSessionId: sourceSessionId,
         runHooks: request.hooks,
         runAgents: request.agents,
         runId: request.runId,
-        workspaceId: request.workspace.id,
+        workspaceId: request.execution.workspaceId,
         forkSession: true,
         newSessionId: sessionId,
         permissionMode: isSDKPermissionMode(forkPermissionMode)

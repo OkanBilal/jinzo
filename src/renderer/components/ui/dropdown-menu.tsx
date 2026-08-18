@@ -89,6 +89,8 @@ interface DropdownMenuBaseProps {
   minWidth?: number;
   className?: string;
   origin?: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "auto";
+  /** Which enabled row receives focus when the menu opens. */
+  initialFocus?: "first" | "selected";
 }
 
 export type DropdownMenuProps = DropdownMenuBaseProps &
@@ -105,6 +107,7 @@ export function DropdownMenu({
   minWidth = 144,
   className = "",
   origin = "auto",
+  initialFocus = "first",
   "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledBy,
 }: DropdownMenuProps) {
@@ -125,7 +128,15 @@ export function DropdownMenu({
     if (!isOpen) return;
     previouslyFocused.current = document.activeElement as HTMLElement | null;
     shouldRestoreFocus.current = true;
-    getEnabledMenuItems(menuRef.current)[0]?.focus();
+    const enabledItems = getEnabledMenuItems(menuRef.current);
+    const selectedItem = enabledItems.find(
+      (item) => item.getAttribute("aria-checked") === "true",
+    );
+    const itemToFocus =
+      initialFocus === "selected"
+        ? (selectedItem ?? enabledItems[0])
+        : enabledItems[0];
+    itemToFocus?.focus();
 
     return () => {
       const target = previouslyFocused.current;
@@ -141,7 +152,7 @@ export function DropdownMenu({
         if (target.isConnected) target.focus();
       });
     };
-  }, [isOpen]);
+  }, [initialFocus, isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -385,7 +396,7 @@ export function DropdownMenuSub({
             onKeyDown={handleSubmenuKeyDown}
             onMouseEnter={clearCloseTimer}
             onMouseLeave={startCloseTimer}
-            className="fixed z-(--z-dropdown-sub) overflow-hidden rounded-2xl glass-surface animate-dropdown-sub-in"
+            className="fixed z-(--z-dropdown-sub) overflow-hidden rounded-2xl glass-surface animate-dropdown-sub-in "
             style={{
               top: submenuPosition.top,
               left: submenuPosition.left,
@@ -443,7 +454,7 @@ export function DropdownMenuItem({
         // look identical while arrowing over a row the pointer happens to sit on.
         "focus-visible:ring-0 focus-visible:ring-offset-0",
         "transition-colors hover:bg-primary-200/40 focus:bg-primary-200/60 focus:outline-none",
-        "dark:hover:bg-primary/5 dark:focus:bg-primary/12",
+        "dark:hover:bg-primary/5 dark:focus:bg-primary/5",
         disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
         variantClasses[variant],
         className,
@@ -452,7 +463,7 @@ export function DropdownMenuItem({
       {selected !== undefined && (
         <Selected
           aria-hidden="true"
-          className={cn("size-3", selected ? "opacity-100" : "opacity-0")}
+          className={cn("size-4", selected ? "opacity-100" : "opacity-0")}
         />
       )}
       {children}

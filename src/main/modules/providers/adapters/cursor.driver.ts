@@ -1651,7 +1651,7 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
     const modePrefix = request.extraInstructions
       ? `<mode_instructions>\n${request.extraInstructions}\n</mode_instructions>\n\n`
       : "";
-    const workspaceInfo = `${modePrefix}Working directory: ${request.workspace.rootPath}`;
+    const workspaceInfo = `${modePrefix}Working directory: ${request.execution.cwd}`;
     let prompt: string;
 
     if (request.context && request.context.length > 0) {
@@ -1926,18 +1926,18 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
       const selection = resolveCursorSelection(overrides, config);
 
       const mainsCtx: MainsToolContext = {
-        workspaceId: request.workspace.id,
-        rootPath: request.workspace.rootPath,
+        workspaceId: request.execution.workspaceId,
+        rootPath: request.execution.cwd,
         runId,
       };
       const mainsMcp = await ensureMcpServer(mainsCtx, request.mode);
       const server = await ensureServer();
 
       logInfo(
-        `Creating session (model: ${resolvedModel || "default"}, cwd: ${request.workspace.rootPath})`,
+        `Creating session (model: ${resolvedModel || "default"}, cwd: ${request.execution.cwd})`,
       );
       const sessionResult = (await server.sendRequest("session/new", {
-        cwd: request.workspace.rootPath,
+        cwd: request.execution.cwd,
         mcpServers: mainsMcp ? [mainsMcp.mcpConfig] : [],
       })) as Record<string, unknown>;
       const sessionId = sessionResult?.sessionId as string | undefined;
@@ -1980,8 +1980,8 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
       const resolvedModel = request.model || config.defaultModel || undefined;
 
       const mainsCtx: MainsToolContext = {
-        workspaceId: request.workspace.id,
-        rootPath: request.workspace.rootPath,
+        workspaceId: request.execution.workspaceId,
+        rootPath: request.execution.cwd,
         runId,
       };
       const mainsMcp = await ensureMcpServer(mainsCtx, request.mode);
@@ -2006,7 +2006,7 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
           "session/load",
           {
             sessionId,
-            cwd: request.workspace.rootPath,
+            cwd: request.execution.cwd,
             mcpServers: mcpServersConfig,
           },
           30000,
@@ -2016,7 +2016,7 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
         if (/not found|unknown|does not exist/i.test(errMsg)) {
           logWarn(`Session load failed (${errMsg}), creating new session`);
           const newResult = (await server.sendRequest("session/new", {
-            cwd: request.workspace.rootPath,
+            cwd: request.execution.cwd,
             mcpServers: mcpServersConfig,
           })) as Record<string, unknown>;
           loadResult = newResult;
@@ -2075,15 +2075,15 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
       );
 
       const mainsCtx: MainsToolContext = {
-        workspaceId: request.workspace.id,
-        rootPath: request.workspace.rootPath,
+        workspaceId: request.execution.workspaceId,
+        rootPath: request.execution.cwd,
         runId,
       };
       const mainsMcp = await ensureMcpServer(mainsCtx, request.mode);
       const server = await ensureServer();
 
       const sessionResult = (await server.sendRequest("session/new", {
-        cwd: request.workspace.rootPath,
+        cwd: request.execution.cwd,
         mcpServers: mainsMcp ? [mainsMcp.mcpConfig] : [],
       })) as Record<string, unknown>;
       const sessionId = sessionResult?.sessionId as string | undefined;

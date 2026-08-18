@@ -7,6 +7,7 @@
  */
 
 import type { ActiveRun } from "@/lib/redux/api";
+import type { ModeId } from "../../../../shared/modes";
 
 export interface SelectBackgroundRunsInput {
   /** Every run with a live session, from `runs:listActive`. */
@@ -19,6 +20,10 @@ export interface SelectBackgroundRunsInput {
   visibleWorkspaceId: string | null;
   /** The provider that page is driving — the active space's `providerId`. */
   visibleProviderId: string | null;
+  /** Mode currently rendered by the active space. */
+  visibleMode: ModeId | null;
+  /** Workspace-less run route currently rendered, if any. */
+  visibleRunId: string | null;
 }
 
 /**
@@ -36,13 +41,20 @@ export function selectBackgroundRuns({
   activeRuns,
   visibleWorkspaceId,
   visibleProviderId,
+  visibleMode,
+  visibleRunId,
 }: SelectBackgroundRunsInput): ActiveRun[] {
   return activeRuns.filter((run) => {
-    if (!visibleWorkspaceId) return true;
-    const isOnScreen =
+    const isDirectlyOnScreen =
+      run.id === visibleRunId &&
+      run.providerId === visibleProviderId &&
+      run.mode === visibleMode;
+    const isWorkspaceRunOnScreen =
+      !!visibleWorkspaceId &&
       run.workspaceId === visibleWorkspaceId &&
-      run.providerId === visibleProviderId;
-    return !isOnScreen;
+      run.providerId === visibleProviderId &&
+      run.mode === visibleMode;
+    return !isDirectlyOnScreen && !isWorkspaceRunOnScreen;
   });
 }
 
@@ -86,6 +98,7 @@ export function mergeLingeringRuns(
 export interface SpaceChoice {
   id: string;
   providerId: string;
+  mode: ModeId;
 }
 
 /**
@@ -98,16 +111,30 @@ export interface SpaceChoice {
  * same agent doesn't move the user out of the space they are working in.
  */
 export function resolveRunSpaceId(
-  run: Pick<ActiveRun, "spaceId" | "providerId">,
+  run: Pick<ActiveRun, "spaceId" | "providerId" | "mode">,
   spaces: SpaceChoice[],
   activeSpaceId: string | null,
 ): string | null {
-  if (run.spaceId && spaces.some((space) => space.id === run.spaceId)) {
+  if (
+    run.spaceId &&
+    spaces.some(
+      (space) =>
+        space.id === run.spaceId &&
+        space.providerId === run.providerId &&
+        space.mode === run.mode,
+    )
+  ) {
     return run.spaceId;
   }
   const active = spaces.find((space) => space.id === activeSpaceId);
-  if (active?.providerId === run.providerId) return active.id;
-  return spaces.find((space) => space.providerId === run.providerId)?.id ?? null;
+  if (active?.providerId === run.providerId && active.mode === run.mode) {
+    return active.id;
+  }
+  return (
+    spaces.find(
+      (space) => space.providerId === run.providerId && space.mode === run.mode,
+    )?.id ?? null
+  );
 }
 
 /** What the card prints as the run's name — title, else the goal's first line. */

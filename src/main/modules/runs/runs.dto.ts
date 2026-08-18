@@ -16,6 +16,7 @@ export interface CreateRunPayload {
   id: string;
   accountId: string;
   workspaceId?: string;
+  collectionId?: string;
   spaceId?: string;
   providerId: string;
   mode?: ModeId;
@@ -43,10 +44,26 @@ export interface UpdateRunPayload {
   sessionId?: string | null;
 }
 
+/** The provider/mode pair that defines which UI experience owns a run. */
+export interface RunExperienceOptions {
+  accountId: string;
+  providerId: string;
+  mode: ModeId;
+  limit?: number;
+}
+
+/** Optional narrowing for callers that load a workspace's run history. */
+export interface WorkspaceRunListOptions {
+  providerId?: string;
+  mode?: ModeId;
+  limit?: number;
+}
+
 export interface RunResponse {
   id: string;
   accountId: string;
   workspaceId: string | null;
+  collectionId: string | null;
   spaceId: string | null;
   providerId: string;
   mode: ModeId;
@@ -92,6 +109,9 @@ export interface ActiveRunWorkspaceResponse {
   id: string;
   name: string;
 }
+
+/** A chat-sidebar row; Collection metadata is loaded through its own module. */
+export type RecentRunResponse = RunResponse;
 
 // ─────────────────────────────────────────────────────────────
 // Run Context DTOs
@@ -289,7 +309,8 @@ export interface StartRunContextItem {
 /** Payload for starting a new work run */
 export interface StartRunPayload {
   accountId: string;
-  workspaceId: string;
+  workspaceId?: string;
+  collectionId?: string;
   spaceId?: string;
   providerId: string; // e.g., "copilot_cli"
   goal: string;
@@ -361,6 +382,12 @@ export interface ContinueRunPayload {
 export interface ContinueRunResponse {
   runId: string;
   resumed: boolean;
+}
+
+export interface MoveRunToCollectionPayload {
+  runId: string;
+  accountId: string;
+  collectionId: string | null;
 }
 
 /** Payload for forking an existing run's session into a new run */

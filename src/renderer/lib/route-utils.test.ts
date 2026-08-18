@@ -26,6 +26,10 @@ describe("getRouteType", () => {
     expect(getRouteType("/code/workspace-123")).toBe("code");
   });
 
+  it('returns "code" for a workspace-less run route', () => {
+    expect(getRouteType("/code/runs/run-123")).toBe("code");
+  });
+
   it('returns "unknown" for unmatched path', () => {
     expect(getRouteType("/random/path")).toBe("unknown");
   });

@@ -13,6 +13,9 @@ import type {
   ForkRunPayload,
   ReviewRunPayload,
   ToolApprovalResponse,
+  RunExperienceOptions,
+  WorkspaceRunListOptions,
+  MoveRunToCollectionPayload,
 } from "./runs.dto";
 import { handleToolApprovalResponse } from "./user-input-broker";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
@@ -40,6 +43,13 @@ export function registerRunsIpc(): void {
   );
 
   ipcMain.handle(
+    CHANNELS.runs.listRecent,
+    handle((options: RunExperienceOptions) =>
+      runsService.listRecentRuns(options),
+    ),
+  );
+
+  ipcMain.handle(
     CHANNELS.runs.getById,
     handle((id: string) => runsService.getRunById(id)),
   );
@@ -51,7 +61,9 @@ export function registerRunsIpc(): void {
 
   ipcMain.handle(
     CHANNELS.runs.getByWorkspace,
-    handle((workspaceId: string, limit?: number) => runsService.getRunsByWorkspace(workspaceId, limit)),
+    handle((workspaceId: string, options?: WorkspaceRunListOptions) =>
+      runsService.getRunsByWorkspace(workspaceId, options),
+    ),
   );
 
   ipcMain.handle(
@@ -67,6 +79,13 @@ export function registerRunsIpc(): void {
   ipcMain.handle(
     CHANNELS.runs.update,
     handle((id: string, payload: UpdateRunPayload) => runsService.updateRun(id, payload)),
+  );
+
+  ipcMain.handle(
+    CHANNELS.runs.moveToCollection,
+    handle((payload: MoveRunToCollectionPayload) =>
+      runsService.moveRunToCollection(payload),
+    ),
   );
 
   ipcMain.handle(
@@ -204,12 +223,14 @@ export function unregisterRunsIpc(): void {
     CHANNELS.runs.getAll,
     CHANNELS.runs.listArchived,
     CHANNELS.runs.listActive,
+    CHANNELS.runs.listRecent,
     CHANNELS.runs.getById,
     CHANNELS.runs.getByAccount,
     CHANNELS.runs.getByWorkspace,
     CHANNELS.runs.getByStatus,
     CHANNELS.runs.create,
     CHANNELS.runs.update,
+    CHANNELS.runs.moveToCollection,
     CHANNELS.runs.start,
     CHANNELS.runs.complete,
     CHANNELS.runs.fail,

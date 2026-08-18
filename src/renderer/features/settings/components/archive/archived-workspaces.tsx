@@ -412,9 +412,9 @@ function ArchivedRunRow({
   const provider = getProviderVariantById(run.providerId);
   const ProviderIcon = provider?.icon;
   const title = runDisplayTitle(run);
-  const unarchiveUnavailableReason = !run.workspace
-    ? "This run has no workspace and cannot be restored"
-    : run.workspace.isArchived
+  const unarchiveUnavailableReason = !run.workspace && run.mode === "developer"
+    ? "This Code run has no workspace and cannot be restored"
+    : run.workspace?.isArchived
       ? "Unarchive the workspace before restoring this run"
       : undefined;
 

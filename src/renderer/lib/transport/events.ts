@@ -41,6 +41,9 @@ export const appEvents = {
     onStatusChanged: bind<typeof window.api.runs.onStatusChanged>(
       CHANNELS.runs.statusChanged,
     ),
+    onUpdated: bind<typeof window.api.runs.onUpdated>(
+      CHANNELS.runs.updated,
+    ),
     onDiffUpdated: bind<typeof window.api.runs.onDiffUpdated>(
       CHANNELS.runs.diffUpdated,
     ),

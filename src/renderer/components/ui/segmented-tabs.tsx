@@ -144,7 +144,7 @@ export function SegmentedTabs<T extends string>({
 
   const containerClass =
     variant === "pill"
-      ? "relative flex rounded-full glass-surface p-0.5"
+      ? "relative flex rounded-full glass-outline p-0.5"
       : variant === "bordered"
         ? "inline-flex rounded-xl border border-primary-200/50 dark:border-primary-800/40 overflow-hidden"
         : "relative flex gap-1";
@@ -198,7 +198,7 @@ export function SegmentedTabs<T extends string>({
           className={cn(
             "absolute transition-all duration-300 ease-in-out",
             variant === "pill"
-              ? "top-0.75 bg-primary dark:bg-primary/10 glass-button rounded-full"
+              ? "top-0.75 glass-outline bg-primary dark:bg-primary/10 rounded-full"
               : "inset-y-0 bg-primary-200/80 dark:bg-primary-800/60 glass-button rounded-xl",
           )}
           style={{

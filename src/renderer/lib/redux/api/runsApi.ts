@@ -1,5 +1,6 @@
 import { baseApi } from "./baseApi";
 import { CHANNELS } from "../../../../shared/ipc-kit/channels";
+import type { ModeId } from "../../../../shared/modes";
 
 export type RunStatus =
   | "queued"
@@ -26,8 +27,11 @@ export interface Run {
   id: string;
   accountId: string;
   workspaceId: string | null;
+  collectionId: string | null;
   spaceId: string | null;
   providerId: string;
+  /** Experience mode snapshotted at run start (see shared/modes.ts). */
+  mode: ModeId;
   model: string | null;
   title: string | null;
   goal: string | null;
@@ -64,10 +68,13 @@ export interface ActiveRun extends Run {
   workspace: ActiveRunWorkspace | null;
 }
 
+export type RecentRun = Run;
+
 export interface CreateRunPayload {
   id: string;
   accountId: string;
   workspaceId?: string;
+  collectionId?: string;
   spaceId?: string;
   providerId: string;
   model?: string;
@@ -195,6 +202,19 @@ export const runsApi = baseApi.injectEndpoints({
       providesTags: ["Runs", "Workspaces"],
     }),
 
+    listRecentRuns: builder.query<
+      RecentRun[],
+      { accountId: string; providerId: string; mode: ModeId; limit?: number }
+    >({
+      query: (options) => ({
+        handler: CHANNELS.runs.listRecent,
+        args: [options],
+      }),
+      // Coarse "Runs" keeps every run mutation refreshing this for free;
+      // "RunsRecent" lets the runs:updated title event invalidate only this.
+      providesTags: ["Runs", "RunsRecent", "Collections"],
+    }),
+
     // Absence rule: a missing run arrives as null data, not an error.
     getRunById: builder.query<Run | null, string>({
       query: (id) => ({
@@ -217,11 +237,16 @@ export const runsApi = baseApi.injectEndpoints({
 
     getRunsByWorkspace: builder.query<
       Run[],
-      { workspaceId: string; limit?: number }
+      {
+        workspaceId: string;
+        providerId?: string;
+        mode?: ModeId;
+        limit?: number;
+      }
     >({
-      query: ({ workspaceId, limit }) => ({
+      query: ({ workspaceId, ...options }) => ({
         handler: CHANNELS.runs.getByWorkspace,
-        args: [workspaceId, limit],
+        args: [workspaceId, options],
       }),
       providesTags: ["Runs"],
     }),
@@ -257,6 +282,17 @@ export const runsApi = baseApi.injectEndpoints({
         ],
       },
     ),
+
+    moveRunToCollection: builder.mutation<
+      Run,
+      { runId: string; accountId: string; collectionId: string | null }
+    >({
+      query: (payload) => ({
+        handler: CHANNELS.runs.moveToCollection,
+        args: [payload],
+      }),
+      invalidatesTags: ["Runs", "RunsRecent", "Collections"],
+    }),
 
     startRun: builder.mutation<Run, string>({
       query: (id) => ({
@@ -436,6 +472,7 @@ export const {
   useLazyGetRunsQuery,
   useListArchivedRunsQuery,
   useListActiveRunsQuery,
+  useListRecentRunsQuery,
   useGetRunByIdQuery,
   useLazyGetRunByIdQuery,
   useGetRunsByAccountQuery,
@@ -446,6 +483,7 @@ export const {
   useLazyGetRunsByStatusQuery,
   useCreateRunMutation,
   useUpdateRunMutation,
+  useMoveRunToCollectionMutation,
   useStartRunMutation,
   useCompleteRunMutation,
   useFailRunMutation,

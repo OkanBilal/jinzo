@@ -948,7 +948,7 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
 
   function buildBaseSessionConfig(
     runId: string,
-    workspace: WorkRunRequest["workspace"],
+    execution: WorkRunRequest["execution"],
     permissionMode: string,
     mode?: ModeId,
     toolPolicy?: WorkRunToolPolicy | null,
@@ -958,16 +958,16 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
       // Authoritative for this session — see SessionConfig.workingDirectory.
       // The client's own working directory is whatever the first caller
       // happened to supply (often none), so it can't be relied on here.
-      workingDirectory: workspace.rootPath,
+      workingDirectory: execution.cwd,
       onPermissionRequest:
         permissionMode === "bypassPermissions" || permissionMode === "allow"
           ? approveAllPermissions
           : buildPermissionHandler(runId),
-      tools: buildMainsTools(workspace.id ?? null, workspace.rootPath, runId, mode),
+      tools: buildMainsTools(execution.workspaceId, execution.cwd, runId, mode),
       skillDirectories: [
         path.join(os.homedir(), ".claude", "skills"),
         path.join(os.homedir(), ".copilot", "skills"),
-        path.join(workspace.rootPath, ".github", "skills"),
+        path.join(execution.cwd, ".github", "skills"),
       ],
     };
 
@@ -1237,7 +1237,7 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
   // ─────────────────────────────────────────────────────────────
 
   function buildStartPrompt(request: WorkRunRequest): string {
-    const workspaceInfo = `Working directory: ${request.workspace.rootPath}`;
+    const workspaceInfo = `Working directory: ${request.execution.cwd}`;
     let prompt: string;
 
     if (request.context && request.context.length > 0) {
@@ -1506,7 +1506,7 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
     async createSession(request: WorkRunRequest): Promise<AcquiredSession> {
       const { runId, model, systemPrompt } = request;
 
-      const copilotClient = await ensureClient(request.workspace.rootPath);
+      const copilotClient = await ensureClient(request.execution.cwd);
 
       const overrides = (request.configSnapshot ?? {}) as Record<string, unknown>;
       const permissionMode =
@@ -1518,7 +1518,7 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
         sessionId: runId,
         ...buildBaseSessionConfig(
           runId,
-          request.workspace,
+          request.execution,
           permissionMode,
           request.mode,
           request.toolPolicy,
@@ -1543,7 +1543,7 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
       }
 
       sessionConfig.systemMessage = buildSystemMessage(
-        request.workspace.rootPath,
+        request.execution.cwd,
         systemPrompt,
         request.extraInstructions,
       );
@@ -1565,7 +1565,7 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
     async resumeSession(request: WorkRunContinueRequest): Promise<AcquiredSession> {
       const { runId } = request;
 
-      const copilotClient = await ensureClient(request.workspace.rootPath);
+      const copilotClient = await ensureClient(request.execution.cwd);
       // Same precedence as createSession: run snapshot beats provider config,
       // so a resumed run keeps the permission mode it started with.
       const resumeOverrides = (request.configSnapshot ?? {}) as Record<string, unknown>;
@@ -1577,7 +1577,7 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
       const resumeConfig: Omit<SessionConfig, "sessionId"> = {
         ...buildBaseSessionConfig(
           runId,
-          request.workspace,
+          request.execution,
           permissionMode,
           request.mode,
           request.toolPolicy,
@@ -1587,7 +1587,7 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
       // session config from scratch, so without this the mode delta and the
       // run's system prompt would silently drop off on the second turn.
       resumeConfig.systemMessage = buildSystemMessage(
-        request.workspace.rootPath,
+        request.execution.cwd,
         request.systemPrompt,
         request.extraInstructions,
       );

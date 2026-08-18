@@ -16,8 +16,10 @@ function makeRun(overrides: Partial<ActiveRun> = {}): ActiveRun {
     id: "r1",
     accountId: "default",
     workspaceId: "ws1",
+    collectionId: null,
     spaceId: "space-codex",
     providerId: "codex",
+    mode: "developer",
     model: null,
     title: null,
     goal: null,
@@ -45,6 +47,8 @@ describe("selectBackgroundRuns", () => {
       activeRuns: runs,
       visibleWorkspaceId: null,
       visibleProviderId: "codex",
+      visibleMode: "developer",
+      visibleRunId: null,
     });
 
     expect(result.map((run) => run.id)).toEqual(["r1", "r2"]);
@@ -55,6 +59,8 @@ describe("selectBackgroundRuns", () => {
       activeRuns: [makeRun({ id: "r1", workspaceId: "ws1" })],
       visibleWorkspaceId: "ws1",
       visibleProviderId: "codex",
+      visibleMode: "developer",
+      visibleRunId: null,
     });
 
     expect(result).toEqual([]);
@@ -67,6 +73,8 @@ describe("selectBackgroundRuns", () => {
       activeRuns: [makeRun({ id: "r1", spaceId: null })],
       visibleWorkspaceId: "ws1",
       visibleProviderId: "codex",
+      visibleMode: "developer",
+      visibleRunId: null,
     });
 
     expect(result).toEqual([]);
@@ -79,6 +87,8 @@ describe("selectBackgroundRuns", () => {
       activeRuns: [makeRun({ id: "r1", providerId: "codex" })],
       visibleWorkspaceId: "ws1",
       visibleProviderId: "claude_code",
+      visibleMode: "developer",
+      visibleRunId: null,
     });
 
     expect(result.map((run) => run.id)).toEqual(["r1"]);
@@ -89,9 +99,37 @@ describe("selectBackgroundRuns", () => {
       activeRuns: [makeRun({ id: "r1", workspaceId: "ws2" })],
       visibleWorkspaceId: "ws1",
       visibleProviderId: "codex",
+      visibleMode: "developer",
+      visibleRunId: null,
     });
 
     expect(result.map((run) => run.id)).toEqual(["r1"]);
+  });
+
+  it("drops the workspace-less run addressed by the run route", () => {
+    const result = selectBackgroundRuns({
+      activeRuns: [
+        makeRun({ id: "work-run", workspaceId: null, mode: "work" }),
+      ],
+      visibleWorkspaceId: null,
+      visibleProviderId: "codex",
+      visibleMode: "work",
+      visibleRunId: "work-run",
+    });
+
+    expect(result).toEqual([]);
+  });
+
+  it("keeps a same-provider Workspace run from another mode", () => {
+    const result = selectBackgroundRuns({
+      activeRuns: [makeRun({ id: "work-run", mode: "work" })],
+      visibleWorkspaceId: "ws1",
+      visibleProviderId: "codex",
+      visibleMode: "developer",
+      visibleRunId: null,
+    });
+
+    expect(result.map((run) => run.id)).toEqual(["work-run"]);
   });
 });
 
@@ -142,9 +180,9 @@ describe("isRunFinished / runOutcomeLabel", () => {
 
 describe("resolveRunSpaceId", () => {
   const spaces = [
-    { id: "claude", providerId: "claude_code" },
-    { id: "codex", providerId: "codex" },
-    { id: "codex-review", providerId: "codex" },
+    { id: "claude", providerId: "claude_code", mode: "developer" as const },
+    { id: "codex", providerId: "codex", mode: "developer" as const },
+    { id: "codex-review", providerId: "codex", mode: "developer" as const },
   ];
 
   it("prefers the space the run was started in", () => {
@@ -177,6 +215,12 @@ describe("resolveRunSpaceId", () => {
     const run = makeRun({ spaceId: null, providerId: "cursor" });
 
     expect(resolveRunSpaceId(run, spaces, "claude")).toBeNull();
+  });
+
+  it("does not open a Work run in a Developer space of the same provider", () => {
+    const run = makeRun({ spaceId: null, providerId: "codex", mode: "work" });
+
+    expect(resolveRunSpaceId(run, spaces, "codex")).toBeNull();
   });
 });
 

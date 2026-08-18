@@ -2,6 +2,7 @@ import type {
   AcquiredSession,
   CodexAdapterConfig,
   FileAttachment,
+  RunExecutionContext,
   WorkRunContextItem,
   WorkRunContinueRequest,
   WorkRunEvent,
@@ -313,11 +314,11 @@ function buildTurnInput(
 
 function mainsContext(
   runId: string,
-  workspace: { id: string; rootPath: string },
+  execution: RunExecutionContext,
 ): MainsToolContext {
   return {
-    workspaceId: workspace.id,
-    rootPath: workspace.rootPath,
+    workspaceId: execution.workspaceId,
+    rootPath: execution.cwd,
     runId,
   };
 }
@@ -436,7 +437,7 @@ export function createCodexSessionAcquisition(
         : undefined;
     const settings = commonThreadSettings();
     const threadStartParams: CodexThreadStartParams = {
-      cwd: request.workspace.rootPath,
+      cwd: request.execution.cwd,
       ...settings,
       sandbox: mapSandboxMode(
         overrideSandboxMode ?? config.sandboxMode,
@@ -447,7 +448,7 @@ export function createCodexSessionAcquisition(
     };
 
     logger.info(
-      `Starting thread (model: ${model || "default"}, cwd: ${request.workspace.rootPath})`,
+      `Starting thread (model: ${model || "default"}, cwd: ${request.execution.cwd})`,
     );
     const threadResult = await server.sendRequest(
       "thread/start",
@@ -463,13 +464,13 @@ export function createCodexSessionAcquisition(
       threadId,
       overrideGoalMode ?? config.goalMode ?? false,
       request.goal,
-      request.workspace.rootPath,
+      request.execution.cwd,
       true,
     );
     runCoordinator.registerRun({
       runId,
       threadId: threadId ?? null,
-      mainsCtx: mainsContext(runId, request.workspace),
+      mainsCtx: mainsContext(runId, request.execution),
     });
 
     const effort =
@@ -533,7 +534,7 @@ export function createCodexSessionAcquisition(
     try {
       await server.sendRequest("thread/resume", {
         threadId,
-        cwd: request.workspace.rootPath,
+        cwd: request.execution.cwd,
         ...settings,
         sandbox: resumeSandbox,
         ...(model ? { model } : {}),
@@ -550,7 +551,7 @@ export function createCodexSessionAcquisition(
         `Thread resume failed (${codexErrorMessage(resumeError)}), starting new thread`,
       );
       const threadStartParams: CodexThreadStartParams = {
-        cwd: request.workspace.rootPath,
+        cwd: request.execution.cwd,
         ...settings,
         sandbox: resumeSandbox,
         ...(model ? { model } : {}),
@@ -572,7 +573,7 @@ export function createCodexSessionAcquisition(
     runCoordinator.registerRun({
       runId,
       threadId,
-      mainsCtx: mainsContext(runId, request.workspace),
+      mainsCtx: mainsContext(runId, request.execution),
       subAgents: persistedSubAgents,
     });
     const interruptedSubAgents =
@@ -584,7 +585,7 @@ export function createCodexSessionAcquisition(
       currentThreadId,
       config.goalMode ?? false,
       message,
-      request.workspace.rootPath,
+      request.execution.cwd,
       false,
     );
 
@@ -652,7 +653,7 @@ export function createCodexSessionAcquisition(
     );
     const forkResult = await server.sendRequest("thread/fork", {
       threadId: sourceThreadId,
-      cwd: request.workspace.rootPath,
+      cwd: request.execution.cwd,
       approvalPolicy: settings.approvalPolicy,
       sandbox: forkSandbox,
       ...(model ? { model } : {}),
@@ -666,13 +667,13 @@ export function createCodexSessionAcquisition(
       forkedThreadId,
       config.goalMode ?? false,
       message,
-      request.workspace.rootPath,
+      request.execution.cwd,
       false,
     );
     runCoordinator.registerRun({
       runId,
       threadId: forkedThreadId,
-      mainsCtx: mainsContext(runId, request.workspace),
+      mainsCtx: mainsContext(runId, request.execution),
     });
 
     const collaborationMode = buildCollaborationMode(
@@ -714,14 +715,14 @@ export function createCodexSessionAcquisition(
     const server = await ensureServer();
     const settings = commonThreadSettings();
     const threadStartParams: CodexThreadStartParams = {
-      cwd: request.workspace.rootPath,
+      cwd: request.execution.cwd,
       ...settings,
       ...(model ? { model } : {}),
       dynamicTools: toCodexDynamicTools(),
     };
 
     logger.info(
-      `Starting review thread (model: ${model || "default"}, cwd: ${request.workspace.rootPath})`,
+      `Starting review thread (model: ${model || "default"}, cwd: ${request.execution.cwd})`,
     );
     const threadResult = await server.sendRequest(
       "thread/start",
@@ -731,7 +732,7 @@ export function createCodexSessionAcquisition(
     runCoordinator.registerRun({
       runId,
       threadId: threadId ?? null,
-      mainsCtx: mainsContext(runId, request.workspace),
+      mainsCtx: mainsContext(runId, request.execution),
     });
 
     const reviewStartParams:

@@ -161,7 +161,9 @@ export function WorkspaceProviderPage({
 
   const tabBar = useMemo(
     () =>
-      ws.showEmptyState ? null : (
+      // Chat/work render a single conversation with no tab strip; a null
+      // header removes the whole header row (main-content degrades cleanly).
+      !modeConfig.showTabs || ws.showEmptyState ? null : (
         <WorkspaceTabs
           variant={variant}
           runs={ws.runs}
@@ -190,6 +192,7 @@ export function WorkspaceProviderPage({
       ),
     [
       variant,
+      modeConfig.showTabs,
       ws.showEmptyState,
       ws.runs,
       ws.activeTab,

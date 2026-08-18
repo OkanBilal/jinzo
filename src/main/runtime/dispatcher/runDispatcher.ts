@@ -118,9 +118,9 @@ export async function dispatchRun(request: DispatchRunRequest): Promise<Dispatch
   const adapterRequest: WorkRunRequest = {
     runId,
     accountId: request.accountId,
-    workspace: {
-      id: workspace.id,
-      rootPath: workspace.rootPath,
+    execution: {
+      workspaceId: workspace.id,
+      cwd: workspace.rootPath,
     },
     goal: request.goal,
     model: request.model,
@@ -269,9 +269,9 @@ async function dispatchRunInternal(
       {
         runId,
         accountId: request.accountId,
-        workspace: {
-          id: workspace.id,
-          rootPath: workspace.rootPath,
+        execution: {
+          workspaceId: workspace.id,
+          cwd: workspace.rootPath,
         },
         goal: request.goal,
         model: request.model,
