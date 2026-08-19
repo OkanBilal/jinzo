@@ -418,6 +418,13 @@ export interface DropdownMenuItemProps {
   className?: string;
   disabled?: boolean;
   selected?: boolean;
+  /**
+   * How the selected row is drawn. "none" keeps the radio semantics — role,
+   * `aria-checked`, and the menu's focus-the-selected-row-on-open — for menus
+   * that mark the selection some other way and would only crowd the row with a
+   * second glyph.
+   */
+  indicator?: "check" | "none";
 }
 
 export function DropdownMenuItem({
@@ -427,6 +434,7 @@ export function DropdownMenuItem({
   className = "",
   disabled = false,
   selected,
+  indicator = "check",
 }: DropdownMenuItemProps) {
   const variantClasses = {
     default:
@@ -460,7 +468,7 @@ export function DropdownMenuItem({
         className,
       )}
     >
-      {selected !== undefined && (
+      {selected !== undefined && indicator === "check" && (
         <Selected
           aria-hidden="true"
           className={cn("size-4", selected ? "opacity-100" : "opacity-0")}

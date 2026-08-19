@@ -13,6 +13,13 @@ import path from "node:path";
 // dedicated tests. See CONTEXT.md "git test surface".
 // ─────────────────────────────────────────────────────────────
 
+// Every test here shells out to the real git binary (often several times per
+// test: init, commit, clone, fetch, push). Under full-suite load those spawns
+// queue behind other workers and the default 5s runner timeout turns into
+// flaky failures — in isolation the file passes comfortably. The bump is a
+// kill-switch for hung processes, not a performance target.
+vi.setConfig({ testTimeout: 30_000 });
+
 // gitService reads app.getPath("userData") for the worktrees dir and
 // app.getPath("desktop") for initRepo's default parent; point both at the
 // test sandbox.

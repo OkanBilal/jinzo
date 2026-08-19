@@ -21,8 +21,10 @@ interface SpaceModePickerProps {
 }
 
 /**
- * Titlebar dropdown for the active space mode. All three modes remain visible,
- * the current one is checked, and Control+1/2/3 selects Code/Work/Chat.
+ * Titlebar dropdown for the active space mode. All three modes remain visible;
+ * the current one carries the radio state (so it is what the menu focuses on
+ * open, and what a screen reader announces as checked) without a check glyph
+ * next to the mode dot. Control+1/2/3 selects Code/Work/Chat.
  */
 export function SpaceModePicker({ value, onChange }: SpaceModePickerProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -106,6 +108,7 @@ export function SpaceModePicker({ value, onChange }: SpaceModePickerProps) {
             key={mode}
             className=" py-2 px-4 gap-2"
             selected={mode === value}
+            indicator="none"
             onClick={() => handleModeChange(mode)}
           >
             <span

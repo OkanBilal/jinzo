@@ -4,6 +4,13 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WorkRunRequest } from "../../../../shared/adapter.types";
 
+// Each test spawns the fake codex app-server as a real Node subprocess and
+// completes a JSON-RPC handshake. Under full-suite load that spawn can blow
+// the default 5s runner timeout even though driver-level timeout behavior
+// (e.g. the 40ms turn timeout) is asserted inside the tests themselves — in
+// isolation the file passes comfortably. Kill-switch, not a performance target.
+vi.setConfig({ testTimeout: 30_000 });
+
 const approvalHarness = vi.hoisted(() => ({
   requests: [] as Array<Record<string, unknown>>,
 }));
