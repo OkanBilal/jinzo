@@ -16,7 +16,7 @@ interface TodoSummaryBarProps {
   variant?: AsciiSpinnerVariant;
 }
 
-interface TodoItem {
+export interface TodoItem {
   content: string;
   status: "completed" | "in_progress" | "pending";
   activeForm?: string;
@@ -194,6 +194,18 @@ export function selectTodoSnapshot(
 }
 
 /**
+ * The bar floats over the transcript, so it has to earn that space. A finished
+ * list ("Task 6/6 · All tasks completed") tells the reader nothing they need
+ * mid-run while covering the text they are actually reading — so the widget
+ * shows only while at least one step is still in progress or pending.
+ */
+export function hasOutstandingWork(
+  todos: TodoItem[] | null,
+): todos is TodoItem[] {
+  return !!todos && todos.some((todo) => todo.status !== "completed");
+}
+
+/**
  * Toast-style plan widget floating at the top of the workspace content column
  * (absolutely positioned against the page container — not the viewport, so it
  * stays centered over the transcript when the embedded browser panel or the
@@ -209,7 +221,8 @@ export function selectTodoSnapshot(
  *
  * Lifecycle: the parent mounts this only while the active run's status is
  * "running" (so it disappears when the run finishes). It also returns null on
- * its own when the current events carry no todos.
+ * its own when the current events carry no todos, and once every step is
+ * completed — see `hasOutstandingWork`.
  */
 export function TodoSummaryBar({
   events,
@@ -243,17 +256,14 @@ export function TodoSummaryBar({
     [events, structuralPlan],
   );
 
-  if (!todos || todos.length === 0) return null;
+  if (!hasOutstandingWork(todos)) return null;
 
   const completedCount = todos.filter((t) => t.status === "completed").length;
-  const allDone = completedCount === todos.length;
   const currentStep = Math.min(completedCount + 1, todos.length);
   const inProgress = todos.find((t) => t.status === "in_progress");
+  // Never "all completed" — that snapshot unmounts the widget above.
   const activeLabel =
-    inProgress?.content ??
-    (allDone
-      ? "All tasks completed"
-      : todos.find((t) => t.status === "pending")?.content);
+    inProgress?.content ?? todos.find((t) => t.status === "pending")?.content;
 
   const open = () => {
     if (collapseTimer.current) clearTimeout(collapseTimer.current);
@@ -290,11 +300,7 @@ export function TodoSummaryBar({
           onClick={() => setIsPinned((v) => !v)}
           className="flex items-center gap-3 w-full px-5 py-3 cursor-pointer"
         >
-          {allDone ? (
-            <Check className="size-3.5 text-success shrink-0" />
-          ) : (
-            <AsciiSpinner variant={variant} kind="circle" />
-          )}
+          <AsciiSpinner variant={variant} kind="circle" />
           <Text as="span" size="sm" tone="inherit" weight="medium" className="whitespace-nowrap shrink-0 tabular-nums">
             Task {currentStep}/{todos.length}
           </Text>
