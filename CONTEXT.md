@@ -156,7 +156,7 @@ An in-house tool exposed to coding agents across the drivers — `SaveReview`, `
 _Avoid_: re-declaring a mains tool's parameter schema, required-fields list, or description inside a driver.
 
 **tool registry**:
-The deep module (`mains-tools.registry.ts`) that assembles each **mains tool** into one entry — `{ name, description, schema, handler, providers, modes }`. `name` is bare (`SaveReview`); namespacing/prefixing is a **tool renderer** concern. `providers` is an explicit allowlist of which drivers expose the tool; `modes` (absent = every mode) is the same allowlist along the experience axis — the review flow is developer-only, `CheckPackage` also serves work. Dispatch is a registry lookup (`registry[name].handler(args, ctx)`), not a per-driver `switch`. The leaf `mains-tools.schemas.ts` has no dependencies, so the flow `schemas ← core ← registry ← driver` stays acyclic.
+The deep module (`mains-tools.registry.ts`) that assembles each **mains tool** into one entry — `{ name, description, schema, handler, providers, modes }`. `name` is bare (`SaveReview`); namespacing/prefixing is a **tool renderer** concern. `providers` is an explicit allowlist of which drivers expose the tool; `modes` (absent = every mode) is the same allowlist along the experience axis — every tool is developer-only today, so work and chat expose none. Dispatch is a registry lookup (`registry[name].handler(args, ctx)`), not a per-driver `switch`. The leaf `mains-tools.schemas.ts` has no dependencies, so the flow `schemas ← core ← registry ← driver` stays acyclic.
 _Avoid_: a per-driver hand-maintained tool list, or a `switch` keyed by tool name (look up the registry instead).
 
 **tool renderer**:

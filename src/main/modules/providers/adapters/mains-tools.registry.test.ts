@@ -110,11 +110,11 @@ describe("mains tool registry — mode dimension", () => {
     );
   });
 
-  it("work drops the review flow but keeps CheckPackage for codex/cursor", () => {
+  it("work exposes no mains tools on any provider", () => {
     expect(toClaudeTools(CTX, "work")).toHaveLength(0);
     expect(toCopilotTools(CTX, "work")).toHaveLength(0);
-    expect(toCodexDynamicTools("work").map((t) => t.name)).toEqual(["CheckPackage"]);
-    expect(toMcpToolDefs("work").map((t) => t.name)).toEqual(["CheckPackage"]);
+    expect(toMcpToolDefs("work")).toHaveLength(0);
+    expect(toCodexDynamicTools("work")).toHaveLength(0);
   });
 
   it("chat exposes no mains tools on any provider", () => {

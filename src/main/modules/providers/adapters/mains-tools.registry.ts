@@ -64,10 +64,11 @@ const REVIEW_FLOW: ProviderId[] = [
 // they need no explicit tool; Codex/Cursor cannot hook that path. Deliberate.
 const PACKAGE_GUARD: ProviderId[] = [PROVIDER_IDS.codex, PROVIDER_IDS.cursor];
 
-// Mode groups. The review flow belongs to the developer experience; work
-// keeps CheckPackage because codex/cursor can still install packages there.
+// Mode group. Every mains tool belongs to the developer experience: the
+// review flow needs a workspace, and package installs are a coding concern.
+// Work and chat expose none — the field stays per-tool so a future tool can
+// widen without reopening the drivers.
 const DEVELOPER_ONLY: ModeId[] = ["developer"];
-const COMMAND_CAPABLE: ModeId[] = ["developer", "work"];
 
 export const MAINS_TOOLS: MainsToolDef[] = [
   {
@@ -100,7 +101,7 @@ export const MAINS_TOOLS: MainsToolDef[] = [
     schema: CheckPackageSchema,
     handler: handleCheckPackage,
     providers: PACKAGE_GUARD,
-    modes: COMMAND_CAPABLE,
+    modes: DEVELOPER_ONLY,
   },
 ];
 
