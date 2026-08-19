@@ -210,7 +210,7 @@ Core tables:
 - `fake.driver.ts` — in-memory driver used by tests
 - `work-run-core.ts` — shared run loop / event plumbing used by every driver
 - `adapter.shared.ts` — common helpers used by every driver
-- `mains-mcp-server.ts`, `mains-tools.core.ts`, `mains-tools.schemas.ts`, `mains-tools.registry.ts` — in-process MCP server and the **mains tools** (`GetWorkspaceDiff`, `SaveReview`, `SaveFinding`, `SaveFindings`, `CommitChanges`, `CreatePR`, `CheckPackage`). Handler logic lives once in core, the Zod schema once in schemas, assembly once in the registry with `providers` and `modes` allowlists (git/review tools are developer-mode-only; `CheckPackage` also serves work mode). Never hand-write a tool definition inside a driver.
+- `mains-mcp-server.ts`, `mains-tools.core.ts`, `mains-tools.schemas.ts`, `mains-tools.registry.ts` — in-process MCP server and the **mains tools** (`SaveReview`, `SaveFinding`, `SaveFindings`, `CheckPackage`). Handler logic lives once in core, the Zod schema once in schemas, assembly once in the registry with `providers` and `modes` allowlists (the review flow is developer-mode-only; `CheckPackage` also serves work mode). Git is not among them: commits and PRs are the user's job through the git-actions panel, or the agent's through the shell. Never hand-write a tool definition inside a driver.
 - **Mode harness** (`src/shared/mode-harness.ts`) — per-mode prompt delta, tool policy, and per-provider config defaults/overrides, resolved once per run in `runs.service` (never inside a driver, never via the cached `AdapterConfig`). Drivers receive the resolved values on the per-run request (`extraInstructions`, `toolPolicy`, `configSnapshot`) and apply them natively: claude appends to the `claude_code` system-prompt preset + allow/disallow lists, copilot layers the session `systemMessage` + PreToolUse deny, codex sends `developerInstructions` + sandbox override (chat = `read-only`), cursor prefixes the prompt + agent mode (chat = `ask`). Continue/fork re-derive the harness from the run row's `mode` snapshot.
 - Hook system for pre/post tool execution and subagent coordination; pre-approved tool list (Bash, Read, Glob, Grep, …) with interactive approval for others
 
@@ -224,7 +224,7 @@ Core tables:
 
 **Git Flow Module** (`src/main/modules/gitFlow/`)
 - Deterministic commit / push / pull / PR orchestration for the UI git-actions panel: `getStatus`, `generateCommitMessage`, `generatePrBody`, `commit`, `push`, `pull`, `createPr`, `publish`, `getPublishPreflight`
-- Also the shared building blocks the mains tools (`CommitChanges` / `CreatePR`) delegate to, so git work lives in one place
+- The only home for that git work — there is no agent-facing commit/PR tool
 - Stages with `simple-git`, generates messages via a one-shot headless `adapter.generateText` call, creates PRs with `gh`
 - Renderer side: `features/workspace/components/session-panel/git-actions/` — one component per row (changes / branch / commit / pull / pr / publish), each owning its own form state (pull owns none — it is the one row that takes no input). `useGitActionsPanel` holds only what several rows share: the status query + `refreshStatus`, the accordion, and the single `pending` action. Publish replaces PR when the repo has no remote. See CONTEXT.md for the rules.
 

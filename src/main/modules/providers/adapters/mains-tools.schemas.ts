@@ -29,13 +29,6 @@ const findingFields = {
     .describe("Additional metadata as JSON"),
 };
 
-export const GetWorkspaceDiffSchema = z.object({
-  runId: z
-    .string()
-    .optional()
-    .describe("Run ID to get diff for a specific run"),
-});
-
 export const SaveReviewSchema = z.object({
   title: z.string().describe("Review title"),
   summary: z.string().optional().describe("Review summary"),
@@ -64,37 +57,6 @@ export const SaveFindingsSchema = z.object({
     .describe("Array of findings to save"),
 });
 
-export const CommitChangesSchema = z.object({
-  // Optional: the handler's instructions-first handshake hands back commit
-  // instructions on the first call when `message` is omitted.
-  message: z
-    .string()
-    .optional()
-    .describe(
-      "The commit message. Omit on first call to retrieve commitInstructions if configured.",
-    ),
-  files: z
-    .array(z.string())
-    .optional()
-    .describe(
-      "Specific files to stage. If omitted, stages all changes (git add -A)",
-    ),
-});
-
-export const CreatePRSchema = z.object({
-  title: z.string().describe("The pull request title"),
-  body: z.string().optional().describe("The pull request body/description"),
-  base: z
-    .string()
-    .optional()
-    .describe("The base branch to merge into (defaults to the repo default branch)"),
-  draft: z.boolean().optional().describe("Create as a draft pull request"),
-  labels: z
-    .array(z.string())
-    .optional()
-    .describe("Labels to add to the pull request"),
-});
-
 export const CheckPackageSchema = z.object({
   packages: z
     .array(
@@ -115,10 +77,7 @@ export const CheckPackageSchema = z.object({
 // Handler arg types are the *input* types (pre-parse): the non-Claude drivers
 // pass raw args straight through without Zod parsing, so optional fields with
 // defaults can legitimately arrive undefined.
-export type GetWorkspaceDiffArgs = z.input<typeof GetWorkspaceDiffSchema>;
 export type SaveReviewArgs = z.input<typeof SaveReviewSchema>;
 export type SaveFindingArgs = z.input<typeof SaveFindingSchema>;
 export type SaveFindingsArgs = z.input<typeof SaveFindingsSchema>;
-export type CommitChangesArgs = z.input<typeof CommitChangesSchema>;
-export type CreatePRArgs = z.input<typeof CreatePRSchema>;
 export type CheckPackageArgs = z.input<typeof CheckPackageSchema>;

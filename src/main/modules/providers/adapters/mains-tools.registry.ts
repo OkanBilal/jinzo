@@ -22,22 +22,16 @@ import { PROVIDER_IDS, type ProviderId } from "../../../../shared/provider-ids";
 import { DEFAULT_MODE_ID, type ModeId } from "../../../../shared/modes";
 import {
   TOOL_DESCRIPTIONS,
-  handleGetWorkspaceDiff,
   handleSaveReview,
   handleSaveFinding,
   handleSaveFindings,
-  handleCommitChanges,
-  handleCreatePR,
   handleCheckPackage,
   type MainsToolContext,
 } from "./mains-tools.core";
 import {
-  GetWorkspaceDiffSchema,
   SaveReviewSchema,
   SaveFindingSchema,
   SaveFindingsSchema,
-  CommitChangesSchema,
-  CreatePRSchema,
   CheckPackageSchema,
 } from "./mains-tools.schemas";
 
@@ -60,12 +54,6 @@ export interface MainsToolDef {
 }
 
 // Availability groups, named so the asymmetry is self-documenting.
-const ALL_PROVIDERS: ProviderId[] = [
-  PROVIDER_IDS.claude,
-  PROVIDER_IDS.copilot,
-  PROVIDER_IDS.codex,
-  PROVIDER_IDS.cursor,
-];
 // The review-flow tools are not exposed to Codex (it is a code-writing flow).
 const REVIEW_FLOW: ProviderId[] = [
   PROVIDER_IDS.claude,
@@ -76,20 +64,12 @@ const REVIEW_FLOW: ProviderId[] = [
 // they need no explicit tool; Codex/Cursor cannot hook that path. Deliberate.
 const PACKAGE_GUARD: ProviderId[] = [PROVIDER_IDS.codex, PROVIDER_IDS.cursor];
 
-// Mode groups. Git/review ceremony belongs to the developer experience; work
+// Mode groups. The review flow belongs to the developer experience; work
 // keeps CheckPackage because codex/cursor can still install packages there.
 const DEVELOPER_ONLY: ModeId[] = ["developer"];
 const COMMAND_CAPABLE: ModeId[] = ["developer", "work"];
 
 export const MAINS_TOOLS: MainsToolDef[] = [
-  {
-    name: "GetWorkspaceDiff",
-    description: TOOL_DESCRIPTIONS.GetWorkspaceDiff,
-    schema: GetWorkspaceDiffSchema,
-    handler: handleGetWorkspaceDiff,
-    providers: REVIEW_FLOW,
-    modes: DEVELOPER_ONLY,
-  },
   {
     name: "SaveReview",
     description: TOOL_DESCRIPTIONS.SaveReview,
@@ -112,22 +92,6 @@ export const MAINS_TOOLS: MainsToolDef[] = [
     schema: SaveFindingsSchema,
     handler: handleSaveFindings,
     providers: REVIEW_FLOW,
-    modes: DEVELOPER_ONLY,
-  },
-  {
-    name: "CommitChanges",
-    description: TOOL_DESCRIPTIONS.CommitChanges,
-    schema: CommitChangesSchema,
-    handler: handleCommitChanges,
-    providers: ALL_PROVIDERS,
-    modes: DEVELOPER_ONLY,
-  },
-  {
-    name: "CreatePR",
-    description: TOOL_DESCRIPTIONS.CreatePR,
-    schema: CreatePRSchema,
-    handler: handleCreatePR,
-    providers: ALL_PROVIDERS,
     modes: DEVELOPER_ONLY,
   },
   {

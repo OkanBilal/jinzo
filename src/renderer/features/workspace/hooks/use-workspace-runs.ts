@@ -138,15 +138,6 @@ export function useWorkspaceRuns(
       }
       cache.markLoaded(runId);
 
-      // A finished CommitChanges tool means new committed changes — refresh diffs.
-      if (
-        toolDeltas.some(
-          (tc) => tc.toolName.includes("CommitChanges") && tc.status === "done",
-        )
-      ) {
-        dispatch(workspaceApi.util.invalidateTags(["WorkspaceDiffs"]));
-      }
-
       const allowed = cache.touch(runId);
 
       setRunEvents((prev) => {
@@ -173,7 +164,7 @@ export function useWorkspaceRuns(
     } catch (err) {
       console.error("Failed to load run details:", err);
     }
-  }, [dispatch, cache]);
+  }, [cache]);
 
   /** Public entry point: runs at most one `loadRunDetailsOnce` per run at a time,
    *  with a single trailing refresh if another request arrived while it ran. This

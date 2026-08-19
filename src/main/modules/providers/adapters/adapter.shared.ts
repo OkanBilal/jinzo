@@ -84,12 +84,9 @@ export const DEFAULT_ALLOWED_TOOLS = [
   "NotebookEdit",
   "Skill",
   "Agent",
-  "mcp__mains__GetWorkspaceDiff",
   "mcp__mains__SaveReview",
   "mcp__mains__SaveFinding",
   "mcp__mains__SaveFindings",
-  "mcp__mains__CommitChanges",
-  "mcp__mains__CreatePR",
   "mcp__mains__CheckPackage",
 ];
 

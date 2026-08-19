@@ -94,8 +94,8 @@ export interface RunSession {
   abort(): Promise<void>;
 
    /**
-   * Update the session's internal baseRef. Called by the in-process commit tool
-   * (`mains-tools.core` → CommitChanges) after a commit moves HEAD forward.
+   * Update the session's internal baseRef. Called by `gitFlowService.performCommit`
+   * (the git-actions panel's commit) after a commit moves HEAD forward.
    *
    * Diff snapshots no longer depend on this — they read HEAD themselves, so a
    * commit made through any route is reflected. It survives as the fallback

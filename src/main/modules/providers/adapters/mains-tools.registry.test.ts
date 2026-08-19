@@ -11,7 +11,6 @@ import {
   dispatchMainsTool,
 } from "./mains-tools.registry";
 import {
-  CommitChangesSchema,
   SaveFindingSchema,
   SaveReviewSchema,
 } from "./mains-tools.schemas";
@@ -62,17 +61,9 @@ describe("mains tool registry — availability matrix", () => {
   });
 
   it("review-flow tools are not exposed to Codex", () => {
-    for (const name of ["GetWorkspaceDiff", "SaveReview", "SaveFinding", "SaveFindings"]) {
+    for (const name of ["SaveReview", "SaveFinding", "SaveFindings"]) {
       const tool = MAINS_TOOLS.find((t) => t.name === name)!;
       expect(tool.providers).not.toContain(PROVIDER_IDS.codex);
-    }
-  });
-
-  it("CommitChanges and CreatePR are exposed to every provider", () => {
-    const all = [PROVIDER_IDS.claude, PROVIDER_IDS.copilot, PROVIDER_IDS.codex, PROVIDER_IDS.cursor];
-    for (const name of ["CommitChanges", "CreatePR"]) {
-      const tool = MAINS_TOOLS.find((t) => t.name === name)!;
-      expect([...tool.providers].sort()).toEqual([...all].sort());
     }
   });
 });
@@ -92,11 +83,6 @@ describe("mains tool registry — JSON Schema rendering", () => {
     expect([...schema.required].sort()).toEqual(
       ["file", "message", "reason", "reviewId", "severity"].sort(),
     );
-  });
-
-  it("keeps CommitChanges.message optional (matches the handler's instructions-first handshake)", () => {
-    const schema = toJsonSchema(CommitChangesSchema) as any;
-    expect(schema.required ?? []).not.toContain("message");
   });
 });
 
@@ -124,7 +110,7 @@ describe("mains tool registry — mode dimension", () => {
     );
   });
 
-  it("work drops the git/review ceremony but keeps CheckPackage for codex/cursor", () => {
+  it("work drops the review flow but keeps CheckPackage for codex/cursor", () => {
     expect(toClaudeTools(CTX, "work")).toHaveLength(0);
     expect(toCopilotTools(CTX, "work")).toHaveLength(0);
     expect(toCodexDynamicTools("work").map((t) => t.name)).toEqual(["CheckPackage"]);
