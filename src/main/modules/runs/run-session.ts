@@ -93,11 +93,13 @@ export interface RunSession {
    */
   abort(): Promise<void>;
 
-  /**
+   /**
    * Update the session's internal baseRef. Called by the in-process commit tool
-   * (`mains-tools.core` → CommitChanges) after a commit moves HEAD forward, so
-   * subsequent live diffs and the final diff snapshot compare against the new
-   * post-commit HEAD instead of the original baseRef captured at run start.
+   * (`mains-tools.core` → CommitChanges) after a commit moves HEAD forward.
+   *
+   * Diff snapshots no longer depend on this — they read HEAD themselves, so a
+   * commit made through any route is reflected. It survives as the fallback
+   * anchor for a snapshot taken while HEAD is unreadable.
    *
    * No-op after finalize.
    */
@@ -387,10 +389,29 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   }
 
   // ─── Diff snapshotting ───
+  /**
+   * Anchored to the CURRENT HEAD, not the run-start `baseRef`. The stored diff
+   * means "what is not committed yet" everywhere else — intake captures against
+   * HEAD, the commit tool re-captures against the post-commit HEAD, and
+   * `resyncDiff` deliberately re-anchors to HEAD for exactly this reason. A run
+   * that froze its own baseline was the one surface that disagreed: anything it
+   * committed mid-run stayed inside `baseRef..workingTree`, so the sidebar and
+   * the changed-files panel kept counting work that was already in history
+   * while the session panel (live `git status`) had moved on.
+   *
+   * Reading HEAD per snapshot also covers commits this session never hears
+   * about — a `git commit` the agent runs through Bash, or one made in a
+   * terminal outside the app — neither of which reaches `updateBaseRef`.
+   */
   async function snapshotCurrentDiff(): Promise<DiffSnapshot | null> {
-    if (!workspaceId || !baseRef) return null;
+    if (!workspaceId) return null;
+    const head = await gitService.getHeadSha(execution.cwd).catch(() => null);
+    // Fall back to the run-start sha only when HEAD is unreadable, so a git
+    // hiccup degrades to the old behaviour instead of dropping the diff.
+    const ref = head ?? baseRef;
+    if (!ref) return null;
     return gitService
-      .captureDiffSnapshot(execution.cwd, baseRef)
+      .captureDiffSnapshot(execution.cwd, ref)
       .catch(() => null);
   }
 

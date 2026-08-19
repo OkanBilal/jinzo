@@ -1246,6 +1246,43 @@ describe("claude.driver / assistant error in the stream", () => {
     ).toEqual([]);
   });
 
+  it("stays silent while only approaching the limit", () => {
+    // `allowed_warning` arrives on every turn once usage is high — twice per
+    // message, in warn styling, about something you cannot act on mid-run.
+    // Nothing reaches the transcript until the limit actually rejects a turn.
+    const cs = makeClaudeSession();
+
+    expect(
+      mapSDKMessage(
+        {
+          type: "rate_limit_event",
+          rate_limit_info: {
+            status: "allowed_warning",
+            rateLimitType: "seven_day",
+            utilization: 0.8,
+          },
+        } as any,
+        cs,
+      ),
+    ).toEqual([]);
+    expect(cs.state.sawRateLimitNotice).toBeFalsy();
+
+    // …and with the notice withheld, the turn's own error still speaks up.
+    expect(
+      mapSDKMessage(
+        {
+          type: "assistant",
+          uuid: "u1",
+          session_id: "s1",
+          parent_tool_use_id: null,
+          error: "rate_limit",
+          message: { role: "assistant", content: [] },
+        } as any,
+        cs,
+      ),
+    ).toMatchObject([{ message: "[api] rate limited" }]);
+  });
+
   it("names the cause on an api retry", () => {
     const [event] = mapSDKMessage(
       {

@@ -1189,8 +1189,7 @@ describe("RunSession", () => {
   // updateBaseRef
   // ─────────────────────────────────────────────────────────────
   describe("updateBaseRef", () => {
-    it("affects subsequent diff snapshots", async () => {
-      vi.mocked(gitService.getHeadSha).mockResolvedValue("original-sha");
+    const trackingSnapshot = () => {
       vi.mocked(gitService.captureDiffSnapshot).mockImplementation(
         async (_rootPath, baseRef) => ({
           baseRef,
@@ -1200,18 +1199,44 @@ describe("RunSession", () => {
           shortstat: "1 file changed",
         }),
       );
+    };
+    const lastSnapshotRef = () => {
+      const calls = vi.mocked(gitService.captureDiffSnapshot).mock.calls;
+      return calls[calls.length - 1][1];
+    };
+
+    it("anchors snapshots to HEAD, not the run-start sha", async () => {
+      // The stored diff means "not committed yet". A commit mid-run therefore
+      // has to leave it — whether it came from the commit tool, a Bash
+      // `git commit`, or a terminal outside the app. Only the first would call
+      // updateBaseRef; all three move HEAD, so HEAD is what we follow.
+      vi.mocked(gitService.getHeadSha).mockResolvedValue("original-sha");
+      trackingSnapshot();
 
       const session = makeSession();
       await flushBackground(); // initial baseRef captured
 
-      session.updateBaseRef("new-sha");
+      vi.mocked(gitService.getHeadSha).mockResolvedValue("post-commit-sha");
 
       await session.finalize({ status: "succeeded" });
 
-      // The final diff snapshot should have used the updated baseRef
-      const calls = vi.mocked(gitService.captureDiffSnapshot).mock.calls;
-      const lastCall = calls[calls.length - 1];
-      expect(lastCall[1]).toBe("new-sha");
+      expect(lastSnapshotRef()).toBe("post-commit-sha");
+    });
+
+    it("falls back to the session baseRef when HEAD is unreadable", async () => {
+      // A git hiccup degrades to the old behaviour instead of dropping the diff.
+      vi.mocked(gitService.getHeadSha).mockResolvedValue("original-sha");
+      trackingSnapshot();
+
+      const session = makeSession();
+      await flushBackground();
+
+      session.updateBaseRef("new-sha");
+      vi.mocked(gitService.getHeadSha).mockRejectedValue(new Error("git gone"));
+
+      await session.finalize({ status: "succeeded" });
+
+      expect(lastSnapshotRef()).toBe("new-sha");
     });
 
     it("is a no-op after finalize", async () => {

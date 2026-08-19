@@ -688,22 +688,25 @@ export function WorkspaceEvents({
                     />
                   );
                 }
-                // Skip layout/paint of off-screen historical rows. `contain-intrinsic-size:
-                // auto …` lets the browser remember each row's real height once it has been
-                // rendered, so scrolling back up doesn't jump. The live (last) row is always
-                // on-screen via auto-scroll and is left uncontained, so the streaming/grow +
-                // scroll-to-bottom path never interacts with containment.
+                // Historical rows carried `content-visibility: auto` to skip their
+                // layout and paint while off-screen. Measured against a real
+                // 17-turn transcript (~12k nodes, 33 rows) it did the opposite of
+                // its job: a fast fling produced two blank frames every time —
+                // the black gaps users reported — and cost ~25% more per frame
+                // (10.3ms avg / 20ms worst, against 7.8ms / 12ms without it).
+                // Raising `contain-intrinsic-size` changed nothing, because the
+                // cost is laying each row out as it enters, not the size guess.
+                // At this scale the containment bookkeeping outweighs the work it
+                // skips. See docs/design/transcript-performance.md — the answer
+                // for genuinely long transcripts is windowing, not containment,
+                // which cannot produce a blank frame in the first place.
                 return (
                   <div
                     key={rowKey}
                     // Scroll target for the turn rail. Every user prompt is its
                     // own flat row, so the first index identifies the row.
                     data-group-index={row.kind === "flat" ? row.indices[0] : undefined}
-                    className={
-                      isLastRow
-                        ? "space-y-4"
-                        : "space-y-4 [content-visibility:auto] [contain-intrinsic-size:auto_240px]"
-                    }
+                    className="space-y-4"
                   >
                     {content}
                   </div>
