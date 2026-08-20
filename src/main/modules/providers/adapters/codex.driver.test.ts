@@ -526,9 +526,12 @@ describe("codex.driver / buildCollaborationMode", () => {
       });
     });
 
-    it("uses empty string when model is missing", () => {
+    it("omits the model when there is none to name", () => {
+      // `model: ""` is not "unset" — Codex reads it as a model name and answers
+      // "The '' model is not supported", which is how forking used to fail.
       const result = buildCollaborationMode(true, undefined, "low");
-      expect(result?.settings).toMatchObject({ model: "" });
+      expect(result?.settings).not.toHaveProperty("model");
+      expect(result?.settings).toMatchObject({ reasoning_effort: "low" });
     });
   });
 
@@ -547,6 +550,13 @@ describe("codex.driver / buildCollaborationMode", () => {
     it("uses null reasoning_effort when none supplied (plan-off default)", () => {
       const result = buildCollaborationMode(false, "gpt-5.4", undefined, true);
       expect(result?.settings).toMatchObject({ reasoning_effort: null });
+    });
+
+    it("sends no model on a fork that carries none", () => {
+      // The fork path always builds this block (forceReset), so it is the one
+      // that hits an absent model in practice — the thread keeps its own.
+      const result = buildCollaborationMode(false, undefined, undefined, true);
+      expect(result?.settings).not.toHaveProperty("model");
     });
   });
 });

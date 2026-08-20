@@ -185,7 +185,10 @@ export function buildCollaborationMode(
   return {
     mode: planEnabled ? "plan" : "default",
     settings: {
-      model: model ?? "",
+      // Omitted rather than blanked when unknown: `model: ""` is not "leave it
+      // alone", it is a model name, and Codex answers a request for the ''
+      // model with a 400. A fork with no model of its own keeps the thread's.
+      ...(model ? { model } : {}),
       reasoning_effort:
         effort ?? (planEnabled ? "medium" : null),
       developer_instructions: null,

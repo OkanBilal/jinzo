@@ -1088,6 +1088,10 @@ export const runsService = {
           accountId,
           execution,
           message,
+          // The forked run row inherits the source's model; the request has to
+          // carry it too, or the provider picks its own default for a
+          // conversation that was already running on something else.
+          model: sourceRun.model ?? undefined,
           mode: sourceRun.mode,
           extraInstructions: composeExtraInstructions(sourceRun.mode, sourceSpace?.systemPrompt),
           toolPolicy:
