@@ -317,8 +317,8 @@ export default function WorkspacesList({
         // onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setIsExpanded(!isExpanded); } }}
         className="w-full flex items-center justify-between transition-all duration-200 bg-transparent px-2 py-1 "
       >
-        <Text size="s" tone="secondary" className="tracking-tight">
-          Workspaces
+            <Text as="span" size="xs" tone="secondary" weight="medium">
+            Workspaces
         </Text>
         <div className="flex items-center ">
           <div className="-mr-1" role="presentation" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>

@@ -8,8 +8,9 @@ import {
   DropdownMenuSub,
   Text,
 } from "@/components/ui";
-import { Archive, Option, Project } from "@/components/ui/icons";
+import { Archive, OpenWith, Option } from "@/components/ui/icons";
 import type { Collection, RecentRun } from "@/lib/redux/api";
+import { ProjectIcon } from "./project-icon";
 
 /** What the row prints — title, else the goal's first line. */
 export function chatLabel(run: Pick<RecentRun, "title" | "goal">): string {
@@ -172,24 +173,33 @@ export function ChatItem({
         <DropdownMenuSub
           label={
             <>
-              <Project className="size-3.5" />
+              <OpenWith className="size-3.5" />
               <span>Move</span>
             </>
           }
         >
           <DropdownMenuItem
             selected={run.collectionId === null}
+            indicator="none"
             onClick={() => move(null)}
           >
-            Standalone
+            {/* Holds the icon column open so every label starts at the same
+                place — "no project" has no icon to show. */}
+            <span className="size-3.5 shrink-0" />
+            <span>No project</span>
           </DropdownMenuItem>
           {collections.map((collection) => (
             <DropdownMenuItem
               key={collection.id}
               selected={run.collectionId === collection.id}
+              indicator="none"
               onClick={() => move(collection.id)}
             >
-              {collection.name}
+              <ProjectIcon
+                icon={collection.icon}
+                projectName={collection.name}
+              />
+              <span className="truncate">{collection.name}</span>
             </DropdownMenuItem>
           ))}
         </DropdownMenuSub>

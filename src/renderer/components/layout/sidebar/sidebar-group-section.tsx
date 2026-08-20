@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { setWorkspaceGroupExpanded } from "@/lib/redux/slices/appSettingsSlice";
 import { Button, Text } from "@/components/ui";
@@ -35,8 +35,15 @@ export function SidebarGroupSection({
    * Defaults to New.
    */
   action?: { label: string; onClick: () => void; icon?: ReactNode };
-  /** Optional sibling action rendered before the primary "+" action. */
-  secondaryAction?: { label: string; onClick: () => void; icon: ReactNode };
+  /**
+   * Optional sibling action rendered before the primary "+" action. Its click
+   * carries the event so a caller can anchor a menu to the button it came from.
+   */
+  secondaryAction?: {
+    label: string;
+    onClick: (event: MouseEvent<HTMLElement>) => void;
+    icon: ReactNode;
+  };
   children: ReactNode;
 }) {
   const dispatch = useAppDispatch();
@@ -67,7 +74,7 @@ export function SidebarGroupSection({
             {typeof icon === "function" ? icon(expanded) : icon}
           </span>
         )}
-        <Text as="span" size="s" tone="contrast" className="truncate">
+        <Text as="span" size="s" tone="contrast" className="truncate" weight="medium">
           {label}
         </Text>
         <div className="ml-auto flex items-center gap-1.5">
@@ -86,7 +93,7 @@ export function SidebarGroupSection({
                   tooltip={secondaryAction.label}
                   onClick={(e) => {
                     e.stopPropagation();
-                    secondaryAction.onClick();
+                    secondaryAction.onClick(e);
                   }}
                   className="hidden group-hover/section:flex items-center p-0.5 cursor-pointer rounded-md"
                   aria-label={secondaryAction.label}

@@ -1,14 +1,22 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
-import { Button, Text, toast } from "@/components/ui";
-import { Plus } from "@/components/ui/icons";
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuItem,
+  Text,
+  toast,
+} from "@/components/ui";
+import { Edit, Option, Plus, Trash } from "@/components/ui/icons";
 import {
   useArchiveRunMutation,
   useGetAccountQuery,
   useListCollectionsQuery,
   useMoveRunToCollectionMutation,
+  useRemoveCollectionMutation,
   useSetActiveSpaceMutation,
+  useUpdateCollectionMutation,
   useUpdateSpaceMutation,
   type Collection,
   type RecentRun,
@@ -27,6 +35,8 @@ import { ChatItem, chatLabel } from "./chat-item";
 import { ProjectIcon } from "./project-icon";
 import { useRecentChats } from "./use-recent-chats";
 import { CollectionSourcesModal } from "./collection-sources-modal";
+import CollectionModal from "./collection-modal";
+import DeleteConfirmationModal from "./delete-confirmation-modal";
 
 /** How many rows the flat Recents section shows. */
 const RECENTS_LIMIT = 20;
@@ -57,8 +67,18 @@ export function SidebarChatList({
   const [updateSpace] = useUpdateSpaceMutation();
   const [archiveRun] = useArchiveRunMutation();
   const [moveRunToCollection] = useMoveRunToCollectionMutation();
+  const [updateCollection] = useUpdateCollectionMutation();
+  const [removeCollection] = useRemoveCollectionMutation();
   const [sourcesCollection, setSourcesCollection] =
     useState<Collection | null>(null);
+  // One row's ⋯ menu at a time, plus the two dialogs it can open. Anchored to
+  // the button it was opened from, like the chat row's own menu.
+  const [menuCollection, setMenuCollection] = useState<Collection | null>(null);
+  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+  const [editCollection, setEditCollection] = useState<Collection | null>(null);
+  const [isSavingCollection, setIsSavingCollection] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Collection | null>(null);
+  const [isDeletingCollection, setIsDeletingCollection] = useState(false);
 
   const activeTab = useAppSelector((state) => state.workspace.activeTab);
   const { data: recentRuns, isLoading } = useRecentChats();
@@ -177,6 +197,49 @@ export function SidebarChatList({
     }
   };
 
+  const openCollectionMenu = (
+    collection: Collection,
+    event: ReactMouseEvent<HTMLElement>,
+  ) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setMenuPosition({ x: rect.right, y: rect.bottom + 4 });
+    setMenuCollection(collection);
+  };
+
+  const handleSaveCollection = async (draft: {
+    name: string;
+    icon: string | null;
+  }) => {
+    if (!editCollection) return;
+    setIsSavingCollection(true);
+    try {
+      await updateCollection({
+        id: editCollection.id,
+        payload: { name: draft.name, icon: draft.icon },
+      }).unwrap();
+      setEditCollection(null);
+    } catch (error) {
+      console.error("Failed to update collection:", error);
+      toast.error("Failed to save project");
+    } finally {
+      setIsSavingCollection(false);
+    }
+  };
+
+  const handleDeleteCollection = async () => {
+    if (!deleteTarget) return;
+    setIsDeletingCollection(true);
+    try {
+      await removeCollection(deleteTarget.id).unwrap();
+      setDeleteTarget(null);
+    } catch (error) {
+      console.error("Failed to delete collection:", error);
+      toast.error("Failed to delete project");
+    } finally {
+      setIsDeletingCollection(false);
+    }
+  };
+
   const renderChat = (run: RecentRun, isRecent = false) => (
     <ChatItem
       key={run.id}
@@ -205,7 +268,7 @@ export function SidebarChatList({
     <div className="flex flex-col gap-2 pb-2">
       {(collectionRows.length > 0 || !query) && (
         <div>
-          <div className="flex items-center px-2 py-1">
+          <div className="flex items-center px-2 py-2">
             <Text as="span" size="xs" tone="secondary" weight="medium">
               Projects
             </Text>
@@ -213,9 +276,9 @@ export function SidebarChatList({
               tooltip="Create project"
               aria-label="Create project"
               onClick={onCreateCollection}
-              className="ml-auto p-0.5 rounded-md"
+              className="ml-auto -mr-1 p-1 rounded-md hover:bg-primary-100/80 dark:hover:bg-primary/10 transition-colors"
             >
-              <Plus className="size-3 -mr-px text-primary-800 dark:text-primary-200" />
+              <Plus className="size-3  text-primary-800 dark:text-primary-200 " />
             </Button>
           </div>
           <div className="flex flex-col gap-1">
@@ -238,13 +301,13 @@ export function SidebarChatList({
                     label: "New chat in project",
                     onClick: () => onNewChatInCollection(collection.id),
                   }}
-                  // secondaryAction={{
-                  //   label: "Project sources",
-                  //   onClick: () => setSourcesCollection(collection),
-                  //   icon: (
-                  //     <Document className="size-3 text-primary-800 dark:text-primary-200" />
-                  //   ),
-                  // }}
+                  secondaryAction={{
+                    label: "Project options",
+                    onClick: (event) => openCollectionMenu(collection, event),
+                    icon: (
+                      <Option className="size-3 text-primary-800 dark:text-primary-200" />
+                    ),
+                  }}
                 >
                   <div className="flex flex-col space-y-0.5">
                     {collectionRuns.length > 0 ? (
@@ -284,6 +347,51 @@ export function SidebarChatList({
           </Text>
         </div>
       )}
+      <DropdownMenu
+        isOpen={!!menuCollection}
+        aria-label="Project actions"
+        position={menuPosition}
+        origin="top-left"
+        onClose={() => setMenuCollection(null)}
+      >
+        <DropdownMenuItem
+          onClick={() => {
+            setEditCollection(menuCollection);
+            setMenuCollection(null);
+          }}
+        >
+          <Edit className="size-3.5" />
+          <span>Edit</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          variant="danger"
+          onClick={() => {
+            setDeleteTarget(menuCollection);
+            setMenuCollection(null);
+          }}
+        >
+          <Trash className="size-3.5" />
+          <span>Delete</span>
+        </DropdownMenuItem>
+      </DropdownMenu>
+      <CollectionModal
+        isOpen={!!editCollection}
+        collection={editCollection}
+        isSaving={isSavingCollection}
+        onSave={handleSaveCollection}
+        onClose={() => setEditCollection(null)}
+      />
+      <DeleteConfirmationModal
+        isOpen={!!deleteTarget}
+        isDeleting={isDeletingCollection}
+        title={`Delete ${deleteTarget?.name ?? "project"}?`}
+        // Says what actually happens: the module detaches runs and removes only
+        // the project's own sources, so nobody has to guess whether deleting a
+        // project takes its chats with it.
+        description="The chats inside move back to Recents and stay. Files added to this project are deleted."
+        onConfirm={() => void handleDeleteCollection()}
+        onCancel={() => setDeleteTarget(null)}
+      />
       <CollectionSourcesModal
         key={sourcesCollection?.id ?? "closed"}
         accountId={account?.id ?? ""}

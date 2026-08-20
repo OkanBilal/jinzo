@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/icons";
 import CloneRepoModal from "./clone-repo-modal";
 import CreateProjectModal from "./create-project-modal";
-import CreateCollectionModal from "./create-collection-modal";
+import CollectionModal from "./collection-modal";
 import { useDeleteWorkspace } from "@/features/workspace/hooks";
 import { useArchiveWorkspace } from "@/features/workspace/hooks";
 import { useSidebarSearch } from "@/hooks/use-sidebar-search";
@@ -490,10 +490,10 @@ export default function Sidebar({ collapsed }: SidebarProps) {
         onClose={handleCloseCreateProjectModal}
       />
 
-      <CreateCollectionModal
+      <CollectionModal
         isOpen={isCreateCollectionModalOpen}
-        isCreating={isCreatingCollection}
-        onCreate={handleCreateCollection}
+        isSaving={isCreatingCollection}
+        onSave={handleCreateCollection}
         onClose={handleCloseCreateCollectionModal}
       />
     </>

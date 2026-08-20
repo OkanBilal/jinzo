@@ -14,7 +14,7 @@ const MODE_DOT_COLORS: Record<ModeId, string> = {
  * the trigger's alone — an unclickable pill shouldn't wear a control's border.
  */
 const MODE_PILL =
-  "flex h-8 items-center rounded-2xl px-3 text-s font-medium text-primary-900 dark:text-primary-100";
+  "flex h-7.5 items-center rounded-2xl px-3  text-s font-medium text-primary-900 dark:text-primary-100";
 
 const MODE_OPTIONS = MODE_IDS.map((mode, index) => ({
   mode,

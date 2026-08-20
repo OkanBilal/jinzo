@@ -419,10 +419,10 @@ export interface DropdownMenuItemProps {
   disabled?: boolean;
   selected?: boolean;
   /**
-   * How the selected row is drawn. "none" keeps the radio semantics — role,
-   * `aria-checked`, and the menu's focus-the-selected-row-on-open — for menus
-   * that mark the selection some other way and would only crowd the row with a
-   * second glyph.
+   * How the selected row is drawn: a leading check, or a filled row. "none"
+   * suits menus whose rows already carry an icon, where a second glyph would
+   * only crowd them. Either way the radio semantics stay — role,
+   * `aria-checked`, and the menu's focus-the-selected-row-on-open.
    */
   indicator?: "check" | "none";
 }
@@ -463,6 +463,11 @@ export function DropdownMenuItem({
         "focus-visible:ring-0 focus-visible:ring-offset-0",
         "transition-colors hover:bg-primary-200/40 focus:bg-primary-200/60 focus:outline-none",
         "dark:hover:bg-primary/5 dark:focus:bg-primary/5",
+        // With the check suppressed the selection still has to be visible, so
+        // the row carries it as a fill — the same tint hover uses.
+        indicator === "none" && selected
+          ? "bg-primary-200/40 dark:bg-primary/5"
+          : "",
         disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
         variantClasses[variant],
         className,

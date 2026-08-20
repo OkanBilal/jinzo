@@ -44,7 +44,7 @@ export function SidebarToggleButton({
           tooltip={isOpen ? "Close sidebar" : "Open sidebar"}
           tooltipPosition="right"
           onClick={onClick}
-          className="rounded-full cursor-pointer hover:bg-primary-100/80 dark:hover:bg-primary/10 px-1.5 py-1.25 text-primary-700 dark:text-primary-300 transition-all duration-300 ease-out"
+          className="rounded-full cursor-pointer hover:bg-primary-100/80 dark:hover:bg-primary/10 px-1.75 py-1.5 text-primary-700 dark:text-primary-300 transition-all duration-300 ease-out"
           aria-label={isOpen ? "Close sidebar" : "Open sidebar"}
         >
           {isOpen ? (

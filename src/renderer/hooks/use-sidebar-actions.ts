@@ -105,13 +105,17 @@ export function useSidebarActions() {
     setIsCreateCollectionModalOpen(false);
   };
 
-  const handleCreateCollection = async (name: string) => {
+  const handleCreateCollection = async (draft: {
+    name: string;
+    icon: string | null;
+  }) => {
     if (!activeSpace || activeSpace.mode === "developer") return;
     setIsCreatingCollection(true);
     try {
       const collection = await createCollection({
         accountId: account?.id || "default",
-        name,
+        name: draft.name,
+        ...(draft.icon ? { icon: draft.icon } : {}),
       }).unwrap();
       setIsCreateCollectionModalOpen(false);
       handleNewChat(collection.id);

@@ -163,6 +163,10 @@ module.exports = {
     extraResource: [
       'src/main/db/migrations',
       'src/renderer/public/icon.png',
+      // Menu-bar icon: both representations, so the packaged app resolves them
+      // from `resourcesPath` instead of falling through to the renderer build.
+      'src/renderer/public/menu-iconTemplate.png',
+      'src/renderer/public/menu-iconTemplate@2x.png',
       'THIRD-PARTY-NOTICES.txt',
     ],
     ...((() => {

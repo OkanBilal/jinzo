@@ -594,6 +594,16 @@ async function detectInstalledApps(): Promise<DetectedApp[]> {
   return refreshInstalledApps();
 }
 
+/**
+ * The 1x menu-bar asset. macOS loads the `@2x` file sitting beside it on its
+ * own, so this path is the only one anything needs to name — and the image
+ * must not be resized afterwards, or the crisp representation is thrown away.
+ * `menu-icon.png` in the same folder is the master the two are cut from
+ * (`sips -z 16 16` / `-z 32 32`). Both must be **black + clear**: a template
+ * image is shape, not artwork, and AppKit takes that shape from the black
+ * content — the white master rendered as a pale smudge next to the system's
+ * own icons until it was recoloured.
+ */
 function resolveTrayIconPath(): string {
   if (!app.isPackaged) {
     return path.join(app.getAppPath(), "src/renderer/public/menu-iconTemplate.png");
@@ -625,15 +635,31 @@ function createTray() {
   if (tray) return;
 
   const sourceImage = nativeImage.createFromPath(resolveTrayIconPath());
-  // macOS menu bar expects ~22px; Windows/Linux accept larger
-  const trayImage =
-    process.platform === "darwin"
-      ? sourceImage.resize({ width: 16, height: 16 })
-      : sourceImage.resize({ width: 16, height: 16 });
+  const isMac = process.platform === "darwin";
+  // The asset is already menu-bar sized (16pt, with its @2x beside it), so on
+  // macOS it goes through untouched: `resize` returns a new image that drops
+  // both the extra representation and the template flag. Windows and Linux
+  // have no template concept and take whatever they are given, so they keep
+  // the explicit 16px.
+  const trayImage = isMac
+    ? sourceImage
+    : sourceImage.resize({ width: 16, height: 16 });
 
-  // NOTE: For a proper monochrome macOS menu bar icon, replace icon.png
-  // with a black+transparent template PNG and call trayImage.setTemplateImage(true).
-  // Using the colored app icon for now.
+  // Template = the alpha channel is a mask, not artwork: macOS paints it black
+  // on a light menu bar and white on a dark one, which is why every other icon
+  // up there is crisp and this one used to sit there as a pale glyph. Set
+  // explicitly rather than relying on the `…Template.png` filename, which only
+  // marks the image at load time.
+  if (isMac) trayImage.setTemplateImage(true);
+
+  // Which file this actually resolved to, and whether it arrived as a mask.
+  // The three-way path fallback above and the packaging step are both easy to
+  // get wrong in a way that only shows up as a pale glyph in the menu bar.
+  const trayPath = resolveTrayIconPath();
+  console.log(
+    `Tray icon: ${trayPath} (exists=${fs.existsSync(trayPath)}, ` +
+      `empty=${trayImage.isEmpty()}, template=${trayImage.isTemplateImage()})`,
+  );
 
   tray = new Tray(trayImage);
   tray.setToolTip("Mains");
