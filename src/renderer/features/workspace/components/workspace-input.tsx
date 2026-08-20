@@ -630,8 +630,8 @@ export function WorkspaceInput({
     const baseHint = isMobile
       ? "Do anything"
       : canResume
-        ? "Ask a follow-up, use @ or / for commands, files, skills and issues"
-        : "Ask to edit, use @ or / for commands, files, skills and issues";
+        ? "Ask a follow-up, use @ or / for commands, files, plugins, and skills"
+        : "Ask to edit, use @ or / for commands, files, plugins, and skills";
 
     if (uploadedFiles.length === 0) {
       return baseHint;
