@@ -488,6 +488,35 @@ export const fileExplorerService = {
   },
 
   /**
+   * Copy a file the renderer may read to a destination the user picked in the
+   * native save dialog. The source goes through the same content-root boundary
+   * as every other read; the destination needs no boundary of its own — the
+   * user named it in an OS dialog, which is the authorization.
+   */
+  async saveFileAs(sourcePath: string, targetPath: string): Promise<void> {
+    let realSource: string;
+    try {
+      realSource = await fs.realpath(path.resolve(sourcePath));
+    } catch (error) {
+      throwFsError(error, "File does not exist", "Failed to save file");
+    }
+
+    await assertWithinContentRoots(realSource);
+
+    const stat = await fs.stat(realSource).catch((error) => {
+      throwFsError(error, "File does not exist", "Failed to save file");
+    });
+    if (!stat.isFile()) throw new Error("Not a regular file");
+
+    try {
+      await fs.copyFile(realSource, targetPath);
+    } catch (error) {
+      console.error("[FileExplorer] Failed to save file:", error);
+      throwFsError(error, "File does not exist", "Failed to save file");
+    }
+  },
+
+  /**
    * Overwrite an existing regular file with UTF-8 text. The target must
    * already exist — this backs in-place editing of previewed files, not
    * file creation. Symlinks are resolved first so the regular-file check and

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Text } from "@/components/ui";
 import { useLocalDocumentUrl } from "@/hooks/use-local-document-url";
-import { pickRenderer } from "@/lib/document-viewer";
+import { pickRenderer, type OfficeDocType } from "@/lib/document-viewer";
 import type { DocumentViewerDoc } from "@/lib/redux/slices/appSettingsSlice";
 import { DocumentFallback } from "./document-fallback";
 import { SheetTabs } from "./sheet-tabs";
@@ -44,11 +44,16 @@ const BASE_SHADOW_CSS = `
 .xlsx-sheet-table a { color: #2563eb; text-decoration: underline; }
 `;
 
+/**
+ * Renders an Office document's bytes into a shadow root. Text formats never
+ * reach here — the panel routes them to a React renderer, which is why this
+ * component narrows `docType` to the Office set.
+ */
 export function DocumentRenderHost({
   doc,
   zoom,
 }: {
-  doc: DocumentViewerDoc;
+  doc: DocumentViewerDoc & { docType: OfficeDocType };
   zoom: number;
 }) {
   const url = useLocalDocumentUrl(doc.path);

@@ -41,6 +41,9 @@ export const appApi = {
     getToolCalls: method<typeof window.api.runs.getToolCalls>(
       CHANNELS.runToolCalls.getByRun,
     ),
+    getExecutionRoot: method<typeof window.api.runs.getExecutionRoot>(
+      CHANNELS.runs.getExecutionRoot,
+    ),
     execute: method<typeof window.api.runs.execute>(CHANNELS.runs.execute),
     continue: method<typeof window.api.runs.continue>(CHANNELS.runs.continue),
     canResume: method<typeof window.api.runs.canResume>(CHANNELS.runs.canResume),
@@ -77,6 +80,9 @@ export const appApi = {
     ),
     readFileText: method<typeof window.api.fileExplorer.readFileText>(
       CHANNELS.fileExplorer.readFileText,
+    ),
+    saveFileAs: method<typeof window.api.fileExplorer.saveFileAs>(
+      CHANNELS.fileExplorer.saveFileAs,
     ),
     writeFileText: method<typeof window.api.fileExplorer.writeFileText>(
       CHANNELS.fileExplorer.writeFileText,

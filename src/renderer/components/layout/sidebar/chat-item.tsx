@@ -107,8 +107,24 @@ export function ChatItem({
             : "hover:bg-primary/50 dark:hover:bg-primary/5"
         }`}
       >
+        {/* Two homes for one indicator. An indented project row has an empty
+            gutter to hang it in, so labels stay aligned whether or not a chat
+            is running. A Recents row is flush with the sidebar's edge — hung
+            there the spinner lands outside the row, so it takes a place in the
+            flow instead and nudges the label across while the run is live. */}
+        {isLive && isRecent && (
+          // The slot reserves width in the flow; the spinner itself is taken
+          // out of it. A box with no in-flow content cannot set the row's
+          // height, so a live chat and an idle one measure exactly the same —
+          // the same reason the indented rows hang theirs in the gutter.
+          <span className="relative shrink-0 w-3 self-stretch">
+            <span className="absolute inset-0 flex items-center justify-center">
+              <AsciiSpinner variant={variant} kind="circle" />
+            </span>
+          </span>
+        )}
         <span className="relative min-w-0 flex-1">
-          {isLive && (
+          {isLive && !isRecent && (
             <span className="pointer-events-none absolute right-full top-1/2 mr-1.5 -translate-y-1/2">
               <AsciiSpinner variant={variant} kind="circle" />
             </span>

@@ -9,7 +9,11 @@ vi.mock("electron", () => ({
   app: { getPath: () => TEST_USER_DATA },
 }));
 
-import { resolveRunExecution } from "./run-execution";
+import {
+  managedExecutionRoots,
+  managedRunDir,
+  resolveRunExecution,
+} from "./run-execution";
 
 describe("resolveRunExecution", () => {
   beforeEach(() => fs.rmSync(TEST_USER_DATA, { recursive: true, force: true }));
@@ -49,5 +53,37 @@ describe("resolveRunExecution", () => {
     expect(() =>
       resolveRunExecution({ runId: "bad-dev", mode: "developer" }),
     ).toThrow("require a workspace");
+  });
+});
+
+describe("managedRunDir", () => {
+  it("gives each Work run its own directory without creating it", () => {
+    // The file explorer and the renderer's file-open resolve paths against
+    // this; only the run itself should be making directories.
+    const dir = managedRunDir("work-42", "work");
+
+    expect(dir).toBe(path.join(TEST_USER_DATA, "runs", "work-42", "work"));
+    expect(fs.existsSync(dir)).toBe(false);
+  });
+
+  it("shares one directory across Chat runs", () => {
+    expect(managedRunDir("chat-1", "chat")).toBe(
+      managedRunDir("chat-2", "chat"),
+    );
+  });
+
+  it("rejects a run id that would escape the runs directory", () => {
+    expect(() => managedRunDir("../escape", "work")).toThrow();
+  });
+});
+
+describe("managedExecutionRoots", () => {
+  it("covers both managed directories with the runs parent", () => {
+    const roots = managedExecutionRoots();
+
+    expect(roots).toContain(path.join(TEST_USER_DATA, "runs"));
+    expect(roots).toContain(path.join(TEST_USER_DATA, "runtime", "chat"));
+    // Every Work run sits under the first entry, so one root admits them all.
+    expect(managedRunDir("any-run", "work").startsWith(roots[0])).toBe(true);
   });
 });

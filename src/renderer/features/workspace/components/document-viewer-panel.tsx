@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useRef, useState } from "react";
-import { Button, Text } from "@/components/ui";
-import { Close, Document } from "@/components/ui/icons";
+import { Button, Text, toast } from "@/components/ui";
+import { Close, Document, Download } from "@/components/ui/icons";
+import { appApi } from "@/lib/transport";
 import { DOC_TYPE_ICONS } from "./document-viewer/doc-type-icons";
 import { useDocumentViewer } from "@/hooks/use-document-viewer";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
@@ -14,8 +15,9 @@ import {
   DOC_VIEWER_PANEL_WIDTH_DEFAULT,
   clamp,
 } from "@/lib/layout";
-import { DOC_VIEWER_LABELS } from "@/lib/document-viewer";
+import { DOC_VIEWER_LABELS, isTextDocType } from "@/lib/document-viewer";
 import { DocumentRenderHost } from "./document-viewer/document-render-host";
+import { MarkdownDocument } from "./document-viewer/markdown-document";
 
 type AnimationState = "closed" | "opening" | "open" | "closing";
 
@@ -28,6 +30,7 @@ export function DocumentViewerPanel() {
   const dispatch = useAppDispatch();
   const documentViewerWidth = useAppSelector((s) => s.appSettings.documentViewerWidth);
   const [zoom, setZoom] = useState(1);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Reset zoom to 100% when a different document loads. Adjusting state during
   // render (React's supported pattern) instead of in an effect avoids a wasted
@@ -63,6 +66,29 @@ export function DocumentViewerPanel() {
   const isAnimatedIn = animState === "open";
 
   if (!isVisible) return null;
+
+  // "Save a copy": the viewer shows a file that lives in a run directory or a
+  // workspace, and the user's own copy belongs wherever they say. Main owns the
+  // native dialog; cancelling comes back as a null path, which is not an error.
+  const saveCopy = async () => {
+    if (!currentDoc || isSaving) return;
+    setIsSaving(true);
+    try {
+      const res = await appApi.fileExplorer.saveFileAs(
+        currentDoc.path,
+        currentDoc.fileName,
+      );
+      if (!res.success) {
+        toast.error(res.error ?? "Failed to save file");
+        return;
+      }
+      if (res.data) toast.success(`Saved to ${res.data}`);
+    } catch {
+      toast.error("Failed to save file");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const zoomOut = () => setZoom((z) => clamp(+(z - ZOOM_STEP).toFixed(2), ZOOM_MIN, ZOOM_MAX));
   const zoomIn = () => setZoom((z) => clamp(+(z + ZOOM_STEP).toFixed(2), ZOOM_MIN, ZOOM_MAX));
@@ -106,38 +132,52 @@ export function DocumentViewerPanel() {
           )}
         </div>
 
-        {/* Zoom controls */}
-        <Text as="div" size="inherit" tone="muted" className="flex items-center gap-0.5">
-          <Button
-            tooltip="Zoom out"
-            tooltipPosition="bottom"
-            onClick={zoomOut}
-            disabled={zoom <= ZOOM_MIN}
-            className="size-6 flex items-center justify-center rounded-md cursor-pointer disabled:opacity-40 hover:bg-primary-200/60 dark:hover:bg-primary-800/60"
-            aria-label="Zoom out"
-          >
-            <Text as="span" size="sm" tone="inherit" className="leading-none">−</Text>
-          </Button>
-          <Button
-            tooltip="Reset zoom"
-            tooltipPosition="bottom"
-            onClick={() => setZoom(1)}
-            className="min-w-10 px-1 text-xxs tabular-nums rounded-md cursor-pointer hover:bg-primary-200/60 dark:hover:bg-primary-800/60"
-            aria-label="Reset zoom"
-          >
-            {Math.round(zoom * 100)}%
-          </Button>
-          <Button
-            tooltip="Zoom in"
-            tooltipPosition="bottom"
-            onClick={zoomIn}
-            disabled={zoom >= ZOOM_MAX}
-            className="size-6 flex items-center justify-center rounded-md cursor-pointer disabled:opacity-40 hover:bg-primary-200/60 dark:hover:bg-primary-800/60"
-            aria-label="Zoom in"
-          >
-            <Text as="span" size="sm" tone="inherit" className="leading-none">+</Text>
-          </Button>
-        </Text>
+        {/* Zoom controls — rendered documents only. Text sets its own type
+            from the app's scale, so there is nothing here to scale. */}
+        {currentDoc && !isTextDocType(currentDoc.docType) && (
+          <Text as="div" size="inherit" tone="muted" className="flex items-center gap-0.5">
+            <Button
+              tooltip="Zoom out"
+              tooltipPosition="bottom"
+              onClick={zoomOut}
+              disabled={zoom <= ZOOM_MIN}
+              className="size-6 flex items-center justify-center rounded-md cursor-pointer disabled:opacity-40 hover:bg-primary-200/60 dark:hover:bg-primary-800/60"
+              aria-label="Zoom out"
+            >
+              <Text as="span" size="sm" tone="inherit" className="leading-none">−</Text>
+            </Button>
+            <Button
+              tooltip="Reset zoom"
+              tooltipPosition="bottom"
+              onClick={() => setZoom(1)}
+              className="min-w-10 px-1 text-xxs tabular-nums rounded-md cursor-pointer hover:bg-primary-200/60 dark:hover:bg-primary-800/60"
+              aria-label="Reset zoom"
+            >
+              {Math.round(zoom * 100)}%
+            </Button>
+            <Button
+              tooltip="Zoom in"
+              tooltipPosition="bottom"
+              onClick={zoomIn}
+              disabled={zoom >= ZOOM_MAX}
+              className="size-6 flex items-center justify-center rounded-md cursor-pointer disabled:opacity-40 hover:bg-primary-200/60 dark:hover:bg-primary-800/60"
+              aria-label="Zoom in"
+            >
+              <Text as="span" size="sm" tone="inherit" className="leading-none">+</Text>
+            </Button>
+          </Text>
+        )}
+
+        <Button
+          tooltip="Save a copy…"
+          tooltipPosition="bottom"
+          onClick={() => void saveCopy()}
+          disabled={!currentDoc || isSaving}
+          className="p-1 rounded-full glass-button cursor-pointer text-primary-700 dark:text-primary-300 hover:bg-primary-200/60 dark:hover:bg-primary-800/60 disabled:opacity-40"
+          aria-label="Save a copy of this document"
+        >
+          <Download className="size-4" />
+        </Button>
 
         <Button
           tooltip="Close"
@@ -150,9 +190,18 @@ export function DocumentViewerPanel() {
         </Button>
       </div>
 
-      {/* Body */}
+      {/* Body — text formats render as React, Office bytes go to the shadow
+          host. The two never mix, so the branch lives here rather than inside
+          the host. */}
       {currentDoc ? (
-        <DocumentRenderHost doc={currentDoc} zoom={zoom} />
+        isTextDocType(currentDoc.docType) ? (
+          <MarkdownDocument key={currentDoc.path} path={currentDoc.path} />
+        ) : (
+          <DocumentRenderHost
+            doc={{ ...currentDoc, docType: currentDoc.docType }}
+            zoom={zoom}
+          />
+        )
       ) : (
         <Text as="div" size="xs" tone="subtle" className="flex-1 flex items-center justify-center">
           No document selected

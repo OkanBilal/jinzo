@@ -20,6 +20,30 @@ function assertSafeRunId(runId: string): void {
 }
 
 /**
+ * Where a workspace-less run of this mode executes. Pure — callers that need
+ * the directory to exist create it; callers that only need to resolve a path
+ * against it (the file explorer, the renderer's file-open) must not.
+ */
+export function managedRunDir(runId: string, mode: ModeId): string {
+  if (mode === "work") {
+    assertSafeRunId(runId);
+    return path.join(userDataRoot(), "runs", runId, "work");
+  }
+  return path.join(userDataRoot(), "runtime", "chat");
+}
+
+/**
+ * The directories mains itself hands to workspace-less runs. Exported so the
+ * file explorer can admit them as content roots — a Work run's deliverable is
+ * a file the user is meant to open, and it lives here rather than in any
+ * workspace. `runs` covers every per-run directory with one entry.
+ */
+export function managedExecutionRoots(): string[] {
+  const root = userDataRoot();
+  return [path.join(root, "runs"), path.join(root, "runtime", "chat")];
+}
+
+/**
  * Resolve the explicit cwd handed to every provider adapter.
  *
  * Developer and legacy non-developer runs keep their real Workspace path.
@@ -40,13 +64,7 @@ export function resolveRunExecution(args: {
     throw new Error("Developer runs require a workspace");
   }
 
-  const cwd =
-    args.mode === "work"
-      ? (() => {
-          assertSafeRunId(args.runId);
-          return path.join(userDataRoot(), "runs", args.runId, "work");
-        })()
-      : path.join(userDataRoot(), "runtime", "chat");
+  const cwd = managedRunDir(args.runId, args.mode);
   fs.mkdirSync(cwd, { recursive: true });
   return { cwd, workspaceId: null };
 }

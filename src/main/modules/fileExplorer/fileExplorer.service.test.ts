@@ -364,6 +364,51 @@ describe("fileExplorerService", () => {
   // ─────────────────────────────────────────────────────────────
   // writeFileText
   // ─────────────────────────────────────────────────────────────
+  describe("saveFileAs", () => {
+    it("copies a readable file to the destination the user picked", async () => {
+      const source = path.join(tmpDir, "report.md");
+      await fs.writeFile(source, "# Report", "utf-8");
+      // The destination is deliberately outside the roots: the user named it
+      // in a native dialog, which is the authorization.
+      const outside = await makeTmpDir();
+      const target = path.join(outside, "saved.md");
+
+      await fileExplorerService.saveFileAs(source, target);
+
+      expect(await fs.readFile(target, "utf-8")).toBe("# Report");
+      await fs.rm(outside, { recursive: true, force: true });
+    });
+
+    it("refuses a source outside the content roots", async () => {
+      const outside = await makeTmpDir();
+      const source = path.join(outside, "secret.txt");
+      await fs.writeFile(source, "nope", "utf-8");
+
+      await expect(
+        fileExplorerService.saveFileAs(source, path.join(tmpDir, "copy.txt")),
+      ).rejects.toThrow(/outside your workspaces/);
+      await fs.rm(outside, { recursive: true, force: true });
+    });
+
+    it("refuses a directory", async () => {
+      const dir = path.join(tmpDir, "folder");
+      await fs.mkdir(dir);
+
+      await expect(
+        fileExplorerService.saveFileAs(dir, path.join(tmpDir, "copy")),
+      ).rejects.toThrow(/regular file/);
+    });
+
+    it("reports a missing source", async () => {
+      await expect(
+        fileExplorerService.saveFileAs(
+          path.join(tmpDir, "gone.md"),
+          path.join(tmpDir, "copy.md"),
+        ),
+      ).rejects.toThrow(/does not exist/);
+    });
+  });
+
   describe("writeFileText", () => {
     it("overwrites an existing file and returns the new mtime", async () => {
       const filePath = path.join(tmpDir, "code.ts");

@@ -43,6 +43,11 @@ export function registerRunsIpc(): void {
   );
 
   ipcMain.handle(
+    CHANNELS.runs.getExecutionRoot,
+    handle((runId: string) => runsService.getRunExecutionRoot(runId)),
+  );
+
+  ipcMain.handle(
     CHANNELS.runs.listRecent,
     handle((options: RunExperienceOptions) =>
       runsService.listRecentRuns(options),
@@ -223,6 +228,7 @@ export function unregisterRunsIpc(): void {
     CHANNELS.runs.getAll,
     CHANNELS.runs.listArchived,
     CHANNELS.runs.listActive,
+    CHANNELS.runs.getExecutionRoot,
     CHANNELS.runs.listRecent,
     CHANNELS.runs.getById,
     CHANNELS.runs.getByAccount,

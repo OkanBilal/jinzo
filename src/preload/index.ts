@@ -456,6 +456,8 @@ const api = {
       ipcRenderer.invoke(CHANNELS.runs.listRecent, options),
     getAll: (limit?: number) => ipcRenderer.invoke(CHANNELS.runs.getAll, limit),
     getById: (id: string) => ipcRenderer.invoke(CHANNELS.runs.getById, id),
+    getExecutionRoot: (runId: string) =>
+      ipcRenderer.invoke(CHANNELS.runs.getExecutionRoot, runId),
     getByAccount: (accountId: string, limit?: number) =>
       ipcRenderer.invoke(CHANNELS.runs.getByAccount, accountId, limit),
     getByWorkspace: (
@@ -687,6 +689,16 @@ const api = {
       filePath: string;
       maxSizeBytes?: number;
     }) => ipcRenderer.invoke(CHANNELS.fileExplorer.readFileText, options),
+    /**
+     * Copy a readable file somewhere the user picks in the native save dialog.
+     * Resolves to the saved path, or null when the dialog is cancelled.
+     */
+    saveFileAs: (sourcePath: string, suggestedName?: string) =>
+      ipcRenderer.invoke(
+        CHANNELS.fileExplorer.saveFileAs,
+        sourcePath,
+        suggestedName,
+      ),
     /**
      * List directory contents for lazy loading.
      * Returns immediate children with hasChildren flag for directories.

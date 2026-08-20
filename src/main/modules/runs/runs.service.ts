@@ -21,7 +21,7 @@ import {
 } from "../providers/adapters";
 import type { WorkRunResult, WorkRunToolPolicy } from "../../../shared/adapter.types";
 import { createRunSession, type RunSession, type RunSessionResult } from "./run-session";
-import { resolveRunExecution } from "./run-execution";
+import { managedRunDir, resolveRunExecution } from "./run-execution";
 import { materializeCollectionSourceContext } from "./run-collection-sources";
 import { emit } from "../../ipc-kit";
 import { runSessionRegistry } from "./run-session-registry";
@@ -362,6 +362,24 @@ export const runsService = {
 
   async getRunById(id: string): Promise<RunResponse | null> {
     return runsRepo.findRunById(id);
+  },
+
+  /**
+   * Where this run's files live — its workspace root, or the managed directory
+   * a workspace-less run executes in. The renderer needs it to resolve the bare
+   * filenames agents write into their answers ("report.md"), which have no
+   * meaning without a base. Null when the run is gone, or when a developer run
+   * somehow has no workspace.
+   */
+  async getRunExecutionRoot(runId: string): Promise<string | null> {
+    const run = await runsRepo.findRunById(runId);
+    if (!run) return null;
+    if (run.workspaceId) {
+      const workspace = await workspaceService.get(run.workspaceId);
+      return workspace?.rootPath ?? null;
+    }
+    if (run.mode === "developer") return null;
+    return managedRunDir(run.id, run.mode);
   },
 
   async getRunsByAccount(

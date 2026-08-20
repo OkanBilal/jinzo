@@ -200,6 +200,14 @@ export const runsRepo = {
     await db.delete(runs).where(eq(runs.workspaceId, workspaceId));
   },
 
+  /**
+   * Deliberately does not touch `updatedAt`. That column is what the chat
+   * sidebar prints as the row's age *and* sorts on, so it has to keep meaning
+   * "when this conversation last moved". Filing a chat under a project is
+   * organizing, not talking — bumping it here made an untouched chat jump to
+   * the top reading "now". (Archive/unarchive still bump: the archive list
+   * sorts on the same column, and a restored chat has to be findable.)
+   */
   async moveToCollection(
     id: string,
     collectionId: string | null,
@@ -207,7 +215,7 @@ export const runsRepo = {
     const db = getDb();
     await db
       .update(runs)
-      .set({ collectionId, updatedAt: sql`(unixepoch())` })
+      .set({ collectionId })
       .where(eq(runs.id, id));
     return this.findRunById(id);
   },

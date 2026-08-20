@@ -197,6 +197,18 @@ describe("runsRepo", () => {
       ).toBe("collection-1");
       expect((await runsRepo.moveToCollection("run-1", null))?.collectionId).toBeNull();
     });
+
+    it("leaves updatedAt alone — filing a chat is not activity", async () => {
+      // The sidebar prints and sorts on this column; a move must not send an
+      // untouched chat to the top of Recents reading "now".
+      createCollection(db, { id: "collection-1" });
+      createRun(db, { id: "run-1", mode: "work" });
+      const before = (await runsRepo.findRunById("run-1"))?.updatedAt;
+
+      const moved = await runsRepo.moveToCollection("run-1", "collection-1");
+
+      expect(moved?.updatedAt).toEqual(before);
+    });
   });
 
   describe("findRunsByStatus", () => {
