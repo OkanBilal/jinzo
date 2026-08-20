@@ -78,21 +78,13 @@ export function PulseList({ onEdit }: PulseListProps) {
                 )}
               </div>
 
-              <Text
-                as="span"
-                size="xs"
-                tone="faint"
-                className="whitespace-nowrap"
+              <div
+                className={`flex items-center gap-1 transition-opacity ${
+                  // Confirming keeps them up: the buttons are live, and a live
+                  // control must not vanish because the pointer moved away.
+                  isConfirming ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                }`}
               >
-                {formatSchedule({
-                  frequency: pulse.frequency,
-                  hour: pulse.hour,
-                  minute: pulse.minute,
-                  dayOfWeek: pulse.dayOfWeek,
-                })}
-              </Text>
-
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Button
                   type="button"
                   tooltip="Edit"
@@ -132,6 +124,19 @@ export function PulseList({ onEdit }: PulseListProps) {
                   </Button>
                 )}
               </div>
+              <Text
+                as="span"
+                size="xs"
+                tone="faint"
+                className="whitespace-nowrap"
+              >
+                {formatSchedule({
+                  frequency: pulse.frequency,
+                  hour: pulse.hour,
+                  minute: pulse.minute,
+                  dayOfWeek: pulse.dayOfWeek,
+                })}
+              </Text>
             </li>
           );
         })}

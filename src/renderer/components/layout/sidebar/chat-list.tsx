@@ -15,6 +15,7 @@ import {
   useListCollectionsQuery,
   useMoveRunToCollectionMutation,
   useRemoveCollectionMutation,
+  useUpdateRunMutation,
   useSetActiveSpaceMutation,
   useUpdateCollectionMutation,
   useUpdateSpaceMutation,
@@ -67,6 +68,7 @@ export function SidebarChatList({
   const [updateSpace] = useUpdateSpaceMutation();
   const [archiveRun] = useArchiveRunMutation();
   const [moveRunToCollection] = useMoveRunToCollectionMutation();
+  const [updateRun] = useUpdateRunMutation();
   const [updateCollection] = useUpdateCollectionMutation();
   const [removeCollection] = useRemoveCollectionMutation();
   const [sourcesCollection, setSourcesCollection] =
@@ -240,6 +242,15 @@ export function SidebarChatList({
     }
   };
 
+  const handleRename = async (run: RecentRun, title: string) => {
+    try {
+      await updateRun({ id: run.id, payload: { title } }).unwrap();
+    } catch (error) {
+      console.error("Failed to rename chat:", error);
+      toast.error("Failed to rename chat");
+    }
+  };
+
   const renderChat = (run: RecentRun, isRecent = false) => (
     <ChatItem
       key={run.id}
@@ -249,6 +260,7 @@ export function SidebarChatList({
       isRecent={isRecent}
       onSelect={() => void handleSelectChat(run)}
       onArchive={() => void handleArchive(run)}
+      onRename={(title) => void handleRename(run, title)}
       collections={collections ?? []}
       onMove={(collectionId) => void handleMove(run, collectionId)}
     />
@@ -327,18 +339,20 @@ export function SidebarChatList({
         </div>
       )}
       {standaloneRuns.length > 0 && (
-        <div>
-          <div className="px-2 py-1">
-            <Text as="span" size="xs" tone="secondary" weight="medium">
-              Recents
-            </Text>
-          </div>
+        <SidebarGroupSection
+          groupKey="recents"
+          label="Recents"
+          // What the section actually lists: the tail past RECENTS_LIMIT is not
+          // reachable from here, so counting it would promise rows that never
+          // arrive.
+          count={Math.min(standaloneRuns.length, RECENTS_LIMIT)}
+        >
           <div className="flex flex-col space-y-0.5">
             {standaloneRuns
               .slice(0, RECENTS_LIMIT)
               .map((run) => renderChat(run, true))}
           </div>
-        </div>
+        </SidebarGroupSection>
       )}
       {runs.length === 0 && (
         <div className="py-3 text-center">

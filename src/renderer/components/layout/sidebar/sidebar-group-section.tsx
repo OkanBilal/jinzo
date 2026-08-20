@@ -18,7 +18,7 @@ export function SidebarGroupSection({
   groupKey,
   label,
   icon,
-  count,
+  // count,
   action,
   secondaryAction,
   children,
@@ -78,14 +78,14 @@ export function SidebarGroupSection({
           {label}
         </Text>
         <div className="ml-auto flex items-center gap-1.5">
-          <Text
+          {/* <Text
             as="span"
             size="xxs"
             tone="secondary"
             className="tabular-nums group-hover/section:hidden"
           >
             {count}
-          </Text>
+          </Text> */}
           {action && (
             <>
               {secondaryAction && (

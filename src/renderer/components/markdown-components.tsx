@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { Components } from "react-markdown";
 
-import { Button, Text } from "@/components/ui";
+import { Button, Checkbox, Text } from "@/components/ui";
 import { CODE_FONT_SIZE_CSS } from "@/lib/appearance-fonts";
 import { proxiedImageSrc } from "@/lib/proxied-image-src";
 import { FileIconComponent } from "@/components/ui/icons";
@@ -33,10 +33,31 @@ function isFileHref(href: string): boolean {
 
 /**
  * File references render as an icon chip and open in the editor tab; real
- * URLs open in the system browser.
+ * URLs open in the system browser; `#fragment` links stay inside the document.
  */
 function MarkdownLink({ href, children }: { href?: string; children?: ReactNode }) {
   const openFileInEditor = useOpenFileInEditor();
+
+  // A fragment names a node in this very document — GFM footnote references
+  // and their back-links are the common case. Handing it to the shell was a
+  // silent no-op (main parses the URL and drops what has no protocol), which
+  // left every footnote link dead.
+  if (href?.startsWith("#")) {
+    return (
+      <Button
+        onClick={() => {
+          const id = decodeURIComponent(href.slice(1));
+          document
+            .getElementById(id)
+            ?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }}
+        title={href}
+        className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 underline cursor-pointer inline"
+      >
+        {children}
+      </Button>
+    );
+  }
 
   const target = href ? splitFileHref(href) : null;
   if (href && target && isFileHref(target.path)) {
@@ -178,14 +199,32 @@ export const  markdownComponents: Components = {
       {children}
     </Text>
   ),
-  li: ({ children }) => (
-    <Text
-      as="li"
-      className="font-sans leading-7 [&>p]:my-0 [&>p:not(:last-child)]:mb-1"
-    >
-      {children}
-    </Text>
-  ),
+  // `id` is forwarded because GFM footnotes land on the list item — without it
+  // the reference above has nothing to scroll to.
+  li: ({ children, className, id }) => {
+    // GFM marks checkbox items; they carry their own box, so the bullet goes
+    // and the row pulls back into the list's indent.
+    const isTask = className?.includes("task-list-item");
+    return (
+      <Text
+        as="li"
+        id={id}
+        className={`font-sans leading-7 [&>p]:my-0 [&>p:not(:last-child)]:mb-1 ${
+          isTask ? "list-none -ml-4 flex items-start gap-2" : ""
+        }`}
+      >
+        {children}
+      </Text>
+    );
+  },
+  // The only `input` markdown can produce is GFM's task-list checkbox. It goes
+  // through the app's own Checkbox so a plan looks like the rest of the UI
+  // rather than an OS control, and stays disabled — the box reports what the
+  // author wrote, it is not a control the reader owns.
+  input: ({ type, checked }) =>
+    type === "checkbox" ? (
+      <Checkbox checked={!!checked} disabled className="mt-1 shrink-0" />
+    ) : null,
   table: ({ children }) => (
     <div className="overflow-x-auto my-4 rounded-lg border border-primary-300 dark:border-primary-700">
       <table className="min-w-full border-collapse">{children}</table>

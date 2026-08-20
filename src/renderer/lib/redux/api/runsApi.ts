@@ -276,8 +276,11 @@ export const runsApi = baseApi.injectEndpoints({
           handler: CHANNELS.runs.update,
           args: [id, payload],
         }),
+        // `RunsRecent` too: the chat sidebar reads that list, and a renamed
+        // chat has to change there — that is where the rename happens.
         invalidatesTags: (_result, _error, { id }) => [
           "Runs",
+          "RunsRecent",
           { type: "Runs", id },
         ],
       },
