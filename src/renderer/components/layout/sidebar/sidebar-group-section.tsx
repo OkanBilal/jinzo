@@ -4,6 +4,10 @@ import { setWorkspaceGroupExpanded } from "@/lib/redux/slices/appSettingsSlice";
 import { Button, Text } from "@/components/ui";
 import { ArrowUp, New } from "@/components/ui/icons";
 
+/** Shared by the header's own glyph and any a caller supplies in its place. */
+export const SIDEBAR_ACTION_ICON =
+  "w-3 h-3 text-primary-800 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-100";
+
 /**
  * A collapsible sidebar section: header row (label, count, hover "+" action)
  * over an animated children well. Extracted from the workspace list so the
@@ -24,8 +28,13 @@ export function SidebarGroupSection({
   /** A function form gets the open state, so the glyph can track the accordion. */
   icon?: ReactNode | ((expanded: boolean) => ReactNode);
   count: number;
-  /** Hover-revealed "+" on the header (e.g. "Create new worktree", "New chat"). */
-  action?: { label: string; onClick: () => void };
+  /**
+   * Hover-revealed action on the header. The glyph names what the click makes:
+   * a plus for one more of what the section already lists (another worktree
+   * under a project), the New mark for starting something fresh (a chat).
+   * Defaults to New.
+   */
+  action?: { label: string; onClick: () => void; icon?: ReactNode };
   /** Optional sibling action rendered before the primary "+" action. */
   secondaryAction?: { label: string; onClick: () => void; icon: ReactNode };
   children: ReactNode;
@@ -94,7 +103,7 @@ export function SidebarGroupSection({
                 className="hidden group-hover/section:flex items-center p-0.5 cursor-pointer rounded-md"
                 aria-label={action.label}
               >
-                <New className="w-3 h-3 text-primary-800 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-100" />
+                {action.icon ?? <New className={SIDEBAR_ACTION_ICON} />}
               </Button>
             </>
           )}

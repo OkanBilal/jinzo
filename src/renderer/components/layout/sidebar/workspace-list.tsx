@@ -11,7 +11,7 @@ import type {
 import { LinkResourcesModal } from "@/features/workspace/components/link-resources-modal";
 import { WORKSPACE_BASE_PATH } from "@/lib/route-utils";
 import { getWorkspaceStatusConfig } from "@/lib/workspace-status";
-import { WorkspaceStatusIcon } from "@/components/ui/icons";
+import { Plus, WorkspaceStatusIcon } from "@/components/ui/icons";
 import type { WorkspaceStatus } from "@/lib/redux/api/workspaceApi";
 import {
   useListProjectsQuery,
@@ -22,7 +22,10 @@ import {
 } from "@/lib/redux/api";
 import type { Project } from "@/lib/redux/api/projectsApi";
 import { ProjectIcon } from "./project-icon";
-import { SidebarGroupSection } from "./sidebar-group-section";
+import {
+  SidebarGroupSection,
+  SIDEBAR_ACTION_ICON,
+} from "./sidebar-group-section";
 import { WorkspaceGroupDropdown, type GroupingMode } from "./workspace-group-dropdown";
 
 type WorkspaceGroup = {
@@ -356,6 +359,7 @@ export default function WorkspacesList({
                         label: "Create new worktree",
                         onClick: () =>
                           handleCreateWorktreeForProject(group.project!),
+                        icon: <Plus className={SIDEBAR_ACTION_ICON} />,
                       }
                     : undefined
                 }

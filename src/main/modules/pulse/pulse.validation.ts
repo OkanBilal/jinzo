@@ -1,5 +1,10 @@
 import type { CreatePulseInput, UpdatePulseInput, PulseFrequency } from "./pulse.dto";
-import { DEFAULT_MODE_ID, isModeId } from "../../../shared/modes";
+import {
+  DEFAULT_MODE_ID,
+  isModeId,
+  providerModes,
+  providerSupportsMode,
+} from "../../../shared/modes";
 
 const FREQUENCIES: PulseFrequency[] = ["hourly", "daily", "weekdays", "weekly"];
 const EFFORT_LEVELS = ["", "minimal", "low", "medium", "high", "max", "xhigh"];
@@ -20,6 +25,11 @@ export function validateCreate(input: CreatePulseInput): string | null {
     return "workspaceId is only allowed for developer pulses";
   }
   if (!input.providerId) return "providerId is required";
+  // A pulse executes under a space of its own provider+mode pair, so a pair no
+  // provider can hold would only fail later, at fire time.
+  if (!providerSupportsMode(input.providerId, mode)) {
+    return `${input.providerId} pulses support ${providerModes(input.providerId).join(", ")}`;
+  }
   if (!input.model) return "model is required";
   if (!input.title?.trim()) return "title is required";
   if (!input.prompt?.trim()) return "prompt is required";

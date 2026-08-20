@@ -47,6 +47,75 @@ describe("spaceService", () => {
     });
   });
 
+  describe("provider/mode pairing", () => {
+    it("reads a mode the provider no longer drives back as developer", async () => {
+      // Written while copilot still offered chat. The row is left alone — a
+      // provider that regains the mode picks its space back up — but the
+      // experience it renders has to be one copilot can run.
+      const space = createSpace(db, {
+        accountId: "default",
+        name: "Legacy",
+        providerId: "copilot_cli",
+        mode: "chat",
+      });
+
+      expect((await spaceService.getById(space.id))?.mode).toBe("developer");
+      const [fromList] = await spaceService.getAll();
+      expect(fromList.mode).toBe("developer");
+      expect((await spaceRepo.findById(space.id))?.mode).toBe("chat");
+    });
+
+    it("refuses to move a developer-only provider into work", async () => {
+      const space = createSpace(db, {
+        accountId: "default",
+        name: "Cursor",
+        providerId: "cursor",
+        mode: "developer",
+      });
+
+      await expect(
+        spaceService.update(space.id, { mode: "work" }),
+      ).rejects.toThrow(/support/);
+    });
+
+    it("refuses a provider switch that strands the space's mode", async () => {
+      // The other half of the pair: the payload names the provider, the row
+      // names the mode.
+      const space = createSpace(db, {
+        accountId: "default",
+        name: "Chat",
+        providerId: "claude_code",
+        mode: "chat",
+      });
+
+      await expect(
+        spaceService.update(space.id, { providerId: "copilot_cli" }),
+      ).rejects.toThrow(/support/);
+    });
+
+    it("still allows the pairs a provider does drive", async () => {
+      const space = createSpace(db, {
+        accountId: "default",
+        name: "Claude",
+        providerId: "claude_code",
+        mode: "developer",
+      });
+
+      const updated = await spaceService.update(space.id, { mode: "chat" });
+      expect(updated.mode).toBe("chat");
+    });
+
+    it("rejects an unsupported pair at creation", async () => {
+      await expect(
+        spaceService.create({
+          name: "New",
+          providerId: "cursor",
+          mode: "chat",
+        }),
+      ).rejects.toThrow(/support/);
+    });
+  });
+
   describe("getById", () => {
     it("returns null when not found (absence rule)", async () => {
       expect(await spaceService.getById("nonexistent")).toBeNull();

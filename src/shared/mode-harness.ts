@@ -74,7 +74,9 @@ const WORK_INSTRUCTIONS = `# Working with a non-technical user
 You are assisting with knowledge work rather than software development. The user may not be technical.
 
 - Prefer non-technical language. Don't name the commands or tools you run — describe what they do in plain terms (say "scanning the folder for documents", not "running grep").
-- When you write code as an intermediate step of a non-coding task (for example a script that builds a document, chart, or summary), don't narrate or cite that code — focus on the outcome it produced.
+- The user is not reading your tool calls. When a step produces something they asked about, carry the answer into your reply rather than pointing at the step that produced it.
+- Say what you did and why in concrete terms, and match the length of the reply to the size of the task — a small request gets a couple of sentences, not a structured report.
+- If you could not do something — a tool you don't have, a step you can't run — say so plainly instead of quietly working around it.
 - If the user asks for technical detail, or it would genuinely help them fix a problem, you may switch to technical language.
 
 # Deliverables
@@ -93,7 +95,8 @@ You are chatting with the user — answering questions and thinking through prob
 
 - Never modify files, run commands, or change any state, even when asked. If the user wants changes made, explain that this is a chat space and suggest switching to a Code or Work space.
 - You may read attached context or search the web to ground your answers.
-- Your reply is the deliverable: answer fully in chat rather than producing files.`;
+- Your reply is the deliverable: answer fully in chat rather than producing files.
+- Match the shape of the answer to the question. A simple question gets a short, direct answer rather than a structured report; for casual conversation, just talk.`;
 
 // ─────────────────────────────────────────────────────────────
 // The table
@@ -111,7 +114,10 @@ export const MODE_HARNESSES: Record<ModeId, ModeHarnessDescriptor> = {
   },
   // Work: file tools stay, Bash goes, git ceremony goes (the git/PR mains
   // tools disappear via the registry's modes allowlist). acceptEdits is a
-  // default, not an override — an explicit caller choice still wins.
+  // default, not an override — an explicit caller choice still wins. Codex's
+  // `personality` carries the tone half of this mode natively: its templates
+  // land at the top of codex's own instructions, above anything a prompt delta
+  // can reach.
   work: {
     mode: "work",
     promptDelta: WORK_INSTRUCTIONS,
@@ -122,7 +128,10 @@ export const MODE_HARNESSES: Record<ModeId, ModeHarnessDescriptor> = {
     configDefaults: {
       [PROVIDER_IDS.claude]: { permissionMode: "acceptEdits" },
       [PROVIDER_IDS.copilot]: { permissionMode: "acceptEdits" },
-      [PROVIDER_IDS.codex]: { sandboxMode: "workspace-write" },
+      [PROVIDER_IDS.codex]: {
+        sandboxMode: "workspace-write",
+        personality: "friendly",
+      },
       [PROVIDER_IDS.cursor]: { mode: "agent" },
     },
     configOverrides: {},
@@ -136,7 +145,9 @@ export const MODE_HARNESSES: Record<ModeId, ModeHarnessDescriptor> = {
       allowedTools: ["Read", "Glob", "Grep", "LSP", "WebFetch", "WebSearch"],
       disallowedTools: ["Bash", "Write", "Edit", "MultiEdit", "NotebookEdit", "Task"],
     },
-    configDefaults: {},
+    configDefaults: {
+      [PROVIDER_IDS.codex]: { personality: "friendly" },
+    },
     configOverrides: {
       [PROVIDER_IDS.claude]: { permissionMode: "default" },
       [PROVIDER_IDS.copilot]: { permissionMode: "default" },
@@ -148,6 +159,27 @@ export const MODE_HARNESSES: Record<ModeId, ModeHarnessDescriptor> = {
 
 export function getModeHarness(mode: ModeId | null | undefined): ModeHarnessDescriptor {
   return MODE_HARNESSES[mode ?? DEFAULT_MODE_ID] ?? MODE_HARNESSES[DEFAULT_MODE_ID];
+}
+
+/**
+ * The value a mode pins for one provider setting, or undefined when the mode
+ * leaves it to the provider's own config. Overrides first, then defaults —
+ * matching `composeConfigSnapshot`'s precedence minus the caller payload.
+ *
+ * Exists so a UI can ask "does this mode decide this for me?" without
+ * re-listing the table: a settings control the harness pins is not a control,
+ * and a second list of pinned keys would drift from this one.
+ */
+export function modeProviderSetting(
+  mode: ModeId | null | undefined,
+  providerId: ProviderId,
+  key: string,
+): unknown {
+  const harness = getModeHarness(mode);
+  return (
+    harness.configOverrides[providerId]?.[key] ??
+    harness.configDefaults[providerId]?.[key]
+  );
 }
 
 // ─────────────────────────────────────────────────────────────

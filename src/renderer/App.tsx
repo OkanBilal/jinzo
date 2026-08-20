@@ -268,6 +268,7 @@ function AppContent() {
             isOpen={!sidebarCollapsed}
             onClick={() => dispatch(setSidebarCollapsed(!sidebarCollapsed))}
             mode={showSpaceModePicker ? activeSpace?.mode : undefined}
+            providerId={activeSpace?.providerId}
             onModeChange={handleSelectMode}
           />
         )}

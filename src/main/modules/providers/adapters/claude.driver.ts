@@ -870,6 +870,13 @@ interface ClaudePermissionBridgeOptions {
   runId: string;
   allowedTools: Set<string>;
   bypassMode: boolean;
+  /**
+   * True when the run's tool policy *replaced* the default allowlist rather
+   * than trimming it — a mode that ships its own tool set (chat). MCP tools
+   * then lose their blanket trust: a mode that removed Write must not get it
+   * back through a filesystem MCP server the space happens to have attached.
+   */
+  restrictedToolset?: boolean;
   requestApproval?: ApprovalRequester;
   cancelApproval?: (requestId: string) => void;
 }
@@ -892,6 +899,7 @@ export function createClaudePermissionBridge({
   runId,
   allowedTools,
   bypassMode,
+  restrictedToolset = false,
   requestApproval = requestToolApproval,
   cancelApproval = cancelPendingRequest,
 }: ClaudePermissionBridgeOptions): {
@@ -906,7 +914,12 @@ export function createClaudePermissionBridge({
 
     // AskUserQuestion is an interaction, not a permission gate, so it must
     // still reach the renderer even in bypass mode.
-    if ((bypassMode && !isAskUser) || allowedTools.has(toolName) || toolName.startsWith("mcp__")) {
+    // The `mcp__` shortcut is the pre-approval an MCP server earns by being
+    // configured at all — but only while the run is on the default toolset.
+    // Under a replacement allowlist it falls through to the approval dialog,
+    // matching the copilot driver's pre-tool hook.
+    const mcpTrusted = !restrictedToolset && toolName.startsWith("mcp__");
+    if ((bypassMode && !isAskUser) || allowedTools.has(toolName) || mcpTrusted) {
       return { allowed: true, updatedInput: toolInput };
     }
 
@@ -2411,6 +2424,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
           runId,
           allowedTools: effectiveAllowedTools,
           bypassMode: permissionMode === "bypassPermissions",
+          restrictedToolset: !!toolPolicy?.allowedTools,
         })
       : null;
 

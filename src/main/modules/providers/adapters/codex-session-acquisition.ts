@@ -376,11 +376,27 @@ export function createCodexSessionAcquisition(
     return requestedModel || config.defaultModel || undefined;
   }
 
-  function commonThreadSettings() {
+  /**
+   * Thread settings for one run: the provider config with the run's
+   * mode-resolved `configSnapshot` on top. The merge lives here rather than at
+   * each call site — create, resume, and fork all need it, and three copies is
+   * how `sandbox` ended up re-derived after every spread.
+   */
+  function threadSettingsFor(overrides: Record<string, unknown> = {}) {
+    const sandboxMode =
+      typeof overrides.sandboxMode === "string"
+        ? (overrides.sandboxMode as CodexAdapterConfig["sandboxMode"])
+        : config.sandboxMode;
+    // Codex's own tone lever: work/chat pin it through the mode harness, and
+    // developer leaves it to the provider setting.
+    const personality =
+      typeof overrides.personality === "string"
+        ? (overrides.personality as CodexAdapterConfig["personality"])
+        : config.personality;
     return {
       approvalPolicy: config.approvalMode ?? "on-request",
-      sandbox: mapSandboxMode(config.sandboxMode),
-      personality: config.personality ?? "none",
+      sandbox: mapSandboxMode(sandboxMode),
+      personality: personality ?? "none",
       config: buildCodexConfigOverrides(
         config.networkAccessEnabled !== false,
       ),
@@ -411,10 +427,6 @@ export function createCodexSessionAcquisition(
     const overrides = (
       request.configSnapshot ?? {}
     ) as Record<string, unknown>;
-    const overrideSandboxMode =
-      typeof overrides.sandboxMode === "string"
-        ? overrides.sandboxMode as CodexAdapterConfig["sandboxMode"]
-        : undefined;
     const overrideEffort =
       typeof overrides.modelReasoningEffort === "string"
         ? overrides.modelReasoningEffort
@@ -435,13 +447,10 @@ export function createCodexSessionAcquisition(
       typeof overrides.goalMode === "boolean"
         ? overrides.goalMode
         : undefined;
-    const settings = commonThreadSettings();
+    const settings = threadSettingsFor(overrides);
     const threadStartParams: CodexThreadStartParams = {
       cwd: request.execution.cwd,
       ...settings,
-      sandbox: mapSandboxMode(
-        overrideSandboxMode ?? config.sandboxMode,
-      ),
       ...(model ? { model } : {}),
       ...buildDeveloperInstructionsParam(request.extraInstructions),
       dynamicTools: toCodexDynamicTools(request.mode),
@@ -520,23 +529,17 @@ export function createCodexSessionAcquisition(
       );
     }
 
-    const settings = commonThreadSettings();
     // Same precedence as createSession: the run's config snapshot beats the
     // provider config, so a resumed chat run keeps its read-only sandbox.
     const resumeOverrides = (
       request.configSnapshot ?? {}
     ) as Record<string, unknown>;
-    const resumeSandbox = mapSandboxMode(
-      typeof resumeOverrides.sandboxMode === "string"
-        ? resumeOverrides.sandboxMode as CodexAdapterConfig["sandboxMode"]
-        : config.sandboxMode,
-    );
+    const settings = threadSettingsFor(resumeOverrides);
     try {
       await server.sendRequest("thread/resume", {
         threadId,
         cwd: request.execution.cwd,
         ...settings,
-        sandbox: resumeSandbox,
         ...(model ? { model } : {}),
         ...buildDeveloperInstructionsParam(request.extraInstructions),
       });
@@ -553,7 +556,6 @@ export function createCodexSessionAcquisition(
       const threadStartParams: CodexThreadStartParams = {
         cwd: request.execution.cwd,
         ...settings,
-        sandbox: resumeSandbox,
         ...(model ? { model } : {}),
         ...buildDeveloperInstructionsParam(request.extraInstructions),
         dynamicTools: toCodexDynamicTools(request.mode),
@@ -642,20 +644,17 @@ export function createCodexSessionAcquisition(
     }
     runCoordinator.attachThread(sourceRunId, sourceThreadId);
 
-    const settings = commonThreadSettings();
     const forkOverrides = (
       request.configSnapshot ?? {}
     ) as Record<string, unknown>;
-    const forkSandbox = mapSandboxMode(
-      typeof forkOverrides.sandboxMode === "string"
-        ? forkOverrides.sandboxMode as CodexAdapterConfig["sandboxMode"]
-        : config.sandboxMode,
-    );
+    // `thread/fork` has no `personality` field — the forked thread inherits the
+    // source's — so only the fields the contract names are passed through.
+    const settings = threadSettingsFor(forkOverrides);
     const forkResult = await server.sendRequest("thread/fork", {
       threadId: sourceThreadId,
       cwd: request.execution.cwd,
       approvalPolicy: settings.approvalPolicy,
-      sandbox: forkSandbox,
+      sandbox: settings.sandbox,
       ...(model ? { model } : {}),
       ...buildDeveloperInstructionsParam(request.extraInstructions),
       config: settings.config,
@@ -713,7 +712,7 @@ export function createCodexSessionAcquisition(
     const target = buildCodexReviewTarget(request.target);
     const model = effectiveModel(request.model);
     const server = await ensureServer();
-    const settings = commonThreadSettings();
+    const settings = threadSettingsFor();
     const threadStartParams: CodexThreadStartParams = {
       cwd: request.execution.cwd,
       ...settings,

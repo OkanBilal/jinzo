@@ -533,6 +533,64 @@ describe("codex.driver / app-server protocol", () => {
     ]);
   });
 
+  it("lets the run's mode-resolved snapshot set the thread personality", async () => {
+    // Work/Chat pin `personality` through the mode harness; the provider
+    // setting is what Code spaces keep. The run snapshot has to win, the same
+    // way it already does for the sandbox.
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mains-codex-driver-"));
+    tempDirs.push(tempDir);
+    const logPath = path.join(tempDir, "protocol.jsonl");
+    process.env.MAINS_CODEX_FIXTURE_LOG = logPath;
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 500,
+      personality: "pragmatic",
+      sandboxMode: "workspace-write",
+    });
+    drivers.push(driver);
+
+    const acquired = await driver.createSession({
+      ...request("run-personality"),
+      mode: "chat",
+      configSnapshot: {
+        personality: "friendly",
+        sandboxMode: "read-only",
+      },
+    });
+
+    const threadStart = readProtocolLog(logPath).find(
+      (message) => message.method === "thread/start",
+    );
+    expect(threadStart?.params).toMatchObject({
+      personality: "friendly",
+      sandbox: "read-only",
+    });
+    await driver.cleanup?.(acquired.session);
+  });
+
+  it("keeps the provider personality when the run pins none", async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mains-codex-driver-"));
+    tempDirs.push(tempDir);
+    const logPath = path.join(tempDir, "protocol.jsonl");
+    process.env.MAINS_CODEX_FIXTURE_LOG = logPath;
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 500,
+      personality: "pragmatic",
+    });
+    drivers.push(driver);
+
+    const acquired = await driver.createSession(request("run-personality-default"));
+
+    const threadStart = readProtocolLog(logPath).find(
+      (message) => message.method === "thread/start",
+    );
+    expect(threadStart?.params).toMatchObject({ personality: "pragmatic" });
+    await driver.cleanup?.(acquired.session);
+  });
+
   it("uses the generated thread/fork contract without obsolete fields", async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mains-codex-driver-"));
     tempDirs.push(tempDir);

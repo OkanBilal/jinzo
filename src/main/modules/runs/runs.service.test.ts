@@ -120,6 +120,9 @@ describe("runsService", () => {
     });
     createAccount(db, { id: "default" });
     createProvider(db, { id: "copilot_cli" });
+    // Work and Chat runs need a provider that drives those modes (see
+    // shared/modes.ts `PROVIDER_MODES`).
+    createProvider(db, { id: "claude_code" });
   });
 
   afterEach(() => {
@@ -435,7 +438,7 @@ describe("runsService", () => {
       createSpace(db, {
         id: "sp-work",
         accountId: "default",
-        providerId: "copilot_cli",
+        providerId: "claude_code",
         mode: "work",
       });
       const startRun = mockStartAdapter();
@@ -443,7 +446,7 @@ describe("runsService", () => {
       const { runId } = await runsService.executeRun({
         accountId: "default",
         spaceId: "sp-work",
-        providerId: "copilot_cli",
+        providerId: "claude_code",
         goal: "write a report",
       });
       await flushBackground();
@@ -464,7 +467,7 @@ describe("runsService", () => {
       createSpace(db, {
         id: "sp-work-with-workspace",
         accountId: "default",
-        providerId: "copilot_cli",
+        providerId: "claude_code",
         mode: "work",
       });
       mockStartAdapter();
@@ -474,7 +477,7 @@ describe("runsService", () => {
           accountId: "default",
           workspaceId: "ws-work",
           spaceId: "sp-work-with-workspace",
-          providerId: "copilot_cli",
+          providerId: "claude_code",
           goal: "write a report",
         }),
       ).rejects.toThrow("do not use a workspace");
@@ -484,7 +487,7 @@ describe("runsService", () => {
       createSpace(db, {
         id: "sp-collected-work",
         accountId: "default",
-        providerId: "copilot_cli",
+        providerId: "claude_code",
         mode: "work",
       });
       createCollection(db, { id: "collection-work" });
@@ -494,7 +497,7 @@ describe("runsService", () => {
         accountId: "default",
         collectionId: "collection-work",
         spaceId: "sp-collected-work",
-        providerId: "copilot_cli",
+        providerId: "claude_code",
         goal: "write a report",
       });
 
@@ -509,7 +512,7 @@ describe("runsService", () => {
       createSpace(db, {
         id: "sp-dev",
         accountId: "default",
-        providerId: "copilot_cli",
+        providerId: "claude_code",
         mode: "developer",
       });
       const startRun = mockStartAdapter();
@@ -518,7 +521,7 @@ describe("runsService", () => {
         accountId: "default",
         workspaceId: "ws-dev",
         spaceId: "sp-dev",
-        providerId: "copilot_cli",
+        providerId: "claude_code",
         goal: "fix the bug",
       });
       await flushBackground();
@@ -534,7 +537,7 @@ describe("runsService", () => {
       createSpace(db, {
         id: "sp-pol",
         accountId: "default",
-        providerId: "copilot_cli",
+        providerId: "claude_code",
         mode: "work",
       });
       const startRun = mockStartAdapter();
@@ -542,7 +545,7 @@ describe("runsService", () => {
       const { runId } = await runsService.executeRun({
         accountId: "default",
         spaceId: "sp-pol",
-        providerId: "copilot_cli",
+        providerId: "claude_code",
         goal: "summarize the docs",
       });
       await flushBackground();
@@ -574,16 +577,22 @@ describe("runsService", () => {
       await flushBackground();
 
       const request = startRun.mock.calls[0][0];
-      expect(request.configSnapshot).toEqual({ sandboxMode: "read-only" });
+      expect(request.configSnapshot).toEqual({
+        sandboxMode: "read-only",
+        personality: "friendly",
+      });
       const run = await runsService.getRunById(runId);
-      expect(run?.configSnapshot).toEqual({ sandboxMode: "read-only" });
+      expect(run?.configSnapshot).toEqual({
+        sandboxMode: "read-only",
+        personality: "friendly",
+      });
     });
 
     it("layers the space's custom system prompt after the mode delta", async () => {
       createSpace(db, {
         id: "sp-sys",
         accountId: "default",
-        providerId: "copilot_cli",
+        providerId: "claude_code",
         mode: "work",
         systemPrompt: "Always answer in Turkish.",
       });
@@ -592,7 +601,7 @@ describe("runsService", () => {
       await runsService.executeRun({
         accountId: "default",
         spaceId: "sp-sys",
-        providerId: "copilot_cli",
+        providerId: "claude_code",
         goal: "draft the weekly update",
       });
       await flushBackground();
@@ -610,7 +619,7 @@ describe("runsService", () => {
         id: "run-work",
         accountId: "default",
         workspaceId: "ws-cont",
-        providerId: "copilot_cli",
+        providerId: "claude_code",
         mode: "work",
         status: "succeeded",
         sessionId: "sess-1",
@@ -659,7 +668,10 @@ describe("runsService", () => {
       await flushBackground();
 
       const request = continueRun.mock.calls[0][0];
-      expect(request.configSnapshot).toEqual({ sandboxMode: "read-only" });
+      expect(request.configSnapshot).toEqual({
+        sandboxMode: "read-only",
+        personality: "friendly",
+      });
       expect(request.toolPolicy?.allowedTools).not.toBeNull();
       expect(request.toolPolicy?.disallowedTools).toContain("Bash");
     });

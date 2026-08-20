@@ -26,6 +26,8 @@ export function openGit(rootPath?: string): SimpleGit {
 }
 
 const MAX_UNTRACKED_INLINE_BYTES = 256 * 1024;
+/** git's own binary sniff window — it reads the first 8KB and no further. */
+const BINARY_SNIFF_BYTES = 8 * 1024;
 
 export interface DiffSnapshot {
   baseRef: string;
@@ -153,6 +155,29 @@ async function untrackedFilesOf(rootPath: string): Promise<string[]> {
 // ─────────────────────────────────────────────────────────────
 
 /**
+ * Whether a file's bytes are binary — git's own heuristic, a NUL byte inside
+ * the first 8KB.
+ *
+ * Untracked files are inlined as synthetic hunks, and decoding an image as
+ * UTF-8 turns each of its 0x0A bytes into a "line": a 40KB .webp reached the
+ * panel as "+334" and carried that into the workspace total. Nothing else in
+ * the pipeline counts binary lines — `git diff` answers "Binary files differ"
+ * for tracked ones — so these get the same stub the oversized files get.
+ */
+function looksBinary(buffer: Buffer): boolean {
+  const sample = Math.min(buffer.length, BINARY_SNIFF_BYTES);
+  for (let i = 0; i < sample; i++) {
+    if (buffer[i] === 0) return true;
+  }
+  return false;
+}
+
+/** A synthetic hunk naming an untracked file without inlining its bytes. */
+function untrackedStub(filePath: string, note: string): string {
+  return `diff --git a/${filePath} b/${filePath}\nnew file\n${note}`;
+}
+
+/**
  * Merge untracked file stats into a git shortstat string.
  * git diff --shortstat only covers tracked files; new files are added here.
  */
@@ -217,12 +242,27 @@ export async function captureDiffSnapshot(
         const stat = fs.statSync(fullPath);
         if (stat.size > MAX_UNTRACKED_INLINE_BYTES) {
           untrackedDiffs.push(
-            `diff --git a/${filePath} b/${filePath}\nnew file\nBinary or large file (${stat.size} bytes)`,
+            untrackedStub(filePath, `Binary or large file (${stat.size} bytes)`),
           );
           continue;
         }
-        const content = fs.readFileSync(fullPath, "utf-8");
-        const lines = content.split("\n");
+        const buffer = fs.readFileSync(fullPath);
+        if (looksBinary(buffer)) {
+          untrackedDiffs.push(
+            untrackedStub(filePath, `Binary or large file (${stat.size} bytes)`),
+          );
+          continue;
+        }
+        const content = buffer.toString("utf-8");
+        // "a\nb\n" is two lines, not three: splitting leaves an empty tail for
+        // the closing newline, and git counts no insertion for it. Left in, it
+        // put a phantom `+` at the end of every synthetic hunk and one extra
+        // line on every untracked file's count.
+        const lines = content ? content.replace(/\n$/, "").split("\n") : [];
+        if (lines.length === 0) {
+          untrackedDiffs.push(untrackedStub(filePath, "(empty file)"));
+          continue;
+        }
         untrackedInsertions += lines.length;
         const diffHeader = [
           `diff --git a/${filePath} b/${filePath}`,
@@ -234,9 +274,7 @@ export async function captureDiffSnapshot(
         const diffBody = lines.map((l) => `+${l}`).join("\n");
         untrackedDiffs.push(`${diffHeader}\n${diffBody}`);
       } catch {
-        untrackedDiffs.push(
-          `diff --git a/${filePath} b/${filePath}\nnew file\n(could not read file)`,
-        );
+        untrackedDiffs.push(untrackedStub(filePath, "(could not read file)"));
       }
     }
     if (untrackedDiffs.length > 0) {

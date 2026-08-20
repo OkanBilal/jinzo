@@ -48,6 +48,37 @@ describe("SpaceModePicker", () => {
     expect(document.activeElement).toBe(choices[1]);
   });
 
+  it("becomes a label for a provider that drives one experience", async () => {
+    // Copilot and Cursor are Developer-only for now. A list of one is not a
+    // choice, so the pill stays to say which experience is running and stops
+    // being a control.
+    render(
+      createElement(SpaceModePicker, {
+        value: "developer",
+        providerId: "copilot_cli",
+        onChange: vi.fn(),
+      }),
+    );
+
+    expect(screen.getByText("Code")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Current mode/ })).toBeNull();
+  });
+
+  it("ignores the shortcut for a mode the provider does not drive", () => {
+    const onChange = vi.fn();
+    render(
+      createElement(SpaceModePicker, {
+        value: "developer",
+        providerId: "cursor",
+        onChange,
+      }),
+    );
+
+    fireEvent.keyDown(window, { key: "2", ctrlKey: true });
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it("changes mode and closes the chooser", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Button, DropdownMenu, DropdownMenuItem } from "@/components/ui";
-import { MODE_IDS, type ModeId } from "../../../../shared/modes";
+import { MODE_IDS, providerModes, type ModeId } from "../../../../shared/modes";
 import { MODE_CONFIGS } from "@/lib/mode-config";
 
 const MODE_DOT_COLORS: Record<ModeId, string> = {
@@ -8,6 +8,13 @@ const MODE_DOT_COLORS: Record<ModeId, string> = {
   work: "bg-warning",
   chat: "bg-success",
 };
+
+/**
+ * Shape and type shared by the trigger and the static label. The outline is
+ * the trigger's alone — an unclickable pill shouldn't wear a control's border.
+ */
+const MODE_PILL =
+  "flex h-8 items-center rounded-2xl px-3 text-s font-medium text-primary-900 dark:text-primary-100";
 
 const MODE_OPTIONS = MODE_IDS.map((mode, index) => ({
   mode,
@@ -18,6 +25,12 @@ const MODE_OPTIONS = MODE_IDS.map((mode, index) => ({
 interface SpaceModePickerProps {
   value: ModeId;
   onChange: (mode: ModeId) => void;
+  /**
+   * The space's provider. Not every agent drives every experience — a provider
+   * with one mode has nothing to pick, so the whole control disappears rather
+   * than offering a list of one. Omitted = unrestricted.
+   */
+  providerId?: string;
 }
 
 /**
@@ -26,7 +39,15 @@ interface SpaceModePickerProps {
  * open, and what a screen reader announces as checked) without a check glyph
  * next to the mode dot. Control+1/2/3 selects Code/Work/Chat.
  */
-export function SpaceModePicker({ value, onChange }: SpaceModePickerProps) {
+export function SpaceModePicker({
+  value,
+  onChange,
+  providerId,
+}: SpaceModePickerProps) {
+  // Shortcut numbers stay tied to the full list (⌃1 is always Code), so a
+  // narrowed provider skips its keys rather than renumbering the rest.
+  const available = providerId ? providerModes(providerId) : MODE_IDS;
+  const options = MODE_OPTIONS.filter(({ mode }) => available.includes(mode));
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -65,7 +86,7 @@ export function SpaceModePicker({ value, onChange }: SpaceModePickerProps) {
       const option = MODE_OPTIONS.find(
         ({ shortcutKey }) => shortcutKey === event.key,
       );
-      if (!option) return;
+      if (!option || !available.includes(option.mode)) return;
 
       event.preventDefault();
       setIsOpen(false);
@@ -74,7 +95,13 @@ export function SpaceModePicker({ value, onChange }: SpaceModePickerProps) {
 
     window.addEventListener("keydown", handleShortcut, true);
     return () => window.removeEventListener("keydown", handleShortcut, true);
-  }, [onChange, value]);
+  }, [onChange, value, available]);
+
+  // One mode is not a choice — the pill stays, as a label rather than a
+  // control, so the titlebar keeps saying which experience is running.
+  if (options.length < 2) {
+    return <span className={MODE_PILL}>{MODE_CONFIGS[value].label}</span>;
+  }
 
   return (
     <>
@@ -85,10 +112,10 @@ export function SpaceModePicker({ value, onChange }: SpaceModePickerProps) {
         aria-expanded={isOpen}
         onMouseDown={(event) => event.stopPropagation()}
         onClick={handleTriggerClick}
-        className={`flex h-8 items-center rounded-2xl px-3 text-s font-medium text-primary-900 glass-outline transition-colors dark:text-primary-100 ${
+        className={`${MODE_PILL} glass-outline transition-colors ${
           isOpen
             ? "bg-primary/80 dark:bg-primary/5"
-            : " hover:bg-primary/80  dark:hover:bg-primary/5"
+            : "hover:bg-primary/80 dark:hover:bg-primary/5"
         }`}
       >
         {MODE_CONFIGS[value].label}
@@ -103,7 +130,7 @@ export function SpaceModePicker({ value, onChange }: SpaceModePickerProps) {
         origin="top-left"
         initialFocus="selected"
       >
-        {MODE_OPTIONS.map(({ mode, shortcutLabel }) => (
+        {options.map(({ mode, shortcutLabel }) => (
           <DropdownMenuItem
             key={mode}
             className=" py-2 px-4 gap-2"

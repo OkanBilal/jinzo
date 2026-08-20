@@ -9,6 +9,8 @@ interface SidebarToggleButtonProps {
   isOpen: boolean;
   onClick: () => void;
   mode?: ModeId;
+  /** Active space's provider — the picker narrows its list with it. */
+  providerId?: string;
   onModeChange?: (mode: ModeId) => void;
 }
 
@@ -16,6 +18,7 @@ export function SidebarToggleButton({
   isOpen,
   onClick,
   mode,
+  providerId,
   onModeChange,
 }: SidebarToggleButtonProps) {
   const { windowChrome } = useCapabilities();
@@ -52,7 +55,11 @@ export function SidebarToggleButton({
         </Button>
       </div>
       {mode && onModeChange && (
-        <SpaceModePicker value={mode} onChange={onModeChange} />
+        <SpaceModePicker
+          value={mode}
+          providerId={providerId}
+          onChange={onModeChange}
+        />
       )}
     </div>
   );

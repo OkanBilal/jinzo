@@ -11,6 +11,7 @@ import {
   getModeHarness,
   composeExtraInstructions,
   composeConfigSnapshot,
+  modeProviderSetting,
 } from "./mode-harness";
 
 describe("MODE_HARNESSES table invariants", () => {
@@ -49,6 +50,21 @@ describe("MODE_HARNESSES table invariants", () => {
     expect(overrides[PROVIDER_IDS.cursor]).toEqual({ mode: "ask" });
     expect(overrides[PROVIDER_IDS.claude]).toEqual({ permissionMode: "default" });
     expect(overrides[PROVIDER_IDS.copilot]).toEqual({ permissionMode: "default" });
+  });
+
+  it("pins codex's tone for the non-developer modes only", () => {
+    // Personality is codex's native tone lever; work/chat carry it as a
+    // default so an explicit per-run choice still wins, and developer stays
+    // on the provider setting.
+    expect(MODE_HARNESSES.work.configDefaults[PROVIDER_IDS.codex]).toMatchObject({
+      personality: "friendly",
+    });
+    expect(MODE_HARNESSES.chat.configDefaults[PROVIDER_IDS.codex]).toEqual({
+      personality: "friendly",
+    });
+    expect(
+      MODE_HARNESSES.developer.configDefaults[PROVIDER_IDS.codex],
+    ).toBeUndefined();
   });
 
   it("only chat carries overrides — work's settings stay caller-overridable", () => {
@@ -110,7 +126,7 @@ describe("composeConfigSnapshot", () => {
       composeConfigSnapshot("chat", PROVIDER_IDS.codex, {
         sandboxMode: "danger-full-access",
       }),
-    ).toEqual({ sandboxMode: "read-only" });
+    ).toEqual({ sandboxMode: "read-only", personality: "friendly" });
     expect(
       composeConfigSnapshot("chat", PROVIDER_IDS.claude, {
         permissionMode: "bypassPermissions",
@@ -121,6 +137,42 @@ describe("composeConfigSnapshot", () => {
   it("keeps unrelated payload keys alongside mode values", () => {
     expect(
       composeConfigSnapshot("chat", PROVIDER_IDS.codex, { effortLevel: "high" }),
-    ).toEqual({ effortLevel: "high", sandboxMode: "read-only" });
+    ).toEqual({
+      effortLevel: "high",
+      sandboxMode: "read-only",
+      personality: "friendly",
+    });
+  });
+});
+
+describe("modeProviderSetting", () => {
+  it("reports the value a mode pins for a provider", () => {
+    expect(modeProviderSetting("work", PROVIDER_IDS.codex, "personality")).toBe(
+      "friendly",
+    );
+    expect(modeProviderSetting("chat", PROVIDER_IDS.codex, "sandboxMode")).toBe(
+      "read-only",
+    );
+  });
+
+  it("returns undefined when the mode leaves the setting alone", () => {
+    // What a settings UI keys off: developer pins nothing, so its controls
+    // stay controls.
+    expect(
+      modeProviderSetting("developer", PROVIDER_IDS.codex, "personality"),
+    ).toBeUndefined();
+    expect(
+      modeProviderSetting("work", PROVIDER_IDS.codex, "webSearchMode"),
+    ).toBeUndefined();
+    expect(
+      modeProviderSetting("work", PROVIDER_IDS.cursor, "personality"),
+    ).toBeUndefined();
+  });
+
+  it("prefers an override over a default", () => {
+    // chat pins the sandbox as an override; nothing may talk it down.
+    expect(modeProviderSetting("chat", PROVIDER_IDS.codex, "sandboxMode")).toBe(
+      MODE_HARNESSES.chat.configOverrides[PROVIDER_IDS.codex]?.sandboxMode,
+    );
   });
 });

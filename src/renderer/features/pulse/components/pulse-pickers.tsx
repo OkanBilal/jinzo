@@ -45,6 +45,10 @@ import {
   PROVIDER_IDS,
   type ProviderId,
 } from "../../../../shared/provider-ids";
+import {
+  providerSupportsMode,
+  type ModeId,
+} from "../../../../shared/modes";
 
 // Local copy keeps the picker's display order (Claude first) separate from
 // the registry tuple's ordering (Copilot first).
@@ -408,15 +412,20 @@ export function WorkspacePicker({
 
 export function ProviderPicker({
   value,
+  mode,
   onChange,
 }: {
   value: string;
+  /** The pulse's mode — providers that don't drive it are not offered. */
+  mode?: ModeId;
   onChange: (id: string) => void;
 }) {
   const { open, ref, toggle, close } = usePickerState();
   const { data: providers = [] } = useGetEnabledProvidersQuery();
-  const eligible = providers.filter((p) =>
-    (SUPPORTED_PROVIDER_IDS as readonly string[]).includes(p.id),
+  const eligible = providers.filter(
+    (p) =>
+      (SUPPORTED_PROVIDER_IDS as readonly string[]).includes(p.id) &&
+      (!mode || providerSupportsMode(p.id, mode)),
   );
   const selected = eligible.find((p) => p.id === value);
 

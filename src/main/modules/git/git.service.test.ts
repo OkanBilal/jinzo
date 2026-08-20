@@ -116,9 +116,34 @@ describe("captureDiffSnapshot", () => {
     expect(snap.diffText).toContain("+hello");
     expect(snap.files).toContain("new.txt");
     expect(snap.untrackedFiles).toEqual(["new.txt"]);
-    // git's shortstat omits untracked files; the snapshot merges them in.
-    expect(snap.shortstat).toContain("1 file changed");
-    expect(snap.shortstat).toMatch(/insertion/);
+    // git's shortstat omits untracked files; the snapshot merges them in — and
+    // git itself is the oracle for the count, since staging the same file is
+    // what the numbers claim to predict. Splitting on "\n" used to add one.
+    git(repo, "add", "new.txt");
+    expect(snap.shortstat).toBe(
+      git(repo, "diff", "--cached", "--shortstat", head),
+    );
+    expect(parsePerFileDiffStats(snap.diffText).get("new.txt")).toEqual({
+      additions: 2,
+      deletions: 0,
+      isNew: true,
+    });
+  });
+
+  it("stubs an empty untracked file rather than counting a phantom line", async () => {
+    const repo = makeRepo();
+    const head = await gitService.getHeadSha(repo);
+    write(repo, "empty.txt", "");
+
+    const snap = await gitService.captureDiffSnapshot(repo, head);
+
+    expect(snap.diffText).toContain("(empty file)");
+    expect(snap.shortstat).not.toMatch(/insertion/);
+    expect(parsePerFileDiffStats(snap.diffText).get("empty.txt")).toEqual({
+      additions: 0,
+      deletions: 0,
+      isNew: true,
+    });
   });
 
   it("stubs large untracked files instead of inlining them", async () => {
@@ -131,6 +156,29 @@ describe("captureDiffSnapshot", () => {
     expect(snap.diffText).toContain("Binary or large file");
     expect(snap.diffText).not.toContain("+xxx");
     expect(snap.untrackedFiles).toEqual(["big.bin"]);
+  });
+
+  // Read as UTF-8, an image's 0x0A bytes become "lines": a small .webp landed
+  // in the panel as "+334" and inflated the workspace total with it. Size was
+  // the only gate, so anything under 256KB was counted line by line.
+  it("stubs small untracked binary files instead of counting their bytes as lines", async () => {
+    const repo = makeRepo();
+    const head = await gitService.getHeadSha(repo);
+    fs.writeFileSync(
+      path.join(repo, "cover.webp"),
+      Buffer.from([0x52, 0x49, 0x46, 0x46, 0x00, 0x0a, 0x0a, 0x00, 0x0a]),
+    );
+
+    const snap = await gitService.captureDiffSnapshot(repo, head);
+
+    expect(snap.diffText).toContain("Binary or large file");
+    expect(snap.untrackedFiles).toEqual(["cover.webp"]);
+    expect(snap.shortstat).not.toMatch(/insertion/);
+    expect(parsePerFileDiffStats(snap.diffText).get("cover.webp")).toEqual({
+      additions: 0,
+      deletions: 0,
+      isNew: true,
+    });
   });
 
   // Escaped names made the file list unreadable, and the synthetic-hunk builder

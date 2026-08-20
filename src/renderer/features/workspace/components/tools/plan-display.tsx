@@ -40,7 +40,10 @@ export function PlanDisplay({
 
   const savedStatus = getPersistedPlanStatus(event.metadata, parsedOutput);
   const [status, setStatus] = useState<PlanStatus>(savedStatus);
-  const [isExpanded, setIsExpanded] = useState(savedStatus !== "dismissed");
+  // A plan stays open only while it still needs a decision. Applied, dismissed,
+  // and failed ones are settled history, and a transcript of long plans all
+  // sitting open buries everything that came after them.
+  const [isExpanded, setIsExpanded] = useState(savedStatus === "pending");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const content = (input?.plan as string) || event.content || "";
@@ -70,6 +73,9 @@ export function PlanDisplay({
     setIsSubmitting(true);
     try {
       await persistStatus("applied");
+      // Collapses on the spot, the way Dismiss does — otherwise a decided plan
+      // reads as open now and closed after the next reload.
+      setIsExpanded(false);
       await onApplyPlan?.();
     } finally {
       setIsSubmitting(false);

@@ -109,6 +109,7 @@ function PulseStep({ isEditing }: { isEditing: boolean }) {
         />
         <ProviderPicker
           value={data.providerId}
+          mode={data.mode}
           onChange={(id) =>
             setData({
               providerId: id,
