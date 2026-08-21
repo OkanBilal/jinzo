@@ -33,7 +33,7 @@ import {
 import type { PulseTemplate } from "../templates";
 import type { ModeId } from "../../../../shared/modes";
 import { useModeConfig } from "@/hooks/use-mode-config";
-import { Sun } from "@/components/ui/icons";
+import { Clock } from "@/components/ui/icons/space";
 
 type PulseWizardData = PulseFormState;
 
@@ -204,7 +204,7 @@ export function PulseModal({
       {
         id: "pulse",
         title: isEditing ? "Edit automation" : "New pulse",
-        titleIcon: <Sun className="size-5.5! text-primary-900 dark:text-primary-100" />,
+        titleIcon: <Clock className="size-5.5! text-primary-900 dark:text-primary-100" />,
         render: () => <PulseStep isEditing={isEditing} />,
       },
     ],

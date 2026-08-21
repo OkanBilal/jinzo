@@ -97,18 +97,20 @@ export function PulseList({ onEdit }: PulseListProps) {
                   <>
                     <Button
                       type="button"
+                      variant="danger"
                       onClick={async () => {
                         await deletePulse(pulse.id).unwrap();
                         setConfirmDeleteId(null);
                       }}
-                      className="px-2 py-1 rounded-lg text-xs bg-danger/15 text-danger hover:bg-danger/25 cursor-pointer"
+                      className="px-2 py-1 rounded-lg text-xs cursor-pointer"
                     >
                       Confirm
                     </Button>
                     <Button
+                    variant="primary"
                       type="button"
                       onClick={() => setConfirmDeleteId(null)}
-                      className="px-2 py-1 rounded-lg text-xs hover:bg-primary-200/30 dark:hover:bg-primary-800 cursor-pointer text-primary-500"
+                      className="px-2 py-1 rounded-lg text-xs cursor-pointer "
                     >
                       Cancel
                     </Button>

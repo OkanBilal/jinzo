@@ -6,7 +6,9 @@ export type PulseTemplateCategory =
   | "incidents-triage"
   | "repo-hygiene"
   | "knowledge-work"
-  | "briefings";
+  | "planning"
+  | "briefings"
+  | "research";
 
 export interface PulseTemplate {
   id: string;
@@ -31,7 +33,9 @@ export const PULSE_CATEGORIES: { id: PulseTemplateCategory; label: string }[] = 
   { id: "incidents-triage", label: "Risk & stability" },
   { id: "repo-hygiene", label: "Repo hygiene" },
   { id: "knowledge-work", label: "Docs & digests" },
+  { id: "planning", label: "Planning & follow-through" },
   { id: "briefings", label: "Briefings" },
+  { id: "research", label: "Reading & research" },
 ];
 
 // The original template corpus is git/repo-centric — developer-only. Work and
@@ -329,6 +333,139 @@ export const PULSE_TEMPLATES: PulseTemplate[] = [
     defaultMinute: 30,
     defaultDayOfWeek: 1,
   },
+  {
+    id: "action-item-sweep",
+    category: "knowledge-work",
+    title: "Action item sweep",
+    description:
+      "Pulls every open action item out of your material into one owner-and-date list.",
+    prompt:
+      "Go through the project source documents and the documents you have produced here, and pull out every action item, promise, or follow-up you can find. Consolidate them into a single list with owner, what was asked for, and any date mentioned; mark the ones where the owner or date is unstated. Save it as one document, replacing your previous sweep if there is one, and name the most urgent few in your reply.",
+    modes: WORK,
+    emoji: "📌",
+    defaultFrequency: "weekdays",
+    defaultHour: 9,
+    defaultMinute: 0,
+  },
+  {
+    id: "source-consistency-check",
+    category: "knowledge-work",
+    title: "Source consistency check",
+    description:
+      "Cross-reads your sources for figures, dates, and claims that contradict each other.",
+    prompt:
+      "Cross-read the project source documents against each other. Report figures, dates, names, or claims that disagree between documents, plus anything that reads as out of date. For each conflict, quote both sides and say which document appears more recent when that is knowable. Save the findings as a short discrepancy report — flag the conflicts, don't resolve them yourself.",
+    modes: WORK,
+    emoji: "🔍",
+    defaultFrequency: "weekly",
+    defaultHour: 11,
+    defaultMinute: 0,
+    defaultDayOfWeek: 3,
+  },
+  {
+    id: "executive-one-pager",
+    category: "knowledge-work",
+    title: "Executive one-pager",
+    description:
+      "Condenses the current material into a single page a busy reader can absorb.",
+    prompt:
+      "Condense the project source documents into a one-page brief for someone with no prior context: what this is, where it stands, what has been decided, and what is still open. No jargon, no filler, one page. Save it as a document and say in your reply what you had to leave out to make it fit.",
+    modes: WORK,
+    emoji: "🗒️",
+    defaultFrequency: "weekly",
+    defaultHour: 15,
+    defaultMinute: 0,
+    defaultDayOfWeek: 4,
+  },
+  {
+    id: "follow-up-drafts",
+    category: "knowledge-work",
+    title: "Follow-up message drafts",
+    description:
+      "Drafts the messages your open items imply — ready to review and send.",
+    prompt:
+      "Look at the open action items and recent meeting material in the project sources. Draft the follow-up messages they imply: one short, sendable draft per recipient, each with a subject line and a single clear ask. Never invent facts, names, or dates the material doesn't support — leave a bracketed blank instead. Save the drafts as one document.",
+    modes: WORK,
+    emoji: "✉️",
+    defaultFrequency: "weekdays",
+    defaultHour: 16,
+    defaultMinute: 30,
+  },
+  {
+    id: "glossary-faq",
+    category: "knowledge-work",
+    title: "Glossary & FAQ upkeep",
+    description:
+      "Keeps a plain-language glossary and FAQ in step with your project material.",
+    prompt:
+      "Maintain a plain-language glossary and FAQ for this project. Read the project source documents, add terms, acronyms, and recurring questions that aren't covered yet, and correct entries the material has outgrown. Edit the existing document in place if one exists; otherwise create it. Report what you added or changed rather than restating the whole file.",
+    modes: WORK,
+    emoji: "📚",
+    defaultFrequency: "weekly",
+    defaultHour: 10,
+    defaultMinute: 0,
+    defaultDayOfWeek: 2,
+  },
+  {
+    id: "deck-outline",
+    category: "knowledge-work",
+    title: "Presentation outline",
+    description:
+      "Turns the latest material into a slide-by-slide outline you can build from.",
+    prompt:
+      "Turn the current project material into a presentation outline: a title, then slide-by-slide bullets with a one-line speaker note under each. Ten slides or fewer, conclusion first. Where the material can't support a slide the story needs, say so instead of filling it in. Save the outline as a document.",
+    modes: WORK,
+    emoji: "🎞️",
+    defaultFrequency: "weekly",
+    defaultHour: 14,
+    defaultMinute: 0,
+    defaultDayOfWeek: 3,
+  },
+  // ── Planning & follow-through (work — the plan is a file, not a chat reply)
+  {
+    id: "week-ahead-plan",
+    category: "planning",
+    title: "Week ahead plan",
+    description:
+      "A Monday plan built from your sources, open items, and whatever is still unfinished.",
+    prompt:
+      "Plan the week ahead. Read the project source documents and the documents you have produced here, then propose a prioritized plan: what to finish, what to start, what can wait, with a rough effort estimate for each. Mark anything that depends on someone else answering first. Save the plan as a document the user can edit, and keep the reply to the top three items.",
+    modes: WORK,
+    emoji: "🗓️",
+    defaultFrequency: "weekly",
+    defaultHour: 8,
+    defaultMinute: 30,
+    defaultDayOfWeek: 1,
+  },
+  {
+    id: "deadline-radar",
+    category: "planning",
+    title: "Deadline radar",
+    description:
+      "Every date hiding in your material, in order — with the next two weeks flagged.",
+    prompt:
+      "Scan the project source documents for dates, deadlines, and time-bound promises. Build one chronological timeline of what falls due when, noting the document each came from, and flag everything inside the next two weeks. When a date is relative or ambiguous (\"next month\", \"after the review\"), record it as such rather than guessing a day. Save it as a document.",
+    modes: WORK,
+    emoji: "⏳",
+    defaultFrequency: "weekdays",
+    defaultHour: 8,
+    defaultMinute: 0,
+  },
+  {
+    id: "decision-log",
+    category: "planning",
+    title: "Decision log update",
+    description:
+      "Appends the decisions your recent material records — what, when, by whom, and why.",
+    prompt:
+      "Maintain a decision log for this project. Read the project source documents for decisions that have been made — what was decided, when, by whom, and the reasoning given — and append the ones the log doesn't already record. Keep each entry to a few lines and quote the sentence you took it from. Create the log if it doesn't exist yet.",
+    modes: WORK,
+    emoji: "⚖️",
+    defaultFrequency: "weekly",
+    defaultHour: 15,
+    defaultMinute: 30,
+    defaultDayOfWeek: 5,
+  },
   // ── Briefings (chat — read-only; the reply IS the deliverable)
   {
     id: "daily-briefing",
@@ -358,5 +495,93 @@ export const PULSE_TEMPLATES: PulseTemplate[] = [
     defaultHour: 17,
     defaultMinute: 30,
     defaultDayOfWeek: 5,
+  },
+  {
+    id: "end-of-day-checkin",
+    category: "briefings",
+    title: "End-of-day check-in",
+    description:
+      "A read-only wind-down: what today's material amounted to, and what to carry into tomorrow.",
+    prompt:
+      "Wind the day down. Based on the project source documents available to you, walk through what the day's material amounted to, what still looks unfinished, and the two or three things worth carrying into tomorrow. Keep it conversational and short — this is a check-in, not a report. Answer entirely in chat — do not create or modify any files.",
+    modes: CHAT,
+    emoji: "🌙",
+    defaultFrequency: "weekdays",
+    defaultHour: 18,
+    defaultMinute: 0,
+  },
+  {
+    id: "devils-advocate",
+    category: "briefings",
+    title: "Devil's advocate pass",
+    description:
+      "Argues the other side of your current plan — pointed, specific, and read-only.",
+    prompt:
+      "Take the opposing view. Read the project source documents available to you, work out the plan or position they assume, and argue against it: the assumptions that could be wrong, the risks being waved away, and what would have to be true for this to fail. Be specific and point at the material rather than offering generic caution. Answer entirely in chat — do not create or modify any files.",
+    modes: CHAT,
+    emoji: "🥊",
+    defaultFrequency: "weekly",
+    defaultHour: 11,
+    defaultMinute: 0,
+    defaultDayOfWeek: 2,
+  },
+  {
+    id: "one-sharp-question",
+    category: "briefings",
+    title: "One sharp question",
+    description:
+      "A single pointed question about your material — a thinking prompt, nothing more.",
+    prompt:
+      "Ask one sharp question. Read the project source documents available to you and raise the single question the material most needs answered — the one whose answer would change what happens next. Add a short paragraph on why it matters, then stop and leave the user to think. Answer entirely in chat — do not create or modify any files.",
+    modes: CHAT,
+    emoji: "❓",
+    defaultFrequency: "weekdays",
+    defaultHour: 13,
+    defaultMinute: 0,
+  },
+  // ── Reading & research (chat — read-only, web-grounded when reachable)
+  {
+    id: "topic-watch",
+    category: "research",
+    title: "Topic watch",
+    description:
+      "Checks what's new on the topics your project revolves around — answers in chat.",
+    prompt:
+      "Work out the main topics, products, or organizations the project source documents revolve around. If you can reach the web, look for what is genuinely new about them and report the handful that matter, with links and one line each on why. If you have no web access, say so plainly and instead summarize what the material itself assumes about those topics. Answer entirely in chat — do not create or modify any files.",
+    modes: CHAT,
+    emoji: "📡",
+    defaultFrequency: "weekdays",
+    defaultHour: 9,
+    defaultMinute: 0,
+  },
+  {
+    id: "market-scan",
+    category: "research",
+    title: "Market scan",
+    description:
+      "A read-only sweep of what's moving in the space your work sits in.",
+    prompt:
+      "Work out which market or field the project source documents place this work in. If you can reach the web, sweep for what has changed there lately — announcements, competitors, notable writing — and report only the few items that would actually affect this work, with links. Say plainly when you cannot reach the web. Answer entirely in chat — do not create or modify any files.",
+    modes: CHAT,
+    emoji: "🧭",
+    defaultFrequency: "weekly",
+    defaultHour: 9,
+    defaultMinute: 30,
+    defaultDayOfWeek: 1,
+  },
+  {
+    id: "plain-language-explainer",
+    category: "research",
+    title: "Plain-language explainer",
+    description:
+      "Explains one dense piece of your material as if you were brand new to it.",
+    prompt:
+      "Pick the densest or least approachable of the project source documents available to you and explain it as if the user were meeting this project for the first time: what it covers, why it exists, and the three things worth remembering. Plain language, no jargon, no summary of the summary. Answer entirely in chat — do not create or modify any files.",
+    modes: CHAT,
+    emoji: "🧑‍🏫",
+    defaultFrequency: "weekly",
+    defaultHour: 10,
+    defaultMinute: 0,
+    defaultDayOfWeek: 4,
   },
 ];

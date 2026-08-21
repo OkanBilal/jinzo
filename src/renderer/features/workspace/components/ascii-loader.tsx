@@ -1,40 +1,57 @@
-import { useEffect, useReducer } from "react";
+import { useEffect, useState } from "react";
 import { AsciiSpinner, Text } from "@/components/ui";
+import { useModeConfig } from "@/hooks/use-mode-config";
+import type { ModeId } from "../../../../shared/modes";
 
 export { AsciiSpinner };
 
-const ASCII_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+/**
+ * What the agent is said to be doing while a turn runs, per experience.
+ *
+ * The words are the only thing on screen between turns, so they set the tone as
+ * much as the prompt delta does: Developer talks about the work as engineering,
+ * Work talks about it as knowledge work — the same rule that keeps the mode's
+ * instructions from naming commands — and Chat sounds like someone thinking
+ * rather than a machine processing.
+ */
+const LOADER_WORDS: Record<ModeId, readonly string[]> = {
+  developer: [
+    "Thinking",
+    "Analyzing",
+    "Searching",
+    "Processing",
+    "Generating",
+    "Creating",
+    "Evaluating",
+    "Researching",
+    "Refining",
+    "Formulating",
+  ],
+  work: [
+    "Working",
+    "Reading",
+    "Gathering",
+    "Drafting",
+    "Organizing",
+    "Reviewing",
+    "Summarizing",
+    "Preparing",
+    "Checking",
+    "Pulling it together",
+  ],
+  chat: [
+    "Thinking",
+    "Reading",
+    "Considering",
+    "Looking into it",
+    "Thinking it over",
+    "Working it out",
+    "Checking",
+  ],
+};
 
-const LOADER_WORDS = [
-  "Thinking",
-  "Analyzing",
-  "Searching",
-  "Processing",
-  "Generating",
-  "Creating",
-  "Evaluating",
-  "Researching",
-  "Refining",
-  "Formulating"
-
-];
-
-type LoaderState = { frameIndex: number; word: string };
-type LoaderAction = { type: "tick" } | { type: "newWord" };
-
-function loaderReducer(state: LoaderState, action: LoaderAction): LoaderState {
-  switch (action.type) {
-    case "tick":
-      return {
-        ...state,
-        frameIndex: (state.frameIndex + 1) % ASCII_FRAMES.length,
-      };
-    case "newWord":
-      return {
-        ...state,
-        word: LOADER_WORDS[Math.floor(Math.random() * LOADER_WORDS.length)],
-      };
-  }
+function pickWord(words: readonly string[]): string {
+  return words[Math.floor(Math.random() * words.length)];
 }
 
 /** Strip markdown formatting for plain-text display */
@@ -56,26 +73,20 @@ export function AsciiLoader({
   variant?: "claude" | "copilot" | "codex" | "cursor";
   thinkingText?: string;
 }) {
-  const [state, dispatch] = useReducer(loaderReducer, undefined, () => ({
-    frameIndex: 0,
-    word: LOADER_WORDS[Math.floor(Math.random() * LOADER_WORDS.length)],
-  }));
+  const { mode } = useModeConfig();
+  const words = LOADER_WORDS[mode];
+  const [word, setWord] = useState(() => pickWord(words));
 
   useEffect(() => {
-    const frameInterval = setInterval(() => dispatch({ type: "tick" }), 80);
-    const wordInterval = setInterval(() => dispatch({ type: "newWord" }), 4000);
-
-    return () => {
-      clearInterval(frameInterval);
-      clearInterval(wordInterval);
-    };
-  }, []);
+    const wordInterval = setInterval(() => setWord(pickWord(words)), 4000);
+    return () => clearInterval(wordInterval);
+  }, [words]);
 
   return (
     <div className={`flex items-center gap-2 ${className || ""}`}>
 
       <Text as="span" size="sm" tone="inherit" className="shine-text truncate max-w-120">
-        {thinkingText ? stripMarkdown(thinkingText) : `${state.word}`}
+        {thinkingText ? stripMarkdown(thinkingText) : word}
       </Text>
     </div>
   );

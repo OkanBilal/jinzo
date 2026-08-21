@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { createContext, useContext, useState } from "react";
 import type { ReactNode } from "react";
 import { Components } from "react-markdown";
 
@@ -97,6 +97,17 @@ function MarkdownLink({ href, children }: { href?: string; children?: ReactNode 
   );
 }
 
+/**
+ * Whether the `code` being rendered sits inside a `pre`.
+ *
+ * The props cannot answer it: react-markdown hands `code` a `language-*` class
+ * only when the fence names one, so a bare ``` block and an inline span look
+ * identical from there — which is how fenced blocks with no language ended up
+ * rendering as a row of inline pills spilling out of their box. The `pre`
+ * renderer is the one place that knows, so it says so.
+ */
+const InCodeBlock = createContext(false);
+
 /** Network URLs — the only sources whose mere loading has a side effect. */
 export function isRemoteImageSrc(src: string | undefined | null): src is string {
   return !!src && (src.startsWith("https://") || src.startsWith("http://"));
@@ -152,6 +163,42 @@ function MarkdownImage({ src, alt }: { src?: string; alt?: string }) {
 }
 
 /**
+ * Inline code or a fenced block, told apart by {@link InCodeBlock} rather than
+ * by props. A named component, not an inline arrow in the map below: it reads
+ * context, and only a component may.
+ */
+function MarkdownCode({ children }: { children?: ReactNode }) {
+  const isInline = !useContext(InCodeBlock);
+  if (isInline) {
+    // `size="inherit"` yields to the `0.9em` below: inline code stays relative
+    // to its sentence so it never towers over the prose around it.
+    return (
+      <Text
+        as="code"
+        size="inherit"
+        className="px-1 py-0.5 rounded text-[0.9em] bg-primary-200/40 dark:bg-primary/10"
+      >
+        {children}
+      </Text>
+    );
+  }
+  // Blocks carry the Code font-size setting instead, which is a pixel value
+  // off the `--text-*` ramp — hence `size="inherit"` here too. The surface
+  // belongs to the `pre` around it: two nested backgrounds drew a box inside
+  // a box, and only the outer one could scroll.
+  return (
+    <Text
+      as="code"
+      size="inherit"
+      className="block"
+      style={{ fontSize: CODE_FONT_SIZE_CSS }}
+    >
+      {children}
+    </Text>
+  );
+}
+
+/**
  * Custom ReactMarkdown component overrides for consistent styling.
  *
  * Every prose node routes through {@link Text}, whose default tone is the prose
@@ -187,14 +234,14 @@ export const  markdownComponents: Components = {
     </Text>
   ),
   ul: ({ children }) => (
-    <Text as="ul" className="list-disc list-outside pl-4 font-sans mb-2 space-y-1">
+    <Text as="ul" className="list-disc list-outside pl-4 font-sans mb-2 space-y-0.5">
       {children}
     </Text>
   ),
   ol: ({ children }) => (
     <Text
       as="ol"
-      className="list-decimal list-outside pl-4 font-sans mb-2 space-y-1"
+      className="list-decimal list-outside pl-4 font-sans mb-2 space-y-0.5"
     >
       {children}
     </Text>
@@ -209,7 +256,9 @@ export const  markdownComponents: Components = {
       <Text
         as="li"
         id={id}
-        className={`font-sans leading-7 [&>p]:my-0 [&>p:not(:last-child)]:mb-1 ${
+        // Tighter than a paragraph on purpose: list items are usually one
+        // short line, and prose leading spreads them into unrelated rows.
+        className={`font-sans leading-6 [&>p]:my-0 [&>p:not(:last-child)]:mb-1 ${
           isTask ? "list-none -ml-4 flex items-start gap-2" : ""
         }`}
       >
@@ -259,36 +308,15 @@ export const  markdownComponents: Components = {
       {children}
     </Text>
   ),
-  code: ({ className, children }) => {
-    const isInline = !className;
-    if (isInline) {
-      // `size="inherit"` yields to the `0.9em` below: inline code stays relative
-      // to its sentence so it never towers over the prose around it.
-      return (
-        <Text
-          as="code"
-          size="inherit"
-          className="px-1 py-0.5 rounded text-[0.9em] bg-primary-200/40 dark:bg-primary/10"
-        >
-          {children}
-        </Text>
-      );
-    }
-    // Blocks carry the Code font-size setting instead, which is a pixel value
-    // off the `--text-*` ramp — hence `size="inherit"` here too.
-    return (
-      <Text
-        as="code"
-        size="inherit"
-        className="block p-4 rounded-xl bg-primary-100 dark:bg-primary-900 overflow-x-auto"
-        style={{ fontSize: CODE_FONT_SIZE_CSS }}
-      >
-        {children}
-      </Text>
-    );
-  },
+  code: MarkdownCode,
+  // Owns the block's surface and its horizontal scroll — an ASCII diagram wider
+  // than the column has to slide inside the box rather than out of it.
   pre: ({ children }) => (
-    <pre className="my-2 rounded-xl  overflow-hidden bg-primary-50 dark:bg-primary/10">{children}</pre>
+    <InCodeBlock.Provider value={true}>
+      <pre className="my-2 p-4 rounded-xl overflow-x-auto bg-primary-50 dark:bg-primary/10">
+        {children}
+      </pre>
+    </InCodeBlock.Provider>
   ),
   a: ({ href, children }) => <MarkdownLink href={href}>{children}</MarkdownLink>,
   // The three inline marks size themselves from the sentence they sit in.

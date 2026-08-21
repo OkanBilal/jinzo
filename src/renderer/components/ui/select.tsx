@@ -364,7 +364,7 @@ export default function Select<T extends string = string>({
                     onFocus={() => setActiveIndex(index)}
                     onClick={() => selectOption(option)}
                     className={`
-                      flex w-full cursor-pointer items-center gap-2 px-3 py-1 text-left ${OPTION_SIZE[size]}
+                      flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-left ${OPTION_SIZE[size]}
                       text-primary-900 transition-colors focus:outline-none dark:text-primary
                       hover:bg-primary-950/5 focus:bg-primary-950/5 dark:hover:bg-primary/5 dark:focus:bg-primary/5
                       ${isSelected || isActive ? "bg-primary-950/5 dark:bg-primary/10" : ""}

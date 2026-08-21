@@ -36,9 +36,9 @@ describe("SpaceModePicker", () => {
     const menu = screen.getByRole("menu", { name: "Choose mode" });
     const choices = within(menu).getAllByRole("menuitemradio");
     expect(choices.map((choice) => choice.textContent)).toEqual([
-      "Code⌃ 1",
-      "Work⌃ 2",
-      "Chat⌃ 3",
+      "Code⌘ 1",
+      "Work⌘ 2",
+      "Chat⌘ 3",
     ]);
     expect(choices.map((choice) => choice.getAttribute("aria-checked"))).toEqual([
       "false",
@@ -74,7 +74,7 @@ describe("SpaceModePicker", () => {
       }),
     );
 
-    fireEvent.keyDown(window, { key: "2", ctrlKey: true });
+    fireEvent.keyDown(window, { key: "2", metaKey: true });
 
     expect(onChange).not.toHaveBeenCalled();
   });
@@ -113,7 +113,7 @@ describe("SpaceModePicker", () => {
     expect(screen.queryByRole("menu", { name: "Choose mode" })).toBeNull();
   });
 
-  it("switches modes with Control+1/2/3", () => {
+  it("switches modes with Command+1/2/3", () => {
     const onChange = vi.fn();
     render(
       createElement(SpaceModePicker, {
@@ -122,7 +122,7 @@ describe("SpaceModePicker", () => {
       }),
     );
 
-    fireEvent.keyDown(window, { key: "3", code: "Digit3", ctrlKey: true });
+    fireEvent.keyDown(window, { key: "3", code: "Digit3", metaKey: true });
 
     expect(onChange).toHaveBeenCalledExactlyOnceWith("chat");
   });

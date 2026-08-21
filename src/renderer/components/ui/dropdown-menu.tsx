@@ -374,9 +374,7 @@ export function DropdownMenuSub({
         className={cn(
           "flex w-full cursor-pointer items-center gap-3 px-3 py-2 text-s",
           "text-primary-700 transition-colors hover:bg-primary-200/40 hover:text-primary-900",
-          "focus:bg-primary-200/40 focus:text-primary-900 focus:outline-none",
           "dark:text-primary-300 dark:hover:bg-primary/5 dark:hover:text-primary-100",
-          "dark:focus:bg-primary/5 dark:focus:text-primary-100",
           className,
         )}
       >
@@ -461,8 +459,8 @@ export function DropdownMenuItem({
         // row instead — which also needs to outrank hover, or the two states
         // look identical while arrowing over a row the pointer happens to sit on.
         "focus-visible:ring-0 focus-visible:ring-offset-0",
-        "transition-colors hover:bg-primary-200/40 focus:bg-primary-200/60 focus:outline-none",
-        "dark:hover:bg-primary/5 dark:focus:bg-primary/5",
+        "transition-colors hover:bg-primary-200/40 ",
+        "dark:hover:bg-primary/5 ",
         // With the check suppressed the selection still has to be visible, so
         // the row carries it as a fill — the same tint hover uses.
         indicator === "none" && selected

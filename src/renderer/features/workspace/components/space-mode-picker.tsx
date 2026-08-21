@@ -1,12 +1,21 @@
 import { useEffect, useRef, useState } from "react";
+import type { ComponentType, SVGProps } from "react";
 import { Button, DropdownMenu, DropdownMenuItem } from "@/components/ui";
+import { Chat, Code, Bag } from "@/components/ui/icons/space";
 import { MODE_IDS, providerModes, type ModeId } from "../../../../shared/modes";
 import { MODE_CONFIGS } from "@/lib/mode-config";
 
-const MODE_DOT_COLORS: Record<ModeId, string> = {
-  developer: "bg-accent",
-  work: "bg-warning",
-  chat: "bg-success",
+/**
+ * A glyph per experience, tinted the way the dots used to be. Placeholders —
+ * pick the ones that actually read as Code / Work / Chat.
+ */
+const MODE_ICONS: Record<
+  ModeId,
+  { icon: ComponentType<SVGProps<SVGSVGElement>>; className: string }
+> = {
+  developer: { icon: Code, className: "text-accent" },
+  work: { icon: Bag, className: "text-warning" },
+  chat: { icon: Chat, className: "text-success" },
 };
 
 /**
@@ -19,7 +28,7 @@ const MODE_PILL =
 const MODE_OPTIONS = MODE_IDS.map((mode, index) => ({
   mode,
   shortcutKey: String(index + 1),
-  shortcutLabel: `⌃ ${index + 1}`,
+  shortcutLabel: `⌘ ${index + 1}`,
 }));
 
 interface SpaceModePickerProps {
@@ -37,14 +46,14 @@ interface SpaceModePickerProps {
  * Titlebar dropdown for the active space mode. All three modes remain visible;
  * the current one carries the radio state (so it is what the menu focuses on
  * open, and what a screen reader announces as checked) without a check glyph
- * next to the mode dot. Control+1/2/3 selects Code/Work/Chat.
+ * next to the mode dot. Command+1/2/3 selects Code/Work/Chat.
  */
 export function SpaceModePicker({
   value,
   onChange,
   providerId,
 }: SpaceModePickerProps) {
-  // Shortcut numbers stay tied to the full list (⌃1 is always Code), so a
+  // Shortcut numbers stay tied to the full list (⌘1 is always Code), so a
   // narrowed provider skips its keys rather than renumbering the rest.
   const available = providerId ? providerModes(providerId) : MODE_IDS;
   const options = MODE_OPTIONS.filter(({ mode }) => available.includes(mode));
@@ -75,8 +84,8 @@ export function SpaceModePicker({
       if (
         event.defaultPrevented ||
         event.repeat ||
-        !event.ctrlKey ||
-        event.metaKey ||
+        !event.metaKey ||
+        event.ctrlKey ||
         event.altKey ||
         event.shiftKey
       ) {
@@ -129,30 +138,34 @@ export function SpaceModePicker({
         minWidth={160}
         origin="top-left"
         initialFocus="selected"
+        className="glass-input!"
       >
-        {options.map(({ mode, shortcutLabel }) => (
-          <DropdownMenuItem
-            key={mode}
-            className=" py-2 px-4 gap-2"
-            selected={mode === value}
-            indicator="none"
-            onClick={() => handleModeChange(mode)}
-          >
-            <span
-              aria-hidden="true"
-              className={`size-2 shrink-0 rounded-full ${MODE_DOT_COLORS[mode]}`}
-            />
-            <span className="flex-1 text-left text-s">
-              {MODE_CONFIGS[mode].label}
-            </span>
-            <span
-              aria-hidden="true"
-              className=" text-xs  text-primary-600 dark:text-primary-300"
+        {options.map(({ mode, shortcutLabel }) => {
+          const { icon: ModeIcon, className: iconTint } = MODE_ICONS[mode];
+          return (
+            <DropdownMenuItem
+              key={mode}
+              className=" py-2 px-4 gap-2"
+              selected={mode === value}
+              indicator="none"
+              onClick={() => handleModeChange(mode)}
             >
-              {shortcutLabel}
-            </span>
-          </DropdownMenuItem>
-        ))}
+              <ModeIcon
+                aria-hidden="true"
+                className={`size-3.5 shrink-0 ${iconTint}`}
+              />
+              <span className="flex-1 text-left text-s">
+                {MODE_CONFIGS[mode].label}
+              </span>
+              <span
+                aria-hidden="true"
+                className=" text-xs text-primary-600 dark:text-primary-300"
+              >
+                {shortcutLabel}
+              </span>
+            </DropdownMenuItem>
+          );
+        })}
       </DropdownMenu>
     </>
   );

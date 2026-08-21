@@ -12,7 +12,6 @@ import {
   Plus,
   Connect,
   Project,
-  Sun,
   Relay,
   Plugin,
   Box,
@@ -47,6 +46,7 @@ import {
   SIDEBAR_WIDTH_MAX,
   SIDEBAR_WIDTH_DEFAULT,
 } from "@/lib/layout";
+import { Clock } from "@/components/ui/icons/space";
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -294,7 +294,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 onClick={() => navigate("/pulse")}
                 aria-current={isPulseRoute ? "page" : undefined}
               >
-                <Sun
+                <Clock
                   className={`w-4 h-4 -ml-1 ${
                     isPulseRoute
                       ? "text-primary-950 dark:text-primary"

@@ -20,7 +20,6 @@ export const iconRegistry: Record<string, IconComponent> = {
   home: Icons.Home,
   incognito: Icons.Incognito,
   mitts: Icons.Mitts,
-
   star: Icons.Star,
   sun: Icons.Sun,
   user: Icons.User,
@@ -30,7 +29,7 @@ export const iconRegistry: Record<string, IconComponent> = {
   atom: Icons.Atom,
   bell: Icons.Bell,
   bicycle: Icons.Bicycle,
-  blackhole: Icons.Blackhole,
+  Bag: Icons.Bag,
   box: Icons.Box,
   bug: Icons.Bug,
   cat: Icons.Cat,
