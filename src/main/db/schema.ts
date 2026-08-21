@@ -51,9 +51,13 @@ export const appSettings = sqliteTable("app_settings", {
     onDelete: "set null",
   }),
 
+  // Off for fresh installs: most people start on one repo and one branch, and
+  // the isolated copy only earns its keep once several tasks run at once. The
+  // default is read at insert time only, so installs that already carry a
+  // value — including everyone seeded before this flipped — keep theirs.
   enableWorktrees: integer("enable_worktrees", { mode: "boolean" })
     .notNull()
-    .default(true),
+    .default(false),
 
   showToolCalls: integer("show_tool_calls", { mode: "boolean" })
     .notNull()

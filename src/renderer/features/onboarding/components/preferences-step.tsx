@@ -77,7 +77,7 @@ export function PreferencesStep() {
   const notifyOnRunComplete = appSettings?.notifyOnRunComplete ?? true;
   const notifyOnToolApproval = appSettings?.notifyOnToolApproval ?? true;
   const showMenuBarIcon = appSettings?.showMenuBarIcon ?? true;
-  const enableWorktrees = appSettings?.enableWorktrees ?? true;
+  const enableWorktrees = appSettings?.enableWorktrees ?? false;
 
   const handleWorktreeToggle = async (enabled: boolean) => {
     if (updatingWorktrees) return;

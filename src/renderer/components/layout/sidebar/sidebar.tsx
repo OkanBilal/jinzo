@@ -416,8 +416,8 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 <span
                   className={`shrink-0 text-t -mr-1 uppercase px-1.5 py-px rounded-md ${
                     isRelayRoute
-                      ? "bg-primary-400/20 text-primary-800 dark:bg-primary/5 dark:text-primary"
-                      : "bg-primary-400/20 text-primary-600 dark:bg-primary/5 dark:text-primary-400"
+                      ? "bg-primary-400/20 text-primary-800 dark:bg-primary/5 dark:text-primary-200"
+                      : "bg-primary-400/20 text-primary-800 dark:bg-primary/5 dark:text-primary-200"
                   }`}
                 >
                   Beta

@@ -207,10 +207,10 @@ function basename(p: string): string {
   return p.split("/").pop() || "Untitled";
 }
 
-/** Honor the global worktree preference (defaults on). */
+/** Honor the global worktree preference (off unless the user turned it on). */
 async function preferWorktrees(): Promise<boolean> {
   const settings = await appSettingsService.ensureSettings();
-  return settings.enableWorktrees ?? true;
+  return settings.enableWorktrees ?? false;
 }
 
 /** Read the `origin` fetch URL of a repo, or null when there's no remote. */

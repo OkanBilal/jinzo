@@ -32,6 +32,15 @@ describe("appSettingsService", () => {
       expect(result.accountId).toBe("default");
     });
 
+    // Fresh installs start with worktrees off. Nothing writes the column —
+    // neither the seed's insert nor the lazy create above — so the schema
+    // default is the whole mechanism, and this is what would catch it
+    // flipping back.
+    it("creates the row with worktrees off", async () => {
+      const result = await appSettingsService.ensureSettings();
+      expect(result.enableWorktrees).toBe(false);
+    });
+
     it("is idempotent", async () => {
       const first = await appSettingsService.ensureSettings();
       const second = await appSettingsService.ensureSettings();
