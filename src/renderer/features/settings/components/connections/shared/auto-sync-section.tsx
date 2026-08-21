@@ -97,7 +97,7 @@ export function AutoSyncSection({
                 value: String(o.value),
                 label: o.label,
               }))}
-              variant="bordered"
+              variant="pill"
               semantics="radiogroup"
               aria-label="Sync interval"
               disabled={!isEnabled}

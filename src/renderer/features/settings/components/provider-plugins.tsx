@@ -11,6 +11,7 @@ import {
   AsciiSpinner,
   Input,
   Select,
+  SegmentedTabs,
 } from "@/components/ui";
 import {
   useGetProviderInstalledPluginsQuery,
@@ -160,9 +161,12 @@ function PluginLogo({
  */
 function HorizontalFadeScroller({
   children,
+  className = "",
   contentClassName = "flex gap-4 w-max",
 }: {
   children: ReactNode;
+  /** Outer (scrolling) element — for sizing it inside a flex row. */
+  className?: string;
   contentClassName?: string;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -193,7 +197,7 @@ function HorizontalFadeScroller({
     <div
       ref={scrollRef}
       onScroll={updateFade}
-      className="overflow-x-auto noscrollbar snap-x pb-1"
+      className={`overflow-x-auto noscrollbar snap-x  ${className}`}
       style={{ maskImage: mask, WebkitMaskImage: mask }}
     >
       <div ref={contentRef} className={contentClassName}>
@@ -996,6 +1000,16 @@ export default function ProviderPlugins({
     return Array.from(cats).sort();
   }, [allPlugins]);
 
+  // "All" rides on the empty string: a category is only ever a non-empty
+  // name (see the Set above), so it can't collide with a real one.
+  const categoryOptions = useMemo(
+    () => [
+      { value: "", label: "All" },
+      ...categories.map((cat) => ({ value: cat, label: formatCategory(cat) })),
+    ],
+    [categories],
+  );
+
   // Filter plugins
   const filteredPlugins = useMemo(() => {
     let result = allPlugins;
@@ -1187,33 +1201,19 @@ export default function ProviderPlugins({
 
       {/* Category filter + search */}
       <div className="flex flex-col gap-3 mb-6 md:flex-row md:items-center md:justify-between md:gap-4">
-        <div className="flex gap-1 min-w-0 flex-1 overflow-x-auto noscrollbar">
-          <Button
-            onClick={() => setCategoryFilter(null)}
-            className={`shrink-0 whitespace-nowrap px-2.5 py-1 text-sm rounded-xl transition-colors cursor-pointer ${
-              !categoryFilter
-                ? "bg-primary-200/80 glass-button dark:bg-primary-800/60 text-primary-900 dark:text-primary-100"
-                : "text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-100/50 dark:hover:bg-primary-800/30"
-            }`}
-          >
-            All
-          </Button>
-          {categories.map((cat) => (
-            <Button
-              key={cat}
-              onClick={() =>
-                setCategoryFilter(cat === categoryFilter ? null : cat)
-              }
-              className={`shrink-0 whitespace-nowrap px-2.5 py-1 text-sm rounded-xl transition-colors cursor-pointer ${
-                categoryFilter === cat
-                  ? "bg-primary-200/80 dark:bg-primary-800/60 text-primary-900 dark:text-primary-100"
-                  : "text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-100/50 dark:hover:bg-primary-800/30"
-              }`}
-            >
-              {formatCategory(cat)}
-            </Button>
-          ))}
-        </div>
+        <HorizontalFadeScroller
+          className="min-w-0 flex-1"
+          contentClassName="w-max"
+        >
+          <SegmentedTabs
+            value={categoryFilter ?? ""}
+            onChange={(next) => setCategoryFilter(next || null)}
+            options={categoryOptions}
+            variant="plain"
+            semantics="radiogroup"
+            aria-label="Plugin category"
+          />
+        </HorizontalFadeScroller>
         <div className="relative w-full md:w-56 md:shrink-0">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-primary-600 dark:text-primary-400 pointer-events-none" />
           <Input
