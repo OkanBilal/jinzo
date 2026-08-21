@@ -249,8 +249,13 @@ export function InputToolbar({
               onToggle={() => setShowPermissionDropdown(!showPermissionDropdown)}
               dropdownRef={permissionDropdownRef}
               variant={variant}
-              planMode={planMode}
-              onPlanModeToggle={onPlanModeToggle}
+              // The plan row lives inside this dropdown, so it needs its own
+              // gate: a mode may keep the permission menu and still have no
+              // plan (the harness pins it off there).
+              planMode={modeConfig.showPlanControls ? planMode : false}
+              onPlanModeToggle={
+                modeConfig.showPlanControls ? onPlanModeToggle : undefined
+              }
               goalMode={goalMode}
             />
           )}

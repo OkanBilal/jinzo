@@ -580,11 +580,15 @@ describe("runsService", () => {
       expect(request.configSnapshot).toEqual({
         sandboxMode: "read-only",
         personality: "friendly",
+        planMode: false,
+        goalMode: false,
       });
       const run = await runsService.getRunById(runId);
       expect(run?.configSnapshot).toEqual({
         sandboxMode: "read-only",
         personality: "friendly",
+        planMode: false,
+        goalMode: false,
       });
     });
 
@@ -671,6 +675,8 @@ describe("runsService", () => {
       expect(request.configSnapshot).toEqual({
         sandboxMode: "read-only",
         personality: "friendly",
+        planMode: false,
+        goalMode: false,
       });
       expect(request.toolPolicy?.allowedTools).not.toBeNull();
       expect(request.toolPolicy?.disallowedTools).toContain("Bash");

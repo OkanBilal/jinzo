@@ -66,6 +66,15 @@ describe("MODE_CONFIGS table invariants", () => {
     expect(MODE_CONFIGS.chat.showPlanControls).toBe(false);
     expect(MODE_CONFIGS.chat.showGoalControls).toBe(false);
   });
+
+  it("hides plan controls outside developer, matching the harness pin", () => {
+    // The composer gates the plan row on this flag (it lives inside the
+    // permission dropdown, so the permission flag alone does not cover it),
+    // and the harness pins codex planMode off for the same two modes.
+    expect(MODE_CONFIGS.developer.showPlanControls).toBe(true);
+    expect(MODE_CONFIGS.work.showPlanControls).toBe(false);
+    expect(MODE_CONFIGS.chat.showPlanControls).toBe(false);
+  });
 });
 
 describe("getModeConfig", () => {

@@ -118,6 +118,11 @@ export const MODE_HARNESSES: Record<ModeId, ModeHarnessDescriptor> = {
   // `personality` carries the tone half of this mode natively: its templates
   // land at the top of codex's own instructions, above anything a prompt delta
   // can reach.
+  //
+  // Plan mode is pinned OFF as an override: the toggle lives in the
+  // developer-only permission dropdown, so the work composer has no way to
+  // turn it back off, and the flag sits on the shared provider row — a Code
+  // space that left it on would otherwise plan every work run too.
   work: {
     mode: "work",
     promptDelta: WORK_INSTRUCTIONS,
@@ -134,10 +139,15 @@ export const MODE_HARNESSES: Record<ModeId, ModeHarnessDescriptor> = {
       },
       [PROVIDER_IDS.cursor]: { mode: "agent" },
     },
-    configOverrides: {},
+    configOverrides: {
+      [PROVIDER_IDS.codex]: { planMode: false },
+    },
   },
   // Chat: read-only, enforced. Overrides beat the caller's snapshot so no
-  // client can escalate a chat space into a writing one.
+  // client can escalate a chat space into a writing one. Plan and goal are
+  // both developer-side affordances riding the shared provider row (see
+  // work), so chat pins both off — a goal would have codex set a thread
+  // objective for a conversation that has no controls to manage it.
   chat: {
     mode: "chat",
     promptDelta: CHAT_INSTRUCTIONS,
@@ -151,7 +161,11 @@ export const MODE_HARNESSES: Record<ModeId, ModeHarnessDescriptor> = {
     configOverrides: {
       [PROVIDER_IDS.claude]: { permissionMode: "default" },
       [PROVIDER_IDS.copilot]: { permissionMode: "default" },
-      [PROVIDER_IDS.codex]: { sandboxMode: "read-only" },
+      [PROVIDER_IDS.codex]: {
+        sandboxMode: "read-only",
+        planMode: false,
+        goalMode: false,
+      },
       [PROVIDER_IDS.cursor]: { mode: "ask" },
     },
   },

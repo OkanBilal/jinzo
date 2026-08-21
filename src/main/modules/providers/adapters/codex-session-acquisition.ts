@@ -406,6 +406,26 @@ export function createCodexSessionAcquisition(
     };
   }
 
+  /**
+   * Plan / goal for one run: the mode-resolved snapshot over the provider
+   * config, same precedence as `threadSettingsFor`. Both flags live on the
+   * shared provider row and are toggled from the developer composer, so a
+   * Code space that left plan on must not plan a Work or Chat run — and that
+   * has to hold on resume and fork too, not just the first turn.
+   */
+  function runTogglesFor(overrides: Record<string, unknown> = {}) {
+    return {
+      planMode:
+        typeof overrides.planMode === "boolean"
+          ? overrides.planMode
+          : (config.planMode ?? false),
+      goalMode:
+        typeof overrides.goalMode === "boolean"
+          ? overrides.goalMode
+          : (config.goalMode ?? false),
+    };
+  }
+
   function makeSession(
     runId: string,
     model: string | undefined,
@@ -442,14 +462,7 @@ export function createCodexSessionAcquisition(
       overrides.serviceTier
         ? overrides.serviceTier
         : undefined;
-    const overridePlanMode =
-      typeof overrides.planMode === "boolean"
-        ? overrides.planMode
-        : undefined;
-    const overrideGoalMode =
-      typeof overrides.goalMode === "boolean"
-        ? overrides.goalMode
-        : undefined;
+    const toggles = runTogglesFor(overrides);
     const settings = threadSettingsFor(overrides);
     const threadStartParams: CodexThreadStartParams = {
       cwd: request.execution.cwd,
@@ -474,7 +487,7 @@ export function createCodexSessionAcquisition(
     await establishGoal(
       server,
       threadId,
-      overrideGoalMode ?? config.goalMode ?? false,
+      toggles.goalMode,
       request.goal,
       request.execution.cwd,
       true,
@@ -490,7 +503,7 @@ export function createCodexSessionAcquisition(
     const serviceTier =
       overrideServiceTier ?? config.serviceTier;
     const collaborationMode = buildCollaborationMode(
-      overridePlanMode ?? config.planMode ?? false,
+      toggles.planMode,
       model,
       effort,
     );
@@ -585,17 +598,18 @@ export function createCodexSessionAcquisition(
       runCoordinator.getInterruptedSubAgents(runId);
     const currentThreadId =
       runCoordinator.getSessionThread(runId) ?? threadId;
+    const resumeToggles = runTogglesFor(resumeOverrides);
     await establishGoal(
       server,
       currentThreadId,
-      config.goalMode ?? false,
+      resumeToggles.goalMode,
       message,
       request.execution.cwd,
       false,
     );
 
     const collaborationMode = buildCollaborationMode(
-      config.planMode ?? false,
+      resumeToggles.planMode,
       model,
       config.modelReasoningEffort,
       true,
@@ -664,10 +678,11 @@ export function createCodexSessionAcquisition(
     });
     const forkedThreadId = forkResult.thread.id;
     runCoordinator.attachThread(runId, forkedThreadId);
+    const forkToggles = runTogglesFor(forkOverrides);
     await establishGoal(
       server,
       forkedThreadId,
-      config.goalMode ?? false,
+      forkToggles.goalMode,
       message,
       request.execution.cwd,
       false,
@@ -679,7 +694,7 @@ export function createCodexSessionAcquisition(
     });
 
     const collaborationMode = buildCollaborationMode(
-      config.planMode ?? false,
+      forkToggles.planMode,
       model,
       config.modelReasoningEffort,
       true,

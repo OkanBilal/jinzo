@@ -46,10 +46,39 @@ describe("MODE_HARNESSES table invariants", () => {
 
   it("enforces read-only chat per provider via configOverrides", () => {
     const overrides = MODE_HARNESSES.chat.configOverrides;
-    expect(overrides[PROVIDER_IDS.codex]).toEqual({ sandboxMode: "read-only" });
+    expect(overrides[PROVIDER_IDS.codex]).toMatchObject({ sandboxMode: "read-only" });
     expect(overrides[PROVIDER_IDS.cursor]).toEqual({ mode: "ask" });
     expect(overrides[PROVIDER_IDS.claude]).toEqual({ permissionMode: "default" });
     expect(overrides[PROVIDER_IDS.copilot]).toEqual({ permissionMode: "default" });
+  });
+
+  it("pins codex plan mode off outside developer — as an override", () => {
+    // `planMode` sits on the shared provider row and is toggled from the
+    // developer-only permission dropdown. Work and chat have no control to
+    // turn it back off, so a Code space that left it on must not plan their
+    // runs: an override, because there is no legitimate caller choice here.
+    expect(MODE_HARNESSES.work.configOverrides[PROVIDER_IDS.codex]).toMatchObject({
+      planMode: false,
+    });
+    expect(MODE_HARNESSES.chat.configOverrides[PROVIDER_IDS.codex]).toMatchObject({
+      planMode: false,
+    });
+    expect(
+      MODE_HARNESSES.developer.configOverrides[PROVIDER_IDS.codex],
+    ).toBeUndefined();
+  });
+
+  it("pins codex goal mode off for chat only", () => {
+    // Work keeps its goal button, so the flag stays caller-owned there.
+    expect(MODE_HARNESSES.chat.configOverrides[PROVIDER_IDS.codex]).toMatchObject({
+      goalMode: false,
+    });
+    expect(
+      MODE_HARNESSES.work.configOverrides[PROVIDER_IDS.codex]?.goalMode,
+    ).toBeUndefined();
+    expect(
+      MODE_HARNESSES.work.configDefaults[PROVIDER_IDS.codex]?.goalMode,
+    ).toBeUndefined();
   });
 
   it("pins codex's tone for the non-developer modes only", () => {
@@ -67,9 +96,14 @@ describe("MODE_HARNESSES table invariants", () => {
     ).toBeUndefined();
   });
 
-  it("only chat carries overrides — work's settings stay caller-overridable", () => {
+  it("limits work's overrides to the plan pin — its settings stay caller-overridable", () => {
+    // Overrides are for values no client may choose for the mode. Work's
+    // permission/sandbox/tone stay defaults; only the developer-side plan
+    // toggle is pinned (see the codex plan-mode test above).
     expect(Object.keys(MODE_HARNESSES.developer.configOverrides)).toHaveLength(0);
-    expect(Object.keys(MODE_HARNESSES.work.configOverrides)).toHaveLength(0);
+    expect(MODE_HARNESSES.work.configOverrides).toEqual({
+      [PROVIDER_IDS.codex]: { planMode: false },
+    });
     expect(Object.keys(MODE_HARNESSES.chat.configOverrides).length).toBeGreaterThan(0);
   });
 
@@ -126,7 +160,12 @@ describe("composeConfigSnapshot", () => {
       composeConfigSnapshot("chat", PROVIDER_IDS.codex, {
         sandboxMode: "danger-full-access",
       }),
-    ).toEqual({ sandboxMode: "read-only", personality: "friendly" });
+    ).toEqual({
+      sandboxMode: "read-only",
+      personality: "friendly",
+      planMode: false,
+      goalMode: false,
+    });
     expect(
       composeConfigSnapshot("chat", PROVIDER_IDS.claude, {
         permissionMode: "bypassPermissions",
@@ -141,7 +180,38 @@ describe("composeConfigSnapshot", () => {
       effortLevel: "high",
       sandboxMode: "read-only",
       personality: "friendly",
+      planMode: false,
+      goalMode: false,
     });
+  });
+
+  it("turns codex plan mode off for work and chat even when the payload asks for it", () => {
+    // The regression: plan toggled on in a Code space, provider row keeps it,
+    // the user switches to a Work space and every run comes back as a plan.
+    expect(
+      composeConfigSnapshot("work", PROVIDER_IDS.codex, { planMode: true }),
+    ).toMatchObject({ planMode: false });
+    expect(
+      composeConfigSnapshot("chat", PROVIDER_IDS.codex, { planMode: true, goalMode: true }),
+    ).toMatchObject({ planMode: false, goalMode: false });
+    // Developer keeps the caller's word.
+    expect(
+      composeConfigSnapshot("developer", PROVIDER_IDS.codex, { planMode: true }),
+    ).toEqual({ planMode: true });
+  });
+
+  it("keeps a claude/copilot row left in plan out of a work run with no payload", () => {
+    // Same leak, other providers: plan is a permissionMode there, and the
+    // renderer sends no snapshot, so work's acceptEdits default must be what
+    // reaches the driver — the provider row's "plan" never enters the merge.
+    for (const providerId of [PROVIDER_IDS.claude, PROVIDER_IDS.copilot]) {
+      expect(composeConfigSnapshot("work", providerId)).toEqual({
+        permissionMode: "acceptEdits",
+      });
+      expect(composeConfigSnapshot("chat", providerId)).toEqual({
+        permissionMode: "default",
+      });
+    }
   });
 });
 
