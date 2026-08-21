@@ -2882,6 +2882,83 @@ describe("workspaceService — createFromSource (workspace intake)", () => {
     expect(a.projectId).toBe(b.projectId);
   });
 
+  it("names a deduped intake after the existing project, not its folder", async () => {
+    // Importing a worktree folder of an already-imported repo: the project
+    // resolves to the existing one, and the workspace should carry its name.
+    setWorktrees(false);
+    gitMock.importLocalRepoDirect
+      .mockResolvedValueOnce({
+        branchName: "main",
+        sourcePath: "/repos/mains",
+        baseBranch: "main",
+        tracking: null,
+        ahead: 0,
+        behind: 0,
+        originUrl: "git@github.com:foo/mains.git",
+      })
+      .mockResolvedValueOnce({
+        branchName: "feat/modes",
+        sourcePath: "/worktrees/mains/avocado-0k55",
+        baseBranch: "main",
+        tracking: null,
+        ahead: 0,
+        behind: 0,
+        originUrl: "https://github.com/foo/mains.git",
+      });
+
+    const first = await workspaceService.createFromSource({
+      accountId: "default",
+      source: { kind: "folder", path: "/repos/mains" },
+    });
+    const second = await workspaceService.createFromSource({
+      accountId: "default",
+      source: { kind: "folder", path: "/worktrees/mains/avocado-0k55" },
+    });
+
+    expect(first.name).toBe("mains");
+    expect(second.projectId).toBe(first.projectId);
+    expect(second.name).toBe("mains");
+    expect(second.rootPath).toBe("/worktrees/mains/avocado-0k55");
+  });
+
+  it("folder + worktree: a deduped intake is also named after the project", async () => {
+    setWorktrees(true);
+    createProject(db, {
+      id: "proj-mains",
+      accountId: "default",
+      name: "mains",
+      rootPath: "/repos/mains",
+      remoteOrigin: "github.com/foo/mains",
+      defaultBranch: "main",
+    });
+    gitMock.getRemotes.mockResolvedValue([
+      {
+        name: "origin",
+        fetchUrl: "git@github.com:foo/mains.git",
+        pushUrl: undefined,
+      },
+    ]);
+    gitMock.getDefaultBranch.mockResolvedValue("main");
+    gitMock.importLocalRepo.mockResolvedValue({
+      branchName: "feature/y",
+      worktreePath: "/work/worktrees/mains/pear",
+      worktreeName: "pear",
+      baseBranch: "main",
+      tracking: null,
+      ahead: 0,
+      behind: 0,
+      originUrl: "git@github.com:foo/mains.git",
+    });
+
+    const result = await workspaceService.createFromSource({
+      accountId: "default",
+      source: { kind: "folder", path: "/worktrees/mains/avocado-0k55" },
+    });
+
+    expect(result.projectId).toBe("proj-mains");
+    expect(result.name).toBe("mains");
+  });
+
   it("keeps the project's canonical default branch across direct intakes", async () => {
     setWorktrees(false);
     gitMock.importLocalRepoDirect

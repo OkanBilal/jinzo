@@ -699,6 +699,10 @@ export const workspaceService = {
         ? (await gitService.cloneRepo(source.url, source.targetPath))
             .clonedPath
         : source.path;
+    // Seed name for a *new* project only. The workspace is named after the
+    // project that find-or-create resolves to, so a second checkout of an
+    // already-imported repo (a worktree folder, a sibling clone) shows the
+    // project's name, not its folder's.
     const name = basename(sourcePath);
 
     // A picked folder can be anything — reject non-repos before any DB
@@ -739,7 +743,7 @@ export const workspaceService = {
       }
       return completeIntake({
         accountId,
-        name,
+        name: project.name,
         rootPath: imported.worktreePath,
         repoUrl: originUrl ?? undefined,
         baseBranch,
@@ -774,7 +778,7 @@ export const workspaceService = {
     }
     return completeIntake({
       accountId,
-      name,
+      name: project.name,
       rootPath: sourcePath,
       repoUrl: imported.originUrl ?? undefined,
       baseBranch,
