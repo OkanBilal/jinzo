@@ -33,7 +33,7 @@ export function SidebarToggleButton({
 
   return (
     <div
-      className="fixed z-(--z-panel-toggle) flex h-8 items-center gap-1 transition-all duration-300 ease-out"
+      className="fixed z-(--z-panel-toggle) flex h-7 items-center gap-1 transition-all duration-300 ease-out"
       style={{
         top: "calc(0.5875rem + env(safe-area-inset-top))",
         left: reserveTrafficLights ? "5.5rem" : "0.75rem",
