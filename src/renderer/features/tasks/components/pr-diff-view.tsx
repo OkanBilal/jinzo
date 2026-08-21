@@ -375,13 +375,14 @@ function FileSection({
     <div className="rounded-xl overflow-hidden glass-outline">
       <Button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-2 px-3 py-3 bg-primary/30 dark:bg-primary/5 cursor-pointer"
+        className="w-full flex items-center gap-2 px-3 py-2 dark:bg-primary/5 bg-primary-50 cursor-pointer"
       >
         <Text
           as="span"
           size="xs"
           weight="medium"
-          className="font-mono truncate"
+          className="truncate"
+          tone="secondary"
         >
           {file.path}
         </Text>

@@ -235,6 +235,64 @@ export interface ProviderUsageRow {
   total?: number;
 }
 
+const USAGE_TICK_COUNT = 24;
+
+/**
+ * Tick colour by how much of the window is consumed. Thresholds are on
+ * *used* percent regardless of whether the bar draws used or remaining, so a
+ * Codex row (remaining) and a Copilot row (used) at the same consumption
+ * level carry the same colour.
+ */
+function usageLevelClass(usedPercent: number): string {
+  if (usedPercent >= 80) return "bg-danger";
+  if (usedPercent >= 50) return "bg-warning";
+  return "bg-accent";
+}
+
+/**
+ * Segmented meter: a row of thin ticks, the first `filledPercent` of them in
+ * the level colour, the rest muted. Rounds to the nearest tick but always
+ * lights at least one for a non-zero value so a 1% reading isn't drawn empty.
+ */
+function UsageTicks({
+  filledPercent,
+  usedPercent,
+  label,
+}: {
+  filledPercent: number;
+  usedPercent: number;
+  label: string;
+}) {
+  const clamped = Math.min(100, Math.max(0, filledPercent));
+  const filled =
+    clamped === 0
+      ? 0
+      : Math.max(1, Math.round((clamped / 100) * USAGE_TICK_COUNT));
+  const levelClass = usageLevelClass(usedPercent);
+
+  return (
+    <div
+      role="progressbar"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(clamped)}
+      className="flex items-center gap-1.25"
+    >
+      {Array.from({ length: USAGE_TICK_COUNT }, (_, i) => (
+        <span
+          key={i}
+          className={`h-3.5 w-0.75 rounded-full transition-colors duration-300 ${
+            i < filled
+              ? levelClass
+              : "bg-primary-300/70 dark:bg-primary-600/50"
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
+
 /**
  * One rate-limit row. `display` preserves the two existing presentations:
  * "remaining" (Codex — bar and text show what's left) and "used" (Copilot —
@@ -264,12 +322,11 @@ function UsageRateLimitRow({
         )}
       </div>
       <div className="flex items-center gap-3">
-        <div className="w-28 h-1.5 rounded-full bg-primary-200/50 dark:bg-primary-700/30 overflow-hidden">
-          <div
-            className="h-full rounded-full bg-primary-800 dark:bg-primary-200 transition-all duration-500"
-            style={{ width: `${barPercent}%` }}
-          />
-        </div>
+        <UsageTicks
+          filledPercent={barPercent}
+          usedPercent={row.usedPercent}
+          label={row.label}
+        />
         {display === "remaining" ? (
           <Text as="span" tone="subtle" align="right" className="w-16">
             {remaining}% left
@@ -307,7 +364,9 @@ export function ProviderUsageSection({
                 <div className="h-3 w-24 rounded bg-primary-200/30 dark:bg-primary-700/20 animate-pulse" />
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-28 h-1.5 rounded-full bg-primary-200/50 dark:bg-primary-700/30" />
+                <div className="animate-pulse">
+                  <UsageTicks filledPercent={0} usedPercent={0} label="Loading usage" />
+                </div>
                 <div className="h-4 w-16 rounded bg-primary-200/50 dark:bg-primary-700/30 animate-pulse" />
               </div>
             </div>

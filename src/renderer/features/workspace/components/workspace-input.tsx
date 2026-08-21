@@ -24,7 +24,7 @@ import {
 import { useSpaceProviderVariant } from "@/hooks/use-space-provider-variant";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import { useDarkMode } from "@/hooks/use-dark-mode";
-import { spaceGlowColor } from "@/lib/space-themes";
+import { spaceGlowColor, spaceGlowShadow } from "@/lib/space-themes";
 import { useIsMobile } from "@/lib/platform";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { Chat, Check, Plus } from "@/components/ui/icons";
@@ -187,6 +187,11 @@ export function WorkspaceInput({
     layout === "centered"
       ? spaceGlowColor(activeSpace?.themeConfig ?? null, darkMode)
       : null;
+  // Built outside the JSX on purpose: calling the helper inline in `style`
+  // makes the React Compiler bail on this component's manual memoization.
+  const spaceGlowStyle = spaceGlow
+    ? { boxShadow: spaceGlowShadow(spaceGlow) }
+    : undefined;
 
 
   const {
@@ -706,13 +711,7 @@ export function WorkspaceInput({
         cursor-pointer transition-all
         ${layout === "default" ? "mb-4" : ""}
         ${isFileDragOver ? "ring-2 ring-primary/60 ring-offset-2 ring-offset-background" : ""}`}
-        style={
-          spaceGlow
-            ? {
-                boxShadow: `0 0 18px -9px ${spaceGlow}, 0 0 12px 6px ${spaceGlow}`,
-              }
-            : undefined
-        }
+        style={spaceGlowStyle}
         onDragEnter={handleWrapperDragEnter}
         onDragLeave={handleWrapperDragLeave}
         onDragOver={handleWrapperDragOver}

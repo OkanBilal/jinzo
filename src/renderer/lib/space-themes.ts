@@ -9,6 +9,12 @@ export interface ThemeColor {
   name: string;
   light: ThemeVariant;
   dark: ThemeVariant;
+  /**
+   * Carries no tint — a semi-transparent white/black that lets the app
+   * backdrop show through. Swatch UIs render it over a checkerboard instead
+   * of as a flat (near-black / near-white) disc.
+   */
+  translucent?: boolean;
 }
 
 const solid = (light: string, dark: string): ThemeColor => ({
@@ -18,14 +24,14 @@ const solid = (light: string, dark: string): ThemeColor => ({
 });
 
 export const solidColors: ThemeColor[] = [
-  { ...solid("#ffffffb3", "#00000070"), name: "Rose Quartz" },
+  { ...solid("#ffffffb3", "#00000070"), name: "Glass", translucent: true },
   { ...solid("#EEEEEEe6", "#121212e6"), name: "Light Brown" },
-  { ...solid("#C6E1D4e6", "#0e1a16e6"), name: "Light Green" },
-  { ...solid("#C5DEEEe6", "#0d171de6"), name: "Light Blue" },
-  { ...solid("#D6D4E8e6", "#181720e6"), name: "Light Purple" },
-  { ...solid("#F1DFC4e6", "#1b140ae6"), name: "Light Yellow" },
-  { ...solid("#EFD3D8e6", "#160e10e6"), name: "Light Pink" },
-  { ...solid("#F2D2C7e6", "#231212e6"), name: "Light Red" },
+  { ...solid("#C6E1D4e6", "#1F3129e6"), name: "Light Green" },
+  { ...solid("#C5DEEEe6", "#15232Ee6"), name: "Light Blue" },
+  { ...solid("#D6D4E8e6", "#1B1B28e6"), name: "Light Purple" },
+  { ...solid("#F1DFC4e6", "#332917e6"), name: "Light Yellow" },
+  { ...solid("#EFD3D8e6", "#2D1A1Ce6"), name: "Light Pink" },
+  { ...solid("#F2D2C7e6", "#351D16e6"), name: "Light Red" },
 ];
 
 /**
@@ -59,6 +65,67 @@ export const getThemeVariant = (
 ): ThemeVariant => (isDarkMode ? colorPair.dark : colorPair.light);
 
 /**
+ * Glow colour from a pastel hex. CSS relative color syntax re-tints the
+ * pastel per mode, and alpha scales with the pastel's own saturation so
+ * neutral colours fade out instead of casting a gray shadow.
+ */
+function glowFromHex(hex: string, isDarkMode: boolean): string {
+  return isDarkMode
+    ? `hsl(from ${hex} h calc(s * 1) 10% / calc(s * 0.5))`
+    : `hsl(from ${hex} h calc(s * 1) 90% / calc(s * 0.5))`;
+}
+
+/** The one box-shadow recipe for a space glow, shared by every glowing surface. */
+export function spaceGlowShadow(color: string): string {
+  return `0 0 18px -9px ${color}, 0 0 12px 6px ${color}`;
+}
+
+/**
+ * Compact variant of {@link spaceGlowShadow} for a 32px swatch: a crisp 2px
+ * halo hugging the disc plus a short falloff, so it reads as a lit ring rather
+ * than a diffuse cloud at that size.
+ */
+export function swatchGlowShadow(color: string): string {
+  return `0 0 0 1.5px color-mix(in srgb, ${color} 85%, transparent), 0 0 6px 2px color-mix(in srgb, ${color} 30%, transparent)`;
+}
+
+/** HSL saturation (0–1) of a `#rrggbb` hex. */
+function hexSaturation(hex: string): number {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  if (max === min) return 0;
+  const l = (max + min) / 2;
+  return (max - min) / (l > 0.5 ? 2 - max - min : max + min);
+}
+
+/**
+ * Selection glow colour for a swatch: the theme's hue, lit bright enough to
+ * separate from the page. The composer's glow sits at 10% lightness in dark
+ * mode — fine across a wide blur, invisible as a 2px halo on a near-black
+ * page — so the swatch re-lights the same hue instead of reusing it.
+ * Derives from the light pastel (dark values are near-black and carry no hue)
+ * and boosts saturation since the pastels are deliberately washed out.
+ * Hue-less swatches (the translucent one, and neutrals) get a neutral halo so
+ * the selection stays visible.
+ */
+export function swatchGlowColor(
+  colorPair: ThemeColor,
+  isDarkMode: boolean,
+): string {
+  const neutral = isDarkMode ? "hsl(0 0% 100% / 0.35)" : "hsl(0 0% 0% / 0.3)";
+  if (colorPair.translucent) return neutral;
+  const hex = colorPair.light.value.slice(0, 7);
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return neutral;
+  if (hexSaturation(hex) < 0.05) return neutral;
+  return isDarkMode
+    ? `hsl(from ${hex} h calc(s * 1.25) 40%)`
+    : `hsl(from ${hex} h calc(s * 1.25) 55%)`;
+}
+
+/**
  * Light pastel hex the theme's hue derives from. Always the light-mode value —
  * dark swatch values are near-black and carry no usable hue. Returns `null`
  * for gradients/unset themes.
@@ -83,9 +150,7 @@ export function spaceGlowColor(
 ): string | null {
   const hex = themeHueSource(themeConfig);
   if (!hex) return null;
-  return isDarkMode
-    ? `hsl(from ${hex} h calc(s * 1) 10% / calc(s * 0.5))`
-    : `hsl(from ${hex} h calc(s * 1) 90% / calc(s * 0.5))`;
+  return glowFromHex(hex, isDarkMode);
 }
 
 /**

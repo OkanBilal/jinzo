@@ -139,7 +139,7 @@ export function SegmentedTabs<T extends string>({
 
   const containerClass =
     variant === "pill"
-      ? "relative flex rounded-full glass-outline p-0.5"
+      ? "relative flex rounded-full glass-outline p-0.5 bg-primary-50/20 dark:bg-primary/2"
       : "relative flex gap-1";
 
   const tabClass = (isActive: boolean) => {
