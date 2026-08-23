@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect } from "react";
 import { HashRouter as Router, useLocation } from "react-router-dom";
 import Sidebar from "./components/layout/sidebar";
 import RightPanel from "./components/layout/right-panel";
@@ -37,7 +37,6 @@ import {
   setOnboardingCompleted,
 } from "./lib/redux/slices/appSettingsSlice";
 import { SidebarToggleButton } from "./components/layout/sidebar/sidebar-toggle-button";
-import { OnboardingScreen } from "./features/onboarding/components/onboarding-screen";
 import { MainHeaderProvider } from "./hooks/use-main-header";
 import { useLayoutWidthVars } from "./hooks/use-layout-width-vars";
 import { useAppearanceFonts } from "./hooks/use-appearance-fonts";
@@ -46,6 +45,14 @@ import { getRouteType } from "./lib/route-utils";
 import { useActiveSpace } from "./hooks/use-active-space";
 import { useUpdateSpaceMutation } from "./lib/redux/api";
 import type { ModeId } from "../shared/modes";
+
+// First-run-only UI is a substantial graph (feature previews, provider cards,
+// and settings controls). Completed users should not parse it on every launch.
+const OnboardingScreen = lazy(() =>
+  import("./features/onboarding/components/onboarding-screen").then((module) => ({
+    default: module.OnboardingScreen,
+  })),
+);
 
 /** Layout widths live in CSS (`--sidebar-width`, `--panel-width`, `--browser-panel-width`) — see index.css. */
 const SIDEBAR_WIDTH = "var(--sidebar-width)";
@@ -233,7 +240,9 @@ function AppContent() {
     return (
       <>
         <Toaster />
-        <OnboardingScreen />
+        <Suspense fallback={null}>
+          <OnboardingScreen />
+        </Suspense>
       </>
     );
   }

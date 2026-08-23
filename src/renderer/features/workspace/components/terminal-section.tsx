@@ -1,7 +1,15 @@
+import { lazy, Suspense } from "react";
 import { Close, Bash } from "@/components/ui/icons";
 import { Body, Button } from "@/components/ui";
 import { BOTTOM_TERMINAL_HEIGHT } from "@/lib/layout";
-import { XtermTerminal } from "./xterm-terminal";
+
+// xterm is only useful after the user opens the terminal. Keeping it behind
+// this boundary removes its parser and renderer from normal app startup.
+const XtermTerminal = lazy(() =>
+  import("./xterm-terminal").then((module) => ({
+    default: module.XtermTerminal,
+  })),
+);
 
 interface TerminalSectionProps {
   workspaceId: string;
@@ -43,10 +51,12 @@ export function TerminalSection({
       </div>
       {isOpen && (
         <div className="h-52">
-          <XtermTerminal
-            id={terminalId}
-            rootPath={rootPath}
-          />
+          <Suspense fallback={null}>
+            <XtermTerminal
+              id={terminalId}
+              rootPath={rootPath}
+            />
+          </Suspense>
         </div>
       )}
     </div>

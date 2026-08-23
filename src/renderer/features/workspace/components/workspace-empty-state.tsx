@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import type { Workspace } from "../types";
 import { useWorkspaceVariant } from "@/hooks/use-workspace-variant";
 import { useActiveSpace } from "@/hooks/use-active-space";
@@ -9,10 +9,11 @@ import { ParticleLogoCanvas } from "./particle-logo-canvas";
 import { Mains } from "@/components/ui/icons";
 import { Button } from "@/components/ui";
 import { SpaceThemePicker } from "./space-theme-picker";
-import ClaudeSettings from "@/features/settings/components/claude";
-import CodexSettings from "@/features/settings/components/codex";
-import CopilotSettings from "@/features/settings/components/copilot";
-import CursorSettings from "@/features/settings/components/cursor";
+
+const ClaudeSettings = lazy(() => import("@/features/settings/components/claude"));
+const CodexSettings = lazy(() => import("@/features/settings/components/codex"));
+const CopilotSettings = lazy(() => import("@/features/settings/components/copilot"));
+const CursorSettings = lazy(() => import("@/features/settings/components/cursor"));
 
 function ProviderSettings({ variant }: { variant: WorkspaceVariant }) {
   switch (variant) {
@@ -53,6 +54,8 @@ export function WorkspaceEmptyState({
   const [trackedSpaceId, setTrackedSpaceId] = useState<string | undefined>(
     activeSpace?.id,
   );
+  const [hasOpenedCustomizer, setHasOpenedCustomizer] = useState(isCustomizing);
+  if (isCustomizing && !hasOpenedCustomizer) setHasOpenedCustomizer(true);
 
   if (activeSpace?.id !== trackedSpaceId) {
     setTrackedSpaceId(activeSpace?.id);
@@ -118,7 +121,11 @@ export function WorkspaceEmptyState({
                   />
                 </div>
 
-                <ProviderSettings variant={variant} />
+                {hasOpenedCustomizer ? (
+                  <Suspense fallback={null}>
+                    <ProviderSettings variant={variant} />
+                  </Suspense>
+                ) : null}
               </div>
             ) : null}
           </div>

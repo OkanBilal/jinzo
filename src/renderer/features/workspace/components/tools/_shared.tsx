@@ -1,11 +1,16 @@
-import { createContext, useContext, type ReactNode } from "react";
-import { PatchDiff } from "@pierre/diffs/react";
+import {
+  createContext,
+  lazy,
+  Suspense,
+  useContext,
+  useState,
+  type ReactNode,
+} from "react";
 import { ArrowUp } from "@/components/ui/icons";
 import { Button, SquareSpinner, Text } from "@/components/ui";
-import { useIsDarkMode } from "@/hooks/use-is-dark-mode";
-import { DIFF_TYPOGRAPHY_STYLE, patchDiffOptions } from "@/lib/diff-style";
-import { useDiffHighlighterReady } from "@/lib/diff-highlighter";
 import type { RunEvent } from "../../types";
+
+const ToolDiffBodyContent = lazy(() => import("./tool-diff-body"));
 
 /**
  * Tool-call lifecycle status, mirroring the `tool_calls.status` column
@@ -294,28 +299,26 @@ export function ToolOutputBody({
  * the scroll shell plus one `PatchDiff` on the app's shared typography and
  * options.
  *
- * It also owns the highlighter gate. `ToolCollapse` mounts its children even
- * while collapsed, so these rows hit `@pierre/diffs` at its coldest — and a
- * surface mounted before the highlighter lands paints nothing and never
- * repaints itself (see `lib/diff-highlighter`).
+ * The actual diff renderer is async: a collapsed tool row does not need to
+ * parse `@pierre/diffs` and Shiki during app startup.
  */
 export function ToolDiffBody({ patch }: { patch: string }) {
-  const isDarkMode = useIsDarkMode();
-  const highlighterReady = useDiffHighlighterReady();
-
   return (
     <div className="max-h-80 overflow-y-auto noscrollbar p-0.5">
-      {highlighterReady ? (
-        <PatchDiff
-          patch={patch}
-          style={DIFF_TYPOGRAPHY_STYLE}
-          options={patchDiffOptions(isDarkMode)}
-        />
-      ) : (
-        <Text as="div" size="xs" tone="subtle" className="px-2 py-1.5 shine-text">
-          Loading diff...
-        </Text>
-      )}
+      <Suspense
+        fallback={
+          <Text
+            as="div"
+            size="xs"
+            tone="subtle"
+            className="px-2 py-1.5 shine-text"
+          >
+            Loading diff...
+          </Text>
+        }
+      >
+        <ToolDiffBodyContent patch={patch} />
+      </Suspense>
     </div>
   );
 }
@@ -335,13 +338,21 @@ export function ToolCollapse({
   /** Extra classes merged onto the outer grid (e.g. border/rounded for diff bodies). */
   className?: string;
 }) {
+  // Do not mount expensive output bodies for the hundreds of historical rows
+  // a transcript can keep collapsed. Once opened, retain the body so closing
+  // still animates and local state survives subsequent toggles.
+  const [hasOpened, setHasOpened] = useState(isExpanded);
+  if (isExpanded && !hasOpened) setHasOpened(true);
+
   return (
     <div
       className={`grid transition-all duration-200 ease-out ${
         isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
       } ${className}`}
     >
-      <div className="min-h-0 overflow-hidden">{children}</div>
+      <div className="min-h-0 overflow-hidden">
+        {hasOpened ? children : null}
+      </div>
     </div>
   );
 }
