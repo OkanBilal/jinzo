@@ -10,6 +10,7 @@ import {
 } from "@/lib/redux/slices/workspaceSlice";
 import { useResyncWorkspaceDiffMutation } from "@/lib/redux/api";
 import { DIFF_TYPOGRAPHY_STYLE, diffSurfaceOptions } from "@/lib/diff-style";
+import { useDiffHighlighterReady } from "@/lib/diff-highlighter";
 import { Button, Text } from "@/components/ui";
 import type {
   FileContentResponse,
@@ -51,6 +52,9 @@ export function CodeViewer({
   const isDarkMode = useIsDarkMode();
   const dispatch = useAppDispatch();
   const [resyncWorkspaceDiff] = useResyncWorkspaceDiffMutation();
+  // Same cold-start blank as the diff viewer: `File` paints nothing while the
+  // highlighter is still loading and never repaints on its own.
+  const highlighterReady = useDiffHighlighterReady();
 
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -371,6 +375,11 @@ export function CodeViewer({
         </div>
       )}
       <div className="h-full overflow-auto">
+        {!highlighterReady ? (
+          <Text as="div" size="xs" tone="subtle" className="px-4 py-3 shine-text">
+            Loading file...
+          </Text>
+        ) : (
         <EditProvider createEditor={createEditor}>
           <File
             file={file}
@@ -380,6 +389,7 @@ export function CodeViewer({
             options={{ ...diffSurfaceOptions(isDarkMode), overflow: "scroll" }}
           />
         </EditProvider>
+        )}
       </div>
     </div>
   );

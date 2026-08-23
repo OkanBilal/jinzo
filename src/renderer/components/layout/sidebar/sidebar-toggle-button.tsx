@@ -1,4 +1,4 @@
-import { Toggle, ToggleClose } from "@/components/ui/icons";
+import { SidebarOpen, SidebarClose } from "@/components/ui/icons";
 import { Button } from "@/components/ui";
 import { useState, useEffect } from "react";
 import { useCapabilities } from "@/lib/platform";
@@ -48,9 +48,9 @@ export function SidebarToggleButton({
           aria-label={isOpen ? "Close sidebar" : "Open sidebar"}
         >
           {isOpen ? (
-            <Toggle className="size-4 text-primary-800 dark:text-primary-200 rotate-180" />
+            <SidebarOpen className="size-4 text-primary-800 dark:text-primary-200" />
           ) : (
-            <ToggleClose className="size-4 text-primary-700 dark:text-primary-300 rotate-180" />
+            <SidebarClose className="size-4 text-primary-700 dark:text-primary-300" />
           )}
         </Button>
       </div>

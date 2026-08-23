@@ -1,12 +1,9 @@
 import { useMemo, useState } from "react";
-import { useIsDarkMode } from "@/hooks/use-is-dark-mode";
 import { Edit } from "@/components/ui/icons";
-import { PatchDiff } from "@pierre/diffs/react";
-import { DIFF_TYPOGRAPHY_STYLE, patchDiffOptions } from "@/lib/diff-style";
 import { normalizePatchForPatchDiff } from "../../lib/patch-utils";
 import { useOpenFileInEditor } from "../../hooks/use-open-file-in-editor";
 import { FileIconComponent } from "@/components/ui/icons";
-import { TOOL_ROW_TEXT, ToolCollapse, ToolHeader } from "./_shared";
+import { TOOL_ROW_TEXT, ToolCollapse, ToolDiffBody, ToolHeader } from "./_shared";
 
 export interface ApplyPatchParams {
   /** Copilot CLI's apply_patch passes the whole `*** Begin Patch …` envelope as a string. */
@@ -35,7 +32,6 @@ export function ApplyPatchDisplay({
   isCompact?: boolean;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const isDarkMode = useIsDarkMode();
   const openFile = useOpenFileInEditor();
 
   // Prefer the completed output (full absolute path), since the envelope passed
@@ -101,13 +97,7 @@ export function ApplyPatchDisplay({
           isExpanded={isExpanded}
           className="rounded-md border border-primary-200/50 dark:border-primary-700/30"
         >
-          <div className="max-h-80 overflow-y-auto noscrollbar p-0.5">
-            <PatchDiff
-              patch={unifiedDiff}
-              style={DIFF_TYPOGRAPHY_STYLE}
-              options={patchDiffOptions(isDarkMode)}
-            />
-          </div>
+          <ToolDiffBody patch={unifiedDiff} />
         </ToolCollapse>
       )}
     </div>

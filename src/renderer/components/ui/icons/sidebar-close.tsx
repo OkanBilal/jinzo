@@ -18,13 +18,13 @@ const SvgComponent = (props: SVGProps<SVGSVGElement>) => (
       stroke="currentColor"
       strokeLinecap="round"
       strokeWidth={1.5}
-      d="M15 3v18"
+      d="M9 3v18"
     />
     <path
       stroke="currentColor"
       strokeLinecap="round"
       strokeWidth={1.5}
-      d="M17.75 7.5h1.5M17.75 10.5h1.5M17.75 13.5h1.5"
+      d="M4.75 7.5h1.5M4.75 10.5h1.5M4.75 13.5h1.5"
     />
   </svg>
 )

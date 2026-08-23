@@ -1,4 +1,4 @@
-import { Toggle, Terminal, TerminalOpen, ToggleClose, Web } from "@/components/ui/icons";
+import { RightPanelOpen, RightPanelClose, Terminal, TerminalOpen, Web } from "@/components/ui/icons";
 import { Button, toast } from "@/components/ui";
 import { useAppSelector } from "@/lib/redux/hooks";
 import { useCapabilities } from "@/lib/platform";
@@ -82,9 +82,9 @@ export function ToggleButton({
           aria-label={isOpen ? "Close right panel" : "Open right panel"}
         >
           {isOpen ? (
-            <Toggle  className="size-4 text-primary-800 dark:text-primary-200" />
+            <RightPanelOpen className="size-4 text-primary-800 dark:text-primary-200" />
           ) : (
-            <ToggleClose  className="size-4 text-primary-700 dark:text-primary-300" />
+            <RightPanelClose className="size-4 text-primary-700 dark:text-primary-300" />
           )}
         </Button>
       )}

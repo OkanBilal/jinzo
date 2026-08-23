@@ -22,6 +22,8 @@ export { default as Close } from "./close";
 export { default as Toggle } from "./toggle";
 export { default as RightPanelOpen } from "./right-panel-open";
 export { default as RightPanelClose } from "./right-panel-close";
+export { default as SidebarOpen } from "./sidebar-open";
+export { default as SidebarClose } from "./sidebar-close";
 export { default as Document } from "./document";
 export { default as Feed } from "./feed";
 export { default as General } from "./general";

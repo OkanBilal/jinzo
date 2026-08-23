@@ -235,40 +235,47 @@ export interface ProviderUsageRow {
   total?: number;
 }
 
+/**
+ * What sits beside the meter: a bare `N% left`, or the provider's own counts
+ * (`24 / 200`) when it reports them.
+ */
+export type UsageReadout = "percentLeft" | "counts";
+
 const USAGE_TICK_COUNT = 24;
 
 /**
- * Tick colour by how much of the window is consumed. Thresholds are on
- * *used* percent regardless of whether the bar draws used or remaining, so a
- * Codex row (remaining) and a Copilot row (used) at the same consumption
- * level carry the same colour.
+ * Tick colour by how much of the window is left — the same quantity the meter
+ * draws, so the colour can't disagree with the fill. Half the allowance gone
+ * turns it amber, a fifth left turns it red.
  */
-function usageLevelClass(usedPercent: number): string {
-  if (usedPercent >= 80) return "bg-danger";
-  if (usedPercent >= 50) return "bg-warning";
+function usageLevelClass(remainingPercent: number): string {
+  if (remainingPercent <= 20) return "bg-danger";
+  if (remainingPercent <= 50) return "bg-warning";
   return "bg-accent";
 }
 
 /**
- * Segmented meter: a row of thin ticks, the first `filledPercent` of them in
- * the level colour, the rest muted. Rounds to the nearest tick but always
- * lights at least one for a non-zero value so a 1% reading isn't drawn empty.
+ * Segmented meter: a row of thin ticks, the ones covering what's *left* in the
+ * level colour, the rest muted. Rounds to the nearest tick but always lights at
+ * least one for a non-zero remainder so a 1% reading isn't drawn empty.
+ *
+ * The meter reads the same way on every provider — a full row means a full
+ * allowance — so it takes consumption and derives the fill itself rather than
+ * letting a caller hand it the opposite quantity.
  */
 function UsageTicks({
-  filledPercent,
   usedPercent,
   label,
 }: {
-  filledPercent: number;
   usedPercent: number;
   label: string;
 }) {
-  const clamped = Math.min(100, Math.max(0, filledPercent));
+  const clamped = Math.min(100, Math.max(0, 100 - usedPercent));
   const filled =
     clamped === 0
       ? 0
       : Math.max(1, Math.round((clamped / 100) * USAGE_TICK_COUNT));
-  const levelClass = usageLevelClass(usedPercent);
+  const levelClass = usageLevelClass(clamped);
 
   return (
     <div
@@ -294,20 +301,25 @@ function UsageTicks({
 }
 
 /**
- * One rate-limit row. `display` preserves the two existing presentations:
- * "remaining" (Codex — bar and text show what's left) and "used" (Copilot —
- * bar fills with usage, text shows counts when available).
+ * One rate-limit row. The meter always draws what's left; `readout` only picks
+ * the number beside it — a bare percentage (Codex) or, where a provider reports
+ * raw counts, how many of them are left (Copilot's `176 / 200`). The counts read
+ * the same direction as the bar: the leading number is the remainder, not the
+ * consumption. They fall back to the percentage when the provider didn't send
+ * them, so the text never contradicts the bar.
  */
 function UsageRateLimitRow({
   row,
-  display,
+  readout,
 }: {
   row: ProviderUsageRow;
-  display: "remaining" | "used";
+  readout: UsageReadout;
 }) {
   const remaining = 100 - row.usedPercent;
   const hasCounts = typeof row.used === "number" && typeof row.total === "number";
-  const barPercent = display === "remaining" ? remaining : row.usedPercent;
+  // Clamped: a provider that reports more used than it entitles (or a snapshot
+  // caught mid-reset) shouldn't render a negative remainder.
+  const remainingCount = hasCounts ? Math.max(0, row.total! - row.used!) : 0;
 
   return (
     <div className="flex items-center justify-between py-3">
@@ -322,20 +334,14 @@ function UsageRateLimitRow({
         )}
       </div>
       <div className="flex items-center gap-3">
-        <UsageTicks
-          filledPercent={barPercent}
-          usedPercent={row.usedPercent}
-          label={row.label}
-        />
-        {display === "remaining" ? (
-          <Text as="span" tone="subtle" align="right" className="w-16">
-            {remaining}% left
+        <UsageTicks usedPercent={row.usedPercent} label={row.label} />
+        {readout === "counts" && hasCounts ? (
+          <Text as="span" tone="subtle" align="right" className="w-28 tabular-nums">
+            {`${remainingCount.toLocaleString()} / ${row.total!.toLocaleString()}`}
           </Text>
         ) : (
-          <Text as="span" tone="subtle" align="right" className="w-24 tabular-nums">
-            {hasCounts
-              ? `${row.used!.toLocaleString()} / ${row.total!.toLocaleString()}`
-              : `${row.usedPercent}% used`}
+          <Text as="span" tone="subtle" align="right" className="w-16">
+            {remaining}% left
           </Text>
         )}
       </div>
@@ -347,11 +353,11 @@ function UsageRateLimitRow({
 export function ProviderUsageSection({
   isLoading,
   rows,
-  display,
+  readout,
 }: {
   isLoading: boolean;
   rows: ProviderUsageRow[];
-  display: "remaining" | "used";
+  readout: UsageReadout;
 }) {
   return (
     <SettingsSection title="Usage">
@@ -365,7 +371,7 @@ export function ProviderUsageSection({
               </div>
               <div className="flex items-center gap-3">
                 <div className="animate-pulse">
-                  <UsageTicks filledPercent={0} usedPercent={0} label="Loading usage" />
+                  <UsageTicks usedPercent={100} label="Loading usage" />
                 </div>
                 <div className="h-4 w-16 rounded bg-primary-200/50 dark:bg-primary-700/30 animate-pulse" />
               </div>
@@ -375,7 +381,7 @@ export function ProviderUsageSection({
       ) : rows.length > 0 ? (
         <div className="divide-y divide-primary-200/50 dark:divide-primary-800/20">
           {rows.map((row, i) => (
-            <UsageRateLimitRow key={`${row.label}-${i}`} row={row} display={display} />
+            <UsageRateLimitRow key={`${row.label}-${i}`} row={row} readout={readout} />
           ))}
         </div>
       ) : (

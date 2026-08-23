@@ -1,6 +1,10 @@
 import { createContext, useContext, type ReactNode } from "react";
+import { PatchDiff } from "@pierre/diffs/react";
 import { ArrowUp } from "@/components/ui/icons";
-import { Button, SquareSpinner } from "@/components/ui";
+import { Button, SquareSpinner, Text } from "@/components/ui";
+import { useIsDarkMode } from "@/hooks/use-is-dark-mode";
+import { DIFF_TYPOGRAPHY_STYLE, patchDiffOptions } from "@/lib/diff-style";
+import { useDiffHighlighterReady } from "@/lib/diff-highlighter";
 import type { RunEvent } from "../../types";
 
 /**
@@ -282,6 +286,37 @@ export function ToolOutputBody({
     >
       {children}
     </Tag>
+  );
+}
+
+/**
+ * The diff card Edit / Write / ApplyPatch all render inside their ToolCollapse:
+ * the scroll shell plus one `PatchDiff` on the app's shared typography and
+ * options.
+ *
+ * It also owns the highlighter gate. `ToolCollapse` mounts its children even
+ * while collapsed, so these rows hit `@pierre/diffs` at its coldest — and a
+ * surface mounted before the highlighter lands paints nothing and never
+ * repaints itself (see `lib/diff-highlighter`).
+ */
+export function ToolDiffBody({ patch }: { patch: string }) {
+  const isDarkMode = useIsDarkMode();
+  const highlighterReady = useDiffHighlighterReady();
+
+  return (
+    <div className="max-h-80 overflow-y-auto noscrollbar p-0.5">
+      {highlighterReady ? (
+        <PatchDiff
+          patch={patch}
+          style={DIFF_TYPOGRAPHY_STYLE}
+          options={patchDiffOptions(isDarkMode)}
+        />
+      ) : (
+        <Text as="div" size="xs" tone="subtle" className="px-2 py-1.5 shine-text">
+          Loading diff...
+        </Text>
+      )}
+    </div>
   );
 }
 

@@ -390,7 +390,7 @@ export default function CodexSettings() {
       <ProviderUsageSection
         isLoading={isLoadingRateLimits}
         rows={usageRows}
-        display="remaining"
+        readout="percentLeft"
       />
 
       <StructuredOutputsModal

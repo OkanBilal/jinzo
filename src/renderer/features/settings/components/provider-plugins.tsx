@@ -35,6 +35,7 @@ import {
   External,
   Plus,
   ArrowUp,
+  Close,
 } from "@/components/ui/icons";
 
 // ── Helpers ──
@@ -1220,10 +1221,28 @@ export default function ProviderPlugins({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => {
+              // Escape clears the filter rather than bubbling out of the page.
+              if (e.key === "Escape" && search) {
+                e.preventDefault();
+                e.stopPropagation();
+                setSearch("");
+              }
+            }}
             placeholder="Search plugins..."
             aria-label="Search plugins"
-            className="pl-8 py-1.5"
+            className={`pl-8 py-1.5 ${search ? "pr-8" : ""}`}
           />
+          {search && (
+            <Button
+              onClick={() => setSearch("")}
+              title="Clear search"
+              aria-label="Clear search"
+              className="absolute right-1.5 top-1/2 flex size-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-primary-600 hover:bg-primary/20 hover:text-primary-800 dark:text-primary-400 dark:hover:bg-primary/10 dark:hover:text-primary-200"
+            >
+              <Close className="size-3" />
+            </Button>
+          )}
         </div>
       </div>
 

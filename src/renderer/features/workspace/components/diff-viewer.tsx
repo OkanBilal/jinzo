@@ -15,6 +15,7 @@ import { ImagePreviewModal } from "./image-preview-modal";
 import { useLocalImageUrl } from "@/hooks/use-local-image-url";
 import { useIsDarkMode } from "@/hooks/use-is-dark-mode";
 import { DIFF_TYPOGRAPHY_STYLE, patchDiffOptions } from "@/lib/diff-style";
+import { useDiffHighlighterReady } from "@/lib/diff-highlighter";
 import { Button, Text } from "@/components/ui";
 import type { FindingSeverity } from "@/lib/redux/api";
 import {
@@ -179,6 +180,10 @@ export function DiffViewer({
   const isDarkMode = useIsDarkMode();
   const dispatch = useAppDispatch();
   const [updateFinding] = useUpdateReviewFindingMutation();
+  // Don't mount PatchDiff before the highlighter is live — it renders nothing
+  // and doesn't repaint when the highlighter lands, so the pane would stay
+  // blank until an unrelated re-render (opening another file) revived it.
+  const highlighterReady = useDiffHighlighterReady();
 
   const { data: allFindings } = useListReviewFindingsByWorkspaceQuery(
     { workspaceId: workspaceId! },
@@ -311,6 +316,8 @@ export function DiffViewer({
     <div className={`h-full overflow-auto ${className}`}>
       {!expandedDiff.trim() ? (
         <Text as="div" size="xs" tone="subtle" className="px-4 py-3">No diff content to display.</Text>
+      ) : !highlighterReady ? (
+        <Text as="div" size="xs" tone="subtle" className="px-4 py-3 shine-text">Loading diff...</Text>
       ) : (
         <PatchDiff
           patch={expandedDiff}
