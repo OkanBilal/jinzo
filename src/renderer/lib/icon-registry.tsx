@@ -29,7 +29,7 @@ export const iconRegistry: Record<string, IconComponent> = {
   atom: Icons.Atom,
   bell: Icons.Bell,
   bicycle: Icons.Bicycle,
-  Bag: Icons.Bag,
+  bag: Icons.Bag,
   box: Icons.Box,
   bug: Icons.Bug,
   cat: Icons.Cat,

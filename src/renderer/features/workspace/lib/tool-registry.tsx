@@ -98,6 +98,21 @@ export const DEFAULT_VERBS: Record<string, VerbInfo> = {
  * `{verb}_{entity}` automatically and rendered through `McpDisplay` without
  * any further wiring.
  */
+/**
+ * Tools whose point is producing or changing a file, by the `displayName`
+ * `resolveTool()` resolves them to — so every provider's spelling
+ * (`write` / `create_file` / `apply_patch` / …) collapses to one name here.
+ *
+ * Read is absent on purpose: this is the set whose output is a deliverable,
+ * not the set that touches the filesystem.
+ */
+export const FILE_WRITING_TOOLS: ReadonlySet<string> = new Set([
+  "Write",
+  "Edit",
+  "Create",
+  "Apply Patch",
+]);
+
 export const VENDORS: VendorInfo[] = [
   {
     id: "mains",

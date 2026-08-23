@@ -76,6 +76,15 @@ export interface ModeConfigDescriptor {
    * The browser toggle is independent and survives without it.
    */
   showRightPanel: boolean;
+  /**
+   * Keep file-writing tool calls out of the turn accordion.
+   *
+   * In Code a turn is dozens of edits and collapsing them is the whole point.
+   * In Work the file *is* the deliverable — the agent names it in prose but the
+   * only way to open it is the Write row, which is exactly what the accordion
+   * was hiding. Same reasoning that already keeps generated media visible.
+   */
+  keepFileWritesVisible: boolean;
 }
 
 export const MODE_CONFIGS: Record<ModeId, ModeConfigDescriptor> = {
@@ -105,6 +114,7 @@ export const MODE_CONFIGS: Record<ModeId, ModeConfigDescriptor> = {
     showTabs: true,
     showPluginsButton: false,
     showRightPanel: true,
+    keepFileWritesVisible: false,
   },
   // Work: same surfaces minus the developer ceremony — no git actions, no
   // terminal, no diff tab, no permission dropdown (the harness pins
@@ -135,6 +145,7 @@ export const MODE_CONFIGS: Record<ModeId, ModeConfigDescriptor> = {
     showTabs: false,
     showPluginsButton: true,
     showRightPanel: false,
+    keepFileWritesVisible: true,
   },
   // Chat: plain conversation — read-only harness, so every write-adjacent
   // affordance goes. Files tab stays for viewing.
@@ -162,6 +173,7 @@ export const MODE_CONFIGS: Record<ModeId, ModeConfigDescriptor> = {
     showTabs: false,
     showPluginsButton: false,
     showRightPanel: false,
+    keepFileWritesVisible: false,
   },
 };
 

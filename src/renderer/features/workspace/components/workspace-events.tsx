@@ -17,6 +17,9 @@ import { NoteTabContent } from "./note-tab-content";
 import { WorkspaceEmptyState } from "./workspace-empty-state";
 import { TurnRail } from "./turn-rail";
 import { buildTurnMarkers, type TurnMarker } from "../lib/turn-markers";
+import { FILE_WRITING_TOOLS } from "../lib/tool-registry";
+import { resolveTool } from "../lib/resolve-tool";
+import { useModeConfig } from "@/hooks/use-mode-config";
 import type { Run, RunEvent, Workspace } from "../types";
 import type { IssueWithEntity, SignalWithEntity, RunTurn, ModelUsageEntry } from "@/lib/redux/api";
 import {
@@ -499,9 +502,27 @@ export function WorkspaceEvents({
     [activeRun, onForkRun],
   );
 
+  // Work calls a written file the deliverable, so its Write row has to stay
+  // reachable: the agent names the file in prose but only that row opens it.
+  const { keepFileWritesVisible } = useModeConfig();
+  const isDeliverableGroup = useMemo(
+    () =>
+      keepFileWritesVisible
+        ? (group: EventGroup) =>
+            group.events.some(
+              (e) =>
+                e.type === "tool_call" &&
+                typeof e.metadata?.toolName === "string" &&
+                FILE_WRITING_TOOLS.has(
+                  resolveTool(e.metadata.toolName).displayName,
+                ),
+            )
+        : undefined,
+    [keepFileWritesVisible],
+  );
   const turnRenderRows = useMemo(
-    () => buildTurnRenderRows(eventGroups),
-    [eventGroups],
+    () => buildTurnRenderRows(eventGroups, { isDeliverableGroup }),
+    [eventGroups, isDeliverableGroup],
   );
 
   // Left-edge navigator: one tick per user message. Built from the same groups
