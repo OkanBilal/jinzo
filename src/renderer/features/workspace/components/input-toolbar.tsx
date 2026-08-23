@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, type RefObject } from "react";
 import { getProviderVariant } from "@/lib/provider-variants";
+import type { SkillInfo } from "@/lib/redux/api/providersApi";
+import { PluginsButton } from "./plugins-button";
 import { useIsMobile } from "@/lib/platform";
 import { useModeConfig } from "@/hooks/use-mode-config";
 import {
@@ -45,6 +47,11 @@ interface InputToolbarProps {
   // Goal mode (Codex only) — registers the prompt as the thread's tracked goal
   goalMode?: boolean;
   onGoalModeToggle?: () => void;
+  // Plugins picker (work mode) — opens the context menu narrowed to plugins
+  pluginSkills?: SkillInfo[];
+  pluginsMenuOpen?: boolean;
+  onTogglePluginsMenu?: () => void;
+  pluginsButtonRef?: RefObject<HTMLButtonElement | null>;
   // Thinking mode (Claude only)
   thinkingMode: boolean;
   onThinkingModeToggle: () => void;
@@ -84,6 +91,10 @@ export function InputToolbar({
   onPlanModeToggle,
   goalMode,
   onGoalModeToggle,
+  pluginSkills,
+  pluginsMenuOpen = false,
+  onTogglePluginsMenu,
+  pluginsButtonRef,
   thinkingMode,
   onThinkingModeToggle,
   fastMode,
@@ -263,6 +274,17 @@ export function InputToolbar({
             modeConfig.showGoalControls &&
             onGoalModeToggle && (
               <GoalButton goalMode={!!goalMode} onToggle={onGoalModeToggle} />
+            )}
+          {modeConfig.showPluginsButton &&
+            onTogglePluginsMenu &&
+            pluginSkills &&
+            pluginSkills.length > 0 && (
+              <PluginsButton
+                ref={pluginsButtonRef}
+                plugins={pluginSkills}
+                isOpen={pluginsMenuOpen}
+                onToggle={onTogglePluginsMenu}
+              />
             )}
         </div>
         <div className="flex items-center ">

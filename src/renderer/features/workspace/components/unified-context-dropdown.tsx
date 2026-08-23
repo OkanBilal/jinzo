@@ -17,6 +17,12 @@ import { useLocalImageUrl } from "@/hooks/use-local-image-url";
  */
 export type UnifiedContextTrigger = "@" | "/" | "$" | "#";
 
+/**
+ * Optional narrowing on top of the trigger: the toolbar's plugins picker opens
+ * the "$" menu restricted to the plugins bucket, with no token in the text.
+ */
+export type UnifiedContextBucket = "plugins";
+
 interface FetchState {
   entries: DirEntry[];
   loading: boolean;
@@ -169,6 +175,8 @@ type FlatRow =
 interface UnifiedContextDropdownProps {
   isOpen: boolean;
   trigger: UnifiedContextTrigger;
+  /** Restrict the menu to one skill bucket (toolbar-opened pickers). */
+  bucket?: UnifiedContextBucket | null;
   filterText: string;
   workspacePath?: string;
   projectId?: string;
@@ -182,6 +190,8 @@ interface UnifiedContextDropdownProps {
   onSelectIssue: (issue: IssueWithEntity) => void;
   onClose: () => void;
   dropdownRef: RefObject<HTMLDivElement | null>;
+  /** A toolbar trigger that opened this menu — clicks on it are not "outside". */
+  triggerRef?: RefObject<HTMLElement | null>;
 }
 
 function buildSections(
@@ -258,6 +268,7 @@ function SectionHeading({
 export function UnifiedContextDropdown({
   isOpen,
   trigger,
+  bucket = null,
   filterText,
   workspacePath,
   projectId,
@@ -271,11 +282,13 @@ export function UnifiedContextDropdown({
   onSelectIssue,
   onClose,
   dropdownRef,
+  triggerRef,
 }: UnifiedContextDropdownProps) {
-  const isCombined = trigger === "@" || trigger === "/";
-  const wantsSkills = isCombined || trigger === "$";
+  const pluginsOnly = bucket === "plugins";
+  const isCombined = !pluginsOnly && (trigger === "@" || trigger === "/");
+  const wantsSkills = isCombined || trigger === "$" || pluginsOnly;
   const wantsFiles = isCombined && Boolean(workspacePath);
-  const wantsIssues = isCombined || trigger === "#";
+  const wantsIssues = isCombined || (!pluginsOnly && trigger === "#");
   const wantsCommands = isCombined;
 
   const [fetchState, dispatchFetch] = useReducer(fetchReducer, {
@@ -284,9 +297,13 @@ export function UnifiedContextDropdown({
     error: null,
   });
 
-  useClickOutside(dropdownRef, () => {
-    if (isOpen) onClose();
-  });
+  useClickOutside(
+    dropdownRef,
+    () => {
+      if (isOpen) onClose();
+    },
+    triggerRef,
+  );
 
   const { dirPath, nameFilter } = useMemo(() => parseFileFilterText(filterText), [filterText]);
 
@@ -432,8 +449,8 @@ export function UnifiedContextDropdown({
   const sections = useMemo(() => {
     return buildSections(
       wantsSkills ? pluginSkills : [],
-      wantsSkills ? macSkills : [],
-      wantsSkills ? regularSkills : [],
+      wantsSkills && !pluginsOnly ? macSkills : [],
+      wantsSkills && !pluginsOnly ? regularSkills : [],
       wantsFiles ? sortedFiles : [],
       dirPath,
       wantsFiles,
@@ -442,6 +459,7 @@ export function UnifiedContextDropdown({
     );
   }, [
     wantsSkills,
+    pluginsOnly,
     pluginSkills,
     macSkills,
     regularSkills,
@@ -516,14 +534,15 @@ export function UnifiedContextDropdown({
 
   const isLoading =
     flatRows.length === 0 &&
-    (trigger === "$"
+    (trigger === "$" || pluginsOnly
       ? isLoadingSkills
       : trigger === "#"
         ? Boolean(projectId) && isLoadingIssues
         : fetchState.loading || (Boolean(projectId) && isLoadingIssues));
 
-  const emptyText =
-    trigger === "$"
+  const emptyText = pluginsOnly
+    ? "No plugins installed"
+    : trigger === "$"
       ? "No skills available"
       : trigger === "#"
         ? projectId

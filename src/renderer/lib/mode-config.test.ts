@@ -62,6 +62,22 @@ describe("MODE_CONFIGS table invariants", () => {
     }
   });
 
+  it("advertises files in the composer only where the agent edits them", () => {
+    for (const mode of MODE_IDS) {
+      const ph = MODE_CONFIGS[mode].composerPlaceholder;
+      expect(ph.initial.length).toBeGreaterThan(0);
+      expect(ph.followUp.length).toBeGreaterThan(0);
+      expect(/files/.test(ph.initial)).toBe(mode === "developer");
+      expect(/files/.test(ph.followUp)).toBe(mode === "developer");
+    }
+  });
+
+  it("shows the plugins picker only in work", () => {
+    expect(MODE_CONFIGS.developer.showPluginsButton).toBe(false);
+    expect(MODE_CONFIGS.work.showPluginsButton).toBe(true);
+    expect(MODE_CONFIGS.chat.showPluginsButton).toBe(false);
+  });
+
   it("keeps chat free of every composer mode control", () => {
     expect(MODE_CONFIGS.chat.showPlanControls).toBe(false);
     expect(MODE_CONFIGS.chat.showGoalControls).toBe(false);

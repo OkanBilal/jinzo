@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Home from "@/routes/Home";
 import { useSidebarConfig } from "@/hooks/use-sidebar-config";
+import { useModeConfig } from "@/hooks/use-mode-config";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import CodePage from "@/routes/Code";
 
@@ -27,6 +28,22 @@ function DefaultRoute() {
   return <Home />;
 }
 
+/**
+ * `/tasks` exists only in the modes whose sidebar offers it. Switching mode
+ * while the page is open (mode picker, ⌘1/2/3, or a space switch) would leave
+ * it mounted with no nav entry pointing back at it — hand the user the new
+ * mode's default route instead.
+ */
+function TasksRoute() {
+  const { activeSpace } = useActiveSpace();
+  const { showTasksNav, sidebar } = useModeConfig();
+
+  if (!activeSpace) return null;
+  if (!showTasksNav) return <Navigate to={sidebar.defaultRoute} replace />;
+
+  return <Tasks />;
+}
+
 export function MainRoutes() {
   return (
     <Suspense fallback={null}>
@@ -39,7 +56,7 @@ export function MainRoutes() {
         <Route path="/plugins" element={<PluginsPage />} />
         <Route path="/pulse" element={<Pulse />} />
         <Route path="/relay" element={<Relay />} />
-        <Route path="/tasks" element={<Tasks />} />
+        <Route path="/tasks" element={<TasksRoute />} />
       </Routes>
     </Suspense>
   );

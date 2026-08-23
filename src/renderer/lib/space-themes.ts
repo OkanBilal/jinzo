@@ -70,14 +70,32 @@ export const getThemeVariant = (
  * neutral colours fade out instead of casting a gray shadow.
  */
 function glowFromHex(hex: string, isDarkMode: boolean): string {
+  // Dark sits at 22% lightness: 10% is so close to the near-black page that
+  // the wide falloff posterizes into visible rings.
   return isDarkMode
-    ? `hsl(from ${hex} h calc(s * 1) 10% / calc(s * 0.5))`
+    ? `hsl(from ${hex} h calc(s * 1) 22% / calc(s * 0.32))`
     : `hsl(from ${hex} h calc(s * 1) 90% / calc(s * 0.5))`;
 }
 
-/** The one box-shadow recipe for a space glow, shared by every glowing surface. */
-export function spaceGlowShadow(color: string): string {
-  return `0 0 18px -9px ${color}, 0 0 12px 6px ${color}`;
+/**
+ * The one box-shadow recipe for a space glow, shared by every glowing surface.
+ * Three stacked layers: a near halo hugging the edge, a mid bloom, and a wide
+ * faded wash, so the light falls off gradually instead of stopping at a ring.
+ * Dark mode drops the spreads — on a near-black page each spread's shoulder
+ * reads as a concentric band — and leans on blur alone for the falloff.
+ */
+export function spaceGlowShadow(color: string, isDarkMode = false): string {
+  const layers = isDarkMode
+    ? [
+        `0 0 32px 0 ${color}`,
+        `0 0 20px 0 color-mix(in srgb, ${color} 15%, transparent)`,
+      ]
+    : [
+        `0 0 20px 4px ${color}`,
+        `0 0 48px 12px ${color}`,
+        `0 0 96px 24px color-mix(in srgb, ${color} 55%, transparent)`,
+      ];
+  return layers.join(", ");
 }
 
 /**

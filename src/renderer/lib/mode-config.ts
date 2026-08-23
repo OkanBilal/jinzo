@@ -32,11 +32,23 @@ export interface ModeRightPanelConfig {
   component: string;
 }
 
+export interface ModeComposerPlaceholder {
+  /** Empty composer, new chat. */
+  initial: string;
+  /** Empty composer, continuing a resumable run. */
+  followUp: string;
+}
+
 export interface ModeConfigDescriptor {
   mode: ModeId;
   /** Human-facing name for the mode picker. */
   label: string;
   sidebar: ModeSidebarConfig;
+  /**
+   * Composer placeholder per mode: developer advertises files because the
+   * agent edits them; work and chat leave them out.
+   */
+  composerPlaceholder: ModeComposerPlaceholder;
   rightPanel: ModeRightPanelConfig;
   /** Session panel with the git-actions menu, and its trigger. */
   showGitActions: boolean;
@@ -55,6 +67,11 @@ export interface ModeConfigDescriptor {
   /** Tab strip above the content; false = tab-less single-chat view. */
   showTabs: boolean;
   /**
+   * Plugins picker in the composer toolbar. Developer reaches plugins through
+   * the `$` / `@` menus; work gets a visible entry point instead.
+   */
+  showPluginsButton: boolean;
+  /**
    * The right panel (Files/Changes/Activity) and its open/close toggle.
    * The browser toggle is independent and survives without it.
    */
@@ -71,6 +88,12 @@ export const MODE_CONFIGS: Record<ModeId, ModeConfigDescriptor> = {
       actionPrefix: "Add",
       defaultRoute: "/code",
     },
+    composerPlaceholder: {
+      initial:
+        "Ask to edit, use @ or / for commands, files, plugins, and skills",
+      followUp:
+        "Ask a follow-up, use @ or / for commands, files, plugins, and skills",
+    },
     rightPanel: { component: "workspace" },
     showGitActions: true,
     showTerminal: true,
@@ -80,6 +103,7 @@ export const MODE_CONFIGS: Record<ModeId, ModeConfigDescriptor> = {
     showGoalControls: true,
     showTasksNav: true,
     showTabs: true,
+    showPluginsButton: false,
     showRightPanel: true,
   },
   // Work: same surfaces minus the developer ceremony — no git actions, no
@@ -96,6 +120,10 @@ export const MODE_CONFIGS: Record<ModeId, ModeConfigDescriptor> = {
       actionPrefix: "New",
       defaultRoute: "/code",
     },
+    composerPlaceholder: {
+      initial: "Ask for help with a task, use @ or / for commands, plugins, and skills",
+      followUp: "Ask a follow-up, use @ or / for commands, plugins, and skills",
+    },
     rightPanel: { component: "workspace" },
     showGitActions: false,
     showTerminal: false,
@@ -105,6 +133,7 @@ export const MODE_CONFIGS: Record<ModeId, ModeConfigDescriptor> = {
     showGoalControls: true,
     showTasksNav: false,
     showTabs: false,
+    showPluginsButton: true,
     showRightPanel: false,
   },
   // Chat: plain conversation — read-only harness, so every write-adjacent
@@ -118,6 +147,10 @@ export const MODE_CONFIGS: Record<ModeId, ModeConfigDescriptor> = {
       actionPrefix: "New",
       defaultRoute: "/code",
     },
+    composerPlaceholder: {
+      initial: "Ask anything, use @ or / for commands, plugins, and skills",
+      followUp: "Ask a follow-up, use @ or / for commands, plugins, and skills",
+    },
     rightPanel: { component: "workspace" },
     showGitActions: false,
     showTerminal: false,
@@ -127,6 +160,7 @@ export const MODE_CONFIGS: Record<ModeId, ModeConfigDescriptor> = {
     showGoalControls: false,
     showTasksNav: false,
     showTabs: false,
+    showPluginsButton: false,
     showRightPanel: false,
   },
 };

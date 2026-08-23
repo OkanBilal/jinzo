@@ -175,10 +175,13 @@ function RowCell({
 function EnableButton({
   isSelected,
   interactive,
+  disabledReason,
   onToggle,
 }: {
   isSelected: boolean;
   interactive: boolean;
+  /** Why the button is inert — shown on hover, since a dead control explains nothing. */
+  disabledReason?: string;
   onToggle: () => void;
 }) {
   // Clicking flips the state under a pointer that is still hovering, which
@@ -195,6 +198,7 @@ function EnableButton({
       }}
       onMouseLeave={() => setPreviewArmed(true)}
       disabled={!interactive}
+      tooltip={!interactive ? disabledReason : undefined}
       className={cn(
         "group min-w-26 rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50",
         isSelected
@@ -238,9 +242,14 @@ function EnableButton({
 function CliInstallBadge({
   name,
   install,
+  onRecheck,
+  isRechecking,
 }: {
   name: string;
   install: CliInstall;
+  /** Re-runs detection: the install happens in a terminal, out of our sight. */
+  onRecheck: () => void;
+  isRechecking: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -313,7 +322,13 @@ function CliInstallBadge({
             >
               {install.docsLabel}
             </Button>
-
+            <Button
+              onClick={onRecheck}
+              disabled={isRechecking}
+              className="cursor-pointer rounded-full bg-primary-200/60 px-3 py-1 text-xs font-medium text-primary-800 transition-colors hover:bg-primary-200 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-primary-800/60 dark:text-primary-200 dark:hover:bg-primary-700"
+            >
+              {isRechecking ? "Checking…" : "Recheck"}
+            </Button>
           </div>
         </div>
       </DropdownWrapper>
@@ -331,7 +346,11 @@ export function AgentComparisonStep() {
   const { data: appSettings } = useGetAppSettingsQuery();
   const [archiveSpace] = useArchiveSpaceMutation();
   const [setActiveSpace] = useSetActiveSpaceMutation();
-  const { data: detectedClis } = useDetectInstalledClisQuery();
+  const {
+    data: detectedClis,
+    isFetching: isDetecting,
+    refetch: refetchClis,
+  } = useDetectInstalledClisQuery();
   const hasAppliedAutoSelect = useRef(false);
   const dispatch = useAppDispatch();
   const autoSelectApplied = useAppSelector(
@@ -340,6 +359,21 @@ export function AgentComparisonStep() {
 
   const { agentSpaces, visibleAgentCount, spacesBySlug, toggleAgent } =
     useAgentSpaces();
+
+  // Detection finding nothing at all is a PATH problem far more often than it
+  // is four uninstalled CLIs, so the enable guard below stands down in that
+  // case rather than leaving the user unable to enable anything.
+  const anyCliDetected =
+    !!detectedClis && Object.values(detectedClis).some(Boolean);
+
+  // Installing a CLI means leaving for a terminal and coming back, so detection
+  // re-runs on focus. (`refetchOnFocus` in baseApi does nothing — RTK Query's
+  // `setupListeners` is never called — so this listener is the mechanism.)
+  useEffect(() => {
+    const onFocus = () => void refetchClis();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [refetchClis]);
 
   // One-time pre-selection: disable agents whose CLI isn't installed so the
   // toggles start from what will actually work on this machine.
@@ -416,7 +450,7 @@ export function AgentComparisonStep() {
         <div />
         {AGENT_COLUMNS.map(({ slug, name, Icon, iconClassName }) => (
           <div key={slug} className="flex flex-col items-center gap-3 pb-8">
-            <span className="flex size-14 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/60">
+            <span className="flex size-14 items-center justify-center rounded-full glass-outline ">
               <Icon
                 className={cn(
                   "size-7 text-primary-900 dark:text-primary-100",
@@ -432,10 +466,10 @@ export function AgentComparisonStep() {
         {/* Coming-soon column: Gemini + Grok share one column */}
         <div className="flex flex-col items-center gap-3 pb-8 opacity-70">
           <div className="flex items-center gap-1.5 pt-2">
-            <span className="flex size-10 items-center justify-center rounded-full bg-primary-100  dark:bg-primary-900/60">
+            <span className="flex size-10 items-center justify-center rounded-full glass-outline">
               <Gemini className="size-5" />
             </span>
-            <span className="flex size-10 items-center justify-center rounded-full bg-primary-100  dark:bg-primary-900/60">
+            <span className="flex size-10 items-center justify-center rounded-full glass-outline">
               <Grok className="size-5 text-primary-900 dark:text-primary-100" />
             </span>
           </div>
@@ -451,17 +485,22 @@ export function AgentComparisonStep() {
           return (
             <RowCell key={slug}>
               {detectedClis !== undefined && !installed ? (
-                <CliInstallBadge name={name} install={install} />
+                <CliInstallBadge
+                  name={name}
+                  install={install}
+                  onRecheck={() => void refetchClis()}
+                  isRechecking={isDetecting}
+                />
               ) : (
                 <Text
                   as="span"
                   weight="medium"
                   tone={detectedClis === undefined ? "subtle" : "success"}
                   className={cn(
-                    "inline-flex items-center rounded-full px-3 py-1",
+                    "inline-flex items-center rounded-full px-3 py-1 ",
                     detectedClis === undefined
-                      ? "bg-primary-500/10"
-                      : "bg-success/15",
+                      ? "bg-primary-500/10 "
+                      : "bg-success/5 glass-outline glass-outline-soft",
                   )}
                 >
                   {detectedClis === undefined ? "Checking…" : "CLI detected"}
@@ -507,16 +546,28 @@ export function AgentComparisonStep() {
 
         {/* Enable buttons — hover previews the opposite state, click applies it */}
         <RowLabel>Enabled</RowLabel>
-        {AGENT_COLUMNS.map(({ slug }) => {
+        {AGENT_COLUMNS.map(({ slug, name }) => {
           const space = spacesBySlug.get(slug);
           const isSelected = !!space && !space.isArchived;
           const cannotArchiveLast = isSelected && visibleAgentCount <= 1;
-          const interactive = !!space && !cannotArchiveLast;
+          // Enabling an agent whose CLI is missing would hand over a space
+          // that cannot run a single turn. Turning one OFF is never blocked
+          // by this — only the last-one-standing rule does that.
+          const cliMissing =
+            !isSelected && anyCliDetected && !detectedClis?.[slug];
+          const interactive = !!space && !cannotArchiveLast && !cliMissing;
           return (
             <RowCell key={slug}>
               <EnableButton
                 isSelected={isSelected}
                 interactive={interactive}
+                disabledReason={
+                  cliMissing
+                    ? `Install the ${name} CLI first`
+                    : cannotArchiveLast
+                      ? "At least one agent has to stay enabled"
+                      : undefined
+                }
                 onToggle={() => toggleAgent(slug)}
               />
             </RowCell>
