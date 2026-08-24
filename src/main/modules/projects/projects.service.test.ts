@@ -173,12 +173,20 @@ describe("projectsService", () => {
   });
 
   describe("delete", () => {
-    it("deletes a project", async () => {
-      createProject(db, { id: "d1" });
+    it("uses the same deep lifecycle as remove", async () => {
+      createProject(db, { id: "d1", rootPath: "/tmp/project-delete" });
+      createWorkspace(db, { id: "delete-ws", projectId: "d1" });
+      createRun(db, { id: "delete-run", workspaceId: "delete-ws" });
 
       await projectsService.delete("d1");
 
       expect(await projectsService.get("d1")).toBeNull();
+      expect(
+        _sqlite.prepare("SELECT id FROM workspaces WHERE id = 'delete-ws'").get(),
+      ).toBeUndefined();
+      expect(
+        _sqlite.prepare("SELECT id FROM runs WHERE id = 'delete-run'").get(),
+      ).toBeUndefined();
     });
   });
 
@@ -208,6 +216,12 @@ describe("projectsService", () => {
       await projectsService.remove("p1");
 
       expect(await projectsService.get("p1")).toBeNull();
+      expect(
+        _sqlite.prepare("SELECT id FROM workspaces WHERE id = 'ws1'").get(),
+      ).toBeUndefined();
+      expect(
+        _sqlite.prepare("SELECT id FROM runs WHERE id = 'r1'").get(),
+      ).toBeUndefined();
     });
   });
 
@@ -378,6 +392,7 @@ describe("projectsService", () => {
     });
 
     it("delete returns error on failure", async () => {
+      createProject(db, { id: "p1" });
       vi.spyOn(projectsRepo, "delete").mockRejectedValueOnce(new Error("db"));
       await expect(projectsService.delete("p1")).rejects.toThrow("db");
     });

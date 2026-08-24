@@ -1,4 +1,5 @@
 import { Body, Button, Text } from "@/components/ui";
+import { useModeConfig } from "@/hooks/use-mode-config";
 import { PULSE_CATEGORIES, PULSE_TEMPLATES, type PulseTemplate } from "../templates";
 
 export function PulseTemplates({
@@ -6,10 +7,13 @@ export function PulseTemplates({
 }: {
   onSelect: (template: PulseTemplate) => void;
 }) {
+  const { mode } = useModeConfig();
   return (
     <div className="space-y-8">
       {PULSE_CATEGORIES.map((cat) => {
-        const items = PULSE_TEMPLATES.filter((t) => t.category === cat.id);
+        const items = PULSE_TEMPLATES.filter(
+          (t) => t.category === cat.id && (!t.modes || t.modes.includes(mode)),
+        );
         if (items.length === 0) return null;
         return (
           <section key={cat.id}>
@@ -20,7 +24,7 @@ export function PulseTemplates({
               {items.map((tpl) => (
                 <Button
                   key={tpl.id}
-                  className="rounded-3xl glass-surface px-4 py-6 cursor-pointer transition-colors flex items-center gap-3 text-left"
+                  className="rounded-4xl glass-surface px-4 py-6 cursor-pointer transition-colors flex items-center gap-3 text-left"
                   onClick={() => onSelect(tpl)}
                 >
                   <div className="size-10 rounded-2xl flex items-center justify-center text-xl bg-primary-200/60 dark:bg-primary-800/60 shrink-0">

@@ -22,6 +22,8 @@ export { default as Close } from "./close";
 export { default as Toggle } from "./toggle";
 export { default as RightPanelOpen } from "./right-panel-open";
 export { default as RightPanelClose } from "./right-panel-close";
+export { default as SidebarOpen } from "./sidebar-open";
+export { default as SidebarClose } from "./sidebar-close";
 export { default as Document } from "./document";
 export { default as Feed } from "./feed";
 export { default as General } from "./general";
@@ -138,6 +140,7 @@ export { default as Word } from "./word";
 export { default as Powerpoint } from "./powerpoint";
 export { default as Goal } from "./goal";
 export { default as ProjectFolder } from "./project-folder";
+export { default as ProjectFolderOpen } from "./project-folder-open";
 export { default as MainsColor } from "./mains-color";
 export { default as Download } from "./download";
 export { default as Plugin } from "./plugin";
@@ -149,6 +152,11 @@ export { default as Menu } from "./menu";
 export { default as Minimize} from "./minimize"
 export { default as Write} from "./write"
 export { default as Box} from "./box"
+export { default as New} from "./new"
+export { default as Link} from "./link"
+
+
+
 
 
 

@@ -65,6 +65,8 @@ export interface WorkspaceState {
    * background-runs dock — and consumed once by the run hook.
    */
   pendingRunId: string | null;
+  /** Work/Chat: Collection assigned to the next new run; null is standalone. */
+  selectedCollectionId: string | null;
 }
 
 const initialState: WorkspaceState = {
@@ -89,6 +91,7 @@ const initialState: WorkspaceState = {
   pendingTerminalCommand: null,
   pendingReviewTarget: null,
   pendingRunId: null,
+  selectedCollectionId: null,
 };
 
 const workspaceSlice = createSlice({
@@ -302,6 +305,9 @@ const workspaceSlice = createSlice({
     clearPendingRunId: (state) => {
       state.pendingRunId = null;
     },
+    setSelectedCollectionId: (state, action: PayloadAction<string | null>) => {
+      state.selectedCollectionId = action.payload;
+    },
   },
 });
 
@@ -343,6 +349,7 @@ export const {
   clearPendingReviewTarget,
   setPendingRunId,
   clearPendingRunId,
+  setSelectedCollectionId,
 } = workspaceSlice.actions;
 
 export default workspaceSlice.reducer;

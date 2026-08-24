@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import {
   useGetLatestWorkspaceDiffQuery,
   useListReviewFindingsByWorkspaceQuery,
+  useDiscardWorkspacePathsMutation,
   type WorkspaceDiff,
   type FindingSeverity,
 } from "@/lib/redux/api";
@@ -14,8 +15,11 @@ import {
   CircleDot,
   Chat,
   Codex,
+  Refresh,
+  Undo,
 } from "@/components/ui/icons";
-import { Button, Caption, Text } from "@/components/ui";
+import { Alert, Button, Caption, Text, toast } from "@/components/ui";
+import { extractErrorMessage } from "@/lib/extract-error-message";
 import { DIFF_ADDED_TEXT, DIFF_REMOVED_TEXT, SEVERITY_TEXT } from "../lib/severity";
 import {
   parseFileDiffSegment,
@@ -23,6 +27,7 @@ import {
   type FileChangeStatus,
 } from "../lib/parse-diff";
 import { normalizePath, pathsMatch } from "../lib/path-utils";
+import { describeDiscard, type DiscardTarget } from "../lib/describe-discard";
 
 interface DiffSectionProps {
   workspaceId: string;
@@ -89,16 +94,19 @@ const STATUS_LETTER: Record<
 function FileStatusLetter({
   status,
   title,
+  className = "",
 }: {
   status: FileChangeStatus;
   title?: string;
+  /** Lets the row fade the letter out while its Undo takes the slot. */
+  className?: string;
 }) {
   const letter = STATUS_LETTER[status];
   return (
     <span
       title={title ?? letter.title}
       // Fixed width so the letters line up into a column regardless of name length.
-      className={`shrink-0 w-3 text-center text-xxs font-semibold tabular-nums ${letter.className}`}
+      className={`shrink-0 w-3 text-center text-xxs font-medium tabular-nums ${letter.className} ${className}`}
     >
       {letter.label}
     </span>
@@ -179,6 +187,37 @@ export function DiffSection({
     return map;
   }, [allFindings, diffFiles]);
 
+  const [discardWorkspacePaths] = useDiscardWorkspacePathsMutation();
+  /** Path being reverted — its row keeps the spinner until the call settles. */
+  const [discarding, setDiscarding] = useState<string | null>(null);
+  /** The pending Undo, held until confirmed — discarding can't be undone. */
+  const [confirmDiscard, setConfirmDiscard] = useState<DiscardTarget | null>(null);
+
+  /**
+   * Restore one file to its HEAD state. The mutation invalidates this
+   * workspace's diff cache and the main process re-records the snapshot, so the
+   * list drops the row on its own — nothing to refetch by hand here.
+   */
+  const handleDiscard = useCallback(
+    async (target: DiscardTarget) => {
+      if (discarding) return;
+      setDiscarding(target.path);
+      try {
+        await discardWorkspacePaths({
+          workspaceId,
+          paths: [target.path],
+        }).unwrap();
+        toast.success(`Reverted ${target.path.split("/").pop()}`);
+      } catch (err) {
+        toast.error(extractErrorMessage(err, "Failed to revert changes."));
+      } finally {
+        setDiscarding(null);
+        setConfirmDiscard(null);
+      }
+    },
+    [workspaceId, discarding, discardWorkspacePaths],
+  );
+
   const handleReviewChanges = () => {
     if (variant === "codex") {
       dispatch(setPendingReviewTarget({ type: "uncommittedChanges" }));
@@ -243,62 +282,116 @@ export function DiffSection({
           const stat = fileStats[filePath];
           const status = stat?.status ?? "modified";
           const isDeleted = status === "deleted";
+          const isNew = status === "added" || status === "untracked";
+          const isDiscarding = discarding === filePath;
 
           return (
-            <Button
+            // A row with two actions can't be one button — a button inside a
+            // button is invalid — so the strip is a div and the zones answer to
+            // different clicks, same shape as the git panel's change rows.
+            <div
               key={filePath}
-              // The path truncates in place, so the full one lives on hover.
-              title={filePath}
-              onClick={() => {
-                const segment = parseFileDiffSegment(filePath, diff.diffText);
-                setSelectedDiffFile(filePath);
-                onSelectDiffFile(filePath, segment || diff.diffText);
-              }}
-              className={`w-full flex items-center gap-2 px-2 py-1 rounded-xl duration-200 text-left transition-all animate-slide-in ${
+              className={`group w-full flex items-center gap-2 px-2 py-1 rounded-xl duration-200 transition-all animate-slide-in ${
                 isSelected
                   ? "bg-primary/80 dark:bg-primary/5 glass-outline"
                   : "bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
               }`}
               style={{ animationDelay: `${index * 0.02}s` }}
             >
-              <FileIconComponent
-                fileName={fileName}
-                extension={fileName.split(".").pop()}
-                className={`w-4 h-4 shrink-0 ${isDeleted ? "opacity-50" : ""}`}
-              />
-              <div className="flex items-baseline gap-1.5 min-w-0 flex-1">
-                <Text
-                  as="span"
-                  size="xs"
-                  weight="medium"
-                  tone={isDeleted ? "muted" : "default"}
-                  // shrink-[0.25]: both children may truncate, but the path —
-                  // longer and less identifying — gives up room first.
-                  className={`min-w-0 shrink-[0.25] truncate ${
-                    isDeleted
-                      ? "line-through decoration-primary-800/50 dark:decoration-primary/50"
-                      : ""
+              <Button
+                // The path truncates in place, so the full one lives on hover.
+                title={filePath}
+                onClick={() => {
+                  const segment = parseFileDiffSegment(filePath, diff.diffText);
+                  setSelectedDiffFile(filePath);
+                  onSelectDiffFile(filePath, segment || diff.diffText);
+                }}
+                className="flex min-w-0 flex-1 items-center gap-2 text-left"
+              >
+                <FileIconComponent
+                  fileName={fileName}
+                  extension={fileName.split(".").pop()}
+                  className={`w-4 h-4 shrink-0 ${isDeleted ? "opacity-50" : ""}`}
+                />
+                <div className="flex items-baseline gap-1.5 min-w-0 flex-1">
+                  <Text
+                    as="span"
+                    size="xs"
+                    weight="medium"
+                    tone={isDeleted ? "muted" : "default"}
+                    // shrink-[0.25]: both children may truncate, but the path —
+                    // longer and less identifying — gives up room first.
+                    className={`min-w-0 shrink-[0.25] truncate ${
+                      isDeleted
+                        ? "line-through decoration-primary-800/50 dark:decoration-primary/50"
+                        : ""
+                    }`}
+                  >
+                    {fileName}
+                  </Text>
+                  {dirPath && (
+                    <Text as="span" size="xxs" tone="subtle" className="min-w-0 truncate">
+                      {dirPath}
+                    </Text>
+                  )}
+                </div>
+                {findingsByFile[filePath] && (
+                  <FindingBadges counts={findingsByFile[filePath]} />
+                )}
+              </Button>
+              {/* Stacked rather than swapped: Undo sits over the status letter,
+                  so revealing it can't shift the row under the cursor. */}
+              <span className="relative flex size-4 shrink-0 items-center justify-center">
+                <FileStatusLetter
+                  status={status}
+                  title={stat?.oldPath ? `Renamed from ${stat.oldPath}` : undefined}
+                  className={`transition-opacity ${
+                    isDiscarding ? "opacity-0" : "group-hover:opacity-0"
+                  }`}
+                />
+                <Button
+                  onClick={() => setConfirmDiscard({ path: filePath, isNew })}
+                  disabled={isDiscarding}
+                  title={
+                    isNew
+                      ? `Delete ${filePath}`
+                      : `Revert ${filePath} to its committed state`
+                  }
+                  aria-label={
+                    isNew
+                      ? `Delete ${filePath}`
+                      : `Revert ${filePath} to its committed state`
+                  }
+                  className={`absolute inset-0 flex items-center justify-center rounded-md text-primary-600 transition-opacity hover:text-primary-900 focus-visible:opacity-100 dark:text-primary-400 dark:hover:text-primary-100 ${
+                    isDiscarding ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                   }`}
                 >
-                  {fileName}
-                </Text>
-                {dirPath && (
-                  <Text as="span" size="xxs" tone="subtle" className="min-w-0 truncate">
-                    {dirPath}
-                  </Text>
-                )}
-              </div>
-              {findingsByFile[filePath] && (
-                <FindingBadges counts={findingsByFile[filePath]} />
-              )}
-              <FileStatusLetter
-                status={status}
-                title={stat?.oldPath ? `Renamed from ${stat.oldPath}` : undefined}
-              />
-            </Button>
+                  {isDiscarding ? (
+                    <Refresh className="size-3.5 animate-spin" />
+                  ) : (
+                    <Undo className="size-3.5" />
+                  )}
+                </Button>
+              </span>
+            </div>
           );
         })}
       </div>
+
+      {/* Portals to the body, so it isn't clipped by this list's scroll box. */}
+      <Alert
+        isOpen={!!confirmDiscard}
+        title={confirmDiscard ? describeDiscard([confirmDiscard]).title : ""}
+        description={
+          confirmDiscard ? describeDiscard([confirmDiscard]).description : ""
+        }
+        primaryButtonText="Revert"
+        secondaryButtonText="Cancel"
+        primaryButtonVariant="danger"
+        onPrimary={() => confirmDiscard && handleDiscard(confirmDiscard)}
+        onSecondary={() => setConfirmDiscard(null)}
+        isPrimaryLoading={discarding !== null}
+      />
     </div>
   );
 }

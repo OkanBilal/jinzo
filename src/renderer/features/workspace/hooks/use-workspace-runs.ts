@@ -18,10 +18,11 @@ import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { appApi } from "@/lib/transport";
 import type { Run, RunEvent, RunArtifact, ToolCall } from "../types";
 import type { RunTurn } from "@/lib/redux/api";
+import type { ModeId } from "../../../../shared/modes";
 import { toast } from "@/components/ui";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { workspaceApi, useArchiveRunMutation } from "@/lib/redux/api";
-import { clearPendingRunId } from "@/lib/redux/slices/workspaceSlice";
+import { clearPendingRunId, setActiveTab } from "@/lib/redux/slices/workspaceSlice";
 import { mergeRunEvents } from "../lib/run-event-mappers";
 import { createRunCache, pruneRunMap } from "../lib/run-cache";
 import { useRunOperations } from "./use-run-operations";
@@ -38,6 +39,8 @@ const MAX_EVENTS_PER_RUN = 5000;
 export function useWorkspaceRuns(
   workspaceId: string | undefined,
   providerId?: string,
+  mode?: ModeId,
+  routeRunId?: string,
 ) {
   const [runs, setRuns] = useState<Run[]>([]);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
@@ -135,15 +138,6 @@ export function useWorkspaceRuns(
       }
       cache.markLoaded(runId);
 
-      // A finished CommitChanges tool means new committed changes — refresh diffs.
-      if (
-        toolDeltas.some(
-          (tc) => tc.toolName.includes("CommitChanges") && tc.status === "done",
-        )
-      ) {
-        dispatch(workspaceApi.util.invalidateTags(["WorkspaceDiffs"]));
-      }
-
       const allowed = cache.touch(runId);
 
       setRunEvents((prev) => {
@@ -170,7 +164,7 @@ export function useWorkspaceRuns(
     } catch (err) {
       console.error("Failed to load run details:", err);
     }
-  }, [dispatch, cache]);
+  }, [cache]);
 
   /** Public entry point: runs at most one `loadRunDetailsOnce` per run at a time,
    *  with a single trailing refresh if another request arrived while it ran. This
@@ -195,16 +189,19 @@ export function useWorkspaceRuns(
   const loadWorkspaceRuns = useCallback(
     async (wsId: string) => {
       try {
-        const result = await appApi.runs.getByWorkspace(wsId, 50);
+        const result = await appApi.runs.getByWorkspace(wsId, {
+          limit: 50,
+          providerId,
+          mode,
+        });
         if (result.success && result.data) {
-          const filteredRuns = providerId
-            ? result.data.filter((run: Run) => run.providerId === providerId)
-            : result.data;
+          const filteredRuns = result.data;
 
           setRuns(filteredRuns);
-          // A jump from outside the page (the background-runs dock) names the
-          // run to open; every other arrival lands on the newest one. Read
-          // through a ref so the request can't re-trigger the mount effect.
+          // A jump from outside the page (the background-runs dock, the chat
+          // sidebar) names the run to open; every other arrival lands on the
+          // newest one. Read through a ref so the request can't re-trigger
+          // the mount effect.
           const requestedId = pendingRunIdRef.current;
           if (requestedId) dispatch(clearPendingRunId());
           const target =
@@ -213,23 +210,86 @@ export function useWorkspaceRuns(
           if (target) {
             setActiveRunId(target.id);
             loadRunDetails(target.id);
+            // A requested run must own the view too — without this, the
+            // editor-tab auto-select (developer) or the new-chat neutral
+            // state (tab-less modes) claims it instead.
+            if (target.id === requestedId) {
+              dispatch(setActiveTab(target.id));
+            }
           }
         }
       } catch (err) {
         console.error("Failed to load workspace runs:", err);
       }
     },
-    [loadRunDetails, providerId, dispatch],
+    [loadRunDetails, providerId, mode, dispatch],
+  );
+
+  const loadRoutedRun = useCallback(
+    async (runId: string) => {
+      try {
+        const [result, accountResult] = await Promise.all([
+          appApi.runs.getById(runId),
+          appApi.account.get(),
+        ]);
+        const run = result.success ? result.data : null;
+        const accountId =
+          accountResult.success && accountResult.data
+            ? accountResult.data.id
+            : null;
+        if (
+          !run ||
+          !accountId ||
+          run.accountId !== accountId ||
+          run.isArchived ||
+          (providerId && run.providerId !== providerId) ||
+          (mode && run.mode !== mode)
+        ) {
+          setRuns([]);
+          setActiveRunId(null);
+          if (pendingRunIdRef.current === runId) dispatch(clearPendingRunId());
+          return;
+        }
+        setRuns([run]);
+        setActiveRunId(run.id);
+        if (pendingRunIdRef.current === run.id) dispatch(clearPendingRunId());
+        dispatch(setActiveTab(run.id));
+        await loadRunDetails(run.id);
+      } catch (err) {
+        console.error("Failed to load routed run:", err);
+      }
+    },
+    [providerId, mode, dispatch, loadRunDetails],
   );
 
   useEffect(() => {
     void (async () => {
       clearState();
-      if (workspaceId) {
+      if (routeRunId) {
+        await loadRoutedRun(routeRunId);
+      } else if (workspaceId) {
         await loadWorkspaceRuns(workspaceId);
       }
     })();
-  }, [workspaceId, loadWorkspaceRuns, clearState]);
+  }, [workspaceId, routeRunId, loadRoutedRun, loadWorkspaceRuns, clearState]);
+
+  // Same-workspace jumps (a chat sidebar click with no navigation): the mount
+  // path above never re-runs, so consume the request here once its run is in
+  // the loaded list. Cross-workspace jumps are consumed by the mount path,
+  // which clears the request before this effect can see it.
+  useEffect(() => {
+    if (!pendingRunId) return;
+    const target = runs.find((run) => run.id === pendingRunId);
+    if (!target) return;
+    dispatch(clearPendingRunId());
+    // Same microtask hop as the pendingGoal sync — the consume must not set
+    // state synchronously inside the effect body.
+    queueMicrotask(() => {
+      setActiveRunId(target.id);
+      loadRunDetails(target.id);
+      dispatch(setActiveTab(target.id));
+    });
+  }, [pendingRunId, runs, dispatch, loadRunDetails]);
 
   // --- Delegated subjects ---
 

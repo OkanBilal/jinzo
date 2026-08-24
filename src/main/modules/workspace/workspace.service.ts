@@ -207,10 +207,10 @@ function basename(p: string): string {
   return p.split("/").pop() || "Untitled";
 }
 
-/** Honor the global worktree preference (defaults on). */
+/** Honor the global worktree preference (off unless the user turned it on). */
 async function preferWorktrees(): Promise<boolean> {
   const settings = await appSettingsService.ensureSettings();
-  return settings.enableWorktrees ?? true;
+  return settings.enableWorktrees ?? false;
 }
 
 /** Read the `origin` fetch URL of a repo, or null when there's no remote. */
@@ -464,9 +464,7 @@ export const workspaceService = {
       const worktree = workspace.metadata?.worktree;
       return {
         ...workspace,
-        projectName: workspace.projectId
-          ? (nameByProject.get(workspace.projectId) ?? null)
-          : null,
+        projectName: nameByProject.get(workspace.projectId) ?? null,
         pathExists: workspacePathExists(workspace.rootPath),
         worktree: worktree?.enabled ? worktree : null,
       };
@@ -533,6 +531,14 @@ export const workspaceService = {
   async create(
     payload: CreateWorkspacePayload,
   ): Promise<WorkspaceResponse> {
+    if (!payload.projectId) {
+      throw new Error("Workspace requires a Developer Project");
+    }
+    const project = await projectsRepo.findById(payload.projectId);
+    if (!project) throw new Error("Project not found");
+    if (project.accountId !== payload.accountId) {
+      throw new Error("Project does not belong to this account");
+    }
     const existing = await workspaceRepo.findByRootPath(
       payload.accountId,
       payload.rootPath,
@@ -551,17 +557,15 @@ export const workspaceService = {
     if (!workspace) throw new Error("Failed to retrieve created workspace");
 
     // Fire-and-forget: run project setupScript in background
-    if (workspace.projectId) {
+    if (project.setupScript) {
       const wsId = id;
       const rootPath = workspace.rootPath;
-      projectsRepo
-        .findById(workspace.projectId)
-        .then((project) => {
-          if (!project?.setupScript) return;
+      Promise.resolve()
+        .then(() => {
           console.log(
             `[WorkspaceService] Running setup script for workspace ${wsId} in ${rootPath}`,
           );
-          executeScript(project.setupScript, rootPath)
+          executeScript(project.setupScript!, rootPath)
             .then(() => {
               console.log(
                 `[WorkspaceService] Setup script completed for workspace ${wsId}`,
@@ -691,6 +695,10 @@ export const workspaceService = {
         ? (await gitService.cloneRepo(source.url, source.targetPath))
             .clonedPath
         : source.path;
+    // Seed name for a *new* project only. The workspace is named after the
+    // project that find-or-create resolves to, so a second checkout of an
+    // already-imported repo (a worktree folder, a sibling clone) shows the
+    // project's name, not its folder's.
     const name = basename(sourcePath);
 
     // A picked folder can be anything — reject non-repos before any DB
@@ -731,7 +739,7 @@ export const workspaceService = {
       }
       return completeIntake({
         accountId,
-        name,
+        name: project.name,
         rootPath: imported.worktreePath,
         repoUrl: originUrl ?? undefined,
         baseBranch,
@@ -766,7 +774,7 @@ export const workspaceService = {
     }
     return completeIntake({
       accountId,
-      name,
+      name: project.name,
       rootPath: sourcePath,
       repoUrl: imported.originUrl ?? undefined,
       baseBranch,
@@ -785,6 +793,17 @@ export const workspaceService = {
     id: string,
     payload: UpdateWorkspacePayload,
   ): Promise<WorkspaceResponse> {
+    if (payload.projectId !== undefined) {
+      const [workspace, project] = await Promise.all([
+        workspaceRepo.findById(id),
+        projectsRepo.findById(payload.projectId),
+      ]);
+      if (!workspace) throw new Error("Workspace not found");
+      if (!project) throw new Error("Project not found");
+      if (workspace.accountId !== project.accountId) {
+        throw new Error("Project does not belong to this account");
+      }
+    }
     const updated = await workspaceRepo.update(id, payload);
     if (!updated) throw new Error("Workspace not found");
     return updated;
@@ -892,6 +911,9 @@ export const workspaceService = {
   async unarchive(id: string): Promise<WorkspaceResponse> {
     const workspace = await workspaceRepo.findById(id);
     if (!workspace) throw new Error("Workspace not found");
+    if (!(await projectsRepo.findById(workspace.projectId))) {
+      throw new Error("Workspace project not found");
+    }
 
     const unarchived = await workspaceRepo.unarchive(id);
     if (!unarchived) throw new Error("Failed to unarchive workspace");

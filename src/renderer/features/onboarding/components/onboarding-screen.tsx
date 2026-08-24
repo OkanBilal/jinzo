@@ -6,13 +6,22 @@ import { useAppDispatch } from "@/lib/redux/hooks";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { setOnboardingCompleted } from "@/lib/redux/slices/appSettingsSlice";
 import { AgentComparisonStep } from "./agent-comparison-step";
+import { CoreFeaturesStep } from "./core-features-step";
 import { PreferencesStep } from "./preferences-step";
 import { WelcomeIntroStep } from "./welcome-intro-step";
 
-const STEPS: { id: string; render: () => React.ReactNode }[] = [
+interface OnboardingStep {
+  id: string;
+  render: () => React.ReactNode;
+  /** Step writes real settings — the footer reassures they're not final. */
+  changesSettings?: boolean;
+}
+
+const STEPS: OnboardingStep[] = [
   { id: "welcome", render: () => <WelcomeIntroStep /> },
-  { id: "agents", render: () => <AgentComparisonStep /> },
-  { id: "preferences", render: () => <PreferencesStep /> },
+  { id: "features", render: () => <CoreFeaturesStep /> },
+  { id: "agents", render: () => <AgentComparisonStep />, changesSettings: true },
+  { id: "preferences", render: () => <PreferencesStep />, changesSettings: true },
 ];
 
 // Must match the segment classes below: w-8 = 32px, gap-2 = 8px.
@@ -34,7 +43,7 @@ function StepIndicator({ count, current }: { count: number; current: number }) {
       ))}
       {/* Active segment slides over the track between steps */}
       <span
-        className="absolute top-0 left-0 h-1 w-8 rounded-full bg-primary-700 transition-transform duration-300 ease-out dark:bg-primary-200"
+        className="absolute top-0 left-0 h-1 w-8 rounded-full bg-primary-700 transition-transform duration-300 ease-out dark:bg-primary"
         style={{
           transform: `translateX(${current * (SEGMENT_WIDTH + SEGMENT_GAP)}px)`,
         }}
@@ -96,8 +105,15 @@ export function OnboardingScreen() {
 
   return (
     <MainLayout>
-      <div className="flex h-full min-w-0 flex-1 flex-col">
-        <div className="flex-1 overflow-y-auto px-8 pt-16 pb-8">
+      <div className="relative flex h-full min-w-0 flex-1 flex-col">
+        {/* The footer floats over this area rather than taking a row, so a long
+            step's content runs to the window's bottom edge. The mask dissolves
+            whatever passes under the footer instead of slicing it; its 4rem
+            fade sits inside the 7rem bottom padding, so the last row is never
+            dimmed once scrolled into view. */}
+        <div
+          className="flex-1 overflow-y-auto px-8 pt-16 pb-28 mask-[linear-gradient(to_bottom,black_0%,black_calc(100%-4rem),transparent_100%)]"
+        >
           {/* Keyed remount animates each step in with the app's slide-fade language */}
           <div
             key={STEPS[stepIndex].id}
@@ -111,14 +127,14 @@ export function OnboardingScreen() {
             {STEPS[stepIndex].render()}
           </div>
         </div>
-        <footer className="relative flex shrink-0 items-center justify-between px-8 py-5">
+        <footer className="absolute inset-x-0 bottom-0 flex items-center justify-between px-8 py-5">
           <StepIndicator count={STEPS.length} current={stepIndex} />
           {/* Agents + preferences steps change real settings — reassure it's not final */}
-          {stepIndex > 0 && (
+          {STEPS[stepIndex].changesSettings && (
             <Text
               as="span"
-              size="xs"
-              tone="subtle"
+              size="s"
+              tone="secondary"
               className="absolute left-1/2 -translate-x-1/2"
             >
               You can change these later in Settings.
@@ -127,7 +143,7 @@ export function OnboardingScreen() {
           <div className="flex items-center gap-2">
             {stepIndex > 0 && (
               <Button
-                variant="secondary"
+                variant="ghost"
                 onClick={() => setStepIndex((i) => i - 1)}
                 className="inline-flex items-center gap-1 px-4 py-2 text-sm"
               >
@@ -136,17 +152,17 @@ export function OnboardingScreen() {
               </Button>
             )}
             <Button
-              variant={isLastStep ? "submit" : "secondary"}
+              variant={isLastStep ? "submit" : "ghost"}
               onClick={goNext}
-              className="inline-flex items-center gap-1 px-4 py-2 text-sm"
+              className="inline-flex items-center gap-1 px-4 py-2 text-sm glass-outline"
             >
               {isLastStep ? "Get Started" : "Continue"}
               {isLastStep ? (
                 <Text
                   as="kbd"
-                  size="xxs"
+                  size="s"
                   tone="inherit"
-                  className="ml-0.5 flex h-4.5 items-center px-1 font-sans leading-none"
+                  className="ml-0.5 mt-1 flex h-4 items-center font-sans leading-none"
                   aria-hidden
                 >
                   ⏎

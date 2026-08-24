@@ -2,6 +2,7 @@ import { promises as fs } from "fs";
 import * as path from "path";
 
 import { projectsService } from "../projects";
+import { managedExecutionRoots } from "../runs";
 import { workspaceService } from "../workspace";
 
 // ─────────────────────────────────────────────────────────────
@@ -18,6 +19,11 @@ import { workspaceService } from "../workspace";
 // explorer exists to serve: every workspace root, plus the project roots and
 // worktree parents those workspaces hang off. Archived rows count — Settings ›
 // Archive still browses them.
+//
+// Plus the run directories mains manages itself (`managedExecutionRoots`).
+// Work and Chat runs have no workspace, so their deliverables land under
+// userData — app-owned directories the user is meant to open files from,
+// which is exactly what this boundary exists to admit.
 // ─────────────────────────────────────────────────────────────
 
 /** Whether `child` is `parent` itself or sits somewhere beneath it. */
@@ -32,7 +38,7 @@ async function listContentRoots(): Promise<string[]> {
     projectsService.list(true),
   ]);
 
-  const roots = new Set<string>();
+  const roots = new Set<string>(managedExecutionRoots());
   for (const workspace of workspaces) {
     if (workspace.rootPath) roots.add(workspace.rootPath);
   }

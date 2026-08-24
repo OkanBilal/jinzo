@@ -37,11 +37,12 @@ export function MainContent({
     return window.api.app.onFullscreenChange(setIsFullscreen);
   }, []);
 
-  // Reserve space for the macOS traffic lights only when there's native window
-  // chrome and we're not fullscreen. In web (no chrome) keep the tight inset.
+  // When the sidebar is collapsed, its toggle and active mode stay in the
+  // titlebar. Keep tabs clear of that cluster; native chrome needs additional
+  // room for the macOS traffic lights to its left.
   const reserveTrafficLights = windowChrome && !isFullscreen;
   const headerPaddingLeft =
-    sidebarCollapsed ? (reserveTrafficLights ? "7rem" : "1.5rem") : undefined;
+    sidebarCollapsed ? (reserveTrafficLights ? "11rem" : "7rem") : undefined;
 
   // When header exists and the first tab is active, the content's top-left corner
   // must be sharp so it connects seamlessly with the active tab above it.

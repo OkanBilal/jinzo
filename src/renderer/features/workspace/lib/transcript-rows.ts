@@ -252,7 +252,11 @@ export type TurnRenderRow =
       previousSegments: number[][];
       /** Plan tool groups — pulled out of `previousSegments` so they stay outside the collapsed bucket. */
       planBreakoutIndices: number[];
-      /** Groups containing generated media — kept visible so it isn't hidden behind the accordion. */
+      /**
+       * Groups whose output is the turn's deliverable — generated media, plus
+       * file writes in modes that say so. Kept visible rather than folded into
+       * the collapsed bucket.
+       */
       messageBreakoutIndices: number[];
       lastSegment: number[];
       previousMessageCount: number;
@@ -272,7 +276,21 @@ function groupHasMediaArtifact(g: EventGroup): boolean {
 }
 
 /** Linear plan: every group index appears exactly once, in order. */
-export function buildTurnRenderRows(groups: EventGroup[]): TurnRenderRow[] {
+export interface TurnRenderOptions {
+  /**
+   * Extra groups to keep out of the collapsed bucket, beyond plans and media.
+   *
+   * Injected rather than decided here: what counts as a deliverable is a
+   * question about tool vocabulary and the active mode, and this module is the
+   * layout plan — React-free, and deliberately ignorant of both.
+   */
+  isDeliverableGroup?: (group: EventGroup) => boolean;
+}
+
+export function buildTurnRenderRows(
+  groups: EventGroup[],
+  options: TurnRenderOptions = {},
+): TurnRenderRow[] {
   const rows: TurnRenderRow[] = [];
   let idx = 0;
   while (idx < groups.length) {
@@ -320,7 +338,7 @@ export function buildTurnRenderRows(groups: EventGroup[]): TurnRenderRow[] {
         const g = groups[gIdx]!;
         if (isPlanToolCallGroup(g)) {
           planBreakout.push(gIdx);
-        } else if (groupHasMediaArtifact(g)) {
+        } else if (groupHasMediaArtifact(g) || options.isDeliverableGroup?.(g)) {
           messageBreakout.push(gIdx);
         }
       }

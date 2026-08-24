@@ -1,12 +1,18 @@
 import { baseApi } from './baseApi';
 import { CHANNELS } from "../../../../shared/ipc-kit/channels";
+import type { ModeId } from "../../../../shared/modes";
 
 export type PulseFrequency = 'hourly' | 'daily' | 'weekdays' | 'weekly';
 
 export interface Pulse {
   id: string;
   accountId: string;
-  workspaceId: string;
+  /** Set for developer pulses; work/chat pulses run workspace-less. */
+  workspaceId: string | null;
+  /** Optional collection target for work/chat pulses. */
+  collectionId: string | null;
+  /** Experience mode the pulse's runs execute under. */
+  mode: ModeId;
   providerId: string;
   model: string;
   title: string;
@@ -28,7 +34,9 @@ export interface Pulse {
 }
 
 export interface CreatePulseInput {
-  workspaceId: string;
+  workspaceId?: string | null;
+  collectionId?: string | null;
+  mode?: ModeId;
   providerId: string;
   model: string;
   title: string;
@@ -43,10 +51,13 @@ export interface CreatePulseInput {
   isActive?: boolean;
 }
 
+// `mode` is create-only — a pulse's mode is its execution shape, not a
+// setting to flip later.
 export type UpdatePulseInput = Partial<
-  Omit<CreatePulseInput, 'workspaceId' | 'providerId'>
+  Omit<CreatePulseInput, 'workspaceId' | 'collectionId' | 'providerId' | 'mode'>
 > & {
-  workspaceId?: string;
+  workspaceId?: string | null;
+  collectionId?: string | null;
   providerId?: string;
 };
 

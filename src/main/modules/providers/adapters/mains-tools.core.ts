@@ -1,9 +1,10 @@
 // ─────────────────────────────────────────────────────────────
 // Mains MCP Tools — Shared handler logic
 //
-// Both Claude and Copilot adapters expose the same five mains tools.
-// This module holds the handler implementations and descriptions;
-// each adapter wraps them into its SDK-specific format.
+// This module holds the handler implementations and descriptions; each
+// adapter wraps them into its SDK-specific format (see the registry's
+// renderers). Which drivers and modes see which tool is the registry's call,
+// not this file's.
 // ─────────────────────────────────────────────────────────────
 
 import {
@@ -11,14 +12,10 @@ import {
   logWorkspaceActivity,
   emitFindingsChanged,
 } from "../../workspace";
-import { gitFlowService } from "../../gitFlow";
 import type {
-  GetWorkspaceDiffArgs,
   SaveReviewArgs,
   SaveFindingArgs,
   SaveFindingsArgs,
-  CommitChangesArgs,
-  CreatePRArgs,
   CheckPackageArgs,
 } from "./mains-tools.schemas";
 
@@ -36,18 +33,12 @@ export interface MainsToolContext {
 // ─────────────────────────────────────────────────────────────
 
 export const TOOL_DESCRIPTIONS = {
-  GetWorkspaceDiff:
-    "Read git diffs from workspace_diffs table. Uses the current workspace by default, or provide runId to get the diff for a specific run.",
   SaveReview:
     "Create a new review record. Returns the generated review ID. Workspace and run are automatically set from the current session.",
   SaveFinding:
     "Save a single code review finding. Returns the generated finding ID.",
   SaveFindings:
     "Save multiple code review findings at once. Returns all generated finding IDs.",
-  CommitChanges:
-    "Stage and commit changes in the workspace git repository. If the project has commitInstructions configured, the tool will return them on the first call (when message is not provided) so you can follow them before committing.",
-  CreatePR:
-    "Create a GitHub pull request for the current branch using the GitHub CLI (gh). Requires gh to be installed and authenticated. Push the branch before calling this tool. If the project has prInstructions configured, the tool will return them on the first call (when body is not provided) so you can follow them before creating the PR.",
   CheckPackage:
     "IMPORTANT: Call this tool only before explicitly adding named packages (for example: npm install axios, pnpm add zod, pip install requests, cargo add serde). Do NOT call it for dependency restore commands with no package names, such as npm install, npm ci, pnpm install, yarn install, or bun install. Checks packages against a dependency security service and returns safety scores, risk levels, and alerts. If any package is blocked, do NOT install it — inform the user instead.",
 } as const;
@@ -55,35 +46,6 @@ export const TOOL_DESCRIPTIONS = {
 // ─────────────────────────────────────────────────────────────
 // Handler implementations
 // ─────────────────────────────────────────────────────────────
-
-export async function handleGetWorkspaceDiff(
-  args: GetWorkspaceDiffArgs,
-  ctx: MainsToolContext,
-) {
-  if (!ctx.workspaceId && !args.runId) {
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: "Error: No workspace context and no runId provided",
-        },
-      ],
-      isError: true,
-    };
-  }
-
-  const row = args.runId
-    ? await workspaceService.getDiffByRun(args.runId)
-    : await workspaceService.getLatestDiff(ctx.workspaceId!);
-
-  if (!row) {
-    return { content: [{ type: "text" as const, text: "No diff found" }] };
-  }
-
-  return {
-    content: [{ type: "text" as const, text: JSON.stringify(row, null, 2) }],
-  };
-}
 
 export async function handleSaveReview(
   args: SaveReviewArgs,
@@ -194,148 +156,6 @@ export async function handleSaveFindings(
       { type: "text" as const, text: JSON.stringify({ findingIds }) },
     ],
   };
-}
-
-export async function handleCommitChanges(
-  args: CommitChangesArgs,
-  ctx: MainsToolContext,
-) {
-  if (!ctx.rootPath) {
-    return {
-      content: [
-        { type: "text" as const, text: "Error: No workspace root path" },
-      ],
-      isError: true,
-    };
-  }
-
-  try {
-    // Instructions-first handshake: on the first call (no message yet) hand the
-    // agent the project/app commit instructions so it crafts the message before
-    // the real commit. The deterministic shared logic lives in gitFlowService.
-    const commitInstructions = ctx.workspaceId
-      ? await gitFlowService.getCommitInstructions(ctx.workspaceId)
-      : null;
-
-    if (commitInstructions && !args.message) {
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify({
-              commitInstructions,
-              hint: "This project has commit instructions. Please follow them to craft the commit message, then call CommitChanges again with the appropriate message.",
-            }),
-          },
-        ],
-      };
-    }
-
-    if (!args.message) {
-      return {
-        content: [
-          { type: "text" as const, text: "Error: No commit message provided" },
-        ],
-        isError: true,
-      };
-    }
-
-    const result = await gitFlowService.performCommit({
-      workspaceId: ctx.workspaceId,
-      rootPath: ctx.rootPath,
-      runId: ctx.runId,
-      message: args.message,
-      // Match the previous behavior: stage the named files, else everything.
-      stage: args.files && args.files.length > 0 ? args.files : "all",
-    });
-
-    return {
-      content: [
-        { type: "text" as const, text: JSON.stringify(result) },
-      ],
-    };
-  } catch (error) {
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-        },
-      ],
-      isError: true,
-    };
-  }
-}
-
-export async function handleCreatePR(
-  args: CreatePRArgs,
-  ctx: MainsToolContext,
-) {
-  if (!ctx.rootPath) {
-    return {
-      content: [
-        { type: "text" as const, text: "Error: No workspace root path" },
-      ],
-      isError: true,
-    };
-  }
-
-  try {
-    // Instructions-first handshake, mirroring CommitChanges. The remote-origin
-    // guard + `gh pr create` live in gitFlowService.performCreatePR.
-    const prInstructions = ctx.workspaceId
-      ? await gitFlowService.getPrInstructions(ctx.workspaceId)
-      : null;
-
-    if (prInstructions && !args.body) {
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify({
-              prInstructions,
-              hint: "This project has PR instructions. Please follow them to set the title, body, and other parameters, then call CreatePR again with the appropriate values.",
-            }),
-          },
-        ],
-      };
-    }
-
-    const result = await gitFlowService.performCreatePR({
-      workspaceId: ctx.workspaceId,
-      rootPath: ctx.rootPath,
-      title: args.title,
-      body: args.body,
-      base: args.base,
-      draft: args.draft,
-      labels: args.labels,
-    });
-
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: JSON.stringify({
-            url: result.url,
-            stdout: result.stdout,
-            stderr: result.stderr,
-          }),
-        },
-      ],
-    };
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    const stderr = (error as any)?.stderr?.trim?.();
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: `Error creating PR: ${stderr || msg}`,
-        },
-      ],
-      isError: true,
-    };
-  }
 }
 
 // ─────────────────────────────────────────────────────────────

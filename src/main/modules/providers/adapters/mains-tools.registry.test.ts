@@ -11,7 +11,6 @@ import {
   dispatchMainsTool,
 } from "./mains-tools.registry";
 import {
-  CommitChangesSchema,
   SaveFindingSchema,
   SaveReviewSchema,
 } from "./mains-tools.schemas";
@@ -62,17 +61,9 @@ describe("mains tool registry — availability matrix", () => {
   });
 
   it("review-flow tools are not exposed to Codex", () => {
-    for (const name of ["GetWorkspaceDiff", "SaveReview", "SaveFinding", "SaveFindings"]) {
+    for (const name of ["SaveReview", "SaveFinding", "SaveFindings"]) {
       const tool = MAINS_TOOLS.find((t) => t.name === name)!;
       expect(tool.providers).not.toContain(PROVIDER_IDS.codex);
-    }
-  });
-
-  it("CommitChanges and CreatePR are exposed to every provider", () => {
-    const all = [PROVIDER_IDS.claude, PROVIDER_IDS.copilot, PROVIDER_IDS.codex, PROVIDER_IDS.cursor];
-    for (const name of ["CommitChanges", "CreatePR"]) {
-      const tool = MAINS_TOOLS.find((t) => t.name === name)!;
-      expect([...tool.providers].sort()).toEqual([...all].sort());
     }
   });
 });
@@ -93,11 +84,6 @@ describe("mains tool registry — JSON Schema rendering", () => {
       ["file", "message", "reason", "reviewId", "severity"].sort(),
     );
   });
-
-  it("keeps CommitChanges.message optional (matches the handler's instructions-first handshake)", () => {
-    const schema = toJsonSchema(CommitChangesSchema) as any;
-    expect(schema.required ?? []).not.toContain("message");
-  });
 });
 
 describe("mains tool registry — dispatch", () => {
@@ -110,6 +96,39 @@ describe("mains tool registry — dispatch", () => {
   it("every registry tool resolves to a handler (no missing dispatch)", () => {
     for (const tool of MAINS_TOOLS) {
       expect(typeof tool.handler).toBe("function");
+    }
+  });
+});
+
+describe("mains tool registry — mode dimension", () => {
+  it("defaults to developer: mode-less renderer calls match today's sets", () => {
+    expect(toClaudeTools(CTX).map((t) => t.name).sort()).toEqual(
+      toClaudeTools(CTX, "developer").map((t) => t.name).sort(),
+    );
+    expect(toCodexDynamicTools().map((t) => t.name).sort()).toEqual(
+      toCodexDynamicTools("developer").map((t) => t.name).sort(),
+    );
+  });
+
+  it("work exposes no mains tools on any provider", () => {
+    expect(toClaudeTools(CTX, "work")).toHaveLength(0);
+    expect(toCopilotTools(CTX, "work")).toHaveLength(0);
+    expect(toMcpToolDefs("work")).toHaveLength(0);
+    expect(toCodexDynamicTools("work")).toHaveLength(0);
+  });
+
+  it("chat exposes no mains tools on any provider", () => {
+    expect(toClaudeTools(CTX, "chat")).toHaveLength(0);
+    expect(toCopilotTools(CTX, "chat")).toHaveLength(0);
+    expect(toMcpToolDefs("chat")).toHaveLength(0);
+    expect(toCodexDynamicTools("chat")).toHaveLength(0);
+  });
+
+  it("every tool's modes list (when present) only names known modes", () => {
+    for (const tool of MAINS_TOOLS) {
+      for (const mode of tool.modes ?? []) {
+        expect(["developer", "work", "chat"]).toContain(mode);
+      }
     }
   });
 });

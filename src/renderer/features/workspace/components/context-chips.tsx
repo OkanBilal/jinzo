@@ -114,16 +114,15 @@ function BrowserSelectionPreview({
  * chips inside the prompt itself.
  */
 export function ContextChips() {
-  const { issues, signals, skills, browserSelections, remove } =
-    useComposerContext();
+  const { issues, signals, browserSelections, remove } = useComposerContext();
   const [previewId, setPreviewId] = useState<string | null>(null);
   const previewSel = browserSelections.find((s) => s.id === previewId) ?? null;
 
+  // Only what this row actually draws may open it. Skills are context too, but
+  // they appear as chips *inside* the input (`skillChipMap` on RichInputForm),
+  // so counting them here opened an empty padded band above the composer.
   const hasContext =
-    issues.length > 0 ||
-    signals.length > 0 ||
-    skills.length > 0 ||
-    browserSelections.length > 0;
+    issues.length > 0 || signals.length > 0 || browserSelections.length > 0;
 
   return (
     <>

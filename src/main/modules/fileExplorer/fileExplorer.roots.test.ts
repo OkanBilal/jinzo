@@ -7,6 +7,7 @@ const { rows } = vi.hoisted(() => ({
   rows: {
     workspaces: [] as Array<{ rootPath: string }>,
     projects: [] as Array<{ rootPath: string; workspacesPath: string | null }>,
+    managedRoots: [] as string[],
   },
 }));
 
@@ -15,6 +16,9 @@ vi.mock("../workspace", () => ({
 }));
 vi.mock("../projects", () => ({
   projectsService: { list: async () => rows.projects },
+}));
+vi.mock("../runs", () => ({
+  managedExecutionRoots: () => rows.managedRoots,
 }));
 
 import { assertWithinContentRoots } from "./fileExplorer.roots";
@@ -31,10 +35,29 @@ describe("assertWithinContentRoots", () => {
     tmpDir = await realTmpDir();
     rows.workspaces = [];
     rows.projects = [];
+    rows.managedRoots = [];
   });
 
   afterEach(async () => {
     await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
+  it("admits a Work run's deliverable under the managed run root", async () => {
+    // Work and Chat runs have no workspace; their files land under userData,
+    // and the file chip in the agent's answer has to be able to open them.
+    rows.managedRoots = [path.join(tmpDir, "runs")];
+    await expect(
+      assertWithinContentRoots(
+        path.join(tmpDir, "runs", "run-1", "work", "report.md"),
+      ),
+    ).resolves.toBeUndefined();
+  });
+
+  it("still rejects a path outside every root, managed ones included", async () => {
+    rows.managedRoots = [path.join(tmpDir, "runs")];
+    await expect(
+      assertWithinContentRoots(path.join(tmpDir, "elsewhere", "secret.txt")),
+    ).rejects.toThrow(/outside your workspaces/);
   });
 
   it("admits a file under a workspace root", async () => {

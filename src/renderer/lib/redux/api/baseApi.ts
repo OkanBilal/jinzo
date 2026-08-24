@@ -51,6 +51,8 @@ export const baseApi = createApi({
   tagTypes: [
     'ConnectionState',
     'Connection',
+    'Collections',
+    'CollectionSources',
     'Entity',
     'Task',
     'Issue',
@@ -68,6 +70,7 @@ export const baseApi = createApi({
     'Workspaces',
     'WorkspaceGitStates',
     'Runs',
+    'RunsRecent',
     'RunContext',
     'RunArtifacts',
     'RunTurns',

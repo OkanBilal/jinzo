@@ -1,7 +1,16 @@
-import { createContext, useContext, type ReactNode } from "react";
+import {
+  createContext,
+  lazy,
+  Suspense,
+  useContext,
+  useState,
+  type ReactNode,
+} from "react";
 import { ArrowUp } from "@/components/ui/icons";
-import { Button, SquareSpinner } from "@/components/ui";
+import { Button, SquareSpinner, Text } from "@/components/ui";
 import type { RunEvent } from "../../types";
+
+const ToolDiffBodyContent = lazy(() => import("./tool-diff-body"));
 
 /**
  * Tool-call lifecycle status, mirroring the `tool_calls.status` column
@@ -286,6 +295,35 @@ export function ToolOutputBody({
 }
 
 /**
+ * The diff card Edit / Write / ApplyPatch all render inside their ToolCollapse:
+ * the scroll shell plus one `PatchDiff` on the app's shared typography and
+ * options.
+ *
+ * The actual diff renderer is async: a collapsed tool row does not need to
+ * parse `@pierre/diffs` and Shiki during app startup.
+ */
+export function ToolDiffBody({ patch }: { patch: string }) {
+  return (
+    <div className="max-h-80 overflow-y-auto noscrollbar p-0.5">
+      <Suspense
+        fallback={
+          <Text
+            as="div"
+            size="xs"
+            tone="subtle"
+            className="px-2 py-1.5 shine-text"
+          >
+            Loading diff...
+          </Text>
+        }
+      >
+        <ToolDiffBodyContent patch={patch} />
+      </Suspense>
+    </div>
+  );
+}
+
+/**
  * CSS-grid based collapse wrapper. The body content (pre/div, font choice,
  * padding, max-height) stays at the call site — only the open/close animation
  * is centralised here.
@@ -300,13 +338,21 @@ export function ToolCollapse({
   /** Extra classes merged onto the outer grid (e.g. border/rounded for diff bodies). */
   className?: string;
 }) {
+  // Do not mount expensive output bodies for the hundreds of historical rows
+  // a transcript can keep collapsed. Once opened, retain the body so closing
+  // still animates and local state survives subsequent toggles.
+  const [hasOpened, setHasOpened] = useState(isExpanded);
+  if (isExpanded && !hasOpened) setHasOpened(true);
+
   return (
     <div
       className={`grid transition-all duration-200 ease-out ${
         isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
       } ${className}`}
     >
-      <div className="min-h-0 overflow-hidden">{children}</div>
+      <div className="min-h-0 overflow-hidden">
+        {hasOpened ? children : null}
+      </div>
     </div>
   );
 }

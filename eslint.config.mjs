@@ -135,6 +135,18 @@ export default tseslint.config(
     },
   },
 
+  // Repository scripts run under Node rather than a browser. Keeping this as
+  // a directory-level environment prevents every .mjs utility from having to
+  // redeclare process, Buffer, timers, and console individually.
+  {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+
   // Common TS rules for both Renderer and Main Process
   {
     files: ['**/*.{ts,tsx}'],

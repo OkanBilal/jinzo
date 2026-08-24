@@ -3,7 +3,17 @@ import { createHash } from "crypto";
 import { PROVIDER_IDS } from "../../../shared/provider-ids";
 import { runsRepo } from "./runs.repo";
 import { providersService } from "../providers";
+import { collectionsService } from "../collections";
+import { projectsService } from "../projects";
 import { workspaceService, assertWorkspacePathExists } from "../workspace";
+import { spaceService } from "../space";
+import { appSettingsService } from "../appSettings";
+import { DEFAULT_MODE_ID, type ModeId } from "../../../shared/modes";
+import {
+  composeConfigSnapshot,
+  composeExtraInstructions,
+  composeToolPolicy,
+} from "../../../shared/mode-harness";
 import {
   createWorkAdapter,
   type WorkRunContextItem,
@@ -12,6 +22,12 @@ import {
 } from "../providers/adapters";
 import type { WorkRunResult } from "../../../shared/adapter.types";
 import { createRunSession, type RunSession, type RunSessionResult } from "./run-session";
+import {
+  managedRunDir,
+  removeManagedRunDir,
+  resolveRunExecution,
+} from "./run-execution";
+import { materializeCollectionSourceContext } from "./run-collection-sources";
 import { emit } from "../../ipc-kit";
 import { runSessionRegistry } from "./run-session-registry";
 import type {
@@ -20,6 +36,9 @@ import type {
   RunResponse,
   ArchivedRunResponse,
   ActiveRunResponse,
+  RecentRunResponse,
+  RunExperienceOptions,
+  WorkspaceRunListOptions,
   CreateRunContextPayload,
   RunContextResponse,
   CreateRunArtifactPayload,
@@ -35,6 +54,7 @@ import type {
   ContinueRunResponse,
   ForkRunPayload,
   ForkRunResponse,
+  MoveRunToCollectionPayload,
   ReviewRunPayload,
   RunDetailsResponse,
   RunTurnResponse,
@@ -54,6 +74,70 @@ function generateRunId(): string {
 
 function hashContent(content: string): string {
   return createHash("sha256").update(content).digest("hex").substring(0, 16);
+}
+
+/**
+ * Best-effort space lookup for harness composition: a missing space must not
+ * block a run, so failures resolve to null (default-mode harness, no custom
+ * system prompt).
+ */
+async function findSpaceForRun(spaceId: string | null | undefined) {
+  if (!spaceId) return null;
+  try {
+    return await spaceService.getById(spaceId);
+  } catch (err) {
+    console.error("[RunsService] Space lookup failed for harness:", err);
+    return null;
+  }
+}
+
+/**
+ * Resolve the experience mode for a new run: the payload's space if given,
+ * otherwise the active space. Snapshotted onto the run row so resume/fork
+ * keep behaving under the mode the run started with. The caller validates
+ * that the resolved Space exists and owns the selected account/provider.
+ */
+async function resolveRunMode(spaceId: string | undefined): Promise<{
+  spaceId: string | undefined;
+  mode: ModeId;
+  space: Awaited<ReturnType<typeof spaceService.getById>> | null;
+}> {
+  try {
+    let resolvedSpaceId = spaceId;
+    if (!resolvedSpaceId) {
+      const settings = await appSettingsService.getSettings();
+      resolvedSpaceId = settings.activeSpaceId ?? undefined;
+    }
+    const space = await findSpaceForRun(resolvedSpaceId);
+    return {
+      spaceId: resolvedSpaceId,
+      mode: space?.mode ?? DEFAULT_MODE_ID,
+      space,
+    };
+  } catch (err) {
+    console.error("[RunsService] Mode resolution failed, using default:", err);
+    return { spaceId, mode: DEFAULT_MODE_ID, space: null };
+  }
+}
+
+async function validateCollectionForRun(
+  collectionId: string | null | undefined,
+  accountId: string,
+  mode: ModeId,
+): Promise<string | undefined> {
+  if (!collectionId) return undefined;
+  if (mode === "developer") {
+    throw new Error("Developer runs cannot belong to a collection");
+  }
+  const collection = await collectionsService.get({ id: collectionId, accountId });
+  if (!collection) throw new Error("Collection not found");
+  if (collection.accountId !== accountId) {
+    throw new Error("Collection does not belong to this account");
+  }
+  if (collection.isArchived) {
+    throw new Error("Archived collections cannot accept runs");
+  }
+  return collection.id;
 }
 
 function fallbackTitle(goal: string): string {
@@ -82,6 +166,9 @@ async function generateRunTitle(
     title = fallbackTitle(goal);
   }
   await runsRepo.updateRun(runId, { title });
+  // Titles land seconds after the run starts; the chat sidebar refreshes on
+  // this instead of polling.
+  emit("runs:updated", { runId, ts: Date.now() });
 }
 
 /** Broadcast statusChanged for runs that fail before a session is created. */
@@ -214,9 +301,45 @@ export const runsService = {
     );
     const workspaceById = new Map(workspaceEntries);
 
+    // A workspace wears its project's icon, the same one the sidebar prints.
+    const projectIds = [
+      ...new Set(
+        [...workspaceById.values()]
+          .filter((workspace) => workspace !== null)
+          .map((workspace) => workspace.projectId),
+      ),
+    ];
+    const projectEntries = await Promise.all(
+      projectIds.map(
+        async (id) =>
+          [id, (await projectsService.get(id))?.icon ?? null] as const,
+      ),
+    );
+    const projectIconById = new Map(projectEntries);
+
+    // Chats have no workspace — their collection names the group instead. One
+    // list per account covers every run, archived collections included, so a
+    // chat filed under a hidden project still finds its name.
+    const accountIds = [
+      ...new Set(
+        archived.filter((run) => run.collectionId).map((run) => run.accountId),
+      ),
+    ];
+    const collectionLists = await Promise.all(
+      accountIds.map((accountId) =>
+        collectionsService.list({ accountId, includeArchived: true }),
+      ),
+    );
+    const collectionById = new Map(
+      collectionLists.flat().map((collection) => [collection.id, collection]),
+    );
+
     return archived.map((run) => {
       const workspace = run.workspaceId
         ? workspaceById.get(run.workspaceId)
+        : null;
+      const collection = run.collectionId
+        ? collectionById.get(run.collectionId)
         : null;
       return {
         ...run,
@@ -225,6 +348,14 @@ export const runsService = {
               id: workspace.id,
               name: workspace.name,
               isArchived: workspace.isArchived,
+              icon: projectIconById.get(workspace.projectId) ?? null,
+            }
+          : null,
+        collection: collection
+          ? {
+              id: collection.id,
+              name: collection.name,
+              icon: collection.icon,
             }
           : null,
       };
@@ -271,8 +402,33 @@ export const runsService = {
     });
   },
 
+  /** Newest-touched runs in one account/provider/mode experience. */
+  async listRecentRuns(
+    options: RunExperienceOptions,
+  ): Promise<RecentRunResponse[]> {
+    return runsRepo.findRecentRunsByExperience(options);
+  },
+
   async getRunById(id: string): Promise<RunResponse | null> {
     return runsRepo.findRunById(id);
+  },
+
+  /**
+   * Where this run's files live — its workspace root, or the managed directory
+   * a workspace-less run executes in. The renderer needs it to resolve the bare
+   * filenames agents write into their answers ("report.md"), which have no
+   * meaning without a base. Null when the run is gone, or when a developer run
+   * somehow has no workspace.
+   */
+  async getRunExecutionRoot(runId: string): Promise<string | null> {
+    const run = await runsRepo.findRunById(runId);
+    if (!run) return null;
+    if (run.workspaceId) {
+      const workspace = await workspaceService.get(run.workspaceId);
+      return workspace?.rootPath ?? null;
+    }
+    if (run.mode === "developer") return null;
+    return managedRunDir(run.id, run.mode);
   },
 
   async getRunsByAccount(
@@ -284,9 +440,9 @@ export const runsService = {
 
   async getRunsByWorkspace(
     workspaceId: string,
-    limit?: number,
+    options?: WorkspaceRunListOptions,
   ): Promise<RunResponse[]> {
-    return runsRepo.findRunsByWorkspace(workspaceId, limit);
+    return runsRepo.findRunsByWorkspace(workspaceId, options);
   },
 
   async getRunsByStatus(
@@ -303,6 +459,31 @@ export const runsService = {
   async updateRun(id: string, payload: UpdateRunPayload): Promise<RunResponse> {
     const updated = await runsRepo.updateRun(id, payload);
     if (!updated) throw new Error("Run not found");
+    return updated;
+  },
+
+  async moveRunToCollection(
+    payload: MoveRunToCollectionPayload,
+  ): Promise<RunResponse> {
+    const run = await runsRepo.findRunById(payload.runId);
+    if (!run) throw new Error("Run not found");
+    if (run.accountId !== payload.accountId) {
+      throw new Error("Run does not belong to this account");
+    }
+    if (run.mode === "developer") {
+      throw new Error("Developer runs cannot belong to a collection");
+    }
+    const collectionId = await validateCollectionForRun(
+      payload.collectionId,
+      run.accountId,
+      run.mode,
+    );
+    const updated = await runsRepo.moveToCollection(
+      run.id,
+      collectionId ?? null,
+    );
+    if (!updated) throw new Error("Run not found");
+    emit("runs:updated", { runId: run.id, ts: Date.now() });
     return updated;
   },
 
@@ -330,6 +511,7 @@ export const runsService = {
     const run = await runsRepo.findRunById(id);
     if (!run) throw new Error("Run not found");
     await syncCodexRunSession(run, "delete");
+    removeManagedRunDir(run.id, run.mode);
     await runsRepo.deleteRun(id);
   },
 
@@ -350,15 +532,25 @@ export const runsService = {
   async unarchiveRun(id: string): Promise<RunResponse> {
     const run = await runsRepo.findRunById(id);
     if (!run) throw new Error("Run not found");
-    if (!run.workspaceId) {
-      throw new Error("Cannot restore a run without a workspace");
+    if (run.workspaceId) {
+      const workspace = await workspaceService.get(run.workspaceId);
+      if (!workspace) {
+        throw new Error("Cannot restore a run whose workspace was deleted");
+      }
+      if (workspace.isArchived) {
+        throw new Error("Unarchive the workspace before restoring this run");
+      }
+    } else if (run.mode === "developer") {
+      throw new Error("Cannot restore a developer run without a workspace");
     }
-    const workspace = await workspaceService.get(run.workspaceId);
-    if (!workspace) {
-      throw new Error("Cannot restore a run without a workspace");
-    }
-    if (workspace.isArchived) {
-      throw new Error("Unarchive the workspace before restoring this run");
+    if (run.collectionId) {
+      const collection = await collectionsService.get({
+        id: run.collectionId,
+        accountId: run.accountId,
+      });
+      if (!collection || collection.isArchived) {
+        await runsRepo.moveToCollection(run.id, null);
+      }
     }
     await syncCodexRunSession(run, "unarchive");
     const unarchived = await runsRepo.unarchiveRun(id);
@@ -450,31 +642,71 @@ export const runsService = {
         );
       }
 
-      const workspace = await workspaceService.get(payload.workspaceId);
-      if (!workspace) {
-        throw new Error(`Workspace "${payload.workspaceId}" not found`);
+      const { spaceId: resolvedSpaceId, mode, space } = await resolveRunMode(payload.spaceId);
+      if (!resolvedSpaceId || !space) {
+        throw new Error("A valid space is required to start a run");
       }
-      // Refuse before any state is written. Handing a missing directory to an
-      // adapter starts a run that can only fail, and fails obscurely — the agent
-      // reports a path error from inside its own sandbox.
-      assertWorkspacePathExists(workspace.rootPath, workspace.name);
-
-      await workspaceService.update(payload.workspaceId, { status: "in_progress" });
+      if (space.accountId !== payload.accountId) {
+        throw new Error("Space does not belong to this account");
+      }
+      if (space.providerId !== payload.providerId) {
+        throw new Error("Space does not use the selected provider");
+      }
+      let workspace: Awaited<ReturnType<typeof workspaceService.get>> = null;
+      if (mode === "developer") {
+        if (!payload.workspaceId) {
+          throw new Error("Developer runs require a workspace");
+        }
+        workspace = await workspaceService.get(payload.workspaceId);
+        if (!workspace) {
+          throw new Error(`Workspace "${payload.workspaceId}" not found`);
+        }
+        if (workspace.accountId !== payload.accountId) {
+          throw new Error("Workspace does not belong to this account");
+        }
+        assertWorkspacePathExists(workspace.rootPath, workspace.name);
+        await workspaceService.update(workspace.id, { status: "in_progress" });
+      } else if (payload.workspaceId) {
+        throw new Error("Work and Chat runs do not use a workspace");
+      }
+      const collectionId = await validateCollectionForRun(
+        payload.collectionId,
+        payload.accountId,
+        mode,
+      );
+      const execution = resolveRunExecution({ runId, mode, workspace });
+      const extraInstructions = composeExtraInstructions(mode, space?.systemPrompt);
+      // Persist the *composed* values — the run row records what actually ran.
+      const configSnapshot = composeConfigSnapshot(mode, payload.providerId, payload.configSnapshot);
+      const toolPolicy = composeToolPolicy(mode, payload.toolPolicySnapshot);
 
       await runsRepo.insertRun({
         id: runId,
         accountId: payload.accountId,
-        workspaceId: payload.workspaceId,
-        spaceId: payload.spaceId,
+        workspaceId: workspace?.id,
+        collectionId,
+        spaceId: resolvedSpaceId,
         providerId: payload.providerId,
+        mode,
         model: payload.model,
         goal: payload.goal,
         status: "running",
         systemPrompt: payload.systemPrompt,
-        configSnapshot: payload.configSnapshot,
-        toolPolicySnapshot: payload.toolPolicySnapshot,
+        configSnapshot: configSnapshot ?? undefined,
+        toolPolicySnapshot: toolPolicy ?? undefined,
       });
       await runsRepo.updateRun(runId, { startedAt: new Date() });
+
+      const collectionContext = await materializeCollectionSourceContext({
+        runId,
+        accountId: payload.accountId,
+        collectionId,
+        execution,
+      });
+      const effectiveInitialContext: WorkRunContextItem[] = [
+        ...collectionContext,
+        ...((payload.initialContext ?? []) as WorkRunContextItem[]),
+      ];
 
       if (payload.initialContext && payload.initialContext.length > 0) {
         for (const ctx of payload.initialContext) {
@@ -493,7 +725,7 @@ export const runsService = {
         runId,
         accountId: payload.accountId,
         providerId: payload.providerId,
-        workspace: { id: workspace.id, rootPath: workspace.rootPath },
+        execution,
         initialPromptContent: payload.goal,
       });
 
@@ -506,13 +738,18 @@ export const runsService = {
         {
           runId,
           accountId: payload.accountId,
-          workspace: { id: workspace.id, rootPath: workspace.rootPath },
+          execution,
           goal: payload.goal,
           model: payload.model,
           systemPrompt: payload.systemPrompt,
-          context: payload.initialContext as WorkRunContextItem[] | undefined,
-          toolPolicy: payload.toolPolicySnapshot,
-          configSnapshot: payload.configSnapshot ?? null,
+          mode,
+          extraInstructions,
+          context:
+            effectiveInitialContext.length > 0
+              ? effectiveInitialContext
+              : undefined,
+          toolPolicy,
+          configSnapshot,
           attachments: payload.attachments,
           contextIssues: payload.contextIssues,
           contextSignals: payload.contextSignals,
@@ -554,6 +791,16 @@ export const runsService = {
         );
       }
 
+      // Reviews are a Developer-mode surface: they feed the review/finding
+      // rows and the git ceremony the other modes hide, and the review request
+      // carries no mode harness (no toolPolicy, no configSnapshot). A Work or
+      // Chat space is refused here rather than allowed to run unharnessed —
+      // before the workspace flips to in_review, so a refusal leaves no trace.
+      const { spaceId: resolvedSpaceId, mode } = await resolveRunMode(payload.spaceId);
+      if (mode !== "developer") {
+        throw new Error("Code review is only available in Developer spaces");
+      }
+
       const workspace = await workspaceService.get(payload.workspaceId);
       if (!workspace) {
         throw new Error(`Workspace "${payload.workspaceId}" not found`);
@@ -576,14 +823,21 @@ export const runsService = {
         id: runId,
         accountId: payload.accountId,
         workspaceId: payload.workspaceId,
-        spaceId: payload.spaceId,
+        spaceId: resolvedSpaceId,
         providerId: payload.providerId,
+        mode,
         model: payload.model,
         goal: goalDescription,
         status: "running",
         systemPrompt: payload.systemPrompt,
-        configSnapshot: payload.configSnapshot,
-        toolPolicySnapshot: payload.toolPolicySnapshot,
+        // Composed, not raw: developer's harness adds nothing, but the caller's
+        // snapshots still get validated and normalized here rather than sitting
+        // on the row until continueRun's compose rejects them mid-resume.
+        configSnapshot:
+          composeConfigSnapshot(mode, payload.providerId, payload.configSnapshot) ??
+          undefined,
+        toolPolicySnapshot:
+          composeToolPolicy(mode, payload.toolPolicySnapshot) ?? undefined,
       });
       await runsRepo.updateRun(runId, { startedAt: new Date() });
 
@@ -591,7 +845,7 @@ export const runsService = {
         runId,
         accountId: payload.accountId,
         providerId: payload.providerId,
-        workspace: { id: workspace.id, rootPath: workspace.rootPath },
+        execution: { cwd: workspace.rootPath, workspaceId: workspace.id },
         initialPromptContent: goalDescription,
       });
 
@@ -608,7 +862,7 @@ export const runsService = {
           {
             runId,
             accountId: payload.accountId,
-            workspace: { id: workspace.id, rootPath: workspace.rootPath },
+            execution: { cwd: workspace.rootPath, workspaceId: workspace.id },
             target: payload.target,
             delivery: payload.delivery,
             model: payload.model,
@@ -621,7 +875,7 @@ export const runsService = {
           {
             runId,
             accountId: payload.accountId,
-            workspace: { id: workspace.id, rootPath: workspace.rootPath },
+            execution: { cwd: workspace.rootPath, workspaceId: workspace.id },
             goal: "review code changes in this workspace",
             model: payload.model,
             systemPrompt: payload.systemPrompt,
@@ -664,11 +918,17 @@ export const runsService = {
       const workspace = run.workspaceId
         ? await workspaceService.get(run.workspaceId)
         : null;
-      // Workspace-less runs fall back to the app's cwd below, so only guard when
-      // the run is actually bound to a workspace directory.
+      if (run.workspaceId && !workspace) {
+        throw new Error("Run workspace no longer exists");
+      }
       if (workspace) {
         assertWorkspacePathExists(workspace.rootPath, workspace.name);
       }
+      const execution = resolveRunExecution({
+        runId,
+        mode: run.mode,
+        workspace,
+      });
 
       const adapter = createWorkAdapter(provider);
       if (!adapter.continueRun) {
@@ -691,12 +951,35 @@ export const runsService = {
         await workspaceService.update(workspace.id, { status: "in_progress" });
       }
 
+      const toolPolicy = composeToolPolicy(
+        run.mode,
+        run.toolPolicySnapshot,
+      );
+      const configSnapshot = composeConfigSnapshot(
+        run.mode,
+        run.providerId,
+        run.configSnapshot,
+      );
+
       await runsRepo.updateRun(runId, {
         status: "running",
         startedAt: new Date(),
         endedAt: null,
         lastError: null,
+        configSnapshot: configSnapshot ?? undefined,
+        toolPolicySnapshot: toolPolicy ?? undefined,
       });
+
+      const collectionContext = await materializeCollectionSourceContext({
+        runId,
+        accountId,
+        collectionId: run.collectionId,
+        execution,
+      });
+      const effectiveAdditionalContext: WorkRunContextItem[] = [
+        ...collectionContext,
+        ...((additionalContext ?? []) as WorkRunContextItem[]),
+      ];
 
       if (additionalContext && additionalContext.length > 0) {
         for (const ctx of additionalContext) {
@@ -711,27 +994,35 @@ export const runsService = {
         }
       }
 
-      const workspaceCtx = workspace
-        ? { id: workspace.id, rootPath: workspace.rootPath }
-        : { id: "", rootPath: process.cwd() };
-
       const session = createRunSession({
         runId,
         accountId,
         providerId: run.providerId,
-        workspace: workspaceCtx,
+        execution,
         initialPromptContent: message,
         seedTurnIndex,
       });
+
+      // Re-derive the harness from the run row's mode snapshot — the space's
+      // current mode is irrelevant, but its system prompt is re-read live.
+      const space = await findSpaceForRun(run.spaceId);
 
       const runPromise = adapter.continueRun(
         {
           runId,
           accountId,
-          workspace: workspaceCtx,
+          execution,
           message,
           model: payload.model,
-          context: additionalContext as any,
+          systemPrompt: run.systemPrompt,
+          mode: run.mode,
+          extraInstructions: composeExtraInstructions(run.mode, space?.systemPrompt),
+          toolPolicy,
+          configSnapshot,
+          context:
+            effectiveAdditionalContext.length > 0
+              ? effectiveAdditionalContext
+              : undefined,
           attachments: payload.attachments,
           contextIssues: payload.contextIssues,
           contextSignals: payload.contextSignals,
@@ -778,6 +1069,12 @@ export const runsService = {
       const workspace = sourceRun.workspaceId
         ? await workspaceService.get(sourceRun.workspaceId)
         : null;
+      if (sourceRun.workspaceId && !workspace) {
+        throw new Error("Source run workspace no longer exists");
+      }
+      if (workspace) {
+        assertWorkspacePathExists(workspace.rootPath, workspace.name);
+      }
 
       const adapter = createWorkAdapter(provider);
       if (!adapter.forkRun) {
@@ -796,27 +1093,66 @@ export const runsService = {
         await workspaceService.update(workspace.id, { status: "in_progress" });
       }
 
+      const toolPolicy = composeToolPolicy(
+        sourceRun.mode,
+        sourceRun.toolPolicySnapshot,
+      );
+      const configSnapshot = composeConfigSnapshot(
+        sourceRun.mode,
+        sourceRun.providerId,
+        sourceRun.configSnapshot,
+      );
+
       await runsRepo.insertRun({
         id: newRunId,
         accountId,
         workspaceId: sourceRun.workspaceId ?? undefined,
+        collectionId: sourceRun.collectionId ?? undefined,
         spaceId: sourceRun.spaceId ?? undefined,
         providerId: sourceRun.providerId,
+        mode: sourceRun.mode,
         model: sourceRun.model ?? undefined,
         goal: message,
         status: "running",
         systemPrompt: sourceRun.systemPrompt ?? undefined,
+        configSnapshot: configSnapshot ?? undefined,
+        toolPolicySnapshot: toolPolicy ?? undefined,
       });
 
-      const workspaceCtx = workspace
-        ? { id: workspace.id, rootPath: workspace.rootPath }
-        : { id: "", rootPath: process.cwd() };
+      const execution = resolveRunExecution({
+        runId: newRunId,
+        mode: sourceRun.mode,
+        workspace,
+      });
+
+      const collectionContext = await materializeCollectionSourceContext({
+        runId: newRunId,
+        accountId,
+        collectionId: sourceRun.collectionId,
+        execution,
+      });
+      const effectiveAdditionalContext: WorkRunContextItem[] = [
+        ...collectionContext,
+        ...((payload.additionalContext ?? []) as WorkRunContextItem[]),
+      ];
+      if (payload.additionalContext) {
+        for (const item of payload.additionalContext) {
+          await runsRepo.insertContext({
+            runId: newRunId,
+            kind: item.kind,
+            ref: item.ref,
+            content: item.content,
+            contentHash: item.content ? hashContent(item.content) : undefined,
+            metadata: item.metadata,
+          });
+        }
+      }
 
       const session = createRunSession({
         runId: newRunId,
         accountId,
         providerId: sourceRun.providerId,
-        workspace: workspaceCtx,
+        execution,
         initialPromptContent: message,
       });
 
@@ -824,14 +1160,29 @@ export const runsService = {
         console.error(`[RunsService] Title generation failed for forked run ${newRunId}:`, err),
       );
 
+      // The fork inherits the source run's harness wholesale — same mode
+      // snapshot, same composed policy/config (the fork row copied them).
+      const sourceSpace = await findSpaceForRun(sourceRun.spaceId);
+
       const runPromise = adapter.forkRun(
         {
           runId: newRunId,
           sourceRunId,
           accountId,
-          workspace: workspaceCtx,
+          execution,
           message,
-          context: payload.additionalContext as any,
+          // The forked run row inherits the source's model; the request has to
+          // carry it too, or the provider picks its own default for a
+          // conversation that was already running on something else.
+          model: sourceRun.model ?? undefined,
+          mode: sourceRun.mode,
+          extraInstructions: composeExtraInstructions(sourceRun.mode, sourceSpace?.systemPrompt),
+          toolPolicy,
+          configSnapshot,
+          context:
+            effectiveAdditionalContext.length > 0
+              ? effectiveAdditionalContext
+              : undefined,
           attachments: payload.attachments,
         },
         (event: WorkRunEvent) =>

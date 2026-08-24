@@ -12,6 +12,10 @@ export interface RunEvent {
 
 export interface Run {
   id: string;
+  workspaceId?: string | null;
+  collectionId?: string | null;
+  spaceId?: string | null;
+  mode?: "developer" | "work" | "chat";
   status: "queued" | "running" | "succeeded" | "failed" | "canceled";
   goal: string;
   title?: string;

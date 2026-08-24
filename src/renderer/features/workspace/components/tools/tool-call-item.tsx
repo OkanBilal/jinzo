@@ -8,10 +8,7 @@ import { TaskDisplay, type TaskParams } from "./task-display";
 import { PlanDisplay } from "./plan-display";
 import { WriteDisplay, type WriteParams } from "./write-display";
 import { McpDisplay } from "./mcp-display";
-import { GetDiffDisplay, type GetDiffParams } from "./get-diff-display";
 import { SaveReviewDisplay, type SaveReviewParams } from "./save-review-display";
-import { CommitDisplay, type CommitParams } from "./commit-display";
-import { PRDisplay, type PRParams } from "./pr-display";
 import { CheckPackageDisplay, type CheckPackageParams } from "./check-package-display";
 import { SaveFindingDisplay, type SaveFindingParams } from "./save-finding-display";
 import { AgentDisplay, type AgentParams } from "./agent-display";
@@ -208,9 +205,6 @@ const DISPATCH: Renderer[] = [
         : { url: ctx.summary },
   ),
 
-  byDisplayName<GetDiffParams>("GetDiff", (ctx, params) => (
-    <GetDiffDisplay params={params} output={ctx.event.metadata?.output} isCompact={ctx.isCompact} />
-  )),
   byDisplayName<SaveReviewParams>("SaveReview", (ctx, params) => (
     <SaveReviewDisplay params={params} isCompact={ctx.isCompact} />
   )),
@@ -219,12 +213,6 @@ const DISPATCH: Renderer[] = [
   )),
   byDisplayName<SaveFindingParams>("SaveFindings", (ctx, params) => (
     <SaveFindingDisplay params={params} isCompact={ctx.isCompact} />
-  )),
-  byDisplayName<CommitParams>("Commit", (ctx, params) => (
-    <CommitDisplay params={params} isCompact={ctx.isCompact} />
-  )),
-  byDisplayName<PRParams>("CreatePR", (ctx, params) => (
-    <PRDisplay params={params} isCompact={ctx.isCompact} />
   )),
   byDisplayName<CheckPackageParams>("CheckPackage", (ctx, params) => (
     <CheckPackageDisplay params={params} output={ctx.event.metadata?.output} isCompact={ctx.isCompact} />

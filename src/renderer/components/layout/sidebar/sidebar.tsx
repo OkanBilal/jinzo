@@ -12,13 +12,14 @@ import {
   Plus,
   Connect,
   Project,
-  Sun,
   Relay,
   Plugin,
   Box,
+  New,
 } from "@/components/ui/icons";
 import CloneRepoModal from "./clone-repo-modal";
 import CreateProjectModal from "./create-project-modal";
+import CollectionModal from "./collection-modal";
 import { useDeleteWorkspace } from "@/features/workspace/hooks";
 import { useArchiveWorkspace } from "@/features/workspace/hooks";
 import { useSidebarSearch } from "@/hooks/use-sidebar-search";
@@ -26,6 +27,7 @@ import { useSettingsNavigation } from "@/hooks/use-settings-navigation";
 import { useSidebarData } from "@/hooks/use-sidebar-data";
 import { useSidebarActions } from "@/hooks/use-sidebar-actions";
 import { useSidebarConfig } from "@/hooks/use-sidebar-config";
+import { useModeConfig } from "@/hooks/use-mode-config";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import { useSpaceProviderVariant } from "@/hooks/use-space-provider-variant";
 import { useScriptNotifications } from "@/hooks/use-script-notifications";
@@ -44,6 +46,7 @@ import {
   SIDEBAR_WIDTH_MAX,
   SIDEBAR_WIDTH_DEFAULT,
 } from "@/lib/layout";
+import { Clock } from "@/components/ui/icons/space";
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -55,6 +58,8 @@ export default function Sidebar({ collapsed }: SidebarProps) {
   const dispatch = useAppDispatch();
   const sidebarWidth = useAppSelector((s) => s.appSettings.sidebarWidth);
   const sidebarConfig = useSidebarConfig();
+  const modeConfig = useModeConfig();
+  const isChatShell = sidebarConfig.itemType === "chat";
   const { spaces, activeSpaceId } = useActiveSpace();
   const spaceProvider = useSpaceProviderVariant();
 
@@ -105,6 +110,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
   const {
     handleSpaceChange,
     handleNewClick,
+    handleNewChat,
     handleAddProject,
     handleCloneRepo,
     handleOpenCloneModal,
@@ -116,6 +122,11 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     handleCloseCreateProjectModal,
     isCreateProjectModalOpen,
     isCreatingProject,
+    handleCreateCollection,
+    handleOpenCreateCollectionModal,
+    handleCloseCreateCollectionModal,
+    isCreateCollectionModalOpen,
+    isCreatingCollection,
   } = useSidebarActions();
 
   const deleteWorkspace = useDeleteWorkspace();
@@ -189,76 +200,88 @@ export default function Sidebar({ collapsed }: SidebarProps) {
             />
             <div className="px-3 py-px">
               <NewButton
-                onClick={handleNewClick}
+                onClick={isChatShell ? () => handleNewChat() : handleNewClick}
                 icon={
-                  <Project className="size-3.5 text-primary-900 dark:text-primary-100" />
+                  isChatShell ? (
+                    <New className="size-3.5 text-primary-900 dark:text-primary-100" />
+                  ) : (
+                    <Project className="size-3.5 text-primary-900 dark:text-primary-100" />
+                  )
                 }
                 title={sidebarConfig.title}
-                actionPrefix="Add"
-                dropdownItems={[
-                  ...(nativeDialogs
-                    ? [
+                actionPrefix={sidebarConfig.actionPrefix}
+                // An empty list turns the button into a direct action (\u2318N
+                // included) \u2014 the chat shell's "New chat".
+                dropdownItems={
+                  isChatShell
+                    ? []
+                    : [
+                        ...(nativeDialogs
+                          ? [
+                              {
+                                label: "Add from local",
+                                icon: (
+                                  <Plus className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
+                                ),
+                                shortcut: "o",
+                                shortcutLabel: "\u2318\u21e7O",
+                                onClick: handleAddProject,
+                              },
+                            ]
+                          : []),
                         {
-                          label: "Add from local",
+                          label: "Clone from URL",
                           icon: (
-                            <Plus className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
+                            <Connect className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
                           ),
-                          shortcut: "o",
-                          shortcutLabel: "\u2318\u21e7O",
-                          onClick: handleAddProject,
+                          shortcut: "u",
+                          shortcutLabel: "\u2318\u21e7U",
+                          onClick: handleOpenCloneModal,
+                        },
+                        {
+                          label: "Create new project",
+                          icon: (
+                            <Project className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
+                          ),
+                          shortcut: "n",
+                          shortcutLabel: "\u2318\u21e7N",
+                          onClick: handleOpenCreateProjectModal,
                         },
                       ]
-                    : []),
-                  {
-                    label: "Clone from URL",
-                    icon: (
-                      <Connect className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
-                    ),
-                    shortcut: "u",
-                    shortcutLabel: "\u2318\u21e7U",
-                    onClick: handleOpenCloneModal,
-                  },
-                  {
-                    label: "Create new project",
-                    icon: (
-                      <Project className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
-                    ),
-                    shortcut: "n",
-                    shortcutLabel: "\u2318\u21e7N",
-                    onClick: handleOpenCreateProjectModal,
-                  },
-                ]}
+                }
               />
             </div>
-            <div className="px-3 mb-px">
-              <Button
-                variant="subtle"
-                tooltip="Issues and pull requests"
-                className={`justify-start flex items-center gap-2 w-full rounded-xl transition-colors ${
-                  isTasksRoute
-                    ? "bg-primary/50 glass-outline dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/10"
-                    : ""
-                }`}
-                onClick={() => navigate("/tasks")}
-                aria-current={isTasksRoute ? "page" : undefined}
-              >
-                <Box
-                  className={`w-4 h-4 -ml-1 ${
+            {modeConfig.showTasksNav && (
+              <div className="px-3 mb-px">
+                <Button
+                  variant="subtle"
+                  tooltip="Issues and pull requests"
+                  className={`justify-start flex items-center gap-2 w-full rounded-xl transition-colors ${
                     isTasksRoute
-                      ? "text-primary-950 dark:text-primary"
-                      : "text-primary-900 dark:text-primary-100"
+                      ? "bg-primary/50 glass-outline dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/10"
+                      : ""
                   }`}
-                />
-                <Text
-                  as="span"
-                  size="s"
-                  weight="normal"
-                  tone={isTasksRoute ? "contrast" : "default"}
+                  onClick={() => navigate("/tasks")}
+                  aria-current={isTasksRoute ? "page" : undefined}
                 >
-                  Tasks
-                </Text>
-              </Button>
-            </div>
+                  <Box
+                    className={`w-4 h-4 -ml-1 ${
+                      isTasksRoute
+                        ? "text-primary-950 dark:text-primary"
+                        : "text-primary-900 dark:text-primary-100"
+                    }`}
+                  />
+                  <Text
+                    as="span"
+                    size="s"
+                    weight="normal"
+                    tone={isTasksRoute ? "contrast" : "default"}
+                  >
+                    Tasks
+                  </Text>
+                </Button>
+              </div>
+            )}
             <div className="px-3 mb-px">
               <Button
                 variant="subtle"
@@ -271,7 +294,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 onClick={() => navigate("/pulse")}
                 aria-current={isPulseRoute ? "page" : undefined}
               >
-                <Sun
+                <Clock
                   className={`w-4 h-4 -ml-1 ${
                     isPulseRoute
                       ? "text-primary-950 dark:text-primary"
@@ -393,8 +416,8 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 <span
                   className={`shrink-0 text-t -mr-1 uppercase px-1.5 py-px rounded-md ${
                     isRelayRoute
-                      ? "bg-primary-400/20 text-primary-800 dark:bg-primary/5 dark:text-primary"
-                      : "bg-primary-400/20 text-primary-600 dark:bg-primary/5 dark:text-primary-400"
+                      ? "bg-primary-400/20 text-primary-800 dark:bg-primary/5 dark:text-primary-200"
+                      : "bg-primary-400/20 text-primary-800 dark:bg-primary/5 dark:text-primary-200"
                   }`}
                 >
                   Beta
@@ -407,6 +430,9 @@ export default function Sidebar({ collapsed }: SidebarProps) {
               isLoadingWorkspaces={isLoadingWorkspaces}
               onDeleteWorkspace={deleteWorkspace.handleDeleteClick}
               onArchiveWorkspace={archiveWorkspace.handleArchiveClick}
+              searchQuery={searchQuery}
+              onNewChatInCollection={handleNewChat}
+              onCreateCollection={handleOpenCreateCollectionModal}
             />
             <BackgroundRunsDock />
             <UpdateBanner />
@@ -462,6 +488,13 @@ export default function Sidebar({ collapsed }: SidebarProps) {
         isCreating={isCreatingProject}
         onCreate={handleCreateProject}
         onClose={handleCloseCreateProjectModal}
+      />
+
+      <CollectionModal
+        isOpen={isCreateCollectionModalOpen}
+        isSaving={isCreatingCollection}
+        onSave={handleCreateCollection}
+        onClose={handleCloseCreateCollectionModal}
       />
     </>
   );

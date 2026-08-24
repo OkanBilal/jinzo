@@ -93,6 +93,11 @@ export function registerEntitiesHandlers(): void {
   );
 
   ipcMain.handle(
+    CHANNELS.issues.getDetail,
+    handle((entityId: string) => entitiesService.getIssueDetail(entityId)),
+  );
+
+  ipcMain.handle(
     CHANNELS.issues.create,
     handle((payload: CreateIssuePayload) => entitiesService.createIssue(payload)),
   );
@@ -153,6 +158,7 @@ export function unregisterEntitiesHandlers(): void {
     CHANNELS.tasks.delete,
     CHANNELS.issues.getAll,
     CHANNELS.issues.getById,
+    CHANNELS.issues.getDetail,
     CHANNELS.issues.create,
     CHANNELS.issues.update,
     CHANNELS.issues.delete,

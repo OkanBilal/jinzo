@@ -166,7 +166,7 @@ export const projectsService = {
   },
 
   async delete(id: string): Promise<void> {
-    await projectsRepo.delete(id);
+    await this.remove(id);
   },
 
   /**

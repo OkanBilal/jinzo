@@ -17,6 +17,7 @@ import { registerProvidersIpc } from "./modules/providers";
 import { registerToolsIpc } from "./modules/tools";
 import { registerWorkspaceIpc } from "./modules/workspace";
 import { registerProjectsIpc } from "./modules/projects";
+import { registerCollectionsIpc } from "./modules/collections";
 import { registerRunsIpc } from "./modules/runs";
 import { registerFileExplorerIpc } from "./modules/fileExplorer";
 import { registerGitFlowIpc } from "./modules/gitFlow";
@@ -101,6 +102,7 @@ export async function startBackendServer(
   registerToolsIpc();
   registerWorkspaceIpc();
   registerProjectsIpc();
+  registerCollectionsIpc();
   registerRunsIpc();
   registerFileExplorerIpc();
   registerGitFlowIpc();

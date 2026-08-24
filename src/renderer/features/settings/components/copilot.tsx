@@ -123,7 +123,7 @@ export default function CopilotSettings(
       <ProviderUsageSection
         isLoading={isLoadingRateLimits}
         rows={usageRows}
-        display="used"
+        readout="counts"
       />
     </ProviderSettingsLayout>
   );

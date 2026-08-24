@@ -6,10 +6,11 @@ import {
   useGetWorkspaceQuery,
 } from "@/lib/redux/api/workspaceApi";
 import { useGetProvidersByKindQuery } from "@/lib/redux/api/providersApi";
+import type { ModeId } from "../../../../shared/modes";
 
 const EMPTY_PROVIDERS: never[] = [];
 
-export function useWorkspaceData(providerId?: string) {
+export function useWorkspaceData(providerId?: string, mode?: ModeId) {
   const { workspaceId } = useParams<{ workspaceId?: string }>();
 
   const savedWorkspaceIdByProvider = useAppSelector(
@@ -31,13 +32,14 @@ export function useWorkspaceData(providerId?: string) {
 
   // Resolve effective workspace ID: URL param > saved per-provider > first workspace
   const effectiveWorkspaceId = useMemo(() => {
+    if (mode && mode !== "developer") return undefined;
     if (workspaceId) return workspaceId;
     if (providerId) {
       const saved = savedWorkspaceIdByProvider[providerId];
       if (saved && workspaces.some((w) => w.id === saved)) return saved;
     }
     return workspaces.length > 0 ? workspaces[0].id : undefined;
-  }, [workspaceId, providerId, savedWorkspaceIdByProvider, workspaces]);
+  }, [mode, workspaceId, providerId, savedWorkspaceIdByProvider, workspaces]);
 
   const { data: fetchedWorkspace } = useGetWorkspaceQuery(effectiveWorkspaceId!, {
     skip: !effectiveWorkspaceId,

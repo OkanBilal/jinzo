@@ -78,8 +78,14 @@ export function PanelItem({
   iconTitle,
   hoverAction,
 }: PanelItemProps) {
+  // A disabled row has to read as one dimmed strip. The single-button layout
+  // gets that free from `disabled:opacity-40` on the row itself; the split
+  // layout is several sibling elements, only one of which is the disabled
+  // button — so the icon, trailing, and chevron take the same tone by hand,
+  // instead of a bright icon sitting next to a greyed-out label.
+  const dimmed = disabled && (onIconClick || hoverAction) ? "opacity-40" : "";
   const iconSlot = (
-    <span className="shrink-0 text-primary-600 dark:text-primary-400">
+    <span className={`shrink-0 text-primary-600 dark:text-primary-400 ${dimmed}`}>
       {loading ? <Refresh className="size-4 animate-spin" /> : icon}
     </span>
   );
@@ -97,13 +103,18 @@ export function PanelItem({
     </Text>
   );
   const trailingSlot = trailing ? (
-    <Text as="span" size="xs" tone="subtle" className="shrink-0 tabular-nums">
+    <Text
+      as="span"
+      size="xs"
+      tone="subtle"
+      className={`shrink-0 tabular-nums ${dimmed}`}
+    >
       {trailing}
     </Text>
   ) : null;
   const chevronSlot = expandable ? (
     <ArrowUp
-      className={`size-3 shrink-0 text-primary-400 transition-transform duration-200 ${
+      className={`size-3 shrink-0 text-primary-400 transition-transform duration-200 ${dimmed} ${
         expanded ? "rotate-180" : "rotate-90"
       }`}
     />
@@ -155,7 +166,7 @@ export function PanelItem({
               as="span"
               size="xs"
               tone="subtle"
-              className={`tabular-nums transition-opacity ${
+              className={`tabular-nums transition-opacity ${dimmed} ${
                 hoverAction.pending || hoverAction.pinned
                   ? "opacity-0"
                   : "group-hover:opacity-0"

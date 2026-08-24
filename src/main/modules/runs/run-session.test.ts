@@ -118,7 +118,7 @@ describe("RunSession", () => {
       runId: "r1",
       accountId: "default",
       providerId: "copilot_cli",
-      workspace: { id: "w1", rootPath: "/tmp/w1" },
+      execution: { workspaceId: "w1", cwd: "/tmp/w1" },
       initialPromptContent: "do the thing",
       ...overrides,
     });
@@ -139,6 +139,18 @@ describe("RunSession", () => {
       const turns = await runsRepo.findTurnsByRun("r1");
       expect(turns).toHaveLength(1);
       expect(turns[0].turnIndex).toBe(0);
+    });
+
+    it("skips every Workspace/git side effect without a Workspace", async () => {
+      const session = makeSession({
+        execution: { workspaceId: null, cwd: "/tmp/work-run" },
+      });
+      await flushBackground();
+      await session.finalize({ status: "succeeded" });
+
+      expect(gitService.getHeadSha).not.toHaveBeenCalled();
+      expect(gitService.captureDiffSnapshot).not.toHaveBeenCalled();
+      expect(logWorkspaceActivity).not.toHaveBeenCalled();
     });
 
     it("creates a turn at seedTurnIndex + 1 for continued runs", async () => {

@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { createContext, useContext, useState } from "react";
 import type { ReactNode } from "react";
 import { Components } from "react-markdown";
 
-import { Button, Text } from "@/components/ui";
+import { Button, Checkbox, Text } from "@/components/ui";
 import { CODE_FONT_SIZE_CSS } from "@/lib/appearance-fonts";
 import { proxiedImageSrc } from "@/lib/proxied-image-src";
 import { FileIconComponent } from "@/components/ui/icons";
@@ -33,10 +33,31 @@ function isFileHref(href: string): boolean {
 
 /**
  * File references render as an icon chip and open in the editor tab; real
- * URLs open in the system browser.
+ * URLs open in the system browser; `#fragment` links stay inside the document.
  */
 function MarkdownLink({ href, children }: { href?: string; children?: ReactNode }) {
   const openFileInEditor = useOpenFileInEditor();
+
+  // A fragment names a node in this very document — GFM footnote references
+  // and their back-links are the common case. Handing it to the shell was a
+  // silent no-op (main parses the URL and drops what has no protocol), which
+  // left every footnote link dead.
+  if (href?.startsWith("#")) {
+    return (
+      <Button
+        onClick={() => {
+          const id = decodeURIComponent(href.slice(1));
+          document
+            .getElementById(id)
+            ?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }}
+        title={href}
+        className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 underline cursor-pointer inline"
+      >
+        {children}
+      </Button>
+    );
+  }
 
   const target = href ? splitFileHref(href) : null;
   if (href && target && isFileHref(target.path)) {
@@ -75,6 +96,17 @@ function MarkdownLink({ href, children }: { href?: string; children?: ReactNode 
     </Button>
   );
 }
+
+/**
+ * Whether the `code` being rendered sits inside a `pre`.
+ *
+ * The props cannot answer it: react-markdown hands `code` a `language-*` class
+ * only when the fence names one, so a bare ``` block and an inline span look
+ * identical from there — which is how fenced blocks with no language ended up
+ * rendering as a row of inline pills spilling out of their box. The `pre`
+ * renderer is the one place that knows, so it says so.
+ */
+const InCodeBlock = createContext(false);
 
 /** Network URLs — the only sources whose mere loading has a side effect. */
 export function isRemoteImageSrc(src: string | undefined | null): src is string {
@@ -131,6 +163,42 @@ function MarkdownImage({ src, alt }: { src?: string; alt?: string }) {
 }
 
 /**
+ * Inline code or a fenced block, told apart by {@link InCodeBlock} rather than
+ * by props. A named component, not an inline arrow in the map below: it reads
+ * context, and only a component may.
+ */
+function MarkdownCode({ children }: { children?: ReactNode }) {
+  const isInline = !useContext(InCodeBlock);
+  if (isInline) {
+    // `size="inherit"` yields to the `0.9em` below: inline code stays relative
+    // to its sentence so it never towers over the prose around it.
+    return (
+      <Text
+        as="code"
+        size="inherit"
+        className="px-1 py-0.5 rounded text-[0.9em] bg-primary-200/40 dark:bg-primary/10"
+      >
+        {children}
+      </Text>
+    );
+  }
+  // Blocks carry the Code font-size setting instead, which is a pixel value
+  // off the `--text-*` ramp — hence `size="inherit"` here too. The surface
+  // belongs to the `pre` around it: two nested backgrounds drew a box inside
+  // a box, and only the outer one could scroll.
+  return (
+    <Text
+      as="code"
+      size="inherit"
+      className="block"
+      style={{ fontSize: CODE_FONT_SIZE_CSS }}
+    >
+      {children}
+    </Text>
+  );
+}
+
+/**
  * Custom ReactMarkdown component overrides for consistent styling.
  *
  * Every prose node routes through {@link Text}, whose default tone is the prose
@@ -166,26 +234,46 @@ export const  markdownComponents: Components = {
     </Text>
   ),
   ul: ({ children }) => (
-    <Text as="ul" className="list-disc list-outside pl-4 font-sans mb-2 space-y-1">
+    <Text as="ul" className="list-disc list-outside pl-4 font-sans mb-2 space-y-0.5">
       {children}
     </Text>
   ),
   ol: ({ children }) => (
     <Text
       as="ol"
-      className="list-decimal list-outside pl-4 font-sans mb-2 space-y-1"
+      className="list-decimal list-outside pl-4 font-sans mb-2 space-y-0.5"
     >
       {children}
     </Text>
   ),
-  li: ({ children }) => (
-    <Text
-      as="li"
-      className="font-sans leading-7 [&>p]:my-0 [&>p:not(:last-child)]:mb-1"
-    >
-      {children}
-    </Text>
-  ),
+  // `id` is forwarded because GFM footnotes land on the list item — without it
+  // the reference above has nothing to scroll to.
+  li: ({ children, className, id }) => {
+    // GFM marks checkbox items; they carry their own box, so the bullet goes
+    // and the row pulls back into the list's indent.
+    const isTask = className?.includes("task-list-item");
+    return (
+      <Text
+        as="li"
+        id={id}
+        // Tighter than a paragraph on purpose: list items are usually one
+        // short line, and prose leading spreads them into unrelated rows.
+        className={`font-sans leading-6 [&>p]:my-0 [&>p:not(:last-child)]:mb-1 ${
+          isTask ? "list-none -ml-4 flex items-start gap-2" : ""
+        }`}
+      >
+        {children}
+      </Text>
+    );
+  },
+  // The only `input` markdown can produce is GFM's task-list checkbox. It goes
+  // through the app's own Checkbox so a plan looks like the rest of the UI
+  // rather than an OS control, and stays disabled — the box reports what the
+  // author wrote, it is not a control the reader owns.
+  input: ({ type, checked }) =>
+    type === "checkbox" ? (
+      <Checkbox checked={!!checked} disabled className="mt-1 shrink-0" />
+    ) : null,
   table: ({ children }) => (
     <div className="overflow-x-auto my-4 rounded-lg border border-primary-300 dark:border-primary-700">
       <table className="min-w-full border-collapse">{children}</table>
@@ -220,36 +308,15 @@ export const  markdownComponents: Components = {
       {children}
     </Text>
   ),
-  code: ({ className, children }) => {
-    const isInline = !className;
-    if (isInline) {
-      // `size="inherit"` yields to the `0.9em` below: inline code stays relative
-      // to its sentence so it never towers over the prose around it.
-      return (
-        <Text
-          as="code"
-          size="inherit"
-          className="px-1 py-0.5 rounded text-[0.9em] bg-primary-200/40 dark:bg-primary/10"
-        >
-          {children}
-        </Text>
-      );
-    }
-    // Blocks carry the Code font-size setting instead, which is a pixel value
-    // off the `--text-*` ramp — hence `size="inherit"` here too.
-    return (
-      <Text
-        as="code"
-        size="inherit"
-        className="block p-4 rounded-xl bg-primary-100 dark:bg-primary-900 overflow-x-auto"
-        style={{ fontSize: CODE_FONT_SIZE_CSS }}
-      >
-        {children}
-      </Text>
-    );
-  },
+  code: MarkdownCode,
+  // Owns the block's surface and its horizontal scroll — an ASCII diagram wider
+  // than the column has to slide inside the box rather than out of it.
   pre: ({ children }) => (
-    <pre className="my-2 rounded-xl  overflow-hidden bg-primary-50 dark:bg-primary/10">{children}</pre>
+    <InCodeBlock.Provider value={true}>
+      <pre className="my-2 p-4 rounded-xl overflow-x-auto bg-primary-50 dark:bg-primary/10">
+        {children}
+      </pre>
+    </InCodeBlock.Provider>
   ),
   a: ({ href, children }) => <MarkdownLink href={href}>{children}</MarkdownLink>,
   // The three inline marks size themselves from the sentence they sit in.

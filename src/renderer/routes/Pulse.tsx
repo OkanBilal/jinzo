@@ -11,7 +11,9 @@ import { PageShell } from "@/components/layout/page-shell";
 export default function PulsePage() {
   const { data: pulses = [] } = useGetPulsesQuery();
   const [editingPulse, setEditingPulse] = useState<Pulse | null>(null);
-  const [activeTemplate, setActiveTemplate] = useState<PulseTemplate | null>(null);
+  const [activeTemplate, setActiveTemplate] = useState<PulseTemplate | null>(
+    null,
+  );
   const [modalOpen, setModalOpen] = useState(false);
 
   const openCreate = () => {
@@ -49,7 +51,7 @@ export default function PulsePage() {
         </div>
         <Button
           type="button"
-          variant="primary"
+          variant="submit"
           onClick={openCreate}
           className="flex items-center gap-1.5 cursor-pointer"
         >

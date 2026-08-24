@@ -36,8 +36,10 @@ import type {
   WorkRunEvent,
   WorkRunEventHandler,
   WorkRunRequest,
+  WorkRunToolPolicy,
   WorkRunUsage,
 } from "../../../../shared/adapter.types";
+import type { ModeId } from "../../../../shared/modes";
 import {
   requestToolApproval,
 } from "../../runs/user-input-broker";
@@ -576,11 +578,32 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
     };
   }
 
-  function buildPreToolUseHook(runId: string, permissionMode: string) {
+  function buildPreToolUseHook(
+    runId: string,
+    permissionMode: string,
+    toolPolicy?: WorkRunToolPolicy | null,
+  ) {
     const bypass = permissionMode === "bypassPermissions" || permissionMode === "allow";
+    // Copilot names its built-in tools in lowercase ("bash", "read"), the
+    // policy uses the canonical names ("Bash") — compare case-insensitively.
+    const disallowed = new Set(
+      (toolPolicy?.disallowedTools ?? []).map((t) => t.toLowerCase()),
+    );
+    const allowedOverride = toolPolicy?.allowedTools
+      ? new Set(toolPolicy.allowedTools.map((t) => t.toLowerCase()))
+      : null;
     return async (
       input: { toolName: string; toolArgs: unknown; timestamp: number; cwd: string },
     ): Promise<{ permissionDecision?: "allow" | "deny" | "ask"; permissionDecisionReason?: string; modifiedArgs?: unknown } | void> => {
+      // A policy-denied tool is denied outright — before bypass, which grants
+      // permission but must not resurrect a tool the mode removed.
+      if (disallowed.has(input.toolName.toLowerCase())) {
+        return {
+          permissionDecision: "deny",
+          permissionDecisionReason: "Tool not available in this space mode",
+        };
+      }
+
       // Bypass mode: auto-allow every tool (matches the Claude driver's bypass
       // path). `ask_user` needs no exemption — allowing it here simply lets the
       // SDK route it to onUserInputRequest, which surfaces the real dialog. We
@@ -598,11 +621,17 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
         }
       }
 
-      if (isCopilotToolAllowed(input.toolName)) {
+      const baselineAllowed = allowedOverride
+        ? allowedOverride.has(input.toolName.toLowerCase())
+        : isCopilotToolAllowed(input.toolName);
+      if (baselineAllowed) {
         return { permissionDecision: "allow" };
       }
 
-      if (input.toolName.startsWith("mcp__")) {
+      // With a replacement allowlist (chat mode) MCP tools are not blanket
+      // trusted — anything outside the list falls through to the approval
+      // dialog like any other tool.
+      if (!allowedOverride && input.toolName.startsWith("mcp__")) {
         return { permissionDecision: "allow" };
       }
 
@@ -707,9 +736,14 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
   // Mains tool registration
   // ─────────────────────────────────────────────────────────────
 
-  function buildMainsTools(workspaceId: string | null, rootPath: string | null = null, runId: string | null = null): CopilotTool[] {
+  function buildMainsTools(
+    workspaceId: string | null,
+    rootPath: string | null = null,
+    runId: string | null = null,
+    mode?: ModeId,
+  ): CopilotTool[] {
     const ctx: MainsToolContext = { workspaceId, rootPath, runId };
-    return toCopilotTools(ctx);
+    return toCopilotTools(ctx, mode);
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -914,24 +948,26 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
 
   function buildBaseSessionConfig(
     runId: string,
-    workspace: WorkRunRequest["workspace"],
+    execution: WorkRunRequest["execution"],
     permissionMode: string,
+    mode?: ModeId,
+    toolPolicy?: WorkRunToolPolicy | null,
   ): Omit<SessionConfig, "sessionId"> {
     const base: Omit<SessionConfig, "sessionId"> = {
       streaming: true,
       // Authoritative for this session — see SessionConfig.workingDirectory.
       // The client's own working directory is whatever the first caller
       // happened to supply (often none), so it can't be relied on here.
-      workingDirectory: workspace.rootPath,
+      workingDirectory: execution.cwd,
       onPermissionRequest:
         permissionMode === "bypassPermissions" || permissionMode === "allow"
           ? approveAllPermissions
           : buildPermissionHandler(runId),
-      tools: buildMainsTools(workspace.id ?? null, workspace.rootPath, runId),
+      tools: buildMainsTools(execution.workspaceId, execution.cwd, runId, mode),
       skillDirectories: [
         path.join(os.homedir(), ".claude", "skills"),
         path.join(os.homedir(), ".copilot", "skills"),
-        path.join(workspace.rootPath, ".github", "skills"),
+        path.join(execution.cwd, ".github", "skills"),
       ],
     };
 
@@ -942,7 +978,7 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
     // the hook and leaned solely on onPermissionRequest, which left filesystem
     // reads ungranted. Keeping onUserInputRequest installed also lets `ask_user`
     // work in bypass (it otherwise threw "no handler registered").
-    base.hooks = { onPreToolUse: buildPreToolUseHook(runId, permissionMode) };
+    base.hooks = { onPreToolUse: buildPreToolUseHook(runId, permissionMode, toolPolicy) };
     base.onUserInputRequest = buildUserInputHandler(runId);
 
     if (permissionMode === "plan") {
@@ -1201,7 +1237,7 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
   // ─────────────────────────────────────────────────────────────
 
   function buildStartPrompt(request: WorkRunRequest): string {
-    const workspaceInfo = `Working directory: ${request.workspace.rootPath}`;
+    const workspaceInfo = `Working directory: ${request.execution.cwd}`;
     let prompt: string;
 
     if (request.context && request.context.length > 0) {
@@ -1450,11 +1486,27 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
   // ProviderDriver implementation
   // ─────────────────────────────────────────────────────────────
 
+  /**
+   * The session's system message: workspace context first, then the
+   * mode/space instruction delta, then the per-run system prompt.
+   */
+  function buildSystemMessage(
+    rootPath: string,
+    systemPrompt: string | null | undefined,
+    extraInstructions: string | null | undefined,
+  ): { content: string } {
+    const workspaceContext = `You are working in the directory: ${rootPath}\nAll file operations should be relative to this workspace root.`;
+    const parts = [workspaceContext, extraInstructions, systemPrompt].filter(
+      (part): part is string => Boolean(part),
+    );
+    return { content: parts.join("\n\n") };
+  }
+
   return {
     async createSession(request: WorkRunRequest): Promise<AcquiredSession> {
       const { runId, model, systemPrompt } = request;
 
-      const copilotClient = await ensureClient(request.workspace.rootPath);
+      const copilotClient = await ensureClient(request.execution.cwd);
 
       const overrides = (request.configSnapshot ?? {}) as Record<string, unknown>;
       const permissionMode =
@@ -1464,7 +1516,13 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
 
       const sessionConfig: SessionConfig = {
         sessionId: runId,
-        ...buildBaseSessionConfig(runId, request.workspace, permissionMode),
+        ...buildBaseSessionConfig(
+          runId,
+          request.execution,
+          permissionMode,
+          request.mode,
+          request.toolPolicy,
+        ),
       };
 
       if (model || config.defaultModel) {
@@ -1484,12 +1542,11 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
         sessionConfig.reasoningEffort = reasoningEffort;
       }
 
-      const workspaceContext = `You are working in the directory: ${request.workspace.rootPath}\nAll file operations should be relative to this workspace root.`;
-      sessionConfig.systemMessage = {
-        content: systemPrompt
-          ? `${workspaceContext}\n\n${systemPrompt}`
-          : workspaceContext,
-      };
+      sessionConfig.systemMessage = buildSystemMessage(
+        request.execution.cwd,
+        systemPrompt,
+        request.extraInstructions,
+      );
 
       const sdkSession = await copilotClient.createSession(sessionConfig);
       const agentMode = agentModeForPermission(permissionMode);
@@ -1508,12 +1565,32 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
     async resumeSession(request: WorkRunContinueRequest): Promise<AcquiredSession> {
       const { runId } = request;
 
-      const copilotClient = await ensureClient(request.workspace.rootPath);
-      const permissionMode = config.permissionMode || "default";
+      const copilotClient = await ensureClient(request.execution.cwd);
+      // Same precedence as createSession: run snapshot beats provider config,
+      // so a resumed run keeps the permission mode it started with.
+      const resumeOverrides = (request.configSnapshot ?? {}) as Record<string, unknown>;
+      const permissionMode =
+        (typeof resumeOverrides.permissionMode === "string" && resumeOverrides.permissionMode) ||
+        config.permissionMode ||
+        "default";
 
       const resumeConfig: Omit<SessionConfig, "sessionId"> = {
-        ...buildBaseSessionConfig(runId, request.workspace, permissionMode),
+        ...buildBaseSessionConfig(
+          runId,
+          request.execution,
+          permissionMode,
+          request.mode,
+          request.toolPolicy,
+        ),
       };
+      // Re-apply the composed system message: resumeSession rebuilds the
+      // session config from scratch, so without this the mode delta and the
+      // run's system prompt would silently drop off on the second turn.
+      resumeConfig.systemMessage = buildSystemMessage(
+        request.execution.cwd,
+        request.systemPrompt,
+        request.extraInstructions,
+      );
 
       const resumeModel = request.model || config.defaultModel;
       if (resumeModel) resumeConfig.model = resumeModel;

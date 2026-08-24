@@ -46,7 +46,7 @@ function makeStartReq(overrides: Partial<WorkRunRequest> = {}): WorkRunRequest {
   return {
     runId: "run-1",
     accountId: "acct-1",
-    workspace: { id: "ws-1", rootPath: "/tmp" },
+    execution: { workspaceId: "ws-1", cwd: "/tmp" },
     goal: "do the thing",
     ...overrides,
   };
@@ -58,7 +58,7 @@ function makeContinueReq(
   return {
     runId: "run-1",
     accountId: "acct-1",
-    workspace: { id: "ws-1", rootPath: "/tmp" },
+    execution: { workspaceId: "ws-1", cwd: "/tmp" },
     message: "follow-up",
     ...overrides,
   };
@@ -71,7 +71,7 @@ function makeForkReq(
     runId: "fork-1",
     sourceRunId: "run-1",
     accountId: "acct-1",
-    workspace: { id: "ws-1", rootPath: "/tmp" },
+    execution: { workspaceId: "ws-1", cwd: "/tmp" },
     message: "branch",
     ...overrides,
   };
@@ -83,7 +83,7 @@ function makeReviewReq(
   return {
     runId: "review-1",
     accountId: "acct-1",
-    workspace: { id: "ws-1", rootPath: "/tmp" },
+    execution: { workspaceId: "ws-1", cwd: "/tmp" },
     target: { type: "uncommittedChanges" },
     ...overrides,
   };

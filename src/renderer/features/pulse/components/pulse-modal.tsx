@@ -23,6 +23,7 @@ import {
   type PulseFormState,
 } from "../hooks/use-pulse-form";
 import {
+  CollectionPicker,
   ModelPicker,
   ProviderPicker,
   PulseEffortPicker,
@@ -30,7 +31,9 @@ import {
   WorkspacePicker,
 } from "./pulse-pickers";
 import type { PulseTemplate } from "../templates";
-import { Sun } from "@/components/ui/icons";
+import type { ModeId } from "../../../../shared/modes";
+import { useModeConfig } from "@/hooks/use-mode-config";
+import { Clock } from "@/components/ui/icons/space";
 
 type PulseWizardData = PulseFormState;
 
@@ -42,12 +45,15 @@ interface PulseModalProps {
 }
 
 function buildInitialData(
+  mode: ModeId,
   pulse?: Pulse | null,
   template?: PulseTemplate | null,
 ): PulseWizardData {
+  // An existing pulse keeps the mode it was created with; a new one adopts
+  // the active space's mode.
   if (pulse) return pulseToForm(pulse);
-  if (template) return applyTemplate({ ...EMPTY_PULSE_FORM }, template);
-  return { ...EMPTY_PULSE_FORM };
+  if (template) return applyTemplate({ ...EMPTY_PULSE_FORM, mode }, template);
+  return { ...EMPTY_PULSE_FORM, mode };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -73,12 +79,20 @@ function PulseStep({ isEditing }: { isEditing: boolean }) {
         className="w-full bg-transparent outline-none  text-primary-900 dark:text-primary-100 placeholder-primary-500 mb-3"
       />
 
-      {/* Selection pills */}
+      {/* Selection pills — developer pulses target a workspace, work/chat
+          pulses an optional collection (sources travel with it). */}
       <div className="flex items-center -mx-2 flex-wrap mb-3">
-        <WorkspacePicker
-          value={data.workspaceId}
-          onChange={(id) => setData({ workspaceId: id })}
-        />
+        {data.mode === "developer" ? (
+          <WorkspacePicker
+            value={data.workspaceId}
+            onChange={(id) => setData({ workspaceId: id })}
+          />
+        ) : (
+          <CollectionPicker
+            value={data.collectionId}
+            onChange={(id) => setData({ collectionId: id })}
+          />
+        )}
         <SchedulePicker
           frequency={data.frequency}
           hour={data.hour}
@@ -95,6 +109,7 @@ function PulseStep({ isEditing }: { isEditing: boolean }) {
         />
         <ProviderPicker
           value={data.providerId}
+          mode={data.mode}
           onChange={(id) =>
             setData({
               providerId: id,
@@ -171,6 +186,7 @@ export function PulseModal({
   initialTemplate,
 }: PulseModalProps) {
   const { data: account } = useGetAccountQuery();
+  const { mode } = useModeConfig();
   const [createPulse] = useCreatePulseMutation();
   const [updatePulse] = useUpdatePulseMutation();
   const isEditing = !!pulse;
@@ -179,8 +195,8 @@ export function PulseModal({
   const wizardKey = pulse?.id ?? initialTemplate?.id ?? "new";
 
   const initialData = useMemo(
-    () => buildInitialData(pulse, initialTemplate),
-    [pulse, initialTemplate],
+    () => buildInitialData(mode, pulse, initialTemplate),
+    [mode, pulse, initialTemplate],
   );
 
   const steps: WizardStep<PulseWizardData>[] = useMemo(
@@ -188,7 +204,7 @@ export function PulseModal({
       {
         id: "pulse",
         title: isEditing ? "Edit automation" : "New pulse",
-        titleIcon: <Sun className="size-5.5! text-primary-900 dark:text-primary-100" />,
+        titleIcon: <Clock className="size-5.5! text-primary-900 dark:text-primary-100" />,
         render: () => <PulseStep isEditing={isEditing} />,
       },
     ],
@@ -199,7 +215,9 @@ export function PulseModal({
     if (!account?.id) return;
     const input = formToCreateInput(data);
     if (pulse) {
-      await updatePulse({ id: pulse.id, input }).unwrap();
+      // Mode is create-only; the rest of the shape is editable.
+      const { mode: _mode, ...updateInput } = input;
+      await updatePulse({ id: pulse.id, input: updateInput }).unwrap();
       toast.success("Pulse updated");
     } else {
       await createPulse({ accountId: account.id, input }).unwrap();

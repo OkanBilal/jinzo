@@ -78,21 +78,13 @@ export function PulseList({ onEdit }: PulseListProps) {
                 )}
               </div>
 
-              <Text
-                as="span"
-                size="xs"
-                tone="faint"
-                className="whitespace-nowrap"
+              <div
+                className={`flex items-center gap-1 transition-opacity ${
+                  // Confirming keeps them up: the buttons are live, and a live
+                  // control must not vanish because the pointer moved away.
+                  isConfirming ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                }`}
               >
-                {formatSchedule({
-                  frequency: pulse.frequency,
-                  hour: pulse.hour,
-                  minute: pulse.minute,
-                  dayOfWeek: pulse.dayOfWeek,
-                })}
-              </Text>
-
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Button
                   type="button"
                   tooltip="Edit"
@@ -105,18 +97,20 @@ export function PulseList({ onEdit }: PulseListProps) {
                   <>
                     <Button
                       type="button"
+                      variant="danger"
                       onClick={async () => {
                         await deletePulse(pulse.id).unwrap();
                         setConfirmDeleteId(null);
                       }}
-                      className="px-2 py-1 rounded-lg text-xs bg-danger/15 text-danger hover:bg-danger/25 cursor-pointer"
+                      className="px-2 py-1 rounded-lg text-xs cursor-pointer"
                     >
                       Confirm
                     </Button>
                     <Button
+                    variant="primary"
                       type="button"
                       onClick={() => setConfirmDeleteId(null)}
-                      className="px-2 py-1 rounded-lg text-xs hover:bg-primary-200/30 dark:hover:bg-primary-800 cursor-pointer text-primary-500"
+                      className="px-2 py-1 rounded-lg text-xs cursor-pointer "
                     >
                       Cancel
                     </Button>
@@ -132,6 +126,19 @@ export function PulseList({ onEdit }: PulseListProps) {
                   </Button>
                 )}
               </div>
+              <Text
+                as="span"
+                size="xs"
+                tone="faint"
+                className="whitespace-nowrap"
+              >
+                {formatSchedule({
+                  frequency: pulse.frequency,
+                  hour: pulse.hour,
+                  minute: pulse.minute,
+                  dayOfWeek: pulse.dayOfWeek,
+                })}
+              </Text>
             </li>
           );
         })}

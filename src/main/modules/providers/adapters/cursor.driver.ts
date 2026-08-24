@@ -54,6 +54,7 @@ import {
   resolveCatalogDefaultId,
 } from "./adapter.shared";
 import { MainsMcpStdioServer } from "./mains-mcp-server";
+import type { ModeId } from "../../../../shared/modes";
 import type { MainsToolContext } from "./mains-tools.core";
 
 // ─────────────────────────────────────────────────────────────
@@ -734,11 +735,14 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
    * config per-session, and the .cursor/mcp.json file is only needed for
    * the user-runs-cursor-manually auto-discovery path.
    */
-  async function ensureMcpServer(ctx: MainsToolContext): Promise<typeof mcpServer> {
+  async function ensureMcpServer(
+    ctx: MainsToolContext,
+    mode?: ModeId,
+  ): Promise<typeof mcpServer> {
     if (mcpServer?.isRunning) {
       await mcpServer.stop();
     }
-    mcpServer = new MainsMcpStdioServer(ctx);
+    mcpServer = new MainsMcpStdioServer(ctx, mode);
     await mcpServer.start();
     logInfo(`Mains MCP stdio bridge started`);
     return mcpServer;
@@ -1641,7 +1645,13 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
   // ─────────────────────────────────────────────────────────────
 
   function buildStartPrompt(request: WorkRunRequest): string {
-    const workspaceInfo = `Working directory: ${request.workspace.rootPath}`;
+    // Cursor's ACP surface has no system-prompt slot, so the mode/space
+    // instruction delta rides the first prompt; the session transcript
+    // carries it for follow-up turns.
+    const modePrefix = request.extraInstructions
+      ? `<mode_instructions>\n${request.extraInstructions}\n</mode_instructions>\n\n`
+      : "";
+    const workspaceInfo = `${modePrefix}Working directory: ${request.execution.cwd}`;
     let prompt: string;
 
     if (request.context && request.context.length > 0) {
@@ -1732,12 +1742,17 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
   }
 
   async function buildForkPrompt(request: WorkRunForkRequest): Promise<string> {
+    // A fork is a fresh Cursor session, so the mode/space delta must ride this
+    // prompt too — the replayed transcript alone doesn't carry it.
+    const modePrefix = request.extraInstructions
+      ? `<mode_instructions>\n${request.extraInstructions}\n</mode_instructions>\n\n`
+      : "";
     const transcript = await buildSourceTranscript(request.sourceRunId);
-    const preamble = transcript
+    const preamble = modePrefix + (transcript
       ? "This run was forked from a previous Cursor conversation. Cursor has no native " +
         "session fork, so the prior context is replayed below for continuity.\n\n" +
         `${transcript}\n\n---\n\n`
-      : "";
+      : "");
 
     let body = request.message;
     if (request.context && request.context.length > 0) {
@@ -1911,18 +1926,18 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
       const selection = resolveCursorSelection(overrides, config);
 
       const mainsCtx: MainsToolContext = {
-        workspaceId: request.workspace.id,
-        rootPath: request.workspace.rootPath,
+        workspaceId: request.execution.workspaceId,
+        rootPath: request.execution.cwd,
         runId,
       };
-      const mainsMcp = await ensureMcpServer(mainsCtx);
+      const mainsMcp = await ensureMcpServer(mainsCtx, request.mode);
       const server = await ensureServer();
 
       logInfo(
-        `Creating session (model: ${resolvedModel || "default"}, cwd: ${request.workspace.rootPath})`,
+        `Creating session (model: ${resolvedModel || "default"}, cwd: ${request.execution.cwd})`,
       );
       const sessionResult = (await server.sendRequest("session/new", {
-        cwd: request.workspace.rootPath,
+        cwd: request.execution.cwd,
         mcpServers: mainsMcp ? [mainsMcp.mcpConfig] : [],
       })) as Record<string, unknown>;
       const sessionId = sessionResult?.sessionId as string | undefined;
@@ -1965,11 +1980,11 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
       const resolvedModel = request.model || config.defaultModel || undefined;
 
       const mainsCtx: MainsToolContext = {
-        workspaceId: request.workspace.id,
-        rootPath: request.workspace.rootPath,
+        workspaceId: request.execution.workspaceId,
+        rootPath: request.execution.cwd,
         runId,
       };
-      const mainsMcp = await ensureMcpServer(mainsCtx);
+      const mainsMcp = await ensureMcpServer(mainsCtx, request.mode);
       const mcpServersConfig = mainsMcp ? [mainsMcp.mcpConfig] : [];
       const server = await ensureServer();
 
@@ -1991,7 +2006,7 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
           "session/load",
           {
             sessionId,
-            cwd: request.workspace.rootPath,
+            cwd: request.execution.cwd,
             mcpServers: mcpServersConfig,
           },
           30000,
@@ -2001,7 +2016,7 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
         if (/not found|unknown|does not exist/i.test(errMsg)) {
           logWarn(`Session load failed (${errMsg}), creating new session`);
           const newResult = (await server.sendRequest("session/new", {
-            cwd: request.workspace.rootPath,
+            cwd: request.execution.cwd,
             mcpServers: mcpServersConfig,
           })) as Record<string, unknown>;
           loadResult = newResult;
@@ -2015,8 +2030,11 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
         }
       }
 
-      // Continue requests carry no per-run snapshot, so selections come from
-      // the persisted provider config only.
+      // Same precedence as createSession: the run's config snapshot beats the
+      // provider config, so a resumed chat run stays in "ask" mode.
+      const resumeOverrides = (request.configSnapshot ?? {}) as Record<string, unknown>;
+      const resumeMode =
+        (typeof resumeOverrides.mode === "string" && resumeOverrides.mode) || config.mode;
       const sessionConfigOptions = loadResult?.configOptions as
         | CursorConfigOption[]
         | undefined;
@@ -2024,9 +2042,9 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
         server,
         sessionId,
         resolvedModel,
-        config.mode,
+        resumeMode,
         sessionConfigOptions,
-        resolveCursorSelection({}, config),
+        resolveCursorSelection(resumeOverrides, config),
       );
 
       const session: CursorSession = {
@@ -2057,15 +2075,15 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
       );
 
       const mainsCtx: MainsToolContext = {
-        workspaceId: request.workspace.id,
-        rootPath: request.workspace.rootPath,
+        workspaceId: request.execution.workspaceId,
+        rootPath: request.execution.cwd,
         runId,
       };
-      const mainsMcp = await ensureMcpServer(mainsCtx);
+      const mainsMcp = await ensureMcpServer(mainsCtx, request.mode);
       const server = await ensureServer();
 
       const sessionResult = (await server.sendRequest("session/new", {
-        cwd: request.workspace.rootPath,
+        cwd: request.execution.cwd,
         mcpServers: mainsMcp ? [mainsMcp.mcpConfig] : [],
       })) as Record<string, unknown>;
       const sessionId = sessionResult?.sessionId as string | undefined;
@@ -2074,6 +2092,10 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
       }
       sessionIdMap.set(runId, sessionId);
 
+      // The fork inherits the source run's harness snapshot.
+      const forkOverrides = (request.configSnapshot ?? {}) as Record<string, unknown>;
+      const forkMode =
+        (typeof forkOverrides.mode === "string" && forkOverrides.mode) || config.mode;
       const sessionConfigOptions = sessionResult?.configOptions as
         | CursorConfigOption[]
         | undefined;
@@ -2081,9 +2103,9 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
         server,
         sessionId,
         resolvedModel,
-        config.mode,
+        forkMode,
         sessionConfigOptions,
-        resolveCursorSelection({}, config),
+        resolveCursorSelection(forkOverrides, config),
       );
 
       const session: CursorSession = {

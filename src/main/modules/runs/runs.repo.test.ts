@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import {
   createAccount,
+  createCollection,
   createProvider,
   createWorkspace,
   createRun,
@@ -124,6 +125,89 @@ describe("runsRepo", () => {
 
       const result = await runsRepo.findRunsByWorkspace("ws1");
       expect(result).toHaveLength(1);
+    });
+
+    it("filters workspace runs by provider and mode before applying the limit", async () => {
+      const ws = createWorkspace(db, { id: "ws-experience" });
+      createRun(db, {
+        id: "claude-developer",
+        workspaceId: ws.id,
+        providerId: "claude_code",
+        mode: "developer",
+      });
+      createRun(db, {
+        id: "claude-work",
+        workspaceId: ws.id,
+        providerId: "claude_code",
+        mode: "work",
+      });
+      createRun(db, {
+        id: "cursor-work",
+        workspaceId: ws.id,
+        providerId: "cursor",
+        mode: "work",
+      });
+
+      const result = await runsRepo.findRunsByWorkspace(ws.id, {
+        providerId: "claude_code",
+        mode: "work",
+        limit: 1,
+      });
+
+      expect(result.map((run) => run.id)).toEqual(["claude-work"]);
+    });
+  });
+
+  describe("findRecentRunsByExperience", () => {
+    it("scopes rows by account, provider, mode, and archive state", async () => {
+      createAccount(db, { id: "other" });
+      createRun(db, {
+        id: "match",
+        accountId: "default",
+        providerId: "copilot_cli",
+        mode: "work",
+      });
+      createRun(db, {
+        id: "other-account",
+        accountId: "other",
+        providerId: "copilot_cli",
+        mode: "work",
+      });
+      createRun(db, { id: "other-mode", mode: "chat" });
+      createRun(db, { id: "archived", mode: "work", isArchived: true });
+
+      const result = await runsRepo.findRecentRunsByExperience({
+        accountId: "default",
+        providerId: "copilot_cli",
+        mode: "work",
+      });
+
+      expect(result.map((run) => run.id)).toEqual(["match"]);
+    });
+  });
+
+  describe("moveToCollection", () => {
+    it("moves a run between a Collection and standalone", async () => {
+      createCollection(db, { id: "collection-1" });
+      createRun(db, { id: "run-1", mode: "work" });
+
+      expect(
+        (await runsRepo.moveToCollection("run-1", "collection-1"))
+          ?.collectionId,
+      ).toBe("collection-1");
+      expect((await runsRepo.moveToCollection("run-1", null))?.collectionId).toBeNull();
+    });
+
+    it("leaves updatedAt alone — filing a chat is not activity", async () => {
+      // The sidebar prints and sorts on this column; a move must not send an
+      // untouched chat to the top of Recents reading "now".
+      createCollection(db, { id: "collection-1" });
+      createRun(db, { id: "run-1", mode: "work" });
+      const before = (await runsRepo.findRunById("run-1"))?.updatedAt;
+
+      const moved = await runsRepo.moveToCollection("run-1", "collection-1");
+
+      expect(moved?.updatedAt).toEqual(before);
     });
   });
 

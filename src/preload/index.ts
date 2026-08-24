@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 import os from "node:os";
 import { CHANNELS } from "../shared/ipc-kit/channels";
+import type { ModeId } from "../shared/modes";
 
 // Expose IPC methods to renderer process
 const api = {
@@ -37,6 +38,8 @@ const api = {
       ipcRenderer.invoke(CHANNELS.issues.getAll, options),
     getById: (entityId: string) =>
       ipcRenderer.invoke(CHANNELS.issues.getById, entityId),
+    getDetail: (entityId: string) =>
+      ipcRenderer.invoke(CHANNELS.issues.getDetail, entityId),
     create: (payload: unknown) => ipcRenderer.invoke(CHANNELS.issues.create, payload),
     update: (entityId: string, payload: unknown) =>
       ipcRenderer.invoke(CHANNELS.issues.update, entityId, payload),
@@ -192,6 +195,31 @@ const api = {
     // ── issues (via linked resources) ──
     listIssues: (projectId: string) =>
       ipcRenderer.invoke(CHANNELS.projects.listIssues, projectId),
+  },
+  // Non-developer Projects: organizational Collections for Work/Chat runs.
+  collections: {
+    list: (options: {
+      accountId: string;
+      includeArchived?: boolean;
+    }) => ipcRenderer.invoke(CHANNELS.collections.list, options),
+    get: (options: { id: string; accountId: string }) =>
+      ipcRenderer.invoke(CHANNELS.collections.get, options),
+    create: (payload: unknown) =>
+      ipcRenderer.invoke(CHANNELS.collections.create, payload),
+    update: (options: { id: string; accountId: string }, payload: unknown) =>
+      ipcRenderer.invoke(CHANNELS.collections.update, options, payload),
+    archive: (options: { id: string; accountId: string }) =>
+      ipcRenderer.invoke(CHANNELS.collections.archive, options),
+    unarchive: (options: { id: string; accountId: string }) =>
+      ipcRenderer.invoke(CHANNELS.collections.unarchive, options),
+    remove: (options: { id: string; accountId: string }) =>
+      ipcRenderer.invoke(CHANNELS.collections.remove, options),
+    listSources: (options: { accountId: string; collectionId: string }) =>
+      ipcRenderer.invoke(CHANNELS.collections.listSources, options),
+    addSource: (payload: unknown) =>
+      ipcRenderer.invoke(CHANNELS.collections.addSource, payload),
+    removeSource: (payload: { accountId: string; id: string }) =>
+      ipcRenderer.invoke(CHANNELS.collections.removeSource, payload),
   },
   // Space operations
   space: {
@@ -427,12 +455,18 @@ const api = {
     listArchived: () => ipcRenderer.invoke(CHANNELS.runs.listArchived),
     /** Runs with a live session right now, across every space and workspace. */
     listActive: () => ipcRenderer.invoke(CHANNELS.runs.listActive),
+    listRecent: (options: { accountId: string; providerId: string; mode: ModeId; limit?: number }) =>
+      ipcRenderer.invoke(CHANNELS.runs.listRecent, options),
     getAll: (limit?: number) => ipcRenderer.invoke(CHANNELS.runs.getAll, limit),
     getById: (id: string) => ipcRenderer.invoke(CHANNELS.runs.getById, id),
+    getExecutionRoot: (runId: string) =>
+      ipcRenderer.invoke(CHANNELS.runs.getExecutionRoot, runId),
     getByAccount: (accountId: string, limit?: number) =>
       ipcRenderer.invoke(CHANNELS.runs.getByAccount, accountId, limit),
-    getByWorkspace: (workspaceId: string, limit?: number) =>
-      ipcRenderer.invoke(CHANNELS.runs.getByWorkspace, workspaceId, limit),
+    getByWorkspace: (
+      workspaceId: string,
+      options?: { providerId?: string; mode?: ModeId; limit?: number },
+    ) => ipcRenderer.invoke(CHANNELS.runs.getByWorkspace, workspaceId, options),
     getByStatus: (
       accountId: string,
       status: "queued" | "running" | "succeeded" | "failed" | "canceled",
@@ -440,6 +474,11 @@ const api = {
     create: (payload: unknown) => ipcRenderer.invoke(CHANNELS.runs.create, payload),
     update: (id: string, payload: unknown) =>
       ipcRenderer.invoke(CHANNELS.runs.update, id, payload),
+    moveToCollection: (payload: {
+      runId: string;
+      accountId: string;
+      collectionId: string | null;
+    }) => ipcRenderer.invoke(CHANNELS.runs.moveToCollection, payload),
     start: (id: string) => ipcRenderer.invoke(CHANNELS.runs.start, id),
     complete: (id: string) => ipcRenderer.invoke(CHANNELS.runs.complete, id),
     fail: (id: string, error: string) =>
@@ -453,7 +492,8 @@ const api = {
     getDetails: (runId: string) => ipcRenderer.invoke(CHANNELS.runs.getDetails, runId),
     execute: (payload: {
       accountId: string;
-      workspaceId: string;
+      workspaceId?: string;
+      collectionId?: string;
       spaceId?: string;
       providerId: string;
       goal: string;
@@ -594,6 +634,13 @@ const api = {
       ipcRenderer.on(CHANNELS.runs.statusChanged, listener);
       return () => ipcRenderer.removeListener(CHANNELS.runs.statusChanged, listener);
     },
+    // Fired when a run row changes outside the status lifecycle (today: the
+    // generated title landing). The chat sidebar refreshes on it.
+    onUpdated: (callback: (data: { runId: string; ts: number }) => void) => {
+      const listener = (_: any, data: any) => callback(data);
+      ipcRenderer.on(CHANNELS.runs.updated, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.runs.updated, listener);
+    },
     // Fired after the workspace diff is recomputed (incrementally during a run
     // and once finally at completion). Renderer refetches the diff.
     onDiffUpdated: (callback: (data: { runId: string; workspaceId: string; ts: number }) => void) => {
@@ -645,6 +692,16 @@ const api = {
       filePath: string;
       maxSizeBytes?: number;
     }) => ipcRenderer.invoke(CHANNELS.fileExplorer.readFileText, options),
+    /**
+     * Copy a readable file somewhere the user picks in the native save dialog.
+     * Resolves to the saved path, or null when the dialog is cancelled.
+     */
+    saveFileAs: (sourcePath: string, suggestedName?: string) =>
+      ipcRenderer.invoke(
+        CHANNELS.fileExplorer.saveFileAs,
+        sourcePath,
+        suggestedName,
+      ),
     /**
      * List directory contents for lazy loading.
      * Returns immediate children with hasChildren flag for directories.
