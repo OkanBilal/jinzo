@@ -16,6 +16,7 @@ import { SignalTabContent } from "./signal-tab-content";
 import { NoteTabContent } from "./note-tab-content";
 import { WorkspaceEmptyState } from "./workspace-empty-state";
 import { TurnRail } from "./turn-rail";
+import { CONTENT_COLUMN_GUTTER } from "../lib/content-column";
 import { buildTurnMarkers, type TurnMarker } from "../lib/turn-markers";
 import { FILE_WRITING_TOOLS } from "../lib/tool-registry";
 import { resolveTool } from "../lib/resolve-tool";
@@ -682,7 +683,12 @@ export function WorkspaceEvents({
             ref={transcriptRef}
             className={`h-full overflow-y-auto noscrollbar ${isRunTabActive ? "" : "hidden"}`}
           >
-            <div className="min-h-75 max-w-210 mx-auto space-y-4 pt-12 pb-24 px-4">
+            {/* The gutter sits *outside* the width cap, so the column measures
+                the same 840px here as the composer does below it — padding
+                inside the cap would eat into the transcript alone and leave it
+                visibly narrower than the box it feeds. */}
+            <div className={CONTENT_COLUMN_GUTTER}>
+            <div className="min-h-75 max-w-210 mx-auto space-y-4 pt-12 pb-24">
               {turnRenderRows.map((row, rowIndex) => {
                 const isLastRow = rowIndex === turnRenderRows.length - 1;
                 let rowKey: string;
@@ -744,6 +750,7 @@ export function WorkspaceEvents({
                 <AsciiLoader thinkingText={latestThinking} />
               )}
               <div ref={eventsEndRef} />
+            </div>
             </div>
           </div>
         )}

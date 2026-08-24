@@ -18,6 +18,7 @@ import {
   useToolApproval,
   PluginLogoProvider,
 } from "@/features/workspace/hooks";
+import { CONTENT_COLUMN_GUTTER } from "@/features/workspace/lib/content-column";
 import { isFirstWorkspaceTabActive } from "@/features/workspace/lib/is-first-workspace-tab-active";
 import {
   useAbortRunMutation,
@@ -245,7 +246,9 @@ export function WorkspaceProviderPage({
           content, so the terminal keeps the full width. */}
       <div className="content-inset flex-1 overflow-hidden noscrollbar min-h-0">
         {useCenteredPromptLayout ? (
-          <div className="flex h-full min-h-0 flex-col items-center justify-center-safe gap-8 overflow-y-auto px-4 py-10 noscrollbar">
+          <div
+            className={`flex h-full min-h-0 flex-col items-center justify-center-safe gap-8 overflow-y-auto py-10 noscrollbar ${CONTENT_COLUMN_GUTTER}`}
+          >
             <WorkspaceEmptyState
               workspace={ws.currentWorkspace}
               presentation="headline"
@@ -305,7 +308,12 @@ export function WorkspaceProviderPage({
           runs). Anchoring it here keeps it directly above the input and always
           reachable regardless of scroll position or conversation length. */}
 
-      <div className="content-inset px-4">
+      {/* Two boxes, not one: `content-inset` sets `padding-right` and wins the
+          cascade over a `px-*` on the same element, so sharing them zeroes the
+          composer's right gutter whenever no session box is docked — the column
+          then hangs off the right edge while the left keeps its padding. */}
+      <div className="content-inset">
+      <div className={CONTENT_COLUMN_GUTTER}>
       {currentApproval &&
         !currentPlanApproval &&
         !ws.showEmptyState &&
@@ -363,6 +371,7 @@ export function WorkspaceProviderPage({
           isNewRunTabActive={ws.showNewRunTab}
         />
       ) : null}
+      </div>
       </div>
 
       {ws.currentWorkspace && modeConfig.showTerminal && (

@@ -785,6 +785,11 @@ html.mains-web.dark #root {
  * terminal) simply don't carry this class and stay full width.
  *
  * Duration mirrors LAYOUT_PANEL_ANIM_MS in lib/layout.ts — CSS can't read it.
+ *
+ * Never put this on the same element as `px-*` or `pr-*`: it declares
+ * `padding-right` too and wins the cascade, so the sibling utility's right
+ * padding silently collapses to the inset (0px with nothing docked) while its
+ * left padding stays. Wrap instead — `content-inset` outside, padding inside.
  */
 @utility content-inset {
   padding-right: var(--content-inset-right, 0px);
