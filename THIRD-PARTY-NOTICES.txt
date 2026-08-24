@@ -12,18 +12,18 @@ open-source software. They are redistributed, unmodified, as part of this
 application under the redistribution terms of their respective licenses,
 which are reproduced in their sections below.
 
-Packages: 424
+Packages: 425
 Bundled assets: 1 (Inter@4.001)
 
 ========================================================================
-@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.220
+@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.241
 License: SEE LICENSE IN LICENSE.md
 ========================================================================
 
 © Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
 
 ========================================================================
-@anthropic-ai/claude-agent-sdk@0.3.220
+@anthropic-ai/claude-agent-sdk@0.3.241
 License: SEE LICENSE IN README.md
 Repository: https://github.com/anthropics/claude-agent-sdk-typescript.git
 ========================================================================
@@ -31,7 +31,7 @@ Repository: https://github.com/anthropics/claude-agent-sdk-typescript.git
 © Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
 
 ========================================================================
-@anthropic-ai/sdk@0.114.0
+@anthropic-ai/sdk@0.120.0
 License: MIT
 Repository: github:anthropics/anthropic-sdk-typescript
 ========================================================================
@@ -130,7 +130,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 ========================================================================
-@github/copilot-darwin-arm64@1.0.74
+@github/copilot-darwin-arm64@1.0.79
 License: SEE LICENSE IN LICENSE.md
 Repository: git+https://github.com/github/copilot-cli.git
 ========================================================================
@@ -172,7 +172,7 @@ GitHub Copilot CLI License
    Use of the Software may require access to GitHub services and is subject to the applicable GitHub Terms of Service and GitHub Copilot terms. This License governs only rights related to the Software and does not grant any rights to access or use GitHub services.
 
 ========================================================================
-@github/copilot-sdk@1.0.8
+@github/copilot-sdk@1.0.11
 License: MIT
 Repository: https://github.com/github/copilot-sdk.git
 ========================================================================
@@ -180,7 +180,7 @@ Repository: https://github.com/github/copilot-sdk.git
 (No license file shipped in the package; see the repository above for the full MIT text.)
 
 ========================================================================
-@github/copilot@1.0.74
+@github/copilot@1.0.79
 License: SEE LICENSE IN LICENSE.md
 Repository: git+https://github.com/github/copilot-cli.git
 ========================================================================
@@ -329,7 +329,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ========================================================================
-@linear/sdk@83.0.0
+@linear/sdk@91.0.0
 License: MIT
 Repository: https://github.com/linear/linear
 ========================================================================
@@ -357,7 +357,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ========================================================================
-@modelcontextprotocol/sdk@1.29.0
+@modelcontextprotocol/sdk@1.30.0
 License: MIT
 Repository: git+https://github.com/modelcontextprotocol/typescript-sdk.git
 ========================================================================
@@ -1741,7 +1741,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ========================================================================
-@types/better-sqlite3@7.6.13
+@types/better-sqlite3@9.6.0
 License: MIT
 Repository: https://github.com/DefinitelyTyped/DefinitelyTyped.git
 ========================================================================
@@ -1993,7 +1993,7 @@ MIT License
     SOFTWARE
 
 ========================================================================
-@types/react-dom@19.2.3
+@types/react-dom@19.2.4
 License: MIT
 Repository: https://github.com/DefinitelyTyped/DefinitelyTyped.git
 ========================================================================
@@ -2021,7 +2021,7 @@ MIT License
     SOFTWARE
 
 ========================================================================
-@types/react@19.2.17
+@types/react@19.2.18
 License: MIT
 Repository: https://github.com/DefinitelyTyped/DefinitelyTyped.git
 ========================================================================
@@ -2875,7 +2875,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ========================================================================
-brace-expansion@1.1.16
+brace-expansion@1.1.18
 License: MIT
 Repository: git://github.com/juliangruber/brace-expansion.git
 ========================================================================
@@ -2903,7 +2903,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ========================================================================
-brace-expansion@2.1.2
+brace-expansion@2.1.4
 License: MIT
 Repository: git://github.com/juliangruber/brace-expansion.git
 ========================================================================
@@ -3424,6 +3424,35 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ========================================================================
 content-type@2.0.0
+License: MIT
+Repository: jshttp/content-type
+========================================================================
+
+(The MIT License)
+
+Copyright (c) 2015 Douglas Christopher Wilson
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+'Software'), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+========================================================================
+content-type@2.1.0
 License: MIT
 Repository: jshttp/content-type
 ========================================================================
@@ -4368,7 +4397,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ========================================================================
-docx-preview@0.3.7
+docx-preview@0.4.0
 License: Apache-2.0
 Repository: git+https://github.com/VolodymyrBaydalka/docxjs.git
 ========================================================================
@@ -5500,7 +5529,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 ========================================================================
-express-rate-limit@8.6.0
+express-rate-limit@8.6.2
 License: MIT
 Repository: git+https://github.com/express-rate-limit/express-rate-limit.git
 ========================================================================
@@ -5674,7 +5703,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 For more information, please refer to <http://unlicense.org>
 
 ========================================================================
-fast-uri@3.1.4
+fast-uri@3.1.6
 License: BSD-3-Clause
 Repository: git+https://github.com/fastify/fast-uri.git
 ========================================================================
@@ -5796,7 +5825,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ========================================================================
-framer-motion@12.42.2
+framer-motion@13.1.1
 License: MIT
 Repository: https://github.com/motiondivision/motion/
 ========================================================================
@@ -6520,7 +6549,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ========================================================================
-hono@4.12.31
+hono@4.13.3
 License: MIT
 Repository: git+https://github.com/honojs/hono.git
 ========================================================================
@@ -6915,9 +6944,9 @@ FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
 
 ========================================================================
-ip-address@10.2.0
+ip-address@10.5.0
 License: MIT
-Repository: git://github.com/beaugunderson/ip-address.git
+Repository: https://github.com/beaugunderson/ip-address.git
 ========================================================================
 
 Copyright (C) 2011 by Beau Gunderson
@@ -10352,7 +10381,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 ========================================================================
-motion-dom@12.42.2
+motion-dom@13.1.1
 License: MIT
 Repository: https://github.com/motiondivision/motion
 ========================================================================
@@ -10380,7 +10409,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ========================================================================
-motion-utils@12.39.0
+motion-utils@13.0.0
 License: MIT
 Repository: https://github.com/motiondivision/motion
 ========================================================================
@@ -10408,7 +10437,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ========================================================================
-motion@12.42.2
+motion@13.1.1
 License: MIT
 Repository: https://github.com/motiondivision/motion
 ========================================================================
@@ -10547,7 +10576,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ========================================================================
-negotiator@1.0.0
+negotiator@1.1.0
 License: MIT
 Repository: jshttp/negotiator
 ========================================================================
@@ -11465,7 +11494,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ========================================================================
-react-router-dom@7.18.1
+react-router-dom@7.18.2
 License: MIT
 Repository: https://github.com/remix-run/react-router
 ========================================================================
@@ -11495,7 +11524,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ========================================================================
-react-router@7.18.1
+react-router@7.18.2
 License: MIT
 Repository: https://github.com/remix-run/react-router
 ========================================================================
@@ -14153,7 +14182,7 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 ========================================================================
-ws@8.21.1
+ws@8.21.3
 License: MIT
 Repository: git+https://github.com/websockets/ws.git
 ========================================================================
