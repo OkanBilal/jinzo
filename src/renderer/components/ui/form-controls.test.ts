@@ -61,7 +61,7 @@ describe("accessible form controls", () => {
     expect(markup).toContain('type="range"');
     expect(markup).toContain('aria-label="Interface size"');
     expect(markup).toContain('aria-valuetext="14px"');
-    expect(markup).toContain("has-[:focus-visible]:ring-2");
+    expect(markup).toContain("has-focus-visible:ring-2");
     expect(markup).not.toContain("focus-within:ring-2");
   });
 });
