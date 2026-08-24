@@ -1,5 +1,6 @@
 import { baseApi } from "./baseApi";
 import { CHANNELS } from "../../../../shared/ipc-kit/channels";
+import type { ModeId } from "../../../../shared/modes";
 
 export type RunStatus =
   | "queued"
@@ -26,8 +27,11 @@ export interface Run {
   id: string;
   accountId: string;
   workspaceId: string | null;
+  collectionId: string | null;
   spaceId: string | null;
   providerId: string;
+  /** Experience mode snapshotted at run start (see shared/modes.ts). */
+  mode: ModeId;
   model: string | null;
   title: string | null;
   goal: string | null;
@@ -48,10 +52,20 @@ export interface ArchivedRunWorkspace {
   id: string;
   name: string;
   isArchived: boolean;
+  /** The workspace's project icon — what the sidebar prints beside it. */
+  icon: string | null;
+}
+
+/** The project a chat is filed under — its collection, named and iconed. */
+export interface ArchivedRunCollection {
+  id: string;
+  name: string;
+  icon: string | null;
 }
 
 export interface ArchivedRun extends Run {
   workspace: ArchivedRunWorkspace | null;
+  collection: ArchivedRunCollection | null;
 }
 
 export interface ActiveRunWorkspace {
@@ -64,10 +78,13 @@ export interface ActiveRun extends Run {
   workspace: ActiveRunWorkspace | null;
 }
 
+export type RecentRun = Run;
+
 export interface CreateRunPayload {
   id: string;
   accountId: string;
   workspaceId?: string;
+  collectionId?: string;
   spaceId?: string;
   providerId: string;
   model?: string;
@@ -183,9 +200,11 @@ export const runsApi = baseApi.injectEndpoints({
 
     listArchivedRuns: builder.query<ArchivedRun[], void>({
       query: () => ({ handler: CHANNELS.runs.listArchived }),
-      // The response embeds workspace archive state, so either aggregate can
-      // make this list stale.
-      providesTags: ["Runs", "Workspaces"],
+      // The response embeds the labels this list groups by — workspace name and
+      // archive state, the project icon behind it, the collection a chat is
+      // filed under — so a rename, a re-icon, or a delete in any of those
+      // aggregates makes it stale, not just a run mutation.
+      providesTags: ["Runs", "Workspaces", "Projects", "Collections"],
     }),
 
     listActiveRuns: builder.query<ActiveRun[], void>({
@@ -193,6 +212,19 @@ export const runsApi = baseApi.injectEndpoints({
       // Workspace renames change the label the dock prints, so both aggregates
       // can make this list stale.
       providesTags: ["Runs", "Workspaces"],
+    }),
+
+    listRecentRuns: builder.query<
+      RecentRun[],
+      { accountId: string; providerId: string; mode: ModeId; limit?: number }
+    >({
+      query: (options) => ({
+        handler: CHANNELS.runs.listRecent,
+        args: [options],
+      }),
+      // Coarse "Runs" keeps every run mutation refreshing this for free;
+      // "RunsRecent" lets the runs:updated title event invalidate only this.
+      providesTags: ["Runs", "RunsRecent", "Collections"],
     }),
 
     // Absence rule: a missing run arrives as null data, not an error.
@@ -217,11 +249,16 @@ export const runsApi = baseApi.injectEndpoints({
 
     getRunsByWorkspace: builder.query<
       Run[],
-      { workspaceId: string; limit?: number }
+      {
+        workspaceId: string;
+        providerId?: string;
+        mode?: ModeId;
+        limit?: number;
+      }
     >({
-      query: ({ workspaceId, limit }) => ({
+      query: ({ workspaceId, ...options }) => ({
         handler: CHANNELS.runs.getByWorkspace,
-        args: [workspaceId, limit],
+        args: [workspaceId, options],
       }),
       providesTags: ["Runs"],
     }),
@@ -251,12 +288,26 @@ export const runsApi = baseApi.injectEndpoints({
           handler: CHANNELS.runs.update,
           args: [id, payload],
         }),
+        // `RunsRecent` too: the chat sidebar reads that list, and a renamed
+        // chat has to change there — that is where the rename happens.
         invalidatesTags: (_result, _error, { id }) => [
           "Runs",
+          "RunsRecent",
           { type: "Runs", id },
         ],
       },
     ),
+
+    moveRunToCollection: builder.mutation<
+      Run,
+      { runId: string; accountId: string; collectionId: string | null }
+    >({
+      query: (payload) => ({
+        handler: CHANNELS.runs.moveToCollection,
+        args: [payload],
+      }),
+      invalidatesTags: ["Runs", "RunsRecent", "Collections"],
+    }),
 
     startRun: builder.mutation<Run, string>({
       query: (id) => ({
@@ -436,6 +487,7 @@ export const {
   useLazyGetRunsQuery,
   useListArchivedRunsQuery,
   useListActiveRunsQuery,
+  useListRecentRunsQuery,
   useGetRunByIdQuery,
   useLazyGetRunByIdQuery,
   useGetRunsByAccountQuery,
@@ -446,6 +498,7 @@ export const {
   useLazyGetRunsByStatusQuery,
   useCreateRunMutation,
   useUpdateRunMutation,
+  useMoveRunToCollectionMutation,
   useStartRunMutation,
   useCompleteRunMutation,
   useFailRunMutation,

@@ -84,16 +84,31 @@ export const DEFAULT_ALLOWED_TOOLS = [
   "NotebookEdit",
   "Skill",
   "Agent",
-  "mcp__mains__GetWorkspaceDiff",
   "mcp__mains__SaveReview",
   "mcp__mains__SaveFinding",
   "mcp__mains__SaveFindings",
-  "mcp__mains__CommitChanges",
-  "mcp__mains__CreatePR",
   "mcp__mains__CheckPackage",
 ];
 
 export const ALLOWED_TOOLS_SET = new Set(DEFAULT_ALLOWED_TOOLS);
+
+/**
+ * The tool set a run actually allows: the policy's allowlist (or the default
+ * above) minus its hard-denied tools. The one place the mode harness's
+ * abstract tool policy meets the adapter's default list — claude feeds the
+ * result to `allowedTools`/`settings.permissions.allow` and its permission
+ * bridge; copilot to its pre-tool-use gate.
+ */
+export function resolveEffectiveAllowedTools(
+  policy?: {
+    allowedTools: readonly string[] | null;
+    disallowedTools: readonly string[];
+  } | null,
+): string[] {
+  const base = policy?.allowedTools ?? DEFAULT_ALLOWED_TOOLS;
+  const disallowed = new Set(policy?.disallowedTools ?? []);
+  return base.filter((tool) => !disallowed.has(tool));
+}
 
 // ─────────────────────────────────────────────────────────────
 // Default-model resolution

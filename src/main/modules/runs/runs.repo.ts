@@ -16,6 +16,8 @@ import type {
   CreateRunTurnPayload,
   UpdateRunTurnPayload,
   RunTurnResponse,
+  RunExperienceOptions,
+  WorkspaceRunListOptions,
 } from "./runs.dto";
 
 // ─────────────────────────────────────────────────────────────
@@ -41,6 +43,30 @@ export const runsRepo = {
       .from(runs)
       .where(eq(runs.isArchived, true))
       .orderBy(desc(runs.updatedAt));
+    return rows.map(mapRunRowToResponse);
+  },
+
+  /**
+   * The chat sidebar's list: newest-touched non-archived runs of one
+   * provider/mode experience.
+   */
+  async findRecentRunsByExperience(
+    options: RunExperienceOptions,
+  ): Promise<RunResponse[]> {
+    const db = getDb();
+    const rows = await db
+      .select()
+      .from(runs)
+      .where(
+        and(
+          eq(runs.providerId, options.providerId),
+          eq(runs.accountId, options.accountId),
+          eq(runs.mode, options.mode),
+          eq(runs.isArchived, false),
+        ),
+      )
+      .orderBy(desc(runs.updatedAt))
+      .limit(options.limit ?? 50);
     return rows.map(mapRunRowToResponse);
   },
 
@@ -87,17 +113,21 @@ export const runsRepo = {
     return rows.map(mapRunRowToResponse);
   },
 
-  async findRunsByWorkspace(workspaceId: string, limit = 100, includeArchived = false): Promise<RunResponse[]> {
+  async findRunsByWorkspace(
+    workspaceId: string,
+    options: WorkspaceRunListOptions & { includeArchived?: boolean } = {},
+  ): Promise<RunResponse[]> {
     const db = getDb();
-    const condition = includeArchived
-      ? eq(runs.workspaceId, workspaceId)
-      : and(eq(runs.workspaceId, workspaceId), eq(runs.isArchived, false));
+    const conditions = [eq(runs.workspaceId, workspaceId)];
+    if (!options.includeArchived) conditions.push(eq(runs.isArchived, false));
+    if (options.providerId) conditions.push(eq(runs.providerId, options.providerId));
+    if (options.mode) conditions.push(eq(runs.mode, options.mode));
     const rows = await db
       .select()
       .from(runs)
-      .where(condition)
+      .where(and(...conditions))
       .orderBy(desc(runs.createdAt))
-      .limit(limit);
+      .limit(options.limit ?? 100);
     return rows.map(mapRunRowToResponse);
   },
 
@@ -120,8 +150,10 @@ export const runsRepo = {
       id: payload.id,
       accountId: payload.accountId,
       workspaceId: payload.workspaceId,
+      collectionId: payload.collectionId,
       spaceId: payload.spaceId,
       providerId: payload.providerId,
+      mode: payload.mode,
       model: payload.model,
       title: payload.title,
       goal: payload.goal,
@@ -166,6 +198,26 @@ export const runsRepo = {
   async deleteRunsByWorkspaceId(workspaceId: string): Promise<void> {
     const db = getDb();
     await db.delete(runs).where(eq(runs.workspaceId, workspaceId));
+  },
+
+  /**
+   * Deliberately does not touch `updatedAt`. That column is what the chat
+   * sidebar prints as the row's age *and* sorts on, so it has to keep meaning
+   * "when this conversation last moved". Filing a chat under a project is
+   * organizing, not talking — bumping it here made an untouched chat jump to
+   * the top reading "now". (Archive/unarchive still bump: the archive list
+   * sorts on the same column, and a restored chat has to be findable.)
+   */
+  async moveToCollection(
+    id: string,
+    collectionId: string | null,
+  ): Promise<RunResponse | null> {
+    const db = getDb();
+    await db
+      .update(runs)
+      .set({ collectionId })
+      .where(eq(runs.id, id));
+    return this.findRunById(id);
   },
 
   async archiveRun(id: string): Promise<RunResponse | null> {
@@ -434,8 +486,10 @@ function mapRunRowToResponse(row: typeof runs.$inferSelect): RunResponse {
     id: row.id,
     accountId: row.accountId,
     workspaceId: row.workspaceId,
+    collectionId: row.collectionId,
     spaceId: row.spaceId,
     providerId: row.providerId,
+    mode: row.mode,
     model: row.model,
     title: row.title,
     goal: row.goal,

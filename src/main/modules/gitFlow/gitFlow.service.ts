@@ -2,14 +2,14 @@
 // Git Flow Service
 //
 // Deterministic commit / push / PR orchestration driven from the UI
-// (the git-actions panel), plus the shared building blocks the Mains
-// MCP tools (CommitChanges / CreatePR) delegate to so the actual git
-// work lives in exactly one place.
+// (the git-actions panel) — the one place the actual git work lives.
+// Agents no longer commit or open PRs through a mains tool; they use the
+// shell like any other command, and the user drives the panel.
 //
-// Unlike the agent path, the UI flow never round-trips through chat:
-// it stages with simple-git, optionally generates a message/body via a
-// one-shot headless model call (adapter.generateText), commits/pushes,
-// and creates the PR with `gh` directly.
+// The UI flow never round-trips through chat: it stages with simple-git,
+// optionally generates a message/body via a one-shot headless model call
+// (adapter.generateText), commits/pushes, and creates the PR with `gh`
+// directly.
 //
 // Throw-style: methods return plain values and throw on failure; the
 // ServiceResponse envelope is applied by handle() at the IPC seam.
@@ -270,7 +270,7 @@ export const gitFlowService = {
   /**
    * Stage (per `stage`) + commit + recapture the post-commit diff so the
    * Changes tab reflects a clean tree, clear accepted findings, and log the
-   * activity. Shared by the UI flow and the CommitChanges MCP tool.
+   * activity. Drives the git-actions panel's commit row.
    */
   async performCommit(params: {
     workspaceId: string | null;
@@ -325,8 +325,8 @@ export const gitFlowService = {
   },
 
   /**
-   * Verify the remote, run `gh pr create`, and log the activity. Shared by the
-   * UI flow and the CreatePR MCP tool. Throws on failure (callers wrap).
+   * Verify the remote, run `gh pr create`, and log the activity. Drives the
+   * git-actions panel's PR row. Throws on failure (callers wrap).
    */
   async performCreatePR(params: {
     workspaceId: string | null;

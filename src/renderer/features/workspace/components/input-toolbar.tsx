@@ -1,7 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, type RefObject } from "react";
 import { getProviderVariant } from "@/lib/provider-variants";
+import type { SkillInfo } from "@/lib/redux/api/providersApi";
+import { PluginsButton } from "./plugins-button";
 import { useIsMobile } from "@/lib/platform";
+import { useModeConfig } from "@/hooks/use-mode-config";
 import {
   CompactComposerControls,
   SendButton,
@@ -44,6 +47,11 @@ interface InputToolbarProps {
   // Goal mode (Codex only) — registers the prompt as the thread's tracked goal
   goalMode?: boolean;
   onGoalModeToggle?: () => void;
+  // Plugins picker (work mode) — opens the context menu narrowed to plugins
+  pluginSkills?: SkillInfo[];
+  pluginsMenuOpen?: boolean;
+  onTogglePluginsMenu?: () => void;
+  pluginsButtonRef?: RefObject<HTMLButtonElement | null>;
   // Thinking mode (Claude only)
   thinkingMode: boolean;
   onThinkingModeToggle: () => void;
@@ -83,6 +91,10 @@ export function InputToolbar({
   onPlanModeToggle,
   goalMode,
   onGoalModeToggle,
+  pluginSkills,
+  pluginsMenuOpen = false,
+  onTogglePluginsMenu,
+  pluginsButtonRef,
   thinkingMode,
   onThinkingModeToggle,
   fastMode,
@@ -99,6 +111,7 @@ export function InputToolbar({
   disabled,
 }: InputToolbarProps) {
   const isMobile = useIsMobile();
+  const modeConfig = useModeConfig();
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [showFileDropdown, setShowFileDropdown] = useState(false);
   const [showPermissionDropdown, setShowPermissionDropdown] = useState(false);
@@ -239,20 +252,40 @@ export function InputToolbar({
               )}
             </>
           )}
-          <PermissionModeDropdown
-            permissionMode={permissionMode}
-            onPermissionModeChange={onPermissionModeChange}
-            isOpen={showPermissionDropdown}
-            onToggle={() => setShowPermissionDropdown(!showPermissionDropdown)}
-            dropdownRef={permissionDropdownRef}
-            variant={variant}
-            planMode={planMode}
-            onPlanModeToggle={onPlanModeToggle}
-            goalMode={goalMode}
-          />
-          {getProviderVariant(variant).supportsGoalMode && onGoalModeToggle && (
-            <GoalButton goalMode={!!goalMode} onToggle={onGoalModeToggle} />
+          {modeConfig.showPermissionControls && (
+            <PermissionModeDropdown
+              permissionMode={permissionMode}
+              onPermissionModeChange={onPermissionModeChange}
+              isOpen={showPermissionDropdown}
+              onToggle={() => setShowPermissionDropdown(!showPermissionDropdown)}
+              dropdownRef={permissionDropdownRef}
+              variant={variant}
+              // The plan row lives inside this dropdown, so it needs its own
+              // gate: a mode may keep the permission menu and still have no
+              // plan (the harness pins it off there).
+              planMode={modeConfig.showPlanControls ? planMode : false}
+              onPlanModeToggle={
+                modeConfig.showPlanControls ? onPlanModeToggle : undefined
+              }
+              goalMode={goalMode}
+            />
           )}
+          {getProviderVariant(variant).supportsGoalMode &&
+            modeConfig.showGoalControls &&
+            onGoalModeToggle && (
+              <GoalButton goalMode={!!goalMode} onToggle={onGoalModeToggle} />
+            )}
+          {modeConfig.showPluginsButton &&
+            onTogglePluginsMenu &&
+            pluginSkills &&
+            pluginSkills.length > 0 && (
+              <PluginsButton
+                ref={pluginsButtonRef}
+                plugins={pluginSkills}
+                isOpen={pluginsMenuOpen}
+                onToggle={onTogglePluginsMenu}
+              />
+            )}
         </div>
         <div className="flex items-center ">
           <SendButton

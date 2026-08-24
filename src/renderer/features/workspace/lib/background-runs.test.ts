@@ -6,7 +6,7 @@ import {
   isRunFinished,
   lastActivityLine,
   mergeLingeringRuns,
-  resolveRunSpaceId,
+  resolveRunSpaceTarget,
   runOutcomeLabel,
   selectBackgroundRuns,
 } from "./background-runs";
@@ -16,8 +16,10 @@ function makeRun(overrides: Partial<ActiveRun> = {}): ActiveRun {
     id: "r1",
     accountId: "default",
     workspaceId: "ws1",
+    collectionId: null,
     spaceId: "space-codex",
     providerId: "codex",
+    mode: "developer",
     model: null,
     title: null,
     goal: null,
@@ -45,6 +47,8 @@ describe("selectBackgroundRuns", () => {
       activeRuns: runs,
       visibleWorkspaceId: null,
       visibleProviderId: "codex",
+      visibleMode: "developer",
+      visibleRunId: null,
     });
 
     expect(result.map((run) => run.id)).toEqual(["r1", "r2"]);
@@ -55,6 +59,8 @@ describe("selectBackgroundRuns", () => {
       activeRuns: [makeRun({ id: "r1", workspaceId: "ws1" })],
       visibleWorkspaceId: "ws1",
       visibleProviderId: "codex",
+      visibleMode: "developer",
+      visibleRunId: null,
     });
 
     expect(result).toEqual([]);
@@ -67,6 +73,8 @@ describe("selectBackgroundRuns", () => {
       activeRuns: [makeRun({ id: "r1", spaceId: null })],
       visibleWorkspaceId: "ws1",
       visibleProviderId: "codex",
+      visibleMode: "developer",
+      visibleRunId: null,
     });
 
     expect(result).toEqual([]);
@@ -79,6 +87,8 @@ describe("selectBackgroundRuns", () => {
       activeRuns: [makeRun({ id: "r1", providerId: "codex" })],
       visibleWorkspaceId: "ws1",
       visibleProviderId: "claude_code",
+      visibleMode: "developer",
+      visibleRunId: null,
     });
 
     expect(result.map((run) => run.id)).toEqual(["r1"]);
@@ -89,9 +99,37 @@ describe("selectBackgroundRuns", () => {
       activeRuns: [makeRun({ id: "r1", workspaceId: "ws2" })],
       visibleWorkspaceId: "ws1",
       visibleProviderId: "codex",
+      visibleMode: "developer",
+      visibleRunId: null,
     });
 
     expect(result.map((run) => run.id)).toEqual(["r1"]);
+  });
+
+  it("drops the workspace-less run addressed by the run route", () => {
+    const result = selectBackgroundRuns({
+      activeRuns: [
+        makeRun({ id: "work-run", workspaceId: null, mode: "work" }),
+      ],
+      visibleWorkspaceId: null,
+      visibleProviderId: "codex",
+      visibleMode: "work",
+      visibleRunId: "work-run",
+    });
+
+    expect(result).toEqual([]);
+  });
+
+  it("keeps a same-provider Workspace run from another mode", () => {
+    const result = selectBackgroundRuns({
+      activeRuns: [makeRun({ id: "work-run", mode: "work" })],
+      visibleWorkspaceId: "ws1",
+      visibleProviderId: "codex",
+      visibleMode: "developer",
+      visibleRunId: null,
+    });
+
+    expect(result.map((run) => run.id)).toEqual(["work-run"]);
   });
 });
 
@@ -140,17 +178,20 @@ describe("isRunFinished / runOutcomeLabel", () => {
   });
 });
 
-describe("resolveRunSpaceId", () => {
+describe("resolveRunSpaceTarget", () => {
   const spaces = [
-    { id: "claude", providerId: "claude_code" },
-    { id: "codex", providerId: "codex" },
-    { id: "codex-review", providerId: "codex" },
+    { id: "claude", providerId: "claude_code", mode: "developer" as const },
+    { id: "codex", providerId: "codex", mode: "developer" as const },
+    { id: "codex-review", providerId: "codex", mode: "developer" as const },
   ];
 
   it("prefers the space the run was started in", () => {
     const run = makeRun({ spaceId: "codex-review", providerId: "codex" });
 
-    expect(resolveRunSpaceId(run, spaces, "claude")).toBe("codex-review");
+    expect(resolveRunSpaceTarget(run, spaces, "claude")).toEqual({
+      spaceId: "codex-review",
+      modeSwitch: null,
+    });
   });
 
   it("falls back to a space driving the run's provider", () => {
@@ -158,25 +199,68 @@ describe("resolveRunSpaceId", () => {
     // the run, so the jump has to find one that can actually show it.
     const run = makeRun({ spaceId: null, providerId: "claude_code" });
 
-    expect(resolveRunSpaceId(run, spaces, "codex")).toBe("claude");
+    expect(resolveRunSpaceTarget(run, spaces, "codex")).toEqual({
+      spaceId: "claude",
+      modeSwitch: null,
+    });
   });
 
   it("stays in the active space when it already drives the provider", () => {
     const run = makeRun({ spaceId: null, providerId: "codex" });
 
-    expect(resolveRunSpaceId(run, spaces, "codex-review")).toBe("codex-review");
+    expect(resolveRunSpaceTarget(run, spaces, "codex-review")).toEqual({
+      spaceId: "codex-review",
+      modeSwitch: null,
+    });
   });
 
   it("ignores a space the run names but that no longer exists", () => {
     const run = makeRun({ spaceId: "archived", providerId: "codex" });
 
-    expect(resolveRunSpaceId(run, spaces, "claude")).toBe("codex");
+    expect(resolveRunSpaceTarget(run, spaces, "claude")).toEqual({
+      spaceId: "codex",
+      modeSwitch: null,
+    });
   });
 
   it("returns null when no space drives the provider", () => {
     const run = makeRun({ spaceId: null, providerId: "cursor" });
 
-    expect(resolveRunSpaceId(run, spaces, "claude")).toBeNull();
+    expect(resolveRunSpaceTarget(run, spaces, "claude")).toBeNull();
+  });
+
+  it("switches the run's own space back to the mode it ran under", () => {
+    // The space picker rewrites `mode` in place, so a Chat run's own space is
+    // in Developer the moment the user flips back — without the switch its
+    // card is unopenable, which is what "No space is set up" used to mean.
+    const run = makeRun({ spaceId: "codex", providerId: "codex", mode: "chat" });
+
+    expect(resolveRunSpaceTarget(run, spaces, "claude")).toEqual({
+      spaceId: "codex",
+      modeSwitch: "chat",
+    });
+  });
+
+  it("prefers a space already in the run's mode over switching one", () => {
+    const inChat = [
+      ...spaces,
+      { id: "codex-chat", providerId: "codex", mode: "chat" as const },
+    ];
+    const run = makeRun({ spaceId: "codex", providerId: "codex", mode: "chat" });
+
+    expect(resolveRunSpaceTarget(run, inChat, "codex")).toEqual({
+      spaceId: "codex-chat",
+      modeSwitch: null,
+    });
+  });
+
+  it("switches the active space when the run names none", () => {
+    const run = makeRun({ spaceId: null, providerId: "codex", mode: "work" });
+
+    expect(resolveRunSpaceTarget(run, spaces, "codex")).toEqual({
+      spaceId: "codex",
+      modeSwitch: "work",
+    });
   });
 });
 

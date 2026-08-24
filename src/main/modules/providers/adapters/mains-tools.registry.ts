@@ -19,24 +19,19 @@
 
 import { z } from "zod";
 import { PROVIDER_IDS, type ProviderId } from "../../../../shared/provider-ids";
+import { DEFAULT_MODE_ID, type ModeId } from "../../../../shared/modes";
 import {
   TOOL_DESCRIPTIONS,
-  handleGetWorkspaceDiff,
   handleSaveReview,
   handleSaveFinding,
   handleSaveFindings,
-  handleCommitChanges,
-  handleCreatePR,
   handleCheckPackage,
   type MainsToolContext,
 } from "./mains-tools.core";
 import {
-  GetWorkspaceDiffSchema,
   SaveReviewSchema,
   SaveFindingSchema,
   SaveFindingsSchema,
-  CommitChangesSchema,
-  CreatePRSchema,
   CheckPackageSchema,
 } from "./mains-tools.schemas";
 
@@ -54,15 +49,11 @@ export interface MainsToolDef {
   handler: (args: any, ctx: MainsToolContext) => Promise<MainsToolResult>;
   /** Which drivers expose this tool. */
   providers: ProviderId[];
+  /** Which experience modes expose this tool. Absent = every mode. */
+  modes?: ModeId[];
 }
 
 // Availability groups, named so the asymmetry is self-documenting.
-const ALL_PROVIDERS: ProviderId[] = [
-  PROVIDER_IDS.claude,
-  PROVIDER_IDS.copilot,
-  PROVIDER_IDS.codex,
-  PROVIDER_IDS.cursor,
-];
 // The review-flow tools are not exposed to Codex (it is a code-writing flow).
 const REVIEW_FLOW: ProviderId[] = [
   PROVIDER_IDS.claude,
@@ -73,20 +64,20 @@ const REVIEW_FLOW: ProviderId[] = [
 // they need no explicit tool; Codex/Cursor cannot hook that path. Deliberate.
 const PACKAGE_GUARD: ProviderId[] = [PROVIDER_IDS.codex, PROVIDER_IDS.cursor];
 
+// Mode group. Every mains tool belongs to the developer experience: the
+// review flow needs a workspace, and package installs are a coding concern.
+// Work and chat expose none — the field stays per-tool so a future tool can
+// widen without reopening the drivers.
+const DEVELOPER_ONLY: ModeId[] = ["developer"];
+
 export const MAINS_TOOLS: MainsToolDef[] = [
-  {
-    name: "GetWorkspaceDiff",
-    description: TOOL_DESCRIPTIONS.GetWorkspaceDiff,
-    schema: GetWorkspaceDiffSchema,
-    handler: handleGetWorkspaceDiff,
-    providers: REVIEW_FLOW,
-  },
   {
     name: "SaveReview",
     description: TOOL_DESCRIPTIONS.SaveReview,
     schema: SaveReviewSchema,
     handler: handleSaveReview,
     providers: REVIEW_FLOW,
+    modes: DEVELOPER_ONLY,
   },
   {
     name: "SaveFinding",
@@ -94,6 +85,7 @@ export const MAINS_TOOLS: MainsToolDef[] = [
     schema: SaveFindingSchema,
     handler: handleSaveFinding,
     providers: REVIEW_FLOW,
+    modes: DEVELOPER_ONLY,
   },
   {
     name: "SaveFindings",
@@ -101,20 +93,7 @@ export const MAINS_TOOLS: MainsToolDef[] = [
     schema: SaveFindingsSchema,
     handler: handleSaveFindings,
     providers: REVIEW_FLOW,
-  },
-  {
-    name: "CommitChanges",
-    description: TOOL_DESCRIPTIONS.CommitChanges,
-    schema: CommitChangesSchema,
-    handler: handleCommitChanges,
-    providers: ALL_PROVIDERS,
-  },
-  {
-    name: "CreatePR",
-    description: TOOL_DESCRIPTIONS.CreatePR,
-    schema: CreatePRSchema,
-    handler: handleCreatePR,
-    providers: ALL_PROVIDERS,
+    modes: DEVELOPER_ONLY,
   },
   {
     name: "CheckPackage",
@@ -122,13 +101,19 @@ export const MAINS_TOOLS: MainsToolDef[] = [
     schema: CheckPackageSchema,
     handler: handleCheckPackage,
     providers: PACKAGE_GUARD,
+    modes: DEVELOPER_ONLY,
   },
 ];
 
 const BY_NAME = new Map(MAINS_TOOLS.map((t) => [t.name, t]));
 
-function forProvider(provider: ProviderId): MainsToolDef[] {
-  return MAINS_TOOLS.filter((t) => t.providers.includes(provider));
+function forProvider(
+  provider: ProviderId,
+  mode: ModeId = DEFAULT_MODE_ID,
+): MainsToolDef[] {
+  return MAINS_TOOLS.filter(
+    (t) => t.providers.includes(provider) && (t.modes?.includes(mode) ?? true),
+  );
 }
 
 /**
@@ -181,8 +166,11 @@ export interface ClaudeToolSpec {
   handler: (args: any) => Promise<MainsToolResult>;
 }
 
-export function toClaudeTools(ctx: MainsToolContext): ClaudeToolSpec[] {
-  return forProvider(PROVIDER_IDS.claude).map((t) => ({
+export function toClaudeTools(
+  ctx: MainsToolContext,
+  mode: ModeId = DEFAULT_MODE_ID,
+): ClaudeToolSpec[] {
+  return forProvider(PROVIDER_IDS.claude, mode).map((t) => ({
     name: t.name,
     description: t.description,
     shape: t.schema.shape,
@@ -198,8 +186,11 @@ export interface CopilotToolSpec {
   handler: (args: any) => Promise<string>;
 }
 
-export function toCopilotTools(ctx: MainsToolContext): CopilotToolSpec[] {
-  return forProvider(PROVIDER_IDS.copilot).map((t) => ({
+export function toCopilotTools(
+  ctx: MainsToolContext,
+  mode: ModeId = DEFAULT_MODE_ID,
+): CopilotToolSpec[] {
+  return forProvider(PROVIDER_IDS.copilot, mode).map((t) => ({
     name: `mcp__mains__${t.name}`,
     description: t.description,
     parameters: toJsonSchema(t.schema),
@@ -217,8 +208,8 @@ export interface McpToolDef {
   inputSchema: Record<string, unknown>;
 }
 
-export function toMcpToolDefs(): McpToolDef[] {
-  return forProvider(PROVIDER_IDS.cursor).map((t) => ({
+export function toMcpToolDefs(mode: ModeId = DEFAULT_MODE_ID): McpToolDef[] {
+  return forProvider(PROVIDER_IDS.cursor, mode).map((t) => ({
     name: t.name,
     description: t.description,
     inputSchema: toJsonSchema(t.schema),
@@ -226,8 +217,8 @@ export function toMcpToolDefs(): McpToolDef[] {
 }
 
 /** Codex dynamic tools — same JSON-Schema shape as the MCP defs. */
-export function toCodexDynamicTools(): McpToolDef[] {
-  return forProvider(PROVIDER_IDS.codex).map((t) => ({
+export function toCodexDynamicTools(mode: ModeId = DEFAULT_MODE_ID): McpToolDef[] {
+  return forProvider(PROVIDER_IDS.codex, mode).map((t) => ({
     name: t.name,
     description: t.description,
     inputSchema: toJsonSchema(t.schema),

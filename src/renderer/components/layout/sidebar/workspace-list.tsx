@@ -1,12 +1,8 @@
 import { useState, useMemo, type MouseEvent, type ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
-import {
-  setWorkspaceGroupExpanded,
-  setWorkspaceListGrouping,
-} from "@/lib/redux/slices/appSettingsSlice";
-import { Button, Text, toast } from "@/components/ui";
-import { ArrowUp, Plus } from "@/components/ui/icons";
+import { setWorkspaceListGrouping } from "@/lib/redux/slices/appSettingsSlice";
+import { Text, toast } from "@/components/ui";
 import WorkspaceItem from "./workspace-item";
 import type {
   Workspace as WorkspaceResponse,
@@ -15,7 +11,7 @@ import type {
 import { LinkResourcesModal } from "@/features/workspace/components/link-resources-modal";
 import { WORKSPACE_BASE_PATH } from "@/lib/route-utils";
 import { getWorkspaceStatusConfig } from "@/lib/workspace-status";
-import { WorkspaceStatusIcon } from "@/components/ui/icons";
+import { Plus, WorkspaceStatusIcon } from "@/components/ui/icons";
 import type { WorkspaceStatus } from "@/lib/redux/api/workspaceApi";
 import {
   useListProjectsQuery,
@@ -26,12 +22,17 @@ import {
 } from "@/lib/redux/api";
 import type { Project } from "@/lib/redux/api/projectsApi";
 import { ProjectIcon } from "./project-icon";
+import {
+  SidebarGroupSection,
+  SIDEBAR_ACTION_ICON,
+} from "./sidebar-group-section";
 import { WorkspaceGroupDropdown, type GroupingMode } from "./workspace-group-dropdown";
 
 type WorkspaceGroup = {
   key: string;
   label: string;
-  icon?: ReactNode;
+  /** Function form tracks the section's open state (see SidebarGroupSection). */
+  icon?: ReactNode | ((expanded: boolean) => ReactNode);
   workspaces: WorkspaceResponse[];
   project?: Project;
 };
@@ -60,84 +61,6 @@ const STATUS_ORDER: WorkspaceStatus[] = [
   "canceled",
   "duplicate",
 ];
-
-function WorkspaceGroupSection({
-  group,
-  onCreateWorktree,
-  children,
-}: {
-  group: WorkspaceGroup;
-  onCreateWorktree?: () => void;
-  children: ReactNode;
-}) {
-  const dispatch = useAppDispatch();
-  // Absent means expanded — a group the user has never touched starts open.
-  const expanded = useAppSelector(
-    (state) => state.appSettings.workspaceGroupExpanded[group.key] ?? true,
-  );
-  const toggleExpanded = () => {
-    dispatch(
-      setWorkspaceGroupExpanded({ groupKey: group.key, expanded: !expanded }),
-    );
-  };
-
-  return (
-    <div className="">
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={toggleExpanded}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            toggleExpanded();
-          }
-        }}
-        className="group/section w-full flex items-center gap-1.5 px-2 py-1 mb-px rounded-lg cursor-pointer hover:bg-primary/50 dark:hover:bg-primary/5 transition-colors"
-      >
-        {group.icon && <span className="shrink-0 text-xs">{group.icon}</span>}
-        <Text as="span" size="s" tone="contrast" className="truncate">
-          {group.label}
-        </Text>
-        <div className="ml-auto flex items-center gap-1.5">
-          <Text
-            as="span"
-            size="xxs"
-            tone="secondary"
-            className="tabular-nums group-hover/section:hidden"
-          >
-            {group.workspaces.length}
-          </Text>
-          {onCreateWorktree && (
-            <Button
-              tooltip="Create new worktree"
-              onClick={(e) => {
-                e.stopPropagation();
-                onCreateWorktree();
-              }}
-              className="hidden group-hover/section:flex items-center p-0.5 cursor-pointer rounded-md"
-              aria-label="Create new worktree"
-            >
-              <Plus className="w-3 h-3 text-primary-800 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-100" />
-            </Button>
-          )}
-          <ArrowUp
-            className={`w-3 h-3 -mr-1 text-primary-800 dark:text-primary-200 transition-transform duration-200 hidden group-hover/section:block ${
-              expanded ? "rotate-180" : "rotate-90"
-            }`}
-          />
-        </div>
-      </div>
-      <div
-        className={`grid transition-[grid-template-rows] duration-300 ease-out ${
-          expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-        }`}
-      >
-        <div className="overflow-hidden">{children}</div>
-      </div>
-    </div>
-  );
-}
 
 interface WorkspacesListProps {
   workspaces: WorkspaceResponse[];
@@ -303,7 +226,13 @@ export default function WorkspacesList({
         result.push({
           key: `project-${pid}`,
           label: projectName,
-          icon: <ProjectIcon icon={data?.icon ?? null} projectName={projectName} />,
+          icon: (expanded: boolean) => (
+            <ProjectIcon
+              icon={data?.icon ?? null}
+              projectName={projectName}
+              expanded={expanded}
+            />
+          ),
           workspaces: wsList,
           project: data,
         });
@@ -388,8 +317,8 @@ export default function WorkspacesList({
         // onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setIsExpanded(!isExpanded); } }}
         className="w-full flex items-center justify-between transition-all duration-200 bg-transparent px-2 py-1 "
       >
-        <Text size="s" tone="secondary" className="tracking-tight">
-          Workspaces
+            <Text as="span" size="xs" tone="secondary" weight="medium">
+            Workspaces
         </Text>
         <div className="flex items-center ">
           <div className="-mr-1" role="presentation" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
@@ -418,19 +347,27 @@ export default function WorkspacesList({
         ) : (
           <div className={`flex flex-col ${grouping === "project" ? "gap-1" : ""}`}>
             {groups.map((group) => (
-              <WorkspaceGroupSection
+              <SidebarGroupSection
                 key={group.key}
-                group={group}
-                onCreateWorktree={
+                groupKey={group.key}
+                label={group.label}
+                icon={group.icon}
+                count={group.workspaces.length}
+                action={
                   group.project
-                    ? () => handleCreateWorktreeForProject(group.project!)
+                    ? {
+                        label: "Create new worktree",
+                        onClick: () =>
+                          handleCreateWorktreeForProject(group.project!),
+                        icon: <Plus className={SIDEBAR_ACTION_ICON} />,
+                      }
                     : undefined
                 }
               >
                 <div className="flex flex-col space-y-0.5">
                   {group.workspaces.map(renderWorkspaceItem)}
                 </div>
-              </WorkspaceGroupSection>
+              </SidebarGroupSection>
             ))}
           </div>
         )}

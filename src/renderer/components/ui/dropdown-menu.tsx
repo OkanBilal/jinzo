@@ -89,6 +89,8 @@ interface DropdownMenuBaseProps {
   minWidth?: number;
   className?: string;
   origin?: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "auto";
+  /** Which enabled row receives focus when the menu opens. */
+  initialFocus?: "first" | "selected";
 }
 
 export type DropdownMenuProps = DropdownMenuBaseProps &
@@ -105,6 +107,7 @@ export function DropdownMenu({
   minWidth = 144,
   className = "",
   origin = "auto",
+  initialFocus = "first",
   "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledBy,
 }: DropdownMenuProps) {
@@ -125,7 +128,15 @@ export function DropdownMenu({
     if (!isOpen) return;
     previouslyFocused.current = document.activeElement as HTMLElement | null;
     shouldRestoreFocus.current = true;
-    getEnabledMenuItems(menuRef.current)[0]?.focus();
+    const enabledItems = getEnabledMenuItems(menuRef.current);
+    const selectedItem = enabledItems.find(
+      (item) => item.getAttribute("aria-checked") === "true",
+    );
+    const itemToFocus =
+      initialFocus === "selected"
+        ? (selectedItem ?? enabledItems[0])
+        : enabledItems[0];
+    itemToFocus?.focus();
 
     return () => {
       const target = previouslyFocused.current;
@@ -141,7 +152,7 @@ export function DropdownMenu({
         if (target.isConnected) target.focus();
       });
     };
-  }, [isOpen]);
+  }, [initialFocus, isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -363,9 +374,7 @@ export function DropdownMenuSub({
         className={cn(
           "flex w-full cursor-pointer items-center gap-3 px-3 py-2 text-s",
           "text-primary-700 transition-colors hover:bg-primary-200/40 hover:text-primary-900",
-          "focus:bg-primary-200/40 focus:text-primary-900 focus:outline-none",
           "dark:text-primary-300 dark:hover:bg-primary/5 dark:hover:text-primary-100",
-          "dark:focus:bg-primary/5 dark:focus:text-primary-100",
           className,
         )}
       >
@@ -385,7 +394,7 @@ export function DropdownMenuSub({
             onKeyDown={handleSubmenuKeyDown}
             onMouseEnter={clearCloseTimer}
             onMouseLeave={startCloseTimer}
-            className="fixed z-(--z-dropdown-sub) overflow-hidden rounded-2xl glass-surface animate-dropdown-sub-in"
+            className="fixed z-(--z-dropdown-sub) overflow-hidden rounded-2xl glass-surface animate-dropdown-sub-in "
             style={{
               top: submenuPosition.top,
               left: submenuPosition.left,
@@ -407,6 +416,13 @@ export interface DropdownMenuItemProps {
   className?: string;
   disabled?: boolean;
   selected?: boolean;
+  /**
+   * How the selected row is drawn: a leading check, or a filled row. "none"
+   * suits menus whose rows already carry an icon, where a second glyph would
+   * only crowd them. Either way the radio semantics stay — role,
+   * `aria-checked`, and the menu's focus-the-selected-row-on-open.
+   */
+  indicator?: "check" | "none";
 }
 
 export function DropdownMenuItem({
@@ -416,6 +432,7 @@ export function DropdownMenuItem({
   className = "",
   disabled = false,
   selected,
+  indicator = "check",
 }: DropdownMenuItemProps) {
   const variantClasses = {
     default:
@@ -442,17 +459,22 @@ export function DropdownMenuItem({
         // row instead — which also needs to outrank hover, or the two states
         // look identical while arrowing over a row the pointer happens to sit on.
         "focus-visible:ring-0 focus-visible:ring-offset-0",
-        "transition-colors hover:bg-primary-200/40 focus:bg-primary-200/60 focus:outline-none",
-        "dark:hover:bg-primary/5 dark:focus:bg-primary/12",
+        "transition-colors hover:bg-primary-200/40 ",
+        "dark:hover:bg-primary/5 ",
+        // With the check suppressed the selection still has to be visible, so
+        // the row carries it as a fill — the same tint hover uses.
+        indicator === "none" && selected
+          ? "bg-primary-200/40 dark:bg-primary/5"
+          : "",
         disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
         variantClasses[variant],
         className,
       )}
     >
-      {selected !== undefined && (
+      {selected !== undefined && indicator === "check" && (
         <Selected
           aria-hidden="true"
-          className={cn("size-3", selected ? "opacity-100" : "opacity-0")}
+          className={cn("size-4", selected ? "opacity-100" : "opacity-0")}
         />
       )}
       {children}

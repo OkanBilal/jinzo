@@ -11,7 +11,7 @@ import {
 } from "@/lib/redux/api";
 
 const CARD =
-  "rounded-3xl bg-primary-100/40 p-6  dark:bg-primary-900/20";
+  "rounded-3xl bg-primary-100/40 p-6  dark:bg-primary-900/20  glass-outline glass-outline-soft";
 
 function PreferenceCard({
   label,
@@ -77,7 +77,7 @@ export function PreferencesStep() {
   const notifyOnRunComplete = appSettings?.notifyOnRunComplete ?? true;
   const notifyOnToolApproval = appSettings?.notifyOnToolApproval ?? true;
   const showMenuBarIcon = appSettings?.showMenuBarIcon ?? true;
-  const enableWorktrees = appSettings?.enableWorktrees ?? true;
+  const enableWorktrees = appSettings?.enableWorktrees ?? false;
 
   const handleWorktreeToggle = async (enabled: boolean) => {
     if (updatingWorktrees) return;

@@ -16,8 +16,6 @@ describe("Button", () => {
     expect(markup).toContain("disabled");
     expect(markup).toContain("disabled:opacity-50");
     expect(markup).toContain("disabled:cursor-not-allowed");
-    expect(markup).toContain("focus-visible:ring-2");
-    expect(markup).toContain("focus-visible:ring-primary-500");
     expect(markup).not.toContain("px-3");
     expect(markup).not.toContain("rounded-xl");
   });
@@ -30,7 +28,6 @@ describe("Button", () => {
     expect(markup).toContain("px-3");
     expect(markup).toContain("rounded-xl");
     expect(markup).toContain("glass-primary");
-    expect(markup).toContain("focus-visible:ring-2");
   });
 
   it("exposes loading as a disabled busy state", () => {

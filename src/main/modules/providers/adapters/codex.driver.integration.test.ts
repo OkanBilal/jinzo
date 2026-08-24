@@ -4,6 +4,13 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WorkRunRequest } from "../../../../shared/adapter.types";
 
+// Each test spawns the fake codex app-server as a real Node subprocess and
+// completes a JSON-RPC handshake. Under full-suite load that spawn can blow
+// the default 5s runner timeout even though driver-level timeout behavior
+// (e.g. the 40ms turn timeout) is asserted inside the tests themselves — in
+// isolation the file passes comfortably. Kill-switch, not a performance target.
+vi.setConfig({ testTimeout: 30_000 });
+
 const approvalHarness = vi.hoisted(() => ({
   requests: [] as Array<Record<string, unknown>>,
 }));
@@ -35,9 +42,9 @@ function request(runId: string): WorkRunRequest {
   return {
     runId,
     accountId: "account-1",
-    workspace: {
-      id: "workspace-1",
-      rootPath: process.cwd(),
+    execution: {
+      workspaceId: "workspace-1",
+      cwd: process.cwd(),
     },
     goal: "Return structured output",
   };
@@ -483,9 +490,9 @@ describe("codex.driver / app-server protocol", () => {
     const acquired = await driver.reviewSession?.({
       runId: "run-detached-review",
       accountId: "account-1",
-      workspace: {
-        id: "workspace-1",
-        rootPath: process.cwd(),
+      execution: {
+        workspaceId: "workspace-1",
+        cwd: process.cwd(),
       },
       target: { type: "uncommittedChanges" },
       delivery: "detached",
@@ -526,6 +533,229 @@ describe("codex.driver / app-server protocol", () => {
     ]);
   });
 
+  it("lets the run's mode-resolved snapshot set the thread personality", async () => {
+    // Work/Chat pin `personality` through the mode harness; the provider
+    // setting is what Code spaces keep. The run snapshot has to win, the same
+    // way it already does for the sandbox.
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mains-codex-driver-"));
+    tempDirs.push(tempDir);
+    const logPath = path.join(tempDir, "protocol.jsonl");
+    process.env.MAINS_CODEX_FIXTURE_LOG = logPath;
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 500,
+      personality: "pragmatic",
+      sandboxMode: "workspace-write",
+    });
+    drivers.push(driver);
+
+    const acquired = await driver.createSession({
+      ...request("run-personality"),
+      mode: "chat",
+      configSnapshot: {
+        personality: "friendly",
+        sandboxMode: "read-only",
+      },
+    });
+
+    const threadStart = readProtocolLog(logPath).find(
+      (message) => message.method === "thread/start",
+    );
+    expect(threadStart?.params).toMatchObject({
+      personality: "friendly",
+      sandbox: "read-only",
+    });
+    await driver.cleanup?.(acquired.session);
+  });
+
+  it("keeps the provider personality when the run pins none", async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mains-codex-driver-"));
+    tempDirs.push(tempDir);
+    const logPath = path.join(tempDir, "protocol.jsonl");
+    process.env.MAINS_CODEX_FIXTURE_LOG = logPath;
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 500,
+      personality: "pragmatic",
+    });
+    drivers.push(driver);
+
+    const acquired = await driver.createSession(request("run-personality-default"));
+
+    const threadStart = readProtocolLog(logPath).find(
+      (message) => message.method === "thread/start",
+    );
+    expect(threadStart?.params).toMatchObject({ personality: "pragmatic" });
+    await driver.cleanup?.(acquired.session);
+  });
+
+  it("lets the run snapshot turn plan mode off on a new thread", async () => {
+    // The provider row is shared by every space on this provider; a Code
+    // space leaving `planMode` on must not plan a Work/Chat run, and the
+    // harness says so through the snapshot.
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mains-codex-driver-"));
+    tempDirs.push(tempDir);
+    const logPath = path.join(tempDir, "protocol.jsonl");
+    process.env.MAINS_CODEX_FIXTURE_LOG = logPath;
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 500,
+      planMode: true,
+      goalMode: true,
+    });
+    drivers.push(driver);
+
+    const acquired = await driver.createSession({
+      ...request("run-plan-pinned-off"),
+      mode: "work",
+      configSnapshot: { planMode: false, goalMode: false },
+    });
+    await driver.executePrompt(
+      acquired.session,
+      acquired.prompt,
+      async () => undefined,
+      new AbortController().signal,
+    );
+
+    const log = readProtocolLog(logPath);
+    const turnStart = log.find((message) => message.method === "turn/start");
+    expect(turnStart).toBeDefined();
+    expect(
+      (turnStart?.params as { collaborationMode?: unknown }).collaborationMode,
+    ).toBeUndefined();
+    expect(log.some((message) => message.method === "thread/goal/set")).toBe(false);
+  });
+
+  it("keeps the provider's plan and goal when the run pins neither", async () => {
+    // Control for the test above: a developer run carries no snapshot and
+    // the provider row decides.
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mains-codex-driver-"));
+    tempDirs.push(tempDir);
+    const logPath = path.join(tempDir, "protocol.jsonl");
+    process.env.MAINS_CODEX_FIXTURE_LOG = logPath;
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 500,
+      planMode: true,
+      goalMode: true,
+    });
+    drivers.push(driver);
+
+    const acquired = await driver.createSession(request("run-plan-provider"));
+    await driver.executePrompt(
+      acquired.session,
+      acquired.prompt,
+      async () => undefined,
+      new AbortController().signal,
+    );
+
+    const log = readProtocolLog(logPath);
+    const turnStart = log.find((message) => message.method === "turn/start");
+    expect(turnStart?.params).toMatchObject({
+      collaborationMode: { mode: "plan" },
+    });
+    expect(log.some((message) => message.method === "thread/goal/set")).toBe(true);
+  });
+
+  it("keeps a resumed run out of plan mode when its snapshot says so", async () => {
+    // Resume used to read `config.planMode` straight off the provider row,
+    // so the pin only held for the first turn of a Work/Chat run.
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mains-codex-driver-"));
+    tempDirs.push(tempDir);
+    const logPath = path.join(tempDir, "protocol.jsonl");
+    process.env.MAINS_CODEX_FIXTURE_LOG = logPath;
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 500,
+      planMode: true,
+      goalMode: true,
+    });
+    drivers.push(driver);
+    await driver.createSession({
+      ...request("run-resume-plan-pinned"),
+      mode: "work",
+      configSnapshot: { planMode: false, goalMode: false },
+    });
+
+    const acquired = await driver.resumeSession?.({
+      runId: "run-resume-plan-pinned",
+      accountId: "account-1",
+      execution: { workspaceId: "workspace-1", cwd: process.cwd() },
+      message: "Keep going",
+      mode: "work",
+      configSnapshot: { planMode: false, goalMode: false },
+    });
+    expect(acquired).toBeDefined();
+    await driver.executePrompt(
+      acquired!.session,
+      acquired!.prompt,
+      async () => undefined,
+      new AbortController().signal,
+    );
+
+    const log = readProtocolLog(logPath);
+    const turnStart = log.find((message) => message.method === "turn/start");
+    // forceReset on continue: an explicit "default", never "plan".
+    expect(turnStart?.params).toMatchObject({
+      collaborationMode: { mode: "default" },
+    });
+    expect(log.some((message) => message.method === "thread/goal/set")).toBe(false);
+  });
+
+  it("keeps a forked run out of plan mode when its snapshot says so", async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mains-codex-driver-"));
+    tempDirs.push(tempDir);
+    const logPath = path.join(tempDir, "protocol.jsonl");
+    process.env.MAINS_CODEX_FIXTURE_LOG = logPath;
+
+    const driver = createCodexDriver({
+      binary: fixtureBinary,
+      timeout: 500,
+      planMode: true,
+      goalMode: true,
+    });
+    drivers.push(driver);
+    await driver.createSession({
+      ...request("run-fork-plan-source"),
+      mode: "work",
+      configSnapshot: { planMode: false, goalMode: false },
+    });
+
+    const acquired = await driver.forkSession?.({
+      runId: "run-fork-plan-target",
+      sourceRunId: "run-fork-plan-source",
+      accountId: "account-1",
+      execution: { workspaceId: "workspace-1", cwd: process.cwd() },
+      message: "Branch off here",
+      mode: "work",
+      configSnapshot: { planMode: false, goalMode: false },
+    });
+    expect(acquired).toBeDefined();
+    await driver.executePrompt(
+      acquired!.session,
+      acquired!.prompt,
+      async () => undefined,
+      new AbortController().signal,
+    );
+
+    const log = readProtocolLog(logPath);
+    const turnStart = log.find(
+      (message) =>
+        message.method === "turn/start" &&
+        (message.params as { threadId?: string } | undefined)?.threadId ===
+          "thread-1-fork",
+    );
+    expect(turnStart?.params).toMatchObject({
+      collaborationMode: { mode: "default" },
+    });
+    expect(log.some((message) => message.method === "thread/goal/set")).toBe(false);
+  });
+
   it("uses the generated thread/fork contract without obsolete fields", async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mains-codex-driver-"));
     tempDirs.push(tempDir);
@@ -544,9 +774,9 @@ describe("codex.driver / app-server protocol", () => {
       runId: "run-fork-target",
       sourceRunId: "run-fork-source",
       accountId: "account-1",
-      workspace: {
-        id: "workspace-1",
-        rootPath: process.cwd(),
+      execution: {
+        workspaceId: "workspace-1",
+        cwd: process.cwd(),
       },
       message: "continue from the fork",
       model: "gpt-5.4",
@@ -604,9 +834,9 @@ describe("codex.driver / app-server protocol", () => {
     const acquired = await driver.resumeSession?.({
       runId: "run-continue-context",
       accountId: "account-1",
-      workspace: {
-        id: "workspace-1",
-        rootPath: process.cwd(),
+      execution: {
+        workspaceId: "workspace-1",
+        cwd: process.cwd(),
       },
       message: "Continue with this evidence",
       context: [{
@@ -658,9 +888,9 @@ describe("codex.driver / app-server protocol", () => {
       runId: "run-fork-context-target",
       sourceRunId: "run-fork-context-source",
       accountId: "account-1",
-      workspace: {
-        id: "workspace-1",
-        rootPath: process.cwd(),
+      execution: {
+        workspaceId: "workspace-1",
+        cwd: process.cwd(),
       },
       message: "Fork with this evidence",
       context: [{
@@ -1096,9 +1326,9 @@ describe("codex.driver / app-server protocol", () => {
     const continued = await driver.resumeSession?.({
       runId,
       accountId: "account-1",
-      workspace: {
-        id: "workspace-1",
-        rootPath: process.cwd(),
+      execution: {
+        workspaceId: "workspace-1",
+        cwd: process.cwd(),
       },
       message: "continue interrupted subagent",
     });

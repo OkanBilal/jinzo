@@ -51,9 +51,13 @@ export const appSettings = sqliteTable("app_settings", {
     onDelete: "set null",
   }),
 
+  // Off for fresh installs: most people start on one repo and one branch, and
+  // the isolated copy only earns its keep once several tasks run at once. The
+  // default is read at insert time only, so installs that already carry a
+  // value — including everyone seeded before this flipped — keep theirs.
   enableWorktrees: integer("enable_worktrees", { mode: "boolean" })
     .notNull()
-    .default(true),
+    .default(false),
 
   showToolCalls: integer("show_tool_calls", { mode: "boolean" })
     .notNull()
@@ -206,8 +210,8 @@ export const workspaces = sqliteTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     projectId: text("project_id").references(() => projects.id, {
-      onDelete: "set null",
-    }),
+      onDelete: "restrict",
+    }).notNull(),
 
     name: text("name").notNull(),
     rootPath: text("root_path").notNull(), // local absolute path
@@ -270,6 +274,70 @@ export const projectResources = sqliteTable(
 );
 
 /* -----------------------------
+   COLLECTIONS (group non-developer runs)
+------------------------------ */
+
+export const collections = sqliteTable(
+  "collections",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    icon: text("icon"),
+    isArchived: integer("is_archived", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    index("idx_collections_account").on(t.accountId),
+    index("idx_collections_updated").on(t.updatedAt),
+  ],
+);
+
+/* -----------------------------
+   COLLECTION SOURCES (canonical context owned by a Collection)
+------------------------------ */
+
+export const collectionSources = sqliteTable(
+  "collection_sources",
+  {
+    id: text("id").primaryKey(),
+    collectionId: text("collection_id")
+      .notNull()
+      .references(() => collections.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: ["file", "text"] }).notNull(),
+    name: text("name").notNull(),
+    mimeType: text("mime_type").notNull(),
+    byteSize: integer("byte_size").notNull(),
+    contentHash: text("content_hash").notNull(),
+    storageKey: text("storage_key").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    index("idx_collection_sources_collection").on(t.collectionId),
+    uniqueIndex("uniq_collection_sources_content").on(
+      t.collectionId,
+      t.contentHash,
+    ),
+    check("check_collection_sources_kind", sql`${t.kind} IN ('file', 'text')`),
+    check("check_collection_sources_byte_size", sql`${t.byteSize} >= 0`),
+  ],
+);
+
+/* -----------------------------
    RUNS (terminal/code-writing flow)
 ------------------------------ */
 
@@ -285,6 +353,10 @@ export const runs = sqliteTable(
       onDelete: "set null",
     }),
 
+    collectionId: text("collection_id").references(() => collections.id, {
+      onDelete: "set null",
+    }),
+
     // optional: which space/profile initiated this run (tool policies etc.)
     spaceId: text("space_id").references(() => spaces.id, {
       onDelete: "set null",
@@ -293,6 +365,10 @@ export const runs = sqliteTable(
     providerId: text("provider_id")
       .notNull()
       .references(() => providers.id, { onDelete: "restrict" }),
+
+    // experience mode snapshot from the space at run start — the run keeps
+    // rendering/resuming under its original mode even if the space changes
+    mode: text("mode", { enum: MODE_IDS }).notNull().default(DEFAULT_MODE_ID),
 
     model: text("model"), // snapshot
     title: text("title"),
@@ -329,7 +405,9 @@ export const runs = sqliteTable(
     index("idx_runs_account_created").on(t.accountId, t.createdAt),
     index("idx_runs_account_status").on(t.accountId, t.status),
     index("idx_runs_provider").on(t.providerId),
+    index("idx_runs_mode").on(t.mode),
     index("idx_runs_workspace").on(t.workspaceId),
+    index("idx_runs_collection").on(t.collectionId),
     index("idx_runs_space").on(t.spaceId),
     index("idx_runs_updated").on(t.updatedAt),
     check(
@@ -1214,9 +1292,18 @@ export const pulses = sqliteTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
 
-    workspaceId: text("workspace_id")
-      .notNull()
-      .references(() => workspaces.id, { onDelete: "cascade" }),
+    // Developer pulses run in a workspace; work/chat pulses run workspace-less
+    // (managed execution dir) and may target a collection instead.
+    workspaceId: text("workspace_id").references(() => workspaces.id, {
+      onDelete: "cascade",
+    }),
+
+    collectionId: text("collection_id").references(() => collections.id, {
+      onDelete: "set null",
+    }),
+
+    // Experience mode the pulse's runs execute under (see shared/modes.ts).
+    mode: text("mode", { enum: MODE_IDS }).notNull().default(DEFAULT_MODE_ID),
 
     providerId: text("provider_id")
       .notNull()

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   getRouteType,
+  getRouteRunId,
   getBaseRoutePath,
   WORKSPACE_BASE_PATH,
 } from "./route-utils";
@@ -24,6 +25,10 @@ describe("getRouteType", () => {
 
   it('returns "code" for /code/:id', () => {
     expect(getRouteType("/code/workspace-123")).toBe("code");
+  });
+
+  it('returns "code" for a workspace-less run route', () => {
+    expect(getRouteType("/code/runs/run-123")).toBe("code");
   });
 
   it('returns "unknown" for unmatched path', () => {
@@ -54,5 +59,23 @@ describe("getBaseRoutePath", () => {
 
   it('returns / for "unknown"', () => {
     expect(getBaseRoutePath("unknown")).toBe("/");
+  });
+});
+
+describe("getRouteRunId", () => {
+  it("reads the run id off the workspace-less run route", () => {
+    expect(getRouteRunId("/code/runs/run-123")).toBe("run-123");
+  });
+
+  it("returns null for /code with no param", () => {
+    expect(getRouteRunId("/code")).toBeNull();
+  });
+
+  it("does not mistake a workspace id for a run id", () => {
+    expect(getRouteRunId("/code/workspace-123")).toBeNull();
+  });
+
+  it("returns null off the code route", () => {
+    expect(getRouteRunId("/pulse")).toBeNull();
   });
 });

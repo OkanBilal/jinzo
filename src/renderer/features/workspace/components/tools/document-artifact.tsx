@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent } from "react";
-import { Button, DropdownMenu, DropdownMenuItem, Text } from "@/components/ui";
-import { ArrowUp, Finder, Mains } from "@/components/ui/icons";
+import { Button, DropdownMenu, DropdownMenuItem, Text, toast } from "@/components/ui";
+import { ArrowUp, Download, Finder, Mains } from "@/components/ui/icons";
+import { appApi } from "@/lib/transport";
 import { useLazyGetAppsForFileQuery } from "@/lib/redux/api";
 import { useDocumentViewer } from "@/hooks/use-document-viewer";
 import { useCapabilities } from "@/lib/platform";
@@ -57,6 +58,22 @@ export function DocumentArtifact({
     void window.api.shell.showItemInFolder(absPath);
   };
 
+  // Same action as the viewer panel's save button: main opens the native
+  // dialog, a cancelled dialog comes back as a null path and says nothing.
+  const saveCopy = async () => {
+    setMenuOpen(false);
+    try {
+      const res = await appApi.fileExplorer.saveFileAs(absPath, fileName);
+      if (!res.success) {
+        toast.error(res.error ?? "Failed to save file");
+        return;
+      }
+      if (res.data) toast.success(`Saved to ${res.data}`);
+    } catch {
+      toast.error("Failed to save file");
+    }
+  };
+
   return (
     <div
       className="relative flex items-center gap-3 w-full max-w-xl rounded-2xl bg-primary-50 dark:bg-primary-900/85 px-3 py-2.5 shadow-sm"
@@ -107,6 +124,10 @@ export function DocumentArtifact({
         <DropdownMenuItem onClick={openInMains}>
           <Mains className="size-4 shrink-0" />
           Open in Mains
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => void saveCopy()}>
+          <Download className="size-4 shrink-0" />
+          Save a copy…
         </DropdownMenuItem>
         {revealInFolder && (
           <DropdownMenuItem onClick={showInFinder}>

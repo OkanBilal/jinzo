@@ -42,7 +42,8 @@ import {
 import { proxiedImageSrc } from "@/lib/proxied-image-src";
 import { formatDate } from "@/lib/format-date";
 import { FilterLabel } from "./filter-section";
-import { PrDiffView, warmDiffHighlighter } from "./pr-diff-view";
+import { PrDiffView } from "./pr-diff-view";
+import { warmDiffHighlighter } from "@/lib/diff-highlighter";
 
 const DETAIL_TABS: { value: "summary" | "code"; label: string }[] = [
   { value: "summary", label: "Summary" },

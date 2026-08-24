@@ -50,6 +50,7 @@ import type {
   WorkRunEventHandler,
   WorkRunForkRequest,
   WorkRunRequest,
+  WorkRunToolPolicy,
   WorkRunUsage,
 } from "../../../../shared/adapter.types";
 import {
@@ -58,6 +59,7 @@ import {
   resolveCandidate,
 } from "../providers.utils";
 import { AGENT_ID_IN_RESULT } from "../../../../shared/subagent";
+import type { ModeId } from "../../../../shared/modes";
 import {
   DEFAULT_CLAUDE_PERMISSION_MODE,
   isClaudePermissionMode,
@@ -72,7 +74,7 @@ import {
   adoptConfig,
   createLogger,
   ALLOWED_TOOLS_SET,
-  DEFAULT_ALLOWED_TOOLS,
+  resolveEffectiveAllowedTools,
   safeJson,
   extractArtifactsFromToolOutput,
   formatContextSection,
@@ -224,22 +226,31 @@ function isSDKPermissionMode(
 export function buildClaudePermissionModeOptions(
   permissionMode: NonNullable<SDKOptions["permissionMode"]>,
   canUseTool?: SDKCanUseTool,
+  toolPolicy?: WorkRunToolPolicy | null,
 ): Pick<
   SDKOptions,
   | "permissionMode"
   | "allowDangerouslySkipPermissions"
   | "allowedTools"
+  | "disallowedTools"
   | "canUseTool"
   | "settings"
 > {
+  const effectiveAllowedTools = resolveEffectiveAllowedTools(toolPolicy);
   return {
     permissionMode,
-    allowedTools: [...DEFAULT_ALLOWED_TOOLS],
+    allowedTools: effectiveAllowedTools,
+    ...(toolPolicy && toolPolicy.disallowedTools.length > 0
+      ? { disallowedTools: [...toolPolicy.disallowedTools] }
+      : {}),
     // Build the run-scoped permission snapshot here. buildOptions materializes
     // it to disk because Workflow children do not inherit the inline form.
     settings: {
       permissions: {
-        allow: [...DEFAULT_ALLOWED_TOOLS],
+        allow: [...effectiveAllowedTools],
+        ...(toolPolicy && toolPolicy.disallowedTools.length > 0
+          ? { deny: [...toolPolicy.disallowedTools] }
+          : {}),
       },
     },
     ...(permissionMode === "bypassPermissions"
@@ -859,6 +870,13 @@ interface ClaudePermissionBridgeOptions {
   runId: string;
   allowedTools: Set<string>;
   bypassMode: boolean;
+  /**
+   * True when the run's tool policy *replaced* the default allowlist rather
+   * than trimming it — a mode that ships its own tool set (chat). MCP tools
+   * then lose their blanket trust: a mode that removed Write must not get it
+   * back through a filesystem MCP server the space happens to have attached.
+   */
+  restrictedToolset?: boolean;
   requestApproval?: ApprovalRequester;
   cancelApproval?: (requestId: string) => void;
 }
@@ -881,6 +899,7 @@ export function createClaudePermissionBridge({
   runId,
   allowedTools,
   bypassMode,
+  restrictedToolset = false,
   requestApproval = requestToolApproval,
   cancelApproval = cancelPendingRequest,
 }: ClaudePermissionBridgeOptions): {
@@ -895,7 +914,12 @@ export function createClaudePermissionBridge({
 
     // AskUserQuestion is an interaction, not a permission gate, so it must
     // still reach the renderer even in bypass mode.
-    if ((bypassMode && !isAskUser) || allowedTools.has(toolName) || toolName.startsWith("mcp__")) {
+    // The `mcp__` shortcut is the pre-approval an MCP server earns by being
+    // configured at all — but only while the run is on the default toolset.
+    // Under a replacement allowlist it falls through to the approval dialog,
+    // matching the copilot driver's pre-tool hook.
+    const mcpTrusted = !restrictedToolset && toolName.startsWith("mcp__");
+    if ((bypassMode && !isAskUser) || allowedTools.has(toolName) || mcpTrusted) {
       return { allowed: true, updatedInput: toolInput };
     }
 
@@ -2300,13 +2324,16 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     workspaceId: string | null,
     rootPath: string | null,
     runId: string | null,
+    mode?: ModeId,
   ): any {
     const ctx: MainsToolContext = { workspaceId, rootPath, runId };
 
+    const tools = toClaudeTools(ctx, mode);
+    if (tools.length === 0) return null;
     return createSdkMcpServerFn!({
       name: "mains",
       version: "1.0.0",
-      tools: toClaudeTools(ctx).map((t) =>
+      tools: tools.map((t) =>
         toolFn!(t.name, t.description, t.shape, t.handler),
       ),
     });
@@ -2324,12 +2351,18 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     runHooks?: HooksConfig;
     runAgents?: AgentsConfig;
     runId?: string;
-    workspaceId?: string;
+    workspaceId?: string | null;
     forkSession?: boolean;
     /** UUID to open the new (or forked) session on. Omitted when resuming. */
     newSessionId?: string;
     onEvent?: WorkRunEventHandler;
     permissionMode?: NonNullable<SDKOptions["permissionMode"]>;
+    /** Mode/space instruction delta, appended to the claude_code preset. */
+    extraInstructions?: string | null;
+    /** Experience mode — filters which mains tools the MCP server exposes. */
+    mode?: ModeId;
+    /** Per-run tool policy from the mode harness. */
+    toolPolicy?: WorkRunToolPolicy | null;
   }): Promise<SDKOptions> {
     const {
       model,
@@ -2344,6 +2377,9 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       newSessionId,
       onEvent,
       permissionMode: runPermissionMode,
+      extraInstructions,
+      mode,
+      toolPolicy,
     } = args;
 
     const packagedSdkBinary = config.binary
@@ -2377,18 +2413,28 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     const permissionMode =
       runPermissionMode ?? config.permissionMode ?? DEFAULT_CLAUDE_PERMISSION_MODE;
     const settingSources = config.settingSources ?? ["user", "project", "local"];
+    // The bridge auto-allows this set, so it must see the *effective* list —
+    // handing it the global default would auto-approve tools the run's policy
+    // just denied.
+    const effectiveAllowedTools = toolPolicy
+      ? new Set(resolveEffectiveAllowedTools(toolPolicy))
+      : ALLOWED_TOOLS_SET;
     const permissionBridge = runId
       ? createClaudePermissionBridge({
           runId,
-          allowedTools: ALLOWED_TOOLS_SET,
+          allowedTools: effectiveAllowedTools,
           bypassMode: permissionMode === "bypassPermissions",
+          restrictedToolset: !!toolPolicy?.allowedTools,
         })
       : null;
 
     const mcpServers = readMcpServersFromSettings(settingSources, workspacePath);
     if (!mcpServers["mains"] && createSdkMcpServerFn && toolFn) {
-      mcpServers["mains"] = buildMainsMcpServer(workspaceId ?? null, workspacePath ?? null, runId ?? null);
-      logInfo("Injected mains MCP server (in-process)");
+      const mainsServer = buildMainsMcpServer(workspaceId ?? null, workspacePath ?? null, runId ?? null, mode);
+      if (mainsServer) {
+        mcpServers["mains"] = mainsServer;
+        logInfo("Injected mains MCP server (in-process)");
+      }
     }
 
     const options: SDKOptions = {
@@ -2396,6 +2442,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       ...buildClaudePermissionModeOptions(
         permissionMode,
         permissionBridge?.canUseTool,
+        toolPolicy,
       ),
       abortController,
       ...executableOptions,
@@ -2507,6 +2554,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     options.systemPrompt = {
       type: "preset",
       preset: "claude_code",
+      ...(extraInstructions ? { append: extraInstructions } : {}),
     };
 
     if (runId && options.settings && typeof options.settings !== "string") {
@@ -2824,16 +2872,19 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       const sessionId = randomUUID();
       const options = await buildOptions({
         model: getModel(request.model),
-        workspacePath: request.workspace.rootPath,
+        workspacePath: request.execution.cwd,
         abortController,
         runHooks: request.hooks,
         runAgents: request.agents,
         runId: request.runId,
-        workspaceId: request.workspace.id,
+        workspaceId: request.execution.workspaceId,
         newSessionId: sessionId,
         permissionMode: isSDKPermissionMode(overridePermissionMode)
           ? overridePermissionMode
           : undefined,
+        extraInstructions: request.extraInstructions,
+        mode: request.mode,
+        toolPolicy: request.toolPolicy,
       });
 
       const session = newSession(request.runId, options, abortController, true);
@@ -2854,15 +2905,22 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       }
 
       const abortController = new AbortController();
+      const resumePermissionMode = request.configSnapshot?.permissionMode;
       const options = await buildOptions({
         model: getModel(request.model ?? config.defaultModel),
-        workspacePath: request.workspace.rootPath,
+        workspacePath: request.execution.cwd,
         abortController,
         resumeSessionId: sessionId,
         runHooks: request.hooks,
         runAgents: request.agents,
         runId: request.runId,
-        workspaceId: request.workspace.id,
+        workspaceId: request.execution.workspaceId,
+        permissionMode: isSDKPermissionMode(resumePermissionMode)
+          ? resumePermissionMode
+          : undefined,
+        extraInstructions: request.extraInstructions,
+        mode: request.mode,
+        toolPolicy: request.toolPolicy,
       });
 
       const session = newSession(request.runId, options, abortController, false);
@@ -2887,17 +2945,24 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       // A fork gets a new id, and the CLI lets us name it — so the fork is
       // identified before it produces anything, same as a fresh session.
       const sessionId = randomUUID();
+      const forkPermissionMode = request.configSnapshot?.permissionMode;
       const options = await buildOptions({
         model: getModel(request.model ?? config.defaultModel),
-        workspacePath: request.workspace.rootPath,
+        workspacePath: request.execution.cwd,
         abortController,
         resumeSessionId: sourceSessionId,
         runHooks: request.hooks,
         runAgents: request.agents,
         runId: request.runId,
-        workspaceId: request.workspace.id,
+        workspaceId: request.execution.workspaceId,
         forkSession: true,
         newSessionId: sessionId,
+        permissionMode: isSDKPermissionMode(forkPermissionMode)
+          ? forkPermissionMode
+          : undefined,
+        extraInstructions: request.extraInstructions,
+        mode: request.mode,
+        toolPolicy: request.toolPolicy,
       });
 
       const session = newSession(request.runId, options, abortController, true);

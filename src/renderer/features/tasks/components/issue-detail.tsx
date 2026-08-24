@@ -3,6 +3,7 @@ import { IssueTabContent } from "@/features/workspace/components/issue-tab-conte
 import { ProviderIcon } from "@/features/workspace/components/provider-icon";
 import { Button, Text } from "@/components/ui";
 import { External } from "@/components/ui/icons";
+import { LinearIssueDetailContent } from "./linear-issue-detail";
 
 /**
  * Drawer wrapper for an issue: slim header (provider, number, open-external)
@@ -36,7 +37,11 @@ export function IssueDetail({ issue }: { issue: IssueWithEntity }) {
         </div>
       </div>
       <div className="flex-1 min-h-0">
-        <IssueTabContent issue={issue} />
+        {iss.provider === "linear" ? (
+          <LinearIssueDetailContent issue={issue} />
+        ) : (
+          <IssueTabContent issue={issue} />
+        )}
       </div>
     </div>
   );

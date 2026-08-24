@@ -4,12 +4,27 @@ import { ACCOUNT_ID } from "./space.constants";
 import { sanitizeSpacePayload, generateSlug } from "./space.validation";
 import type { SpaceRecord } from "./space.dto";
 import { PROVIDER_IDS } from "../../../shared/provider-ids";
-import { DEFAULT_MODE_ID } from "../../../shared/modes";
+import {
+  DEFAULT_MODE_ID,
+  clampModeForProvider,
+  providerModes,
+  providerSupportsMode,
+} from "../../../shared/modes";
 
 function flattenFieldErrors(errors: Record<string, string>): string {
   return Object.entries(errors)
     .map(([field, msg]) => `${field}: ${msg}`)
     .join("; ");
+}
+
+/**
+ * A space read back through its provider's mode list. The stored value is left
+ * alone — a provider that regains work/chat picks its spaces back up — but a
+ * mode the provider no longer drives must not reach the UI or the harness.
+ */
+function withSupportedMode(space: SpaceRecord): SpaceRecord {
+  const mode = clampModeForProvider(space.providerId, space.mode);
+  return mode === space.mode ? space : { ...space, mode };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -22,11 +37,12 @@ function flattenFieldErrors(errors: Record<string, string>): string {
 // ─────────────────────────────────────────────────────────────
 export const spaceService = {
   async getAll(): Promise<SpaceRecord[]> {
-    return spaceRepo.findAll();
+    return (await spaceRepo.findAll()).map(withSupportedMode);
   },
 
   async getById(spaceId: string): Promise<SpaceRecord | null> {
-    return (await spaceRepo.findById(spaceId)) ?? null;
+    const space = await spaceRepo.findById(spaceId);
+    return space ? withSupportedMode(space) : null;
   },
 
   async create(payload: unknown): Promise<SpaceRecord> {
@@ -52,6 +68,14 @@ export const spaceService = {
     // Get next sort order
     const nextOrder = await spaceRepo.getMaxSortOrder();
 
+    const providerId = data.providerId ?? PROVIDER_IDS.claude;
+    const mode = data.mode ?? DEFAULT_MODE_ID;
+    if (!providerSupportsMode(providerId, mode)) {
+      throw new Error(
+        `mode: "${providerId}" spaces support ${providerModes(providerId).join(", ")}`,
+      );
+    }
+
     const newSpace = {
       id: nanoid(),
       accountId: ACCOUNT_ID,
@@ -62,8 +86,8 @@ export const spaceService = {
       model: data.model || null,
       icon: data.icon || null,
       themeConfig: data.themeConfig || null,
-      providerId: data.providerId ?? PROVIDER_IDS.claude,
-      mode: data.mode ?? DEFAULT_MODE_ID,
+      providerId,
+      mode,
       sortOrder: data.sortOrder ?? nextOrder,
     };
 
@@ -83,6 +107,20 @@ export const spaceService = {
 
     const existing = await spaceRepo.findById(spaceId);
     if (!existing) throw new Error("Space not found");
+
+    // The pair, not the halves: an update sends `mode` or `providerId` alone,
+    // so the missing half comes from the row. Checked here rather than in
+    // `sanitizeSpacePayload`, which never sees the existing space.
+    const nextProviderId = data.providerId ?? existing.providerId;
+    const nextMode = data.mode ?? existing.mode;
+    if (
+      (data.mode !== undefined || data.providerId !== undefined) &&
+      !providerSupportsMode(nextProviderId, nextMode)
+    ) {
+      throw new Error(
+        `mode: "${nextProviderId}" spaces support ${providerModes(nextProviderId).join(", ")}`,
+      );
+    }
 
     // If slug is being changed, check if new slug already exists
     if (data.slug && data.slug !== existing.slug) {

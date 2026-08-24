@@ -4,10 +4,19 @@
 // ─────────────────────────────────────────────────────────────
 
 import type { ClaudePermissionMode } from "./claude-permission-modes";
+import type { ModeId } from "./modes";
+import type { ModeToolPolicy } from "./mode-harness";
 import type {
   PluginAvailability,
   PluginDisabledReason,
 } from "./plugin-install-availability";
+
+/**
+ * Per-run tool policy (see `src/shared/mode-harness.ts`). Applied by the
+ * drivers with an allowlist mechanism (claude, copilot); codex/cursor enforce
+ * their harness through `configSnapshot` (sandbox / agent mode) instead.
+ */
+export type WorkRunToolPolicy = ModeToolPolicy;
 
 /**
  * Context item provided to a work run
@@ -37,20 +46,33 @@ export interface FileAttachment {
 }
 
 /**
+ * The filesystem context every coding-agent adapter needs. A real domain
+ * Workspace is optional, but a resolved cwd is never implicit.
+ */
+export interface RunExecutionContext {
+  cwd: string;
+  workspaceId: string | null;
+}
+
+/**
  * Request to start a work run
  */
 export interface WorkRunRequest {
   runId: string;
   accountId: string;
-  workspace: {
-    id: string;
-    rootPath: string;
-  };
+  execution: RunExecutionContext;
   goal: string;
   model?: string | null;
   systemPrompt?: string | null;
+  /** Experience mode snapshot for this run (see `src/shared/modes.ts`). */
+  mode?: ModeId;
+  /**
+   * Mode-resolved instruction delta (see `src/shared/mode-harness.ts`).
+   * Adapters attach it via their provider's native prompt-layer mechanism.
+   */
+  extraInstructions?: string | null;
   context?: WorkRunContextItem[];
-  toolPolicy?: Record<string, unknown> | null;
+  toolPolicy?: WorkRunToolPolicy | null;
   /**
    * Per-run config snapshot. Adapters use these values to override their
    * cached provider config when present (e.g. Pulse forces specific
@@ -373,14 +395,22 @@ export type WorkRunEventHandler = (event: WorkRunEvent) => void | Promise<void>;
 export interface WorkRunContinueRequest {
   runId: string;
   accountId: string;
-  workspace: {
-    id: string;
-    rootPath: string;
-  };
+  execution: RunExecutionContext;
   /** The follow-up message/goal */
   message: string;
   /** Model to use for this continuation (overrides provider default) */
   model?: string | null;
+  /** The run's original system prompt, re-applied by drivers that rebuild
+   * their session config on resume (copilot). */
+  systemPrompt?: string | null;
+  /** Experience mode snapshot from the run row (see `src/shared/modes.ts`). */
+  mode?: ModeId;
+  /** Mode-resolved instruction delta, re-applied on resume (new threads inherit it). */
+  extraInstructions?: string | null;
+  /** Per-run tool policy, re-derived from the run row (see WorkRunRequest). */
+  toolPolicy?: WorkRunToolPolicy | null;
+  /** Per-run config snapshot, re-derived from the run row (see WorkRunRequest). */
+  configSnapshot?: Record<string, unknown> | null;
   /** Additional context to add */
   context?: WorkRunContextItem[];
   /** File attachments (images/documents) to include in the prompt */
@@ -425,14 +455,19 @@ export interface WorkRunForkRequest {
   /** The source run whose session will be forked */
   sourceRunId: string;
   accountId: string;
-  workspace: {
-    id: string;
-    rootPath: string;
-  };
+  execution: RunExecutionContext;
   /** The message/goal for the forked session */
   message: string;
   /** Model to use for this fork (overrides provider default) */
   model?: string | null;
+  /** Experience mode inherited from the source run (see `src/shared/modes.ts`). */
+  mode?: ModeId;
+  /** Mode-resolved instruction delta, re-applied on the forked session. */
+  extraInstructions?: string | null;
+  /** Per-run tool policy inherited from the source run (see WorkRunRequest). */
+  toolPolicy?: WorkRunToolPolicy | null;
+  /** Per-run config snapshot inherited from the source run (see WorkRunRequest). */
+  configSnapshot?: Record<string, unknown> | null;
   /** Additional context to add */
   context?: WorkRunContextItem[];
   /** File attachments (images/documents) to include in the prompt */
@@ -464,10 +499,7 @@ export interface WorkRunReviewTarget {
 export interface WorkRunReviewRequest {
   runId: string;
   accountId: string;
-  workspace: {
-    id: string;
-    rootPath: string;
-  };
+  execution: RunExecutionContext;
   target: WorkRunReviewTarget;
   /** inline = review on same thread (default), detached = fork new review thread */
   delivery?: "inline" | "detached";

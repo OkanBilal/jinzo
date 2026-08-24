@@ -349,7 +349,7 @@ export const FileExplorer = memo(function FileExplorer({
             placeholder="Search files"
             aria-label="Search files"
             spellCheck={false}
-            className="w-full h-7 pl-7 pr-7 text-s bg-transparent text-primary-900 dark:text-primary-100 placeholder:text-primary-500 dark:placeholder:text-primary-500 outline-none transition-colors"
+            className="w-full h-7 pl-7 pr-7 text-s bg-transparent text-primary-900 dark:text-primary-100 placeholder:text-primary-700 dark:placeholder:text-primary-300 outline-none transition-colors"
           />
           {isSearching && (
             <Button

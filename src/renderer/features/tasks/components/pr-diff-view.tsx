@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { preloadHighlighter } from "@pierre/diffs";
+import { useCallback, useMemo, useState } from "react";
 import { PatchDiff, type DiffLineAnnotation } from "@pierre/diffs/react";
 import {
   useGetPrDetailQuery,
@@ -25,6 +24,7 @@ import { ArrowUp } from "@/components/ui/icons";
 import { proxiedImageSrc } from "@/lib/proxied-image-src";
 import { formatDate } from "@/lib/format-date";
 import { DIFF_TYPOGRAPHY_STYLE, patchDiffOptions } from "@/lib/diff-style";
+import { useDiffHighlighterReady } from "@/lib/diff-highlighter";
 
 interface FileDiff {
   path: string;
@@ -44,24 +44,6 @@ interface ComposerTarget {
 interface AnnotationMeta {
   threads: PrReviewThread[];
   showComposer: boolean;
-}
-
-// The shiki highlighter behind PatchDiff loads async and the web component
-// doesn't repaint when it lands — first mount rendered blank/unthemed until
-// a tab switch remounted it. Warm it once (both themes, shared across all
-// diff views) and gate rendering on readiness.
-let highlighterWarmup: Promise<void> | null = null;
-
-export function warmDiffHighlighter(): Promise<void> {
-  highlighterWarmup ??= preloadHighlighter({
-    themes: ["pierre-dark", "pierre-light"],
-    langs: ["text"],
-  }).catch(() => {
-    // A failed warmup shouldn't wedge the Code tab closed forever — allow
-    // a retry on the next mount.
-    highlighterWarmup = null;
-  }) as Promise<void>;
-  return highlighterWarmup;
 }
 
 /** Split a multi-file unified diff into per-file sections. */
@@ -375,13 +357,14 @@ function FileSection({
     <div className="rounded-xl overflow-hidden glass-outline">
       <Button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-2 px-3 py-3 bg-primary/30 dark:bg-primary/5 cursor-pointer"
+        className="w-full flex items-center gap-2 px-3 py-2 dark:bg-primary/5 bg-primary-50 cursor-pointer"
       >
         <Text
           as="span"
           size="xs"
           weight="medium"
-          className="font-mono truncate"
+          className="truncate"
+          tone="secondary"
         >
           {file.path}
         </Text>
@@ -454,16 +437,7 @@ export function PrDiffView({ prRef }: { prRef: PrRefInput }) {
 
   // Don't hand PatchDiff a patch until the highlighter is live — it won't
   // repaint on its own once the highlighter finishes loading.
-  const [highlighterReady, setHighlighterReady] = useState(false);
-  useEffect(() => {
-    let cancelled = false;
-    warmDiffHighlighter().then(() => {
-      if (!cancelled) setHighlighterReady(true);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const highlighterReady = useDiffHighlighterReady();
 
   const files = useMemo(
     () => (data ? splitDiffByFile(data.diffText) : []),

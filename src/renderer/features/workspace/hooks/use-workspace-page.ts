@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { toast, type UploadedFile } from "@/components/ui";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAppSelector, useAppDispatch } from "@/lib/redux/hooks";
 import {
   setWorkspaceModel,
@@ -13,8 +14,11 @@ import {
   setWorkspaceProvider,
   clearPendingGoal,
   clearPendingReviewTarget,
+  openNewRunTab,
+  setSelectedCollectionId,
 } from "@/lib/redux/slices/workspaceSlice";
 import { isRunTab, isNewRunTab } from "@/features/workspace/lib/repo-utils";
+import { useModeConfig } from "@/hooks/use-mode-config";
 import { useComposerContext } from "./use-composer-context";
 import { useWorkspaceData } from "./use-workspace-data";
 import { useWorkspaceRuns } from "./use-workspace-runs";
@@ -24,6 +28,8 @@ import { serializeAttachments } from "@/features/workspace/lib/run-helpers";
 
 export function useWorkspacePage(providerId: string) {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  const { runId: routeRunId } = useParams<{ runId?: string }>();
 
   const selectedModel = useAppSelector(
     (state) =>
@@ -57,6 +63,13 @@ export function useWorkspacePage(providerId: string) {
   const previousNonEditorTab = useAppSelector(
     (state) => state.workspace.previousNonEditorTab,
   );
+  const pendingRunId = useAppSelector(
+    (state) => state.workspace.pendingRunId,
+  );
+  const selectedCollectionId = useAppSelector(
+    (state) => state.workspace.selectedCollectionId,
+  );
+  const { mode, showTabs } = useModeConfig();
 
   const [goal, setGoal] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
@@ -71,7 +84,7 @@ export function useWorkspacePage(providerId: string) {
   );
 
   const { workspaceId, selectedWorkspace, currentWorkspace } =
-    useWorkspaceData(providerId);
+    useWorkspaceData(providerId, mode);
 
   // A space switch can land on the same workspace, so the workspaceId-keyed
   // resets below never fire — sync the provider so the slice drops tab state
@@ -95,7 +108,7 @@ export function useWorkspacePage(providerId: string) {
     dispatch(clearNoteTabs());
     dispatch(setActiveTab("editor"));
     // `clearContext` is dispatch-stable, so listing it doesn't re-fire this.
-  }, [workspaceId, dispatch, clearContext]);
+  }, [workspaceId, routeRunId, dispatch, clearContext]);
 
   // Sync pendingGoal from Redux to local state
   useEffect(() => {
@@ -125,11 +138,12 @@ export function useWorkspacePage(providerId: string) {
     closeTab,
     selectTab,
     setRuns,
-  } = useWorkspaceRuns(workspaceId, providerId);
+  } = useWorkspaceRuns(workspaceId, providerId, mode, routeRunId);
 
-  // Handle pending review target (native code review)
+  // Handle pending review target (native code review) — developer-only UI,
+  // gated defensively so a stale target can't hijack the tab-less view.
   useEffect(() => {
-    if (!pendingReviewTarget || !workspaceId || !selectedWorkspace) return;
+    if (!showTabs || !pendingReviewTarget || !workspaceId || !selectedWorkspace) return;
     dispatch(clearPendingReviewTarget());
 
     const run = async () => {
@@ -139,15 +153,31 @@ export function useWorkspacePage(providerId: string) {
       }
     };
     run();
-  }, [pendingReviewTarget, workspaceId, selectedWorkspace, providerId, selectedModel, executeReview, dispatch]);
+  }, [showTabs, pendingReviewTarget, workspaceId, selectedWorkspace, providerId, selectedModel, executeReview, dispatch]);
 
   useEffect(() => {
+    if (!showTabs) return; // tab-less neutral state is the new-chat screen, not the newest run
     if (runs.length > 0 && !selectedFile && activeTab === "editor") {
       const firstRun = runs[0];
       dispatch(setActiveTab(firstRun.id));
       selectTab(firstRun.id);
     }
-  }, [runs, selectedFile, activeTab, dispatch, selectTab]);
+  }, [showTabs, runs, selectedFile, activeTab, dispatch, selectTab]);
+
+  // Tab-less modes: "editor" is only ever the post-reset placeholder (workspace,
+  // provider, and space switches all hard-reset to it). Promote it to the
+  // new-chat screen — unless a sidebar chat click is about to claim the view.
+  useEffect(() => {
+    if (showTabs) return;
+    if (activeTab === "editor" && pendingRunId === null && !routeRunId) {
+      dispatch(openNewRunTab());
+    }
+  }, [showTabs, activeTab, pendingRunId, routeRunId, dispatch]);
+
+  useEffect(() => {
+    if (mode === "developer" || !activeRun) return;
+    dispatch(setSelectedCollectionId(activeRun.collectionId ?? null));
+  }, [mode, activeRun, dispatch]);
 
   useFileContentLoader(selectedFile, currentWorkspace?.rootPath);
 
@@ -227,7 +257,7 @@ export function useWorkspacePage(providerId: string) {
   }, [clearContext]);
 
   const handleExecute = useCallback(async () => {
-    if (!workspaceId) {
+    if (mode === "developer" && !workspaceId) {
       toast.error("Select a workspace before sending a prompt.");
       return;
     }
@@ -265,16 +295,21 @@ export function useWorkspacePage(providerId: string) {
         selectedModel,
         attachments,
         contextItems,
+        selectedCollectionId,
       );
       if (newRunId) {
         clearInputState();
         dispatch(setActiveTab(newRunId));
+        if (mode !== "developer") {
+          navigate(`/code/runs/${newRunId}`);
+        }
       }
     }
   }, [
     goal,
     uploadedFiles,
     contextItems,
+    mode,
     workspaceId,
     selectedWorkspace,
     selectedModel,
@@ -288,29 +323,40 @@ export function useWorkspacePage(providerId: string) {
     clearInputState,
     dispatch,
     providerId,
+    selectedCollectionId,
+    navigate,
   ]);
 
   // Auto-execute when pendingAutoExecute was set (e.g. "Review Changes" button, suggestion chips)
   useEffect(() => {
     if (autoExecute && goal) {
       queueMicrotask(() => setAutoExecute(false));
-      if (!workspaceId) return;
+      if (mode === "developer" && !workspaceId) return;
       const run = async () => {
         if (activeRunId && canResume && activeRun && activeRun.status !== "running") {
           const success =
             (await continueRun(activeRunId, goal, selectedModel)) ?? false;
           if (success) clearInputState();
         } else {
-          const newRunId = await executeRun(goal, selectedWorkspace, providerId, selectedModel);
+          const newRunId = await executeRun(
+            goal,
+            selectedWorkspace,
+            providerId,
+            selectedModel,
+            undefined,
+            undefined,
+            selectedCollectionId,
+          );
           if (newRunId) {
             clearInputState();
             dispatch(setActiveTab(newRunId));
+            if (mode !== "developer") navigate(`/code/runs/${newRunId}`);
           }
         }
       };
       run();
     }
-  }, [autoExecute, goal, executeRun, continueRun, workspaceId, selectedWorkspace, providerId, selectedModel, dispatch, activeRunId, canResume, activeRun, clearInputState]);
+  }, [autoExecute, goal, executeRun, continueRun, mode, workspaceId, selectedWorkspace, providerId, selectedModel, selectedCollectionId, navigate, dispatch, activeRunId, canResume, activeRun, clearInputState]);
 
   const runLabel = (r: { title?: string; goal: string }) =>
     r.title?.trim() ? r.title : r.goal;

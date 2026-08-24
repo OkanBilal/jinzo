@@ -30,6 +30,8 @@ import {
 import { CODEX_SANDBOX_MODES } from "@/lib/provider-modes";
 import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 import { getProviderVariant } from "@/lib/provider-variants";
+import { modeProviderSetting } from "../../../../shared/mode-harness";
+import { useModeConfig } from "@/hooks/use-mode-config";
 
 const APPROVAL_OPTIONS: Array<{
   value: CodexApprovalMode;
@@ -74,6 +76,10 @@ const PERSONALITY_OPTIONS: Array<{
     description: "Direct and practical tone",
   },
 ];
+
+function personalityLabel(value: CodexPersonality): string {
+  return PERSONALITY_OPTIONS.find((o) => o.value === value)?.label ?? value;
+}
 
 const SANDBOX_OPTIONS = CODEX_SANDBOX_MODES.map((m) => ({
   value: m.value,
@@ -139,6 +145,19 @@ export default function CodexSettings() {
 
   const [isStructuredOutputsModalOpen, setIsStructuredOutputsModalOpen] =
     useState(false);
+
+  // Work and Chat pin the agent's tone through the mode harness, so the picker
+  // would be a control that changes nothing there. Read the pin from the
+  // harness itself rather than a second list of modes — this row then follows
+  // the table automatically. It stays visible (read-only) instead of
+  // disappearing: the stored value still governs Code spaces, and Settings has
+  // no space switcher to go change it from.
+  const { mode, label: modeLabel } = useModeConfig();
+  const pinnedPersonality = modeProviderSetting(
+    mode,
+    PROVIDER_IDS.codex,
+    "personality",
+  ) as CodexPersonality | undefined;
 
   const approvalMode = config.approvalMode ?? "on-request";
   const sandboxMode = config.sandboxMode ?? "workspace-write";
@@ -295,20 +314,27 @@ export default function CodexSettings() {
         <SettingsDivider />
         <SettingsRow
           title="Personality"
-          description="Controls the agent's conversational style"
+          description={
+            pinnedPersonality
+              ? `${modeLabel} spaces set the tone themselves. Switch to a Code space to change this.`
+              : "Controls the agent's conversational style"
+          }
         >
-          <Select
-            value={personality}
-            aria-label="Personality"
-            options={PERSONALITY_OPTIONS}
-            onChange={(value) => {
-              updateConfig({ personality: value });
-              const label =
-                PERSONALITY_OPTIONS.find((o) => o.value === value)?.label ??
-                value;
-              toast.success(`Personality: ${label}`);
-            }}
-          />
+          {pinnedPersonality ? (
+            <Text as="span" tone="subtle">
+              {personalityLabel(pinnedPersonality)}
+            </Text>
+          ) : (
+            <Select
+              value={personality}
+              aria-label="Personality"
+              options={PERSONALITY_OPTIONS}
+              onChange={(value) => {
+                updateConfig({ personality: value });
+                toast.success(`Personality: ${personalityLabel(value)}`);
+              }}
+            />
+          )}
         </SettingsRow>
         <SettingsDivider />
         <SettingsRow
@@ -364,7 +390,7 @@ export default function CodexSettings() {
       <ProviderUsageSection
         isLoading={isLoadingRateLimits}
         rows={usageRows}
-        display="remaining"
+        readout="percentLeft"
       />
 
       <StructuredOutputsModal

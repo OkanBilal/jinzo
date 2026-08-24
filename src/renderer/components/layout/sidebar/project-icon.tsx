@@ -1,23 +1,23 @@
 import type { ReactNode } from "react";
-import { iconColorClass, parseIcon, type IconComponent } from "@/lib/icon-registry";
-import { ProjectFolder } from "@/components/ui/icons";
+import { iconTintClass, parseIcon, type IconComponent } from "@/lib/icon-registry";
+import { ProjectFolder, ProjectFolderOpen } from "@/components/ui/icons";
 
 export function ProjectIcon({
   icon,
   projectName,
+  expanded = false,
 }: {
   icon: string | null;
   projectName: string;
+  /** Only the default folder reacts: open lid while its group is expanded. */
+  expanded?: boolean;
 }): ReactNode {
   if (icon) {
     const parsed = parseIcon(icon);
     if (parsed.type === "icon") {
       const IconComp = parsed.value as IconComponent;
-      const tint = iconColorClass(parsed.color);
       return (
-        <IconComp
-          className={`size-3.5 ${tint || "text-primary-700 dark:text-primary-300"}`}
-        />
+        <IconComp className={`size-3.5 ${iconTintClass(parsed.color)}`} />
       );
     }
     if (parsed.type === "emoji") {
@@ -27,5 +27,6 @@ export function ProjectIcon({
     }
   }
   void projectName;
-  return <ProjectFolder className="size-3.5 text-primary-950 dark:text-primary" />;
+  const Folder = expanded ? ProjectFolderOpen : ProjectFolder;
+  return <Folder className="size-3.5 text-primary-950 dark:text-primary" />;
 }

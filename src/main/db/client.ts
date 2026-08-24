@@ -5,7 +5,6 @@ import { app } from "electron";
 import crypto from "node:crypto";
 import path from "path";
 import fs from "fs";
-import { fileURLToPath } from "url";
 import * as schema from "./schema";
 import type {
   DatabaseInstance,
@@ -14,9 +13,6 @@ import type {
   DatabaseInitResult,
   ExtensionLoadResult,
 } from "./types";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 /**
  * Database client singleton for the Electron app

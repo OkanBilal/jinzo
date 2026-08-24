@@ -47,7 +47,11 @@ export const pulseRepo = {
       .values({
         id,
         accountId,
-        workspaceId: input.workspaceId,
+        workspaceId: input.workspaceId ?? null,
+        collectionId: input.collectionId ?? null,
+        // Fixed at creation, like runs snapshot theirs — a pulse's mode is
+        // its execution shape, not a setting to flip later.
+        mode: input.mode ?? "developer",
         providerId: input.providerId,
         model: input.model,
         title: input.title,

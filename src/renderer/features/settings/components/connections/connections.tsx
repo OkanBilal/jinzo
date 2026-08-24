@@ -104,7 +104,7 @@ export default function ConnectionsSettings() {
         className="gap-1 flex items-center"
       >
         {isSyncing ? <AsciiSpinner variant="null" /> : null}
-        <Text variant="button">{isSyncing ? "Syncing..." : "Sync All"}</Text>
+        <Text size="s"  variant="button">{isSyncing ? "Syncing..." : "Sync All"}</Text>
       </Button>
     ) : null;
 

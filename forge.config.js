@@ -108,6 +108,27 @@ module.exports = {
         }
       }
 
+      // @github/copilot ships a MediaRemoteAdapter.framework (macOS "now
+      // playing" integration) whose bundle seal — _CodeSignature/CodeResources
+      // — does not survive npm packaging, so notarization rejects it:
+      // "The signature of the binary is invalid." Re-signing the inner binary
+      // cannot restore a bundle seal, and the CLI feature-detects the adapter
+      // (no mediaremote-adapter.pl on disk = the integration stays off), so the
+      // fix is to not ship it.
+      if (fs.existsSync(githubScope)) {
+        for (const entry of fs.readdirSync(githubScope, { withFileTypes: true })) {
+          if (!entry.isDirectory()) continue;
+          const adapterDir = path.join(
+            githubScope, entry.name, 'prebuilds', targetPlatform, 'mediaremote-adapter',
+          );
+          if (!fs.existsSync(adapterDir)) continue;
+          const size = getDirSize(adapterDir);
+          fs.rmSync(adapterDir, { recursive: true, force: true });
+          totalSaved += size;
+          console.log(`  ✓ Removed ${path.relative(viteNodeModules, adapterDir)} (${(size / 1024).toFixed(0)} KB)`);
+        }
+      }
+
       // Keep only the Claude Agent SDK native binary for the target arch.
       const anthropicScope = path.join(viteNodeModules, '@anthropic-ai');
       if (fs.existsSync(anthropicScope)) {
@@ -163,6 +184,10 @@ module.exports = {
     extraResource: [
       'src/main/db/migrations',
       'src/renderer/public/icon.png',
+      // Menu-bar icon: both representations, so the packaged app resolves them
+      // from `resourcesPath` instead of falling through to the renderer build.
+      'src/renderer/public/menu-iconTemplate.png',
+      'src/renderer/public/menu-iconTemplate@2x.png',
       'THIRD-PARTY-NOTICES.txt',
     ],
     ...((() => {
@@ -178,6 +203,12 @@ module.exports = {
       }
       return {
         osxSign: {
+          // @electron/packager defaults osx-sign to `continueOnError: true`, so
+          // a signing failure is downgraded to a warning and the build limps on
+          // to notarization — which then dies on the unsigned app with the
+          // misleading "code has no resources but signature indicates they must
+          // be present". Fail at the step that actually broke instead.
+          continueOnError: false,
           // Signing cert comes from the env so forks/CI aren't tied to one
           // person's certificate. When unset, osx-sign auto-discovers the
           // Developer ID identity in the keychain.
@@ -210,14 +241,19 @@ module.exports = {
       name: '@electron-forge/maker-dmg',
       platforms: ['darwin'],
       config: {
+        title: 'Install Mains',
         format: 'UDZO',
-        background: 'src/renderer/public/dmg-background.png',
+        background: 'src/renderer/public/dmg-background-v4.png',
         icon: 'src/renderer/public/icon.icns',
+        iconSize: 112,
         contents: (opts) => [
-          { x: 190, y: 200, type: 'file', path: opts.appPath },
-          { x: 470, y: 200, type: 'link', path: '/Applications' },
+          { x: 160, y: 200, type: 'file', path: opts.appPath },
+          { x: 500, y: 200, type: 'link', path: '/Applications' },
         ],
-        window: { size: { width: 660, height: 400 } },
+        additionalDMGOptions: {
+          'background-color': '#faf7f3',
+          window: { size: { width: 660, height: 400 } },
+        },
       },
     },
   ],

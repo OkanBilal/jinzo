@@ -55,7 +55,7 @@ export function useRunOperations({
   // accepted it, but nothing filled it — so every run read back as belonging to
   // no space, and anything asking "which space is this run from?" got null.
   // Forks inherit it from their source run; continues reuse the row.
-  const { activeSpaceId } = useActiveSpace();
+  const { activeSpaceId, activeSpace } = useActiveSpace();
 
   /** Wraps async run operations with loading state, account fetch, and error handling */
   const runOperation = useCallback(async <T>(
@@ -84,13 +84,18 @@ export function useRunOperations({
   const executeRun = useCallback(
     async (
       goal: string,
-      selectedWorkspace: string,
+      selectedWorkspace: string | undefined,
       selectedProvider: string,
       model?: string,
       uploads?: Attachments,
       context?: readonly ContextItem[],
+      collectionId?: string | null,
     ) => {
-      if (!goal.trim() || !selectedWorkspace || !selectedProvider) {
+      if (
+        !goal.trim() ||
+        !selectedProvider ||
+        (activeSpace?.mode === "developer" && !selectedWorkspace)
+      ) {
         toast.error("Please fill in all required fields");
         return null;
       }
@@ -103,7 +108,11 @@ export function useRunOperations({
       return runOperation(async (accountId) => {
         const result = await appApi.runs.execute({
           accountId,
-          workspaceId: selectedWorkspace,
+          workspaceId: selectedWorkspace || undefined,
+          collectionId:
+            activeSpace?.mode === "developer"
+              ? undefined
+              : collectionId || undefined,
           spaceId: activeSpaceId || undefined,
           providerId: selectedProvider,
           goal: goal.trim(),
@@ -119,7 +128,7 @@ export function useRunOperations({
         return registerNewRun(result.data.runId);
       }, null, "Failed to execute run");
     },
-    [runOperation, registerNewRun, activeSpaceId],
+    [runOperation, registerNewRun, activeSpaceId, activeSpace?.mode],
   );
 
   const continueRun = useCallback(async (

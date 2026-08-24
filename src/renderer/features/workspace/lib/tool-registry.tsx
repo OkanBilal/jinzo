@@ -42,7 +42,7 @@ export interface VendorInfo {
   /**
    * Direct mapping from tool name (after prefix strip, lowercased) to a fixed
    * displayName. Used for tools that have specialized renderers in
-   * `tool-call-item.tsx` (Mains: GetDiff, SaveReview, Commit, …).
+   * `tool-call-item.tsx` (Mains: SaveReview, CheckPackage, …).
    */
   specialTools?: Record<string, string>;
   /** Verb-level overrides; merged onto DEFAULT_VERBS. */
@@ -98,6 +98,21 @@ export const DEFAULT_VERBS: Record<string, VerbInfo> = {
  * `{verb}_{entity}` automatically and rendered through `McpDisplay` without
  * any further wiring.
  */
+/**
+ * Tools whose point is producing or changing a file, by the `displayName`
+ * `resolveTool()` resolves them to — so every provider's spelling
+ * (`write` / `create_file` / `apply_patch` / …) collapses to one name here.
+ *
+ * Read is absent on purpose: this is the set whose output is a deliverable,
+ * not the set that touches the filesystem.
+ */
+export const FILE_WRITING_TOOLS: ReadonlySet<string> = new Set([
+  "Write",
+  "Edit",
+  "Create",
+  "Apply Patch",
+]);
+
 export const VENDORS: VendorInfo[] = [
   {
     id: "mains",
@@ -108,12 +123,9 @@ export const VENDORS: VendorInfo[] = [
     // These have specialized renderers in tool-call-item.tsx — keep their
     // displayNames stable so the dispatch keeps matching.
     specialTools: {
-      getworkspacediff: "GetDiff",
       savereview: "SaveReview",
       savefinding: "SaveFinding",
       savefindings: "SaveFindings",
-      commitchanges: "Commit",
-      createpr: "CreatePR",
       checkpackage: "CheckPackage",
     },
   },
@@ -309,8 +321,8 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
     aliases: ["write", "writeifempty", "create_file", "write_file"],
   },
   // Copilot CLI's file-creation tool. Distinct alias (`create`) so it isn't
-  // confused with `create_file`/CreatePR; rendered like Write (path + content
-  // diff) via the `Create` renderers in tool-input-preview / write-display.
+  // confused with `create_file`; rendered like Write (path + content diff)
+  // via the `Create` renderers in tool-input-preview / write-display.
   {
     displayName: "Create",
     groupKey: "create",
@@ -391,20 +403,6 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
     aliases: ["search"],
   },
   {
-    displayName: "Commit",
-    groupKey: "commitchanges",
-    category: "Code",
-    icon: <Mains className="size-4" />,
-    aliases: ["commitchanges"],
-  },
-  {
-    displayName: "CreatePR",
-    groupKey: "createpr",
-    category: "Code",
-    icon: <Mains className="size-4" />,
-    aliases: ["createpr"],
-  },
-  {
     displayName: "CheckPackage",
     groupKey: "checkpackage",
     category: "Code",
@@ -431,12 +429,5 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
     category: "Code",
     icon: <Mains className="size-4" />,
     aliases: ["savefindings"],
-  },
-  {
-    displayName: "GetDiff",
-    groupKey: "getworkspacediff",
-    category: "Code",
-    icon: <Mains className="size-4" />,
-    aliases: ["getworkspacediff"],
   },
 ];

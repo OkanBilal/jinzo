@@ -319,6 +319,70 @@ describe("claude.driver / permission bridge", () => {
     );
   });
 
+  it("auto-allows MCP tools while the run is on the default toolset", async () => {
+    const requestApproval = vi.fn();
+    const bridge = createClaudePermissionBridge({
+      runId: "run-mcp-default",
+      allowedTools: ALLOWED_TOOLS_SET,
+      bypassMode: false,
+      requestApproval,
+    });
+
+    await expect(
+      bridge.canUseTool(
+        "mcp__linear__create_issue",
+        { title: "Bug" },
+        {
+          signal: new AbortController().signal,
+          toolUseID: "tool-mcp-1",
+          agentID: "agent-1",
+          requestId: "permission-mcp-1",
+        },
+      ),
+    ).resolves.toEqual({
+      behavior: "allow",
+      updatedInput: { title: "Bug" },
+      toolUseID: "tool-mcp-1",
+    });
+    expect(requestApproval).not.toHaveBeenCalled();
+  });
+
+  it("stops trusting MCP tools once a mode replaces the toolset", async () => {
+    // Chat ships its own allowlist. Without this, an attached filesystem or
+    // issue-tracker MCP server would hand the mode's removed write powers back.
+    const requestApproval = vi.fn().mockResolvedValue({
+      requestId: "permission-mcp-2",
+      approved: false,
+    });
+    const bridge = createClaudePermissionBridge({
+      runId: "run-mcp-chat",
+      allowedTools: new Set(["Read", "Glob", "Grep"]),
+      bypassMode: false,
+      restrictedToolset: true,
+      requestApproval,
+    });
+
+    const decision = await bridge.canUseTool(
+      "mcp__filesystem__write_file",
+      { path: "/tmp/x", contents: "x" },
+      {
+        signal: new AbortController().signal,
+        toolUseID: "tool-mcp-2",
+        agentID: "agent-2",
+        requestId: "permission-mcp-2",
+      },
+    );
+
+    expect(decision?.behavior).toBe("deny");
+    expect(requestApproval).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runId: "run-mcp-chat",
+        toolName: "mcp__filesystem__write_file",
+        kind: "tool_approval",
+      }),
+    );
+  });
+
   it("switches the active SDK session to acceptEdits after the user applies the plan", async () => {
     const requestApproval = vi.fn().mockResolvedValue({
       requestId: "plan-approval-1",
@@ -1976,5 +2040,42 @@ describe("mapSDKMessage subagent sequence", () => {
     expect(
       ackEvents.filter((e) => e.type === "subagent" && (e as any).phase === "completed"),
     ).toHaveLength(0);
+  });
+});
+
+describe("claude.driver / buildClaudePermissionModeOptions with a tool policy", () => {
+  it("removes disallowed tools from the effective allowlist and denies them", () => {
+    const options = buildClaudePermissionModeOptions("acceptEdits", undefined, {
+      allowedTools: null,
+      disallowedTools: ["Bash"],
+    });
+
+    expect(options.allowedTools).not.toContain("Bash");
+    expect(options.allowedTools).toEqual(
+      DEFAULT_ALLOWED_TOOLS.filter((t) => t !== "Bash"),
+    );
+    expect(options.disallowedTools).toEqual(["Bash"]);
+    const settings = options.settings as {
+      permissions: { allow: string[]; deny?: string[] };
+    };
+    expect(settings.permissions.allow).not.toContain("Bash");
+    expect(settings.permissions.deny).toEqual(["Bash"]);
+  });
+
+  it("replaces the allowlist wholesale when the policy provides one", () => {
+    const options = buildClaudePermissionModeOptions("default", undefined, {
+      allowedTools: ["Read", "Glob", "Grep"],
+      disallowedTools: ["Bash", "Write", "Edit"],
+    });
+
+    expect(options.allowedTools).toEqual(["Read", "Glob", "Grep"]);
+    expect(options.disallowedTools).toEqual(["Bash", "Write", "Edit"]);
+  });
+
+  it("stays byte-identical to today without a policy", () => {
+    expect(buildClaudePermissionModeOptions("default", undefined, null)).toEqual(
+      buildClaudePermissionModeOptions("default"),
+    );
+    expect(buildClaudePermissionModeOptions("default").disallowedTools).toBeUndefined();
   });
 });

@@ -14,7 +14,7 @@ const SvgComponent = (props: SVGProps<SVGSVGElement>) => (
       strokeLinecap="round"
       strokeLinejoin="round"
       strokeWidth={2}
-      d="M4 12.611 8.923 17.5 20 6.5"
+      d="m6 12 4.243 4.243 8.484-8.486"
     />
   </svg>
 )

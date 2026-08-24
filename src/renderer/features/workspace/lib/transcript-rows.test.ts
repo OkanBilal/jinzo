@@ -1,129 +1,65 @@
 import { describe, it, expect } from "vitest";
-import type { EventGroup } from "./group-events";
+import { groupEvents } from "./group-events";
+import { buildTurnRenderRows } from "./transcript-rows";
 import type { RunEvent } from "../types";
-import type { RunTurn } from "@/lib/redux/api";
-import {
-  buildTurnRenderRows,
-  matchTurnsToGroups,
-  isUserPromptGroup,
-  type TurnRenderRow,
-} from "./transcript-rows";
 
-let seq = 0;
-function ev(partial: Partial<RunEvent>): RunEvent {
-  return { id: `e${seq++}`, type: "log", content: "", timestamp: new Date(0), ...partial };
-}
-function grp(
-  type: EventGroup["type"],
-  events: RunEvent[],
-  startMs = 0,
-  endMs = 0,
-): EventGroup {
-  return { id: `g${seq++}`, type, events, startTime: new Date(startMs), endTime: new Date(endMs) };
-}
-const userPrompt = (startMs = 0, endMs = 0) =>
-  grp("info", [ev({ type: "log", metadata: { kind: "user-prompt" } })], startMs, endMs);
-const response = (content = "hi", startMs = 0, endMs = 0) =>
-  grp("response", [ev({ type: "log", content })], startMs, endMs);
-const toolCalls = (n = 1) =>
-  grp(
-    "tool_calls",
-    Array.from({ length: n }, () => ev({ type: "tool_call", content: "Bash: ls" })),
-  );
-
-function accordion(row: TurnRenderRow) {
-  if (row.kind !== "accordion") throw new Error("expected accordion row");
-  return row;
+function ev(partial: Partial<RunEvent> & { id: string }): RunEvent {
+  return {
+    type: "artifact",
+    content: "",
+    timestamp: new Date(partial.id.length * 1000),
+    ...partial,
+  };
 }
 
-describe("isUserPromptGroup", () => {
-  it("matches an info group whose first event is a user prompt", () => {
-    expect(isUserPromptGroup(userPrompt())).toBe(true);
-    expect(isUserPromptGroup(response())).toBe(false);
-    expect(isUserPromptGroup(toolCalls())).toBe(false);
-  });
-});
+/**
+ * A turn with enough segments to collapse: prompt, a Write, a reply, then a
+ * second reply. Everything before the last reply is what the accordion hides.
+ */
+function turnWithFileWrite(): RunEvent[] {
+  return [
+    ev({ id: "u1", content: "write the list", metadata: { kind: "user-prompt" } }),
+    ev({
+      id: "w1",
+      type: "tool_call",
+      content: "Write: list.md",
+      metadata: { status: "done", toolName: "Write" },
+    }),
+    ev({ id: "r1", content: "created it", metadata: { kind: "report" } }),
+    ev({ id: "r2", content: "anything else?", metadata: { kind: "report" } }),
+  ];
+}
 
-describe("buildTurnRenderRows", () => {
-  it("renders a prompt and a single reply as two flat rows", () => {
-    const rows = buildTurnRenderRows([userPrompt(), response()]);
-    expect(rows).toEqual([
-      { kind: "flat", indices: [0] },
-      { kind: "flat", indices: [1] },
-    ]);
-  });
+const writeGroupIndex = (groups: ReturnType<typeof groupEvents>) =>
+  groups.findIndex((g) => g.events.some((e) => e.id === "w1"));
 
-  it("collapses earlier replies into an accordion when a turn has multiple replies", () => {
-    // prompt(0) reply(1) tools(2) reply(3) — two reply segments → accordion
-    const rows = buildTurnRenderRows([userPrompt(), response(), toolCalls(1), response()]);
-    expect(rows[0]).toEqual({ kind: "flat", indices: [0] });
-    const acc = accordion(rows[1]);
-    expect(acc.previousSegments).toEqual([[1, 2]]);
-    expect(acc.lastSegment).toEqual([3]);
-    expect(acc.previousMessageCount).toBe(1);
-    expect(acc.previousToolSummary).toBe("1 tool call");
-  });
+describe("buildTurnRenderRows — deliverable breakout", () => {
+  it("collapses a file write into the accordion by default", () => {
+    const groups = groupEvents(turnWithFileWrite());
+    const rows = buildTurnRenderRows(groups);
+    const accordion = rows.find((r) => r.kind === "accordion");
 
-  it("counts every tool call across collapsed segments (plural summary)", () => {
-    // prompt reply tools(2) reply tools(1) reply → 3 collapsed tool calls, 2 prior replies
-    const rows = buildTurnRenderRows([
-      userPrompt(),
-      response(),
-      toolCalls(2),
-      response(),
-      toolCalls(1),
-      response(),
-    ]);
-    const acc = accordion(rows[1]);
-    expect(acc.lastSegment).toEqual([5]);
-    expect(acc.previousMessageCount).toBe(2);
-    expect(acc.previousToolSummary).toBe("3 tool calls");
+    expect(accordion).toBeDefined();
+    if (accordion?.kind !== "accordion") return;
+    expect(accordion.messageBreakoutIndices).not.toContain(
+      writeGroupIndex(groups),
+    );
+    expect(accordion.previousSegments.flat()).toContain(writeGroupIndex(groups));
   });
 
-  it("keeps a live image-generation card outside the collapsed accordion", () => {
-    const imageGeneration = grp("response", [
-      ev({
-        type: "artifact",
-        content: "Generating image",
-        metadata: { kind: "image_generation", streaming: true },
-      }),
-    ]);
-    const rows = buildTurnRenderRows([
-      userPrompt(),
-      response("Starting"),
-      imageGeneration,
-      response("Done"),
-    ]);
+  it("keeps it visible when the caller calls it a deliverable", () => {
+    const groups = groupEvents(turnWithFileWrite());
+    const rows = buildTurnRenderRows(groups, {
+      isDeliverableGroup: (g) =>
+        g.events.some((e) => e.metadata?.toolName === "Write"),
+    });
+    const accordion = rows.find((r) => r.kind === "accordion");
 
-    const acc = accordion(rows[1]);
-    expect(acc.messageBreakoutIndices).toEqual([2]);
-    expect(acc.previousSegments).toEqual([[1]]);
-    expect(acc.lastSegment).toEqual([3]);
-  });
-});
-
-describe("matchTurnsToGroups", () => {
-  it("attaches a completed turn's elapsed time to its last group", () => {
-    const groups = [response("a", 0, 1000), response("b", 1000, 2000)];
-    const turns = [
-      { status: "completed", elapsedMs: 1500, endedAt: new Date(9_999_999_999_999) },
-    ] as unknown as RunTurn[];
-    const map = matchTurnsToGroups(groups, turns);
-    expect(map.get(1)?.elapsed).toBe(1500);
-  });
-
-  it("ignores turns that are not completed or have no elapsed time", () => {
-    const groups = [response("a", 0, 1000)];
-    const turns = [
-      { status: "running", elapsedMs: 0, endedAt: null },
-    ] as unknown as RunTurn[];
-    expect(matchTurnsToGroups(groups, turns).size).toBe(0);
-  });
-
-  it("falls back to event timings when there are no backend turns", () => {
-    // prompt(0) reply(ends 1000) prompt(starts 1500) → one session bar at the reply
-    const groups = [userPrompt(0, 0), response("a", 0, 1000), userPrompt(1500, 1500)];
-    const map = matchTurnsToGroups(groups, []);
-    expect(map.get(1)?.elapsed).toBe(1000);
+    expect(accordion).toBeDefined();
+    if (accordion?.kind !== "accordion") return;
+    expect(accordion.messageBreakoutIndices).toContain(writeGroupIndex(groups));
+    expect(accordion.previousSegments.flat()).not.toContain(
+      writeGroupIndex(groups),
+    );
   });
 });

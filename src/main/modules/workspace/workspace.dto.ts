@@ -56,7 +56,7 @@ export interface CreateWorkspacePayload {
   repoUrl?: string;
   baseBranch?: string;
   metadata?: WorkspaceMetadata;
-  projectId?: string;
+  projectId: string;
 }
 
 export interface UpdateWorkspacePayload {
@@ -90,7 +90,7 @@ export interface WorkspaceIntakePayload {
 export interface WorkspaceResponse {
   id: string;
   accountId: string;
-  projectId: string | null;
+  projectId: string;
   name: string;
   rootPath: string;
   repoUrl: string | null;
@@ -129,7 +129,7 @@ export interface WorkspaceListResponse {
  * out one call per row.
  */
 export interface ArchivedWorkspaceResponse extends WorkspaceResponse {
-  /** Display name of the owning project, or null when the row has none. */
+  /** Display name of the owning Developer Project, or null for a dangling row. */
   projectName: string | null;
   /** Whether `rootPath` is still on disk. See `workspacePathExists`. */
   pathExists: boolean;

@@ -1,21 +1,31 @@
 // Pure helpers for the in-app document viewer. Kept free of React/DOM so they
 // can be unit-tested in the repo's node-only vitest environment.
 
-export type DocType = "docx" | "xlsx" | "pptx";
+/** Formats rendered by the shadow-DOM render host from raw bytes. */
+export type OfficeDocType = "docx" | "xlsx" | "pptx";
+
+/**
+ * Everything the viewer can show. Office formats go through the render host;
+ * text ones (`md`) are React all the way down, so they keep the app's theme
+ * and typography instead of living behind a shadow boundary.
+ */
+export type DocType = OfficeDocType | "md";
 
 /** Renderer module key dispatched on by the render host. */
-export type RendererKey = "docx" | "xlsx" | "pptx";
+export type RendererKey = OfficeDocType;
 
 const EXT_TO_DOC_TYPE: Record<string, DocType> = {
   ".docx": "docx",
   ".xlsx": "xlsx",
   ".pptx": "pptx",
+  ".md": "md",
+  ".markdown": "md",
 };
 
 /**
- * Classify a file name or path into a viewer DocType, or `null` when it isn't a
- * supported OOXML document. Legacy binary formats (.doc/.xls/.ppt) return null —
- * the pure-JS renderers can't read them, so they fall through to "Open with…".
+ * Classify a file name or path into a viewer DocType, or `null` when the viewer
+ * can't show it. Legacy binary formats (.doc/.xls/.ppt) return null — the
+ * pure-JS renderers can't read them, so they fall through to "Open with…".
  */
 export function classifyDocType(fileNameOrPath: string): DocType | null {
   if (!fileNameOrPath) return null;
@@ -31,11 +41,17 @@ export const DOC_VIEWER_LABELS: Record<DocType, string> = {
   docx: "Word Document",
   xlsx: "Spreadsheet",
   pptx: "Presentation",
+  md: "Markdown",
 };
 
-/** Maps a DocType to its renderer module key. Identity today, but kept explicit
- * so the dispatch is a single tested unit and easy to extend (e.g. pdf). */
-export function pickRenderer(docType: DocType): RendererKey {
+/** Text formats render as React, not as bytes through the shadow-DOM host. */
+export function isTextDocType(docType: DocType): docType is "md" {
+  return docType === "md";
+}
+
+/** Maps an Office DocType to its renderer module key. Identity today, but kept
+ * explicit so the dispatch is a single tested unit and easy to extend. */
+export function pickRenderer(docType: OfficeDocType): RendererKey {
   return docType;
 }
 

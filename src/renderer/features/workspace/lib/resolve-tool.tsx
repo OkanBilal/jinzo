@@ -86,7 +86,7 @@ function resolveVendorTool(vendor: VendorInfo, rest: string): ResolvedTool {
   // one (e.g. prefix `mcp__codex_apps__linear` + tool `_list_issues`).
   const trimmed = rest.startsWith("_") ? rest.slice(1) : rest;
 
-  // Special tools (Mains: getworkspacediff → "GetDiff", …). These bypass the
+  // Special tools (Mains: savefindings → "SaveFindings", …). These bypass the
   // generic MCP renderer because tool-call-item.tsx has dedicated displays.
   const special = vendor.specialTools?.[trimmed];
   if (special) {

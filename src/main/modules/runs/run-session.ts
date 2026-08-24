@@ -5,6 +5,7 @@ import {
   type WorkRunEvent,
 } from "../providers/adapters";
 import type { WorkRunUsage, StopReason } from "../../../shared/adapter.types";
+import type { RunExecutionContext } from "../../../shared/adapter.types";
 import { runsRepo } from "./runs.repo";
 import { providersService } from "../providers";
 import { appSettingsService } from "../appSettings";
@@ -62,7 +63,7 @@ export interface RunSessionContext {
   runId: string;
   accountId: string;
   providerId: string;
-  workspace: { id: string; rootPath: string };
+  execution: RunExecutionContext;
   initialPromptContent: string;
   /** Defaults to -1 (fresh run). continueRun passes the recovered max turn index. */
   seedTurnIndex?: number;
@@ -93,8 +94,8 @@ export interface RunSession {
   abort(): Promise<void>;
 
    /**
-   * Update the session's internal baseRef. Called by the in-process commit tool
-   * (`mains-tools.core` → CommitChanges) after a commit moves HEAD forward.
+   * Update the session's internal baseRef. Called by `gitFlowService.performCommit`
+   * (the git-actions panel's commit) after a commit moves HEAD forward.
    *
    * Diff snapshots no longer depend on this — they read HEAD themselves, so a
    * commit made through any route is reflected. It survives as the fallback
@@ -115,7 +116,8 @@ export interface RunSession {
 // ─────────────────────────────────────────────────────────────
 
 export function createRunSession(ctx: RunSessionContext): RunSession {
-  const { runId, accountId, providerId, workspace } = ctx;
+  const { runId, accountId, providerId, execution } = ctx;
+  const workspaceId = execution.workspaceId;
 
   // ─── Lifecycle flags ───
   let finalized = false;
@@ -173,7 +175,8 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
     broadcastToWindows("runs:statusChanged", { runId, status, ts: Date.now() });
   }
   function broadcastDiffUpdated(): void {
-    broadcastToWindows("runs:diffUpdated", { runId, workspaceId: workspace.id, ts: Date.now() });
+    if (!workspaceId) return;
+    broadcastToWindows("runs:diffUpdated", { runId, workspaceId, ts: Date.now() });
   }
   function broadcastEphemeralEvent(event: unknown): void {
     broadcastToWindows("runs:ephemeralEvent", { runId, event, ts: Date.now() });
@@ -225,8 +228,9 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
 
   // ─── Base ref capture ───
   async function captureBaseRef(): Promise<void> {
+    if (!workspaceId) return;
     try {
-      baseRef = await gitService.getHeadSha(workspace.rootPath);
+      baseRef = await gitService.getHeadSha(execution.cwd);
     } catch {
       // Not a git repo or git error – ignore
       return;
@@ -236,7 +240,7 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
     // already dirty at run start are excluded unless this run touches them.
     try {
       const snapshot = await gitService.captureDiffSnapshot(
-        workspace.rootPath,
+        execution.cwd,
         baseRef,
       );
       initialDiffHashes = buildPerFileDiffHashes(snapshot.diffText);
@@ -400,15 +404,14 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
    * terminal outside the app — neither of which reaches `updateBaseRef`.
    */
   async function snapshotCurrentDiff(): Promise<DiffSnapshot | null> {
-    const head = await gitService
-      .getHeadSha(workspace.rootPath)
-      .catch(() => null);
+    if (!workspaceId) return null;
+    const head = await gitService.getHeadSha(execution.cwd).catch(() => null);
     // Fall back to the run-start sha only when HEAD is unreadable, so a git
     // hiccup degrades to the old behaviour instead of dropping the diff.
     const ref = head ?? baseRef;
     if (!ref) return null;
     return gitService
-      .captureDiffSnapshot(workspace.rootPath, ref)
+      .captureDiffSnapshot(execution.cwd, ref)
       .catch(() => null);
   }
 
@@ -419,13 +422,15 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
    * pointing at a now-merged baseRef.
    */
   async function clearStaleWorkspaceDiff(): Promise<void> {
-    if (await clearWorkspaceDiff(workspace.id)) {
+    if (!workspaceId) return;
+    if (await clearWorkspaceDiff(workspaceId)) {
       broadcastDiffUpdated();
     }
   }
 
   // ─── Live diff scheduler ───
   async function recomputeLiveDiff(): Promise<void> {
+    if (!workspaceId) return;
     const snapshot = await snapshotCurrentDiff();
     if (!snapshot) return;
     if (snapshot.files.length === 0) {
@@ -441,7 +446,7 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
       return;
     }
     try {
-      await recordWorkspaceDiff(workspace.id, runId, snapshot);
+      await recordWorkspaceDiff(workspaceId, runId, snapshot);
       broadcastDiffUpdated();
     } catch (err) {
       console.error(`[RunSession ${runId}] recomputeLiveDiff failed:`, err);
@@ -466,6 +471,7 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   }
 
   function scheduleLiveDiff(): void {
+    if (!workspaceId) return;
     if (liveDiffTimer) clearTimeout(liveDiffTimer);
     liveDiffTimer = setTimeout(() => {
       liveDiffTimer = null;
@@ -483,6 +489,7 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
 
   // ─── Final diff persistence at completion ───
   async function persistFinalDiff(): Promise<void> {
+    if (!workspaceId) return;
     clearLiveDiffSchedule();
     // Make sure the run-start baseline finished capturing before we diff against
     // it. Normally settled long ago; this only bites runs that finish almost
@@ -507,7 +514,7 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
     }
 
     try {
-      await recordWorkspaceDiff(workspace.id, runId, snapshot);
+      await recordWorkspaceDiff(workspaceId, runId, snapshot);
       broadcastDiffUpdated();
 
       // No reliable run-start baseline: null means "baseline unknown" (the git
@@ -531,7 +538,7 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
       if (incrementalFileCount > 0) {
         const summaryLines = incrementalFileNames.map((f) => f.split("/").pop() ?? f).join(", ");
         logWorkspaceActivity({
-          workspaceId: workspace.id,
+          workspaceId,
           type: "diff",
           title: `${incrementalFileCount} file${incrementalFileCount === 1 ? "" : "s"} changed`,
           summary: summaryLines,

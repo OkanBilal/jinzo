@@ -1,5 +1,7 @@
 import { nanoid } from "nanoid";
 import { entitiesRepo } from "./entities.repo";
+import { getConnectionWithSecrets } from "../connections";
+import { fetchLinearIssueDetail } from "./entities.linear";
 import type {
   CreateEntityPayload,
   UpdateEntityPayload,
@@ -14,6 +16,7 @@ import type {
   IssueQueryOptions,
   SignalQueryOptions,
   SearchOptions,
+  LinearIssueDetail,
 } from "./entities.dto";
 
 // ─────────────────────────────────────────────────────────────
@@ -96,6 +99,26 @@ export const entitiesService = {
 
   async getIssueById(entityId: string): Promise<unknown> {
     return (await entitiesRepo.findIssueById(entityId)) ?? null;
+  },
+
+  async getIssueDetail(entityId: string): Promise<LinearIssueDetail> {
+    const row = await entitiesRepo.findIssueById(entityId);
+    if (!row) throw new Error("Issue not found");
+    if (row.issue.provider !== "linear") {
+      throw new Error(`Live issue details are not supported for ${row.issue.provider}`);
+    }
+    if (!row.entity.externalId || !row.entity.connectionId) {
+      throw new Error("Linear issue is missing its source identity");
+    }
+
+    const connection = await getConnectionWithSecrets(
+      "linear",
+      row.entity.connectionId,
+    );
+    const apiKey = connection?.secrets.apiKey;
+    if (!apiKey) throw new Error("Linear connection is not available");
+
+    return fetchLinearIssueDetail(apiKey, row.entity.externalId);
   },
 
   async createIssue(payload: CreateIssuePayload): Promise<unknown> {

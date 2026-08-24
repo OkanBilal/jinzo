@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   classifyDocType,
+  isTextDocType,
   pickRenderer,
   shouldFallback,
   DOC_VIEWER_LABELS,
@@ -33,6 +34,13 @@ describe("classifyDocType", () => {
     expect(classifyDocType("old.doc")).toBeNull();
     expect(classifyDocType("old.xls")).toBeNull();
     expect(classifyDocType("old.ppt")).toBeNull();
+  });
+
+  it("classifies markdown", () => {
+    expect(classifyDocType("notes.md")).toBe("md");
+    expect(classifyDocType("NOTES.MD")).toBe("md");
+    expect(classifyDocType("readme.markdown")).toBe("md");
+    expect(classifyDocType("/tmp/runs/r1/work/plan.md")).toBe("md");
   });
 
   it("returns null for non-office files and edge cases", () => {
@@ -109,5 +117,16 @@ describe("DOC_VIEWER_LABELS", () => {
     expect(DOC_VIEWER_LABELS.docx).toBeTruthy();
     expect(DOC_VIEWER_LABELS.xlsx).toBeTruthy();
     expect(DOC_VIEWER_LABELS.pptx).toBeTruthy();
+  });
+});
+
+describe("isTextDocType", () => {
+  it("separates the React-rendered formats from the shadow-DOM ones", () => {
+    // The panel branches on this: text renders as React so it keeps the app's
+    // theme, Office bytes go behind a shadow root.
+    expect(isTextDocType("md")).toBe(true);
+    expect(isTextDocType("docx")).toBe(false);
+    expect(isTextDocType("xlsx")).toBe(false);
+    expect(isTextDocType("pptx")).toBe(false);
   });
 });

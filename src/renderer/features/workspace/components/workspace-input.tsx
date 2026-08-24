@@ -24,12 +24,14 @@ import {
 import { useSpaceProviderVariant } from "@/hooks/use-space-provider-variant";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import { useDarkMode } from "@/hooks/use-dark-mode";
-import { spaceGlowColor } from "@/lib/space-themes";
+import { useModeConfig } from "@/hooks/use-mode-config";
+import { spaceGlowColor, spaceGlowShadow } from "@/lib/space-themes";
 import { useIsMobile } from "@/lib/platform";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { Chat, Check, Plus } from "@/components/ui/icons";
 import {
   UnifiedContextDropdown,
+  type UnifiedContextBucket,
   type UnifiedContextTrigger,
 } from "@/features/workspace/components/unified-context-dropdown";
 import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
@@ -115,6 +117,14 @@ function fileToUploadedFile(file: File): UploadedFile {
   };
 }
 
+interface UnifiedMenuState {
+  visible: boolean;
+  filter: string;
+  trigger: UnifiedContextTrigger;
+  /** Set only by toolbar pickers; cleared whenever the menu closes. */
+  bucket: UnifiedContextBucket | null;
+}
+
 export interface ComposerSendTarget {
   /** Run the next send continues, or null for a new chat. */
   runId: string | null;
@@ -168,6 +178,7 @@ export function WorkspaceInput({
 }: WorkspaceInputProps) {
   const inputRef = useRef<RichInputFormHandle>(null);
   const unifiedContextDropdownRef = useRef<HTMLDivElement>(null);
+  const pluginsButtonRef = useRef<HTMLButtonElement>(null);
   const {
     files: contextFiles,
     skills: contextSkills,
@@ -183,10 +194,16 @@ export function WorkspaceInput({
   // hue. Inline because the color is derived from per-space config at runtime.
   const { activeSpace } = useActiveSpace();
   const { darkMode } = useDarkMode();
+  const { composerPlaceholder } = useModeConfig();
   const spaceGlow =
     layout === "centered"
       ? spaceGlowColor(activeSpace?.themeConfig ?? null, darkMode)
       : null;
+  // Built outside the JSX on purpose: calling the helper inline in `style`
+  // makes the React Compiler bail on this component's manual memoization.
+  const spaceGlowStyle = spaceGlow
+    ? { boxShadow: spaceGlowShadow(spaceGlow, darkMode) }
+    : undefined;
 
 
   const {
@@ -267,20 +284,30 @@ export function WorkspaceInput({
   }, [isNewRunTabActive]);
 
   const [unifiedMenu, updateUnifiedMenu] = useReducer(
-    (
-      prev: {
-        visible: boolean;
-        filter: string;
-        trigger: UnifiedContextTrigger;
-      },
-      next: Partial<{
-        visible: boolean;
-        filter: string;
-        trigger: UnifiedContextTrigger;
-      }>,
-    ) => ({ ...prev, ...next }),
-    { visible: false, filter: "", trigger: "@" },
+    (prev: UnifiedMenuState, next: Partial<UnifiedMenuState>) => {
+      const merged = { ...prev, ...next };
+      return merged.visible ? merged : { ...merged, bucket: null };
+    },
+    { visible: false, filter: "", trigger: "@", bucket: null },
   );
+
+  // Toolbar plugins picker: opens the "$" menu narrowed to plugins without a
+  // token in the text — the chip lands at the caret on select.
+  const pluginSkills = useMemo(
+    () =>
+      providerSkills.filter(
+        (skill) => skill.scope === "plugin" && skill.userInvokable !== false,
+      ),
+    [providerSkills],
+  );
+  const pluginsMenuOpen = unifiedMenu.visible && unifiedMenu.bucket === "plugins";
+  const handleTogglePluginsMenu = useCallback(() => {
+    if (pluginsMenuOpen) {
+      updateUnifiedMenu({ visible: false, filter: "" });
+      return;
+    }
+    updateUnifiedMenu({ visible: true, filter: "", trigger: "$", bucket: "plugins" });
+  }, [pluginsMenuOpen]);
 
   // Detect @ / context menu when goal is set externally (e.g. quick actions)
   useEffect(() => {
@@ -313,6 +340,7 @@ export function WorkspaceInput({
         filter: match[2],
         visible: true,
         trigger: match[1] as UnifiedContextTrigger,
+        bucket: null,
       });
     } else {
       updateUnifiedMenu({ visible: false, filter: "" });
@@ -630,8 +658,8 @@ export function WorkspaceInput({
     const baseHint = isMobile
       ? "Do anything"
       : canResume
-        ? "Ask a follow-up, use @ or / for commands, files, skills and issues"
-        : "Ask to edit, use @ or / for commands, files, skills and issues";
+        ? composerPlaceholder.followUp
+        : composerPlaceholder.initial;
 
     if (uploadedFiles.length === 0) {
       return baseHint;
@@ -651,7 +679,7 @@ export function WorkspaceInput({
     return uploadedFiles.length === 1
       ? "Ask about this document — drop more files here anytime"
       : "Ask about these documents — drop more files here anytime";
-  }, [isFileDragOver, uploadedFiles, canResume, isMobile]);
+  }, [isFileDragOver, uploadedFiles, canResume, isMobile, composerPlaceholder]);
 
   //Copilot related TODO:
   const authErrorMessage = (() => {
@@ -706,13 +734,7 @@ export function WorkspaceInput({
         cursor-pointer transition-all
         ${layout === "default" ? "mb-4" : ""}
         ${isFileDragOver ? "ring-2 ring-primary/60 ring-offset-2 ring-offset-background" : ""}`}
-        style={
-          spaceGlow
-            ? {
-                boxShadow: `0 0 18px -9px ${spaceGlow}, 0 0 12px 6px ${spaceGlow}`,
-              }
-            : undefined
-        }
+        style={spaceGlowStyle}
         onDragEnter={handleWrapperDragEnter}
         onDragLeave={handleWrapperDragLeave}
         onDragOver={handleWrapperDragOver}
@@ -802,6 +824,7 @@ export function WorkspaceInput({
           <UnifiedContextDropdown
             isOpen={unifiedMenu.visible}
             trigger={unifiedMenu.trigger}
+            bucket={unifiedMenu.bucket}
             filterText={unifiedMenu.filter}
             workspacePath={workspacePath}
             projectId={projectId}
@@ -815,6 +838,7 @@ export function WorkspaceInput({
             onSelectIssue={handleUnifiedIssueSelect}
             onClose={() => updateUnifiedMenu({ visible: false, filter: "" })}
             dropdownRef={unifiedContextDropdownRef}
+            triggerRef={pluginsButtonRef}
           />
         </div>
         <InputToolbar
@@ -833,6 +857,10 @@ export function WorkspaceInput({
           onPlanModeToggle={handlePlanModeToggle}
           goalMode={goalMode}
           onGoalModeToggle={handleGoalModeToggle}
+          pluginSkills={pluginSkills}
+          pluginsMenuOpen={pluginsMenuOpen}
+          onTogglePluginsMenu={handleTogglePluginsMenu}
+          pluginsButtonRef={pluginsButtonRef}
           thinkingMode={thinkingMode}
           onThinkingModeToggle={handleThinkingModeToggle}
           fastMode={fastMode}

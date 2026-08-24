@@ -233,9 +233,11 @@ describe("workspaceRepo — workspace lifecycle", () => {
 
   describe("insert", () => {
     it("inserts a workspace and returns the id", async () => {
+      createProject(db, { id: "project-new-1", rootPath: "/tmp/ws/new" });
       const id = await workspaceRepo.insert({
         id: "new-1",
         accountId: "default",
+        projectId: "project-new-1",
         name: "New Workspace",
         rootPath: "/tmp/ws/new",
       });
@@ -248,9 +250,11 @@ describe("workspaceRepo — workspace lifecycle", () => {
     });
 
     it("stores metadata as JSON", async () => {
+      createProject(db, { id: "project-meta-1", rootPath: "/tmp/ws/meta" });
       await workspaceRepo.insert({
         id: "meta-1",
         accountId: "default",
+        projectId: "project-meta-1",
         name: "Meta WS",
         rootPath: "/tmp/ws/meta",
         metadata: { branch: "feature-x" },
@@ -420,33 +424,63 @@ describe("workspaceService — workspace lifecycle", () => {
   });
 
   describe("create", () => {
+    it("rejects a Workspace without a Developer Project", async () => {
+      await expect(
+        workspaceService.create({
+          accountId: "default",
+          name: "Orphan",
+          rootPath: "/projects/orphan",
+        } as never),
+      ).rejects.toThrow("requires a Developer Project");
+    });
+
+    it("rejects a Project owned by another account", async () => {
+      const project = createProject(db, {
+        id: "other-project",
+        accountId: "other",
+      });
+      await expect(
+        workspaceService.create({
+          accountId: "default",
+          name: "Wrong owner",
+          rootPath: "/projects/wrong-owner",
+          projectId: project.id,
+        }),
+      ).rejects.toThrow("does not belong to this account");
+    });
+
     it("creates a new workspace", async () => {
+      const project = createProject(db, { rootPath: "/projects/new-ws" });
       const result = await workspaceService.create({
         accountId: "default",
         name: "New Workspace",
         rootPath: "/projects/new-ws",
+        projectId: project.id,
       });
       expect(result.name).toBe("New Workspace");
       expect(result.id).toBeTruthy();
     });
 
     it("rejects duplicate root path", async () => {
-      createWorkspace(db, { id: "ws1", rootPath: "/projects/existing" });
+      const workspace = createWorkspace(db, { id: "ws1", rootPath: "/projects/existing" });
 
       await expect(
         workspaceService.create({
           accountId: "default",
           name: "Duplicate",
           rootPath: "/projects/existing",
+          projectId: workspace.projectId,
         }),
       ).rejects.toThrow("Workspace with this path already exists");
     });
 
     it("generates ID if not provided", async () => {
+      const project = createProject(db, { rootPath: "/projects/auto-id" });
       const result = await workspaceService.create({
         accountId: "default",
         name: "Auto ID",
         rootPath: "/projects/auto-id",
+        projectId: project.id,
       });
       expect(result.id).toBeTruthy();
     });
@@ -574,11 +608,34 @@ describe("workspaceService — workspace lifecycle", () => {
       expect(row.projectName).toBe("Mains");
     });
 
-    it("reports a null project name for a workspace with no project", async () => {
-      createWorkspace(db, { id: "ws1", isArchived: true });
+    it("always resolves an owning project for an archived Workspace", async () => {
+      const workspace = createWorkspace(db, { id: "ws1", isArchived: true });
 
       const [row] = await workspaceService.listArchived();
-      expect(row.projectName).toBeNull();
+      expect(row.projectId).toBe(workspace.projectId);
+      expect(row.projectName).toBe("Test Project");
+    });
+
+    it("keeps the Archive list usable when one Workspace project is missing", async () => {
+      createWorkspace(db, {
+        id: "valid",
+        projectId: "valid-project",
+        isArchived: true,
+      });
+      createWorkspace(db, {
+        id: "dangling",
+        projectId: "missing-project",
+        isArchived: true,
+      });
+      _sqlite.pragma("foreign_keys = OFF");
+      _sqlite.prepare("DELETE FROM projects WHERE id = ?").run("missing-project");
+      _sqlite.pragma("foreign_keys = ON");
+
+      const rows = await workspaceService.listArchived();
+      const byId = new Map(rows.map((row) => [row.id, row]));
+
+      expect(byId.get("valid")?.projectName).toBe("Test Project");
+      expect(byId.get("dangling")?.projectName).toBeNull();
     });
 
     it("exposes worktree metadata only for worktree workspaces", async () => {
@@ -632,6 +689,23 @@ describe("workspaceService — workspace lifecycle", () => {
       await expect(workspaceService.unarchive("missing")).rejects.toThrow(
         "Workspace not found",
       );
+    });
+
+    it("refuses to restore a Workspace whose Project is missing", async () => {
+      const workspace = createWorkspace(db, {
+        id: "dangling",
+        isArchived: true,
+      });
+      _sqlite.pragma("foreign_keys = OFF");
+      _sqlite.prepare("DELETE FROM projects WHERE id = ?").run(workspace.projectId);
+      _sqlite.pragma("foreign_keys = ON");
+
+      await expect(workspaceService.unarchive(workspace.id)).rejects.toThrow(
+        "Workspace project not found",
+      );
+      expect(await workspaceRepo.findById(workspace.id)).toMatchObject({
+        isArchived: true,
+      });
     });
 
     // Unarchiving must not re-run setup or touch the repo — the row comes back
@@ -716,11 +790,13 @@ describe("workspaceService — workspace lifecycle", () => {
     });
 
     it("uses provided id when given", async () => {
+      const project = createProject(db, { rootPath: "/projects/custom-id" });
       const result = await workspaceService.create({
         id: "custom-id",
         accountId: "default",
         name: "Custom ID",
         rootPath: "/projects/custom-id",
+        projectId: project.id,
       });
       expect(result.id).toBe("custom-id");
     });
@@ -752,9 +828,10 @@ describe("workspaceService — workspace lifecycle", () => {
     });
 
     it("create returns error on failure", async () => {
+      const project = createProject(db, { rootPath: "/fail" });
       vi.spyOn(workspaceRepo, "findByRootPath").mockResolvedValueOnce(null);
       vi.spyOn(workspaceRepo, "insert").mockRejectedValueOnce(new Error("db"));
-      await expect(workspaceService.create({ accountId: "default", name: "Fail", rootPath: "/fail", })).rejects.toThrow("db");
+      await expect(workspaceService.create({ accountId: "default", name: "Fail", rootPath: "/fail", projectId: project.id })).rejects.toThrow("db");
     });
 
     it("update returns error on failure", async () => {
@@ -775,6 +852,7 @@ describe("workspaceService — workspace lifecycle", () => {
 
   describe("create — post-insert findById returns null", () => {
     it("returns error when workspace cannot be retrieved after insert", async () => {
+      const project = createProject(db, { rootPath: "/projects/ghost" });
       vi.spyOn(workspaceRepo, "findByRootPath").mockResolvedValueOnce(null);
       vi.spyOn(workspaceRepo, "insert").mockResolvedValueOnce("new-id");
       vi.spyOn(workspaceRepo, "findById").mockResolvedValueOnce(null);
@@ -784,6 +862,7 @@ describe("workspaceService — workspace lifecycle", () => {
           accountId: "default",
           name: "Ghost",
           rootPath: "/projects/ghost",
+          projectId: project.id,
         }),
       ).rejects.toThrow("Failed to retrieve created workspace");
     });
@@ -880,7 +959,7 @@ describe("workspaceService — workspace lifecycle", () => {
       );
     });
 
-    it("silently catches projectsRepo.findById rejection in create", async () => {
+    it("fails creation when the owning Project cannot be verified", async () => {
       const project = createProject(db, {
         id: "p-create-catch",
         name: "CreateCatch",
@@ -889,13 +968,14 @@ describe("workspaceService — workspace lifecycle", () => {
         new Error("db fail"),
       );
 
-      await workspaceService.create({
-        accountId: "default",
-        name: "WS project fail",
-        rootPath: "/projects/project-fail",
-        projectId: project.id,
-      });
-      await new Promise((r) => setTimeout(r, 50));
+      await expect(
+        workspaceService.create({
+          accountId: "default",
+          name: "WS project fail",
+          rootPath: "/projects/project-fail",
+          projectId: project.id,
+        }),
+      ).rejects.toThrow("db fail");
     });
   });
 
@@ -2839,6 +2919,83 @@ describe("workspaceService — createFromSource (workspace intake)", () => {
     const projects = await projectsRepo.findAll();
     expect(projects).toHaveLength(1); // same normalized origin → one project
     expect(a.projectId).toBe(b.projectId);
+  });
+
+  it("names a deduped intake after the existing project, not its folder", async () => {
+    // Importing a worktree folder of an already-imported repo: the project
+    // resolves to the existing one, and the workspace should carry its name.
+    setWorktrees(false);
+    gitMock.importLocalRepoDirect
+      .mockResolvedValueOnce({
+        branchName: "main",
+        sourcePath: "/repos/mains",
+        baseBranch: "main",
+        tracking: null,
+        ahead: 0,
+        behind: 0,
+        originUrl: "git@github.com:foo/mains.git",
+      })
+      .mockResolvedValueOnce({
+        branchName: "feat/modes",
+        sourcePath: "/worktrees/mains/avocado-0k55",
+        baseBranch: "main",
+        tracking: null,
+        ahead: 0,
+        behind: 0,
+        originUrl: "https://github.com/foo/mains.git",
+      });
+
+    const first = await workspaceService.createFromSource({
+      accountId: "default",
+      source: { kind: "folder", path: "/repos/mains" },
+    });
+    const second = await workspaceService.createFromSource({
+      accountId: "default",
+      source: { kind: "folder", path: "/worktrees/mains/avocado-0k55" },
+    });
+
+    expect(first.name).toBe("mains");
+    expect(second.projectId).toBe(first.projectId);
+    expect(second.name).toBe("mains");
+    expect(second.rootPath).toBe("/worktrees/mains/avocado-0k55");
+  });
+
+  it("folder + worktree: a deduped intake is also named after the project", async () => {
+    setWorktrees(true);
+    createProject(db, {
+      id: "proj-mains",
+      accountId: "default",
+      name: "mains",
+      rootPath: "/repos/mains",
+      remoteOrigin: "github.com/foo/mains",
+      defaultBranch: "main",
+    });
+    gitMock.getRemotes.mockResolvedValue([
+      {
+        name: "origin",
+        fetchUrl: "git@github.com:foo/mains.git",
+        pushUrl: undefined,
+      },
+    ]);
+    gitMock.getDefaultBranch.mockResolvedValue("main");
+    gitMock.importLocalRepo.mockResolvedValue({
+      branchName: "feature/y",
+      worktreePath: "/work/worktrees/mains/pear",
+      worktreeName: "pear",
+      baseBranch: "main",
+      tracking: null,
+      ahead: 0,
+      behind: 0,
+      originUrl: "git@github.com:foo/mains.git",
+    });
+
+    const result = await workspaceService.createFromSource({
+      accountId: "default",
+      source: { kind: "folder", path: "/worktrees/mains/avocado-0k55" },
+    });
+
+    expect(result.projectId).toBe("proj-mains");
+    expect(result.name).toBe("mains");
   });
 
   it("keeps the project's canonical default branch across direct intakes", async () => {

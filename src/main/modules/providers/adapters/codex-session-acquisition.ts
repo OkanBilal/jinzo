@@ -2,6 +2,7 @@ import type {
   AcquiredSession,
   CodexAdapterConfig,
   FileAttachment,
+  RunExecutionContext,
   WorkRunContextItem,
   WorkRunContinueRequest,
   WorkRunEvent,
@@ -34,8 +35,6 @@ const VALID_SANDBOX_MODES = new Set([
   "workspace-write",
   "danger-full-access",
 ]);
-const MAINS_DYNAMIC_TOOLS = toCodexDynamicTools();
-
 type CodexConfigOverrides = NonNullable<
   CodexAppServerParams<"thread/start">["config"]
 >;
@@ -45,7 +44,9 @@ type CodexOutputSchema = Exclude<
 >;
 type CodexThreadStartParams =
   CodexAppServerParams<"thread/start"> & {
-    dynamicTools?: typeof MAINS_DYNAMIC_TOOLS;
+    // Rendered per session, not at module scope — the mains tool set is
+    // mode-filtered, so it must be recomputed for each run's mode.
+    dynamicTools?: ReturnType<typeof toCodexDynamicTools>;
   };
 type CodexTurnStartParams =
   CodexAppServerParams<"turn/start"> & {
@@ -162,6 +163,18 @@ function buildCodexConfigOverrides(
   };
 }
 
+/**
+ * Mode-resolved instruction delta as `thread/start` / `thread/resume` params.
+ * Uses the app-server's top-level `developerInstructions` field — deliberately
+ * NOT `collaboration_mode.settings.developer_instructions`, which the plan
+ * toggle resets (see buildCollaborationMode); the two stay orthogonal.
+ */
+export function buildDeveloperInstructionsParam(
+  extraInstructions: string | null | undefined,
+): Record<string, unknown> {
+  return extraInstructions ? { developerInstructions: extraInstructions } : {};
+}
+
 export function buildCollaborationMode(
   planEnabled: boolean,
   model: string | undefined,
@@ -172,7 +185,10 @@ export function buildCollaborationMode(
   return {
     mode: planEnabled ? "plan" : "default",
     settings: {
-      model: model ?? "",
+      // Omitted rather than blanked when unknown: `model: ""` is not "leave it
+      // alone", it is a model name, and Codex answers a request for the ''
+      // model with a 400. A fork with no model of its own keeps the thread's.
+      ...(model ? { model } : {}),
       reasoning_effort:
         effort ?? (planEnabled ? "medium" : null),
       developer_instructions: null,
@@ -301,11 +317,11 @@ function buildTurnInput(
 
 function mainsContext(
   runId: string,
-  workspace: { id: string; rootPath: string },
+  execution: RunExecutionContext,
 ): MainsToolContext {
   return {
-    workspaceId: workspace.id,
-    rootPath: workspace.rootPath,
+    workspaceId: execution.workspaceId,
+    rootPath: execution.cwd,
     runId,
   };
 }
@@ -363,14 +379,50 @@ export function createCodexSessionAcquisition(
     return requestedModel || config.defaultModel || undefined;
   }
 
-  function commonThreadSettings() {
+  /**
+   * Thread settings for one run: the provider config with the run's
+   * mode-resolved `configSnapshot` on top. The merge lives here rather than at
+   * each call site — create, resume, and fork all need it, and three copies is
+   * how `sandbox` ended up re-derived after every spread.
+   */
+  function threadSettingsFor(overrides: Record<string, unknown> = {}) {
+    const sandboxMode =
+      typeof overrides.sandboxMode === "string"
+        ? (overrides.sandboxMode as CodexAdapterConfig["sandboxMode"])
+        : config.sandboxMode;
+    // Codex's own tone lever: work/chat pin it through the mode harness, and
+    // developer leaves it to the provider setting.
+    const personality =
+      typeof overrides.personality === "string"
+        ? (overrides.personality as CodexAdapterConfig["personality"])
+        : config.personality;
     return {
       approvalPolicy: config.approvalMode ?? "on-request",
-      sandbox: mapSandboxMode(config.sandboxMode),
-      personality: config.personality ?? "none",
+      sandbox: mapSandboxMode(sandboxMode),
+      personality: personality ?? "none",
       config: buildCodexConfigOverrides(
         config.networkAccessEnabled !== false,
       ),
+    };
+  }
+
+  /**
+   * Plan / goal for one run: the mode-resolved snapshot over the provider
+   * config, same precedence as `threadSettingsFor`. Both flags live on the
+   * shared provider row and are toggled from the developer composer, so a
+   * Code space that left plan on must not plan a Work or Chat run — and that
+   * has to hold on resume and fork too, not just the first turn.
+   */
+  function runTogglesFor(overrides: Record<string, unknown> = {}) {
+    return {
+      planMode:
+        typeof overrides.planMode === "boolean"
+          ? overrides.planMode
+          : (config.planMode ?? false),
+      goalMode:
+        typeof overrides.goalMode === "boolean"
+          ? overrides.goalMode
+          : (config.goalMode ?? false),
     };
   }
 
@@ -398,10 +450,6 @@ export function createCodexSessionAcquisition(
     const overrides = (
       request.configSnapshot ?? {}
     ) as Record<string, unknown>;
-    const overrideSandboxMode =
-      typeof overrides.sandboxMode === "string"
-        ? overrides.sandboxMode as CodexAdapterConfig["sandboxMode"]
-        : undefined;
     const overrideEffort =
       typeof overrides.modelReasoningEffort === "string"
         ? overrides.modelReasoningEffort
@@ -414,27 +462,18 @@ export function createCodexSessionAcquisition(
       overrides.serviceTier
         ? overrides.serviceTier
         : undefined;
-    const overridePlanMode =
-      typeof overrides.planMode === "boolean"
-        ? overrides.planMode
-        : undefined;
-    const overrideGoalMode =
-      typeof overrides.goalMode === "boolean"
-        ? overrides.goalMode
-        : undefined;
-    const settings = commonThreadSettings();
+    const toggles = runTogglesFor(overrides);
+    const settings = threadSettingsFor(overrides);
     const threadStartParams: CodexThreadStartParams = {
-      cwd: request.workspace.rootPath,
+      cwd: request.execution.cwd,
       ...settings,
-      sandbox: mapSandboxMode(
-        overrideSandboxMode ?? config.sandboxMode,
-      ),
       ...(model ? { model } : {}),
-      dynamicTools: MAINS_DYNAMIC_TOOLS,
+      ...buildDeveloperInstructionsParam(request.extraInstructions),
+      dynamicTools: toCodexDynamicTools(request.mode),
     };
 
     logger.info(
-      `Starting thread (model: ${model || "default"}, cwd: ${request.workspace.rootPath})`,
+      `Starting thread (model: ${model || "default"}, cwd: ${request.execution.cwd})`,
     );
     const threadResult = await server.sendRequest(
       "thread/start",
@@ -448,15 +487,15 @@ export function createCodexSessionAcquisition(
     await establishGoal(
       server,
       threadId,
-      overrideGoalMode ?? config.goalMode ?? false,
+      toggles.goalMode,
       request.goal,
-      request.workspace.rootPath,
+      request.execution.cwd,
       true,
     );
     runCoordinator.registerRun({
       runId,
       threadId: threadId ?? null,
-      mainsCtx: mainsContext(runId, request.workspace),
+      mainsCtx: mainsContext(runId, request.execution),
     });
 
     const effort =
@@ -464,7 +503,7 @@ export function createCodexSessionAcquisition(
     const serviceTier =
       overrideServiceTier ?? config.serviceTier;
     const collaborationMode = buildCollaborationMode(
-      overridePlanMode ?? config.planMode ?? false,
+      toggles.planMode,
       model,
       effort,
     );
@@ -506,13 +545,19 @@ export function createCodexSessionAcquisition(
       );
     }
 
-    const settings = commonThreadSettings();
+    // Same precedence as createSession: the run's config snapshot beats the
+    // provider config, so a resumed chat run keeps its read-only sandbox.
+    const resumeOverrides = (
+      request.configSnapshot ?? {}
+    ) as Record<string, unknown>;
+    const settings = threadSettingsFor(resumeOverrides);
     try {
       await server.sendRequest("thread/resume", {
         threadId,
-        cwd: request.workspace.rootPath,
+        cwd: request.execution.cwd,
         ...settings,
         ...(model ? { model } : {}),
+        ...buildDeveloperInstructionsParam(request.extraInstructions),
       });
     } catch (resumeError) {
       if (isCodexArchivedThreadError(resumeError)) {
@@ -525,10 +570,11 @@ export function createCodexSessionAcquisition(
         `Thread resume failed (${codexErrorMessage(resumeError)}), starting new thread`,
       );
       const threadStartParams: CodexThreadStartParams = {
-        cwd: request.workspace.rootPath,
+        cwd: request.execution.cwd,
         ...settings,
         ...(model ? { model } : {}),
-        dynamicTools: MAINS_DYNAMIC_TOOLS,
+        ...buildDeveloperInstructionsParam(request.extraInstructions),
+        dynamicTools: toCodexDynamicTools(request.mode),
       };
       const threadResult = await server.sendRequest(
         "thread/start",
@@ -545,24 +591,25 @@ export function createCodexSessionAcquisition(
     runCoordinator.registerRun({
       runId,
       threadId,
-      mainsCtx: mainsContext(runId, request.workspace),
+      mainsCtx: mainsContext(runId, request.execution),
       subAgents: persistedSubAgents,
     });
     const interruptedSubAgents =
       runCoordinator.getInterruptedSubAgents(runId);
     const currentThreadId =
       runCoordinator.getSessionThread(runId) ?? threadId;
+    const resumeToggles = runTogglesFor(resumeOverrides);
     await establishGoal(
       server,
       currentThreadId,
-      config.goalMode ?? false,
+      resumeToggles.goalMode,
       message,
-      request.workspace.rootPath,
+      request.execution.cwd,
       false,
     );
 
     const collaborationMode = buildCollaborationMode(
-      config.planMode ?? false,
+      resumeToggles.planMode,
       model,
       config.modelReasoningEffort,
       true,
@@ -614,33 +661,40 @@ export function createCodexSessionAcquisition(
     }
     runCoordinator.attachThread(sourceRunId, sourceThreadId);
 
-    const settings = commonThreadSettings();
+    const forkOverrides = (
+      request.configSnapshot ?? {}
+    ) as Record<string, unknown>;
+    // `thread/fork` has no `personality` field — the forked thread inherits the
+    // source's — so only the fields the contract names are passed through.
+    const settings = threadSettingsFor(forkOverrides);
     const forkResult = await server.sendRequest("thread/fork", {
       threadId: sourceThreadId,
-      cwd: request.workspace.rootPath,
+      cwd: request.execution.cwd,
       approvalPolicy: settings.approvalPolicy,
       sandbox: settings.sandbox,
       ...(model ? { model } : {}),
+      ...buildDeveloperInstructionsParam(request.extraInstructions),
       config: settings.config,
     });
     const forkedThreadId = forkResult.thread.id;
     runCoordinator.attachThread(runId, forkedThreadId);
+    const forkToggles = runTogglesFor(forkOverrides);
     await establishGoal(
       server,
       forkedThreadId,
-      config.goalMode ?? false,
+      forkToggles.goalMode,
       message,
-      request.workspace.rootPath,
+      request.execution.cwd,
       false,
     );
     runCoordinator.registerRun({
       runId,
       threadId: forkedThreadId,
-      mainsCtx: mainsContext(runId, request.workspace),
+      mainsCtx: mainsContext(runId, request.execution),
     });
 
     const collaborationMode = buildCollaborationMode(
-      config.planMode ?? false,
+      forkToggles.planMode,
       model,
       config.modelReasoningEffort,
       true,
@@ -676,16 +730,16 @@ export function createCodexSessionAcquisition(
     const target = buildCodexReviewTarget(request.target);
     const model = effectiveModel(request.model);
     const server = await ensureServer();
-    const settings = commonThreadSettings();
+    const settings = threadSettingsFor();
     const threadStartParams: CodexThreadStartParams = {
-      cwd: request.workspace.rootPath,
+      cwd: request.execution.cwd,
       ...settings,
       ...(model ? { model } : {}),
-      dynamicTools: MAINS_DYNAMIC_TOOLS,
+      dynamicTools: toCodexDynamicTools(),
     };
 
     logger.info(
-      `Starting review thread (model: ${model || "default"}, cwd: ${request.workspace.rootPath})`,
+      `Starting review thread (model: ${model || "default"}, cwd: ${request.execution.cwd})`,
     );
     const threadResult = await server.sendRequest(
       "thread/start",
@@ -695,7 +749,7 @@ export function createCodexSessionAcquisition(
     runCoordinator.registerRun({
       runId,
       threadId: threadId ?? null,
-      mainsCtx: mainsContext(runId, request.workspace),
+      mainsCtx: mainsContext(runId, request.execution),
     });
 
     const reviewStartParams:

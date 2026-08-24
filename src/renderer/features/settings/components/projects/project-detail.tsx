@@ -16,7 +16,7 @@ import { ProjectScriptsSection } from "./project-scripts-section";
 import { ProjectInstructionsSection } from "./project-instructions-section";
 import { ProjectSaveBar } from "./project-save-bar";
 import { extractErrorMessage } from "@/lib/extract-error-message";
-import { DEFAULT_ICON_COLOR, formatIcon } from "@/lib/icon-registry";
+import { DEFAULT_ICON_COLOR, formatIcon, iconKindOf } from "@/lib/icon-registry";
 
 interface ProjectDetailProps {
   id: string;
@@ -51,7 +51,9 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
   const handleSave = useCallback(async () => {
     if (saving || !project) return;
     try {
-      const iconValue = formatIcon(iconMode, icon, iconColor);
+      // `iconMode` is the picker's open tab, not what was picked — read the
+      // kind off the value so browsing the other tab can't mislabel it.
+      const iconValue = formatIcon(iconKindOf(icon), icon, iconColor);
 
       await updateProject({
         id: project.id,
@@ -70,7 +72,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
     } catch (err: any) {
       toast.error(extractErrorMessage(err, "Failed to save project settings"));
     }
-  }, [saving, project, icon, iconMode, iconColor, defaultBranch, setupScript, runScript, archiveScript, commitInstructions, prInstructions, updateProject]);
+  }, [saving, project, icon, iconColor, defaultBranch, setupScript, runScript, archiveScript, commitInstructions, prInstructions, updateProject]);
 
   // Auto-save when the icon or its tint changes (skip syncs from project
   // load/switch via isDirty)

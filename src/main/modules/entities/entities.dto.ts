@@ -64,6 +64,119 @@ export interface UpdateIssuePayload {
   closedAt?: Date | null;
 }
 
+// Live provider detail. The canonical entity/issue rows stay deliberately
+// compact; relationship-heavy data is fetched only while the detail drawer is
+// open so the issue inbox does not turn into an N+1 sync job.
+export interface IssueDetailUser {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+}
+
+export interface IssueDetailReference {
+  id: string;
+  identifier: string;
+  title: string;
+  url: string;
+  state: { name: string; type: string; color: string } | null;
+  priority: number;
+  priorityLabel: string;
+}
+
+export interface IssueDetailResource {
+  id: string;
+  kind: "attachment" | "document";
+  title: string;
+  subtitle: string | null;
+  url: string;
+  sourceType: string | null;
+  createdAt: string;
+  creator: IssueDetailUser | null;
+}
+
+export interface IssueDetailRelation {
+  id: string;
+  type: string;
+  direction: "outbound" | "inbound";
+  issue: IssueDetailReference;
+}
+
+export type IssueDetailActivityKind =
+  | "created"
+  | "comment"
+  | "status"
+  | "assignee"
+  | "priority"
+  | "label"
+  | "project"
+  | "cycle"
+  | "parent"
+  | "attachment"
+  | "description"
+  | "title"
+  | "due_date"
+  | "estimate"
+  | "archived";
+
+export interface IssueDetailActivity {
+  id: string;
+  kind: IssueDetailActivityKind;
+  createdAt: string;
+  actor: IssueDetailUser | null;
+  summary: string;
+  body: string | null;
+  url: string | null;
+}
+
+export interface LinearIssueDetail {
+  provider: "linear";
+  id: string;
+  identifier: string;
+  title: string;
+  url: string;
+  description: string | null;
+  branchName: string;
+  priority: number;
+  priorityLabel: string;
+  estimate: number | null;
+  dueDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  canceledAt: string | null;
+  state: { id: string; name: string; type: string; color: string };
+  assignee: IssueDetailUser | null;
+  creator: IssueDetailUser | null;
+  team: {
+    id: string;
+    key: string;
+    name: string;
+    color: string | null;
+    icon: string | null;
+  };
+  project: {
+    id: string;
+    name: string;
+    url: string;
+    color: string;
+    icon: string | null;
+  } | null;
+  cycle: {
+    id: string;
+    name: string;
+    number: number;
+    startsAt: string;
+    endsAt: string;
+  } | null;
+  parent: IssueDetailReference | null;
+  labels: Array<{ id: string; name: string; color: string }>;
+  children: IssueDetailReference[];
+  resources: IssueDetailResource[];
+  relations: IssueDetailRelation[];
+  activity: IssueDetailActivity[];
+}
+
 // ─────────────────────────────────────────────────────────────
 // Signal DTOs
 // ─────────────────────────────────────────────────────────────
@@ -141,4 +254,3 @@ export interface SearchOptions {
   kind?: string;
   limit?: number;
 }
-

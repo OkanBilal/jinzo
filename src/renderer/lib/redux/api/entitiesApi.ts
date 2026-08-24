@@ -88,6 +88,114 @@ export interface IssueWithEntity {
   entity: Entity;
 }
 
+export interface IssueDetailUser {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+}
+
+export interface IssueDetailReference {
+  id: string;
+  identifier: string;
+  title: string;
+  url: string;
+  state: { name: string; type: string; color: string } | null;
+  priority: number;
+  priorityLabel: string;
+}
+
+export interface IssueDetailResource {
+  id: string;
+  kind: "attachment" | "document";
+  title: string;
+  subtitle: string | null;
+  url: string;
+  sourceType: string | null;
+  createdAt: string;
+  creator: IssueDetailUser | null;
+}
+
+export interface IssueDetailRelation {
+  id: string;
+  type: string;
+  direction: "outbound" | "inbound";
+  issue: IssueDetailReference;
+}
+
+export interface IssueDetailActivity {
+  id: string;
+  kind:
+    | "created"
+    | "comment"
+    | "status"
+    | "assignee"
+    | "priority"
+    | "label"
+    | "project"
+    | "cycle"
+    | "parent"
+    | "attachment"
+    | "description"
+    | "title"
+    | "due_date"
+    | "estimate"
+    | "archived";
+  createdAt: string;
+  actor: IssueDetailUser | null;
+  summary: string;
+  body: string | null;
+  url: string | null;
+}
+
+export interface LinearIssueDetail {
+  provider: "linear";
+  id: string;
+  identifier: string;
+  title: string;
+  url: string;
+  description: string | null;
+  branchName: string;
+  priority: number;
+  priorityLabel: string;
+  estimate: number | null;
+  dueDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  canceledAt: string | null;
+  state: { id: string; name: string; type: string; color: string };
+  assignee: IssueDetailUser | null;
+  creator: IssueDetailUser | null;
+  team: {
+    id: string;
+    key: string;
+    name: string;
+    color: string | null;
+    icon: string | null;
+  };
+  project: {
+    id: string;
+    name: string;
+    url: string;
+    color: string;
+    icon: string | null;
+  } | null;
+  cycle: {
+    id: string;
+    name: string;
+    number: number;
+    startsAt: string;
+    endsAt: string;
+  } | null;
+  parent: IssueDetailReference | null;
+  labels: Array<{ id: string; name: string; color: string }>;
+  children: IssueDetailReference[];
+  resources: IssueDetailResource[];
+  relations: IssueDetailRelation[];
+  activity: IssueDetailActivity[];
+}
+
 export const entitiesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getEntities: builder.query<Entity[], EntityQueryParams>({
@@ -196,6 +304,16 @@ export const entitiesApi = baseApi.injectEndpoints({
       ],
     }),
 
+    getIssueDetail: builder.query<LinearIssueDetail, string>({
+      query: (entityId) => ({
+        handler: CHANNELS.issues.getDetail,
+        args: [entityId],
+      }),
+      providesTags: (_result, _error, entityId) => [
+        { type: "Issue", id: entityId },
+      ],
+    }),
+
     updateIssueState: builder.mutation<
       Issue,
       { entityId: string; state: string }
@@ -247,6 +365,7 @@ export const {
   useUpdateTaskStatusMutation,
   useGetIssuesQuery,
   useGetIssueByEntityIdQuery,
+  useGetIssueDetailQuery,
   useUpdateIssueStateMutation,
   useGetIssuesByRepoQuery,
   useGetIssuesInboxQuery,

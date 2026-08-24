@@ -23,7 +23,7 @@ export default function GitSettings() {
   const [localInstructions, setLocalInstructions] = useState<string | null>(null);
   const [localPrInstructions, setLocalPrInstructions] = useState<string | null>(null);
 
-  const enableWorktrees = settings?.enableWorktrees ?? true;
+  const enableWorktrees = settings?.enableWorktrees ?? false;
   const commitInstructions = localInstructions ?? settings?.commitInstructions ?? "";
   const prInstructions = localPrInstructions ?? settings?.prInstructions ?? "";
 
