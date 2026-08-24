@@ -214,14 +214,19 @@ module.exports = {
       name: '@electron-forge/maker-dmg',
       platforms: ['darwin'],
       config: {
+        title: 'Install Mains',
         format: 'UDZO',
-        background: 'src/renderer/public/dmg-background.png',
+        background: 'src/renderer/public/dmg-background-v3.png',
         icon: 'src/renderer/public/icon.icns',
+        iconSize: 112,
         contents: (opts) => [
-          { x: 190, y: 200, type: 'file', path: opts.appPath },
-          { x: 470, y: 200, type: 'link', path: '/Applications' },
+          { x: 160, y: 200, type: 'file', path: opts.appPath },
+          { x: 500, y: 200, type: 'link', path: '/Applications' },
         ],
-        window: { size: { width: 660, height: 400 } },
+        additionalDMGOptions: {
+          'background-color': '#fbf7f1',
+          window: { size: { width: 660, height: 400 } },
+        },
       },
     },
   ],

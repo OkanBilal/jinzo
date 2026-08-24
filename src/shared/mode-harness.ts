@@ -214,6 +214,88 @@ export function composeExtraInstructions(
   return parts.length > 0 ? parts.join("\n\n") : null;
 }
 
+function parseToolPolicySnapshot(snapshot: unknown): ModeToolPolicy | null {
+  if (snapshot == null) return null;
+  if (typeof snapshot !== "object" || Array.isArray(snapshot)) {
+    throw new Error("Invalid tool policy snapshot");
+  }
+
+  const candidate = snapshot as Record<string, unknown>;
+  const allowedValue = candidate.allowedTools;
+  const disallowedValue = candidate.disallowedTools;
+
+  if (
+    allowedValue !== undefined &&
+    allowedValue !== null &&
+    (!Array.isArray(allowedValue) ||
+      allowedValue.some(
+        (tool) => typeof tool !== "string" || tool.trim().length === 0,
+      ))
+  ) {
+    throw new Error("Invalid tool policy allowedTools");
+  }
+  if (
+    disallowedValue !== undefined &&
+    (!Array.isArray(disallowedValue) ||
+      disallowedValue.some(
+        (tool) => typeof tool !== "string" || tool.trim().length === 0,
+      ))
+  ) {
+    throw new Error("Invalid tool policy disallowedTools");
+  }
+
+  const allowedTools =
+    allowedValue == null
+      ? null
+      : [...new Set(allowedValue as string[])];
+  const disallowedTools = [
+    ...new Set((disallowedValue ?? []) as string[]),
+  ];
+
+  // An absent/null allowlist plus no denials contributes no restriction.
+  return allowedTools === null && disallowedTools.length === 0
+    ? null
+    : { allowedTools, disallowedTools };
+}
+
+/**
+ * The tool policy a run carries. Permissions compose restrictively:
+ * hard denials accumulate, while every non-null allowlist narrows the result.
+ * A caller may make a mode stricter, but can never widen its ceiling.
+ */
+export function composeToolPolicy(
+  mode: ModeId | null | undefined,
+  payloadSnapshot?: unknown,
+): ModeToolPolicy | null {
+  const harnessPolicy = getModeHarness(mode).toolPolicy;
+  const callerPolicy = parseToolPolicySnapshot(payloadSnapshot);
+
+  if (!harnessPolicy && !callerPolicy) return null;
+
+  const disallowedTools = [
+    ...new Set([
+      ...(harnessPolicy?.disallowedTools ?? []),
+      ...(callerPolicy?.disallowedTools ?? []),
+    ]),
+  ];
+  const harnessAllowed = harnessPolicy?.allowedTools ?? null;
+  const callerAllowed = callerPolicy?.allowedTools ?? null;
+
+  let allowedTools: string[] | null;
+  if (harnessAllowed && callerAllowed) {
+    const callerSet = new Set(callerAllowed);
+    allowedTools = harnessAllowed.filter((tool) => callerSet.has(tool));
+  } else if (harnessAllowed) {
+    allowedTools = [...harnessAllowed];
+  } else if (callerAllowed) {
+    allowedTools = [...callerAllowed];
+  } else {
+    allowedTools = null;
+  }
+
+  return { allowedTools, disallowedTools };
+}
+
 /**
  * The config snapshot a run carries: mode defaults under the caller's
  * snapshot, mode overrides on top (`overrides > payload > defaults`).

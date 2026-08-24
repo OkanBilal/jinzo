@@ -11,6 +11,7 @@ import {
   getModeHarness,
   composeExtraInstructions,
   composeConfigSnapshot,
+  composeToolPolicy,
   modeProviderSetting,
 } from "./mode-harness";
 
@@ -212,6 +213,73 @@ describe("composeConfigSnapshot", () => {
         permissionMode: "default",
       });
     }
+  });
+});
+
+describe("composeToolPolicy", () => {
+  it("keeps chat read-only when the caller asks for provider defaults", () => {
+    expect(
+      composeToolPolicy("chat", {
+        allowedTools: null,
+        disallowedTools: [],
+      }),
+    ).toEqual(MODE_HARNESSES.chat.toolPolicy);
+  });
+
+  it("lets the caller narrow chat but never widen it", () => {
+    expect(
+      composeToolPolicy("chat", {
+        allowedTools: ["Read", "Bash"],
+        disallowedTools: ["WebSearch"],
+      }),
+    ).toEqual({
+      allowedTools: ["Read"],
+      disallowedTools: [
+        "Bash",
+        "Write",
+        "Edit",
+        "MultiEdit",
+        "NotebookEdit",
+        "Task",
+        "WebSearch",
+      ],
+    });
+  });
+
+  it("unions work's hard denials with the caller's denials", () => {
+    expect(
+      composeToolPolicy("work", {
+        allowedTools: ["Bash", "Read"],
+        disallowedTools: ["Write"],
+      }),
+    ).toEqual({
+      allowedTools: ["Bash", "Read"],
+      disallowedTools: ["Bash", "Write"],
+    });
+  });
+
+  it("passes a restrictive caller policy through developer mode", () => {
+    expect(
+      composeToolPolicy("developer", {
+        allowedTools: ["Read"],
+        disallowedTools: ["Bash"],
+      }),
+    ).toEqual({ allowedTools: ["Read"], disallowedTools: ["Bash"] });
+  });
+
+  it("rejects malformed snapshots at the composition seam", () => {
+    expect(() =>
+      composeToolPolicy("chat", {
+        allowedTools: "everything",
+        disallowedTools: [],
+      }),
+    ).toThrow("Invalid tool policy allowedTools");
+    expect(() =>
+      composeToolPolicy("chat", {
+        allowedTools: null,
+        disallowedTools: ["Bash", 42],
+      }),
+    ).toThrow("Invalid tool policy disallowedTools");
   });
 });
 

@@ -746,6 +746,16 @@ export const runsService = {
         );
       }
 
+      // Reviews are a Developer-mode surface: they feed the review/finding
+      // rows and the git ceremony the other modes hide, and the review request
+      // carries no mode harness (no toolPolicy, no configSnapshot). A Work or
+      // Chat space is refused here rather than allowed to run unharnessed —
+      // before the workspace flips to in_review, so a refusal leaves no trace.
+      const { spaceId: resolvedSpaceId, mode } = await resolveRunMode(payload.spaceId);
+      if (mode !== "developer") {
+        throw new Error("Code review is only available in Developer spaces");
+      }
+
       const workspace = await workspaceService.get(payload.workspaceId);
       if (!workspace) {
         throw new Error(`Workspace "${payload.workspaceId}" not found`);
@@ -763,10 +773,6 @@ export const runsService = {
               ? `commit ${payload.target.sha ?? ""}`
               : "code changes"
       }`;
-
-      // Reviews are a developer-mode surface, but the row still records the
-      // truthful mode so continueRun re-derives the same harness.
-      const { spaceId: resolvedSpaceId, mode } = await resolveRunMode(payload.spaceId);
 
       await runsRepo.insertRun({
         id: runId,

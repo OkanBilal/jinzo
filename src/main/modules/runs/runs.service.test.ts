@@ -100,6 +100,7 @@ import { runsRepo } from "./runs.repo";
 import { managedRunDir } from "./run-execution";
 import { runSessionRegistry } from "./run-session-registry";
 import { createWorkAdapter } from "../providers/adapters";
+import { workspaceService } from "../workspace";
 import { gitService } from "../git/git.service";
 
 describe("runsService", () => {
@@ -640,6 +641,62 @@ describe("runsService", () => {
       const request = startRun.mock.calls[0][0];
       expect(request.extraInstructions).toContain("non-technical");
       expect(request.extraInstructions.endsWith("Always answer in Turkish.")).toBe(true);
+    });
+  });
+
+  describe("executeReview mode guard", () => {
+    it("refuses a review from a non-Developer space, before touching the workspace", async () => {
+      createWorkspace(db, { id: "ws-chat-review", accountId: "default" });
+      createSpace(db, {
+        id: "sp-chat-review",
+        accountId: "default",
+        providerId: "claude_code",
+        mode: "chat",
+      });
+      // The adapter mock is module-level: earlier tests leave calls on it.
+      vi.mocked(createWorkAdapter).mockClear();
+
+      await expect(
+        runsService.executeReview({
+          accountId: "default",
+          workspaceId: "ws-chat-review",
+          spaceId: "sp-chat-review",
+          providerId: "claude_code",
+          target: { type: "uncommittedChanges" },
+          toolPolicySnapshot: { allowedTools: null, disallowedTools: [] },
+        }),
+      ).rejects.toThrow("only available in Developer spaces");
+
+      // No adapter, no run row, and the workspace never flipped to in_review.
+      expect(createWorkAdapter).not.toHaveBeenCalled();
+      expect(await runsService.getRunsByWorkspace("ws-chat-review")).toEqual([]);
+      expect((await workspaceService.get("ws-chat-review"))?.status).not.toBe(
+        "in_review",
+      );
+    });
+
+    it("still runs a review from a Developer space", async () => {
+      createWorkspace(db, { id: "ws-dev-review", accountId: "default" });
+      createSpace(db, {
+        id: "sp-dev-review",
+        accountId: "default",
+        providerId: "claude_code",
+        mode: "developer",
+      });
+      const reviewRun = vi.fn().mockResolvedValue({ status: "succeeded" });
+      vi.mocked(createWorkAdapter).mockReturnValue({ reviewRun } as any);
+
+      const { runId } = await runsService.executeReview({
+        accountId: "default",
+        workspaceId: "ws-dev-review",
+        spaceId: "sp-dev-review",
+        providerId: "claude_code",
+        target: { type: "uncommittedChanges" },
+      });
+      await flushBackground();
+
+      expect(reviewRun).toHaveBeenCalled();
+      expect((await runsService.getRunById(runId))?.mode).toBe("developer");
     });
   });
 
