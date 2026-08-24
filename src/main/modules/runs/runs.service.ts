@@ -4,6 +4,7 @@ import { PROVIDER_IDS } from "../../../shared/provider-ids";
 import { runsRepo } from "./runs.repo";
 import { providersService } from "../providers";
 import { collectionsService } from "../collections";
+import { projectsService } from "../projects";
 import { workspaceService, assertWorkspacePathExists } from "../workspace";
 import { spaceService } from "../space";
 import { appSettingsService } from "../appSettings";
@@ -300,9 +301,45 @@ export const runsService = {
     );
     const workspaceById = new Map(workspaceEntries);
 
+    // A workspace wears its project's icon, the same one the sidebar prints.
+    const projectIds = [
+      ...new Set(
+        [...workspaceById.values()]
+          .filter((workspace) => workspace !== null)
+          .map((workspace) => workspace.projectId),
+      ),
+    ];
+    const projectEntries = await Promise.all(
+      projectIds.map(
+        async (id) =>
+          [id, (await projectsService.get(id))?.icon ?? null] as const,
+      ),
+    );
+    const projectIconById = new Map(projectEntries);
+
+    // Chats have no workspace — their collection names the group instead. One
+    // list per account covers every run, archived collections included, so a
+    // chat filed under a hidden project still finds its name.
+    const accountIds = [
+      ...new Set(
+        archived.filter((run) => run.collectionId).map((run) => run.accountId),
+      ),
+    ];
+    const collectionLists = await Promise.all(
+      accountIds.map((accountId) =>
+        collectionsService.list({ accountId, includeArchived: true }),
+      ),
+    );
+    const collectionById = new Map(
+      collectionLists.flat().map((collection) => [collection.id, collection]),
+    );
+
     return archived.map((run) => {
       const workspace = run.workspaceId
         ? workspaceById.get(run.workspaceId)
+        : null;
+      const collection = run.collectionId
+        ? collectionById.get(run.collectionId)
         : null;
       return {
         ...run,
@@ -311,6 +348,14 @@ export const runsService = {
               id: workspace.id,
               name: workspace.name,
               isArchived: workspace.isArchived,
+              icon: projectIconById.get(workspace.projectId) ?? null,
+            }
+          : null,
+        collection: collection
+          ? {
+              id: collection.id,
+              name: collection.name,
+              icon: collection.icon,
             }
           : null,
       };
@@ -785,8 +830,14 @@ export const runsService = {
         goal: goalDescription,
         status: "running",
         systemPrompt: payload.systemPrompt,
-        configSnapshot: payload.configSnapshot,
-        toolPolicySnapshot: payload.toolPolicySnapshot,
+        // Composed, not raw: developer's harness adds nothing, but the caller's
+        // snapshots still get validated and normalized here rather than sitting
+        // on the row until continueRun's compose rejects them mid-resume.
+        configSnapshot:
+          composeConfigSnapshot(mode, payload.providerId, payload.configSnapshot) ??
+          undefined,
+        toolPolicySnapshot:
+          composeToolPolicy(mode, payload.toolPolicySnapshot) ?? undefined,
       });
       await runsRepo.updateRun(runId, { startedAt: new Date() });
 

@@ -11,6 +11,7 @@ import {
 import { Edit, Option, Plus, Trash } from "@/components/ui/icons";
 import {
   useArchiveRunMutation,
+  useDeleteRunMutation,
   useGetAccountQuery,
   useListCollectionsQuery,
   useMoveRunToCollectionMutation,
@@ -67,6 +68,7 @@ export function SidebarChatList({
   const [setActiveSpace] = useSetActiveSpaceMutation();
   const [updateSpace] = useUpdateSpaceMutation();
   const [archiveRun] = useArchiveRunMutation();
+  const [deleteRun] = useDeleteRunMutation();
   const [moveRunToCollection] = useMoveRunToCollectionMutation();
   const [updateRun] = useUpdateRunMutation();
   const [updateCollection] = useUpdateCollectionMutation();
@@ -81,6 +83,10 @@ export function SidebarChatList({
   const [isSavingCollection, setIsSavingCollection] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Collection | null>(null);
   const [isDeletingCollection, setIsDeletingCollection] = useState(false);
+  // Archiving is reversible and fires straight from the menu; deleting is not,
+  // so it parks the run here until the confirmation comes back.
+  const [deleteRunTarget, setDeleteRunTarget] = useState<RecentRun | null>(null);
+  const [isDeletingRun, setIsDeletingRun] = useState(false);
 
   const activeTab = useAppSelector((state) => state.workspace.activeTab);
   const { data: recentRuns, isLoading } = useRecentChats();
@@ -166,16 +172,35 @@ export function SidebarChatList({
     navigate(targetPath);
   };
 
+  /** The open tab cannot survive its run leaving the list — send it home. */
+  const leaveIfActive = (runId: string) => {
+    if (activeTab !== runId) return;
+    navigate(WORKSPACE_BASE_PATH);
+    dispatch(openNewRunTab());
+  };
+
   const handleArchive = async (run: RecentRun) => {
     try {
       await archiveRun(run.id).unwrap();
-      if (activeTab === run.id) {
-        navigate(WORKSPACE_BASE_PATH);
-        dispatch(openNewRunTab());
-      }
+      leaveIfActive(run.id);
     } catch (error) {
       console.error("Failed to archive chat:", error);
+      toast.error("Failed to archive chat");
+    }
+  };
+
+  const handleDeleteRun = async () => {
+    if (!deleteRunTarget) return;
+    setIsDeletingRun(true);
+    try {
+      await deleteRun(deleteRunTarget.id).unwrap();
+      leaveIfActive(deleteRunTarget.id);
+      setDeleteRunTarget(null);
+    } catch (error) {
+      console.error("Failed to delete chat:", error);
       toast.error("Failed to delete chat");
+    } finally {
+      setIsDeletingRun(false);
     }
   };
 
@@ -264,6 +289,7 @@ export function SidebarChatList({
       isRecent={isRecent}
       onSelect={() => void handleSelectChat(run)}
       onArchive={() => void handleArchive(run)}
+      onDelete={() => setDeleteRunTarget(run)}
       onRename={(title) => void handleRename(run, title)}
       collections={collections ?? []}
       onMove={(collectionId) => void handleMove(run, collectionId)}
@@ -409,6 +435,16 @@ export function SidebarChatList({
         description="The chats inside move back to Recents and stay. Files added to this project are deleted."
         onConfirm={() => void handleDeleteCollection()}
         onCancel={() => setDeleteTarget(null)}
+      />
+      <DeleteConfirmationModal
+        isOpen={!!deleteRunTarget}
+        isDeleting={isDeletingRun}
+        title={`Delete ${deleteRunTarget ? chatLabel(deleteRunTarget) : "chat"}?`}
+        // Names the reversible neighbour, so the choice between the two menu
+        // entries is clear at the moment it matters.
+        description="This chat and its messages are permanently deleted. Archive instead to keep it recoverable from Settings → Archive."
+        onConfirm={() => void handleDeleteRun()}
+        onCancel={() => setDeleteRunTarget(null)}
       />
       <CollectionSourcesModal
         key={sourcesCollection?.id ?? "closed"}

@@ -42,7 +42,7 @@ export type FeatureAccent =
   | "blue"
   | "green"
   | "orange"
-  | "pink"
+  | "red"
   | "amber";
 
 export interface CoreFeature {
@@ -177,7 +177,7 @@ export const CORE_FEATURES: CoreFeature[] = [
     title: "Tasks inbox",
     blurb: "Issues & PRs from GitHub, Linear, Jira",
     Icon: Inbox,
-    accent: "pink",
+    accent: "red",
     preview: (
       <ListPreview
         heading="Assigned to me"

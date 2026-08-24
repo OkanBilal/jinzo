@@ -52,10 +52,20 @@ export interface ArchivedRunWorkspace {
   id: string;
   name: string;
   isArchived: boolean;
+  /** The workspace's project icon — what the sidebar prints beside it. */
+  icon: string | null;
+}
+
+/** The project a chat is filed under — its collection, named and iconed. */
+export interface ArchivedRunCollection {
+  id: string;
+  name: string;
+  icon: string | null;
 }
 
 export interface ArchivedRun extends Run {
   workspace: ArchivedRunWorkspace | null;
+  collection: ArchivedRunCollection | null;
 }
 
 export interface ActiveRunWorkspace {
@@ -190,9 +200,11 @@ export const runsApi = baseApi.injectEndpoints({
 
     listArchivedRuns: builder.query<ArchivedRun[], void>({
       query: () => ({ handler: CHANNELS.runs.listArchived }),
-      // The response embeds workspace archive state, so either aggregate can
-      // make this list stale.
-      providesTags: ["Runs", "Workspaces"],
+      // The response embeds the labels this list groups by — workspace name and
+      // archive state, the project icon behind it, the collection a chat is
+      // filed under — so a rename, a re-icon, or a delete in any of those
+      // aggregates makes it stale, not just a run mutation.
+      providesTags: ["Runs", "Workspaces", "Projects", "Collections"],
     }),
 
     listActiveRuns: builder.query<ActiveRun[], void>({

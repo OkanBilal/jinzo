@@ -10,7 +10,7 @@ import {
   Input,
   Text,
 } from "@/components/ui";
-import { Archive, Edit, OpenWith, Option } from "@/components/ui/icons";
+import { Archive, Edit, OpenWith, Option, Trash } from "@/components/ui/icons";
 import type { Collection, RecentRun } from "@/lib/redux/api";
 import { ProjectIcon } from "./project-icon";
 
@@ -56,8 +56,10 @@ interface ChatItemProps {
   isActive: boolean;
   isRecent?: boolean;
   onSelect: () => void;
-  /** Archive = the chat's delete affordance; recoverable in Settings → Archive. */
+  /** Reversible: the chat leaves the list but is restorable in Settings → Archive. */
   onArchive: () => void;
+  /** Permanent: the run row and its turns go for good. Confirmed by the caller. */
+  onDelete: () => void;
   onRename: (title: string) => void;
   collections: Collection[];
   onMove: (collectionId: string | null) => void;
@@ -70,6 +72,7 @@ export function ChatItem({
   isRecent = false,
   onSelect,
   onArchive,
+  onDelete,
   onRename,
   collections,
   onMove,
@@ -267,13 +270,22 @@ export function ChatItem({
           ))}
         </DropdownMenuSub>
         <DropdownMenuItem
-          variant="danger"
           onClick={() => {
             setIsMenuOpen(false);
             onArchive();
           }}
         >
           <Archive className="size-3.5" />
+          <span>Archive</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          variant="danger"
+          onClick={() => {
+            setIsMenuOpen(false);
+            onDelete();
+          }}
+        >
+          <Trash className="size-3.5" />
           <span>Delete</span>
         </DropdownMenuItem>
       </DropdownMenu>

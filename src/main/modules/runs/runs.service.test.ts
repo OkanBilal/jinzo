@@ -14,6 +14,8 @@ import {
   createToolCall,
   createRunTurn,
 } from "../../../test/factories";
+import { eq } from "drizzle-orm";
+import { collections } from "../../db/schema";
 import type { DatabaseInstance } from "../../db/types";
 import type Database from "better-sqlite3";
 
@@ -189,6 +191,56 @@ describe("runsService", () => {
       const [result] = await runsService.listArchivedRuns();
 
       expect(result.workspace).toBeNull();
+      expect(result.collection).toBeNull();
+    });
+
+    it("labels a workspace with its project's icon", async () => {
+      createProject(db, { id: "p1", name: "Mains", icon: "icon:rocket" });
+      createWorkspace(db, { id: "ws1", name: "Website", projectId: "p1" });
+      createRun(db, { id: "r1", workspaceId: "ws1", isArchived: true });
+
+      const [result] = await runsService.listArchivedRuns();
+
+      expect(result.workspace).toMatchObject({ id: "ws1", icon: "icon:rocket" });
+    });
+
+    it("labels a chat with the Collection it is filed under", async () => {
+      createCollection(db, { id: "c1", name: "Life", icon: "emoji:❤️" });
+      createRun(db, {
+        id: "r1",
+        providerId: "claude_code",
+        mode: "chat",
+        collectionId: "c1",
+        isArchived: true,
+      });
+
+      const [result] = await runsService.listArchivedRuns();
+
+      expect(result.workspace).toBeNull();
+      expect(result.collection).toEqual({
+        id: "c1",
+        name: "Life",
+        icon: "emoji:❤️",
+      });
+    });
+
+    it("unfiles a chat when its Collection is deleted", async () => {
+      createCollection(db, { id: "c1", name: "Life" });
+      createRun(db, {
+        id: "r1",
+        providerId: "claude_code",
+        mode: "chat",
+        collectionId: "c1",
+        isArchived: true,
+      });
+      // Deleting a Collection detaches its runs (FK ON DELETE SET NULL) — the
+      // archived chat outlives the project and falls back to "No project".
+      db.delete(collections).where(eq(collections.id, "c1")).run();
+
+      const [result] = await runsService.listArchivedRuns();
+
+      expect(result.collectionId).toBeNull();
+      expect(result.collection).toBeNull();
     });
   });
 
@@ -644,7 +696,7 @@ describe("runsService", () => {
     });
   });
 
-  describe("executeReview mode guard", () => {
+  describe("executeReview guards", () => {
     it("refuses a review from a non-Developer space, before touching the workspace", async () => {
       createWorkspace(db, { id: "ws-chat-review", accountId: "default" });
       createSpace(db, {
@@ -692,11 +744,41 @@ describe("runsService", () => {
         spaceId: "sp-dev-review",
         providerId: "claude_code",
         target: { type: "uncommittedChanges" },
+        toolPolicySnapshot: { allowedTools: ["Read", "Read"], disallowedTools: [] },
       });
       await flushBackground();
 
       expect(reviewRun).toHaveBeenCalled();
-      expect((await runsService.getRunById(runId))?.mode).toBe("developer");
+      const run = await runsService.getRunById(runId);
+      expect(run?.mode).toBe("developer");
+      // Composed on the way in, so the row carries a normalized policy.
+      expect(run?.toolPolicySnapshot).toEqual({
+        allowedTools: ["Read"],
+        disallowedTools: [],
+      });
+    });
+
+    it("rejects a malformed tool policy snapshot at review start", async () => {
+      createWorkspace(db, { id: "ws-bad-review", accountId: "default" });
+      createSpace(db, {
+        id: "sp-bad-review",
+        accountId: "default",
+        providerId: "claude_code",
+        mode: "developer",
+      });
+
+      await expect(
+        runsService.executeReview({
+          accountId: "default",
+          workspaceId: "ws-bad-review",
+          spaceId: "sp-bad-review",
+          providerId: "claude_code",
+          target: { type: "uncommittedChanges" },
+          toolPolicySnapshot: { allowedTools: "everything" } as any,
+        }),
+      ).rejects.toThrow("Invalid tool policy allowedTools");
+
+      expect(await runsService.getRunsByWorkspace("ws-bad-review")).toEqual([]);
     });
   });
 

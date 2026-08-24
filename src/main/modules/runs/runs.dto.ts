@@ -88,11 +88,25 @@ export interface ArchivedRunWorkspaceResponse {
   id: string;
   name: string;
   isArchived: boolean;
+  /** The workspace's project icon — what the sidebar prints beside it. */
+  icon: string | null;
 }
 
-/** An archived run enriched for Settings › Archive grouping. */
+/** The project a chat is filed under — its collection, named and iconed. */
+export interface ArchivedRunCollectionResponse {
+  id: string;
+  name: string;
+  icon: string | null;
+}
+
+/**
+ * An archived run enriched for Settings › Archive grouping. Developer runs are
+ * grouped by workspace and chats by collection, so both labels travel with the
+ * run — the renderer has no link from a run to either.
+ */
 export interface ArchivedRunResponse extends RunResponse {
   workspace: ArchivedRunWorkspaceResponse | null;
+  collection: ArchivedRunCollectionResponse | null;
 }
 
 /**

@@ -261,7 +261,12 @@ function parseToolPolicySnapshot(snapshot: unknown): ModeToolPolicy | null {
 /**
  * The tool policy a run carries. Permissions compose restrictively:
  * hard denials accumulate, while every non-null allowlist narrows the result.
- * A caller may make a mode stricter, but can never widen its ceiling.
+ *
+ * A caller may make a mode stricter, but can never loosen what the mode
+ * restricts: the mode's denials survive, and where the mode sets an allowlist
+ * it bounds the result. Where it sets none (developer, work), the caller's
+ * allowlist still replaces the provider's default list — "stricter" is
+ * measured against the mode, not against that default.
  */
 export function composeToolPolicy(
   mode: ModeId | null | undefined,
