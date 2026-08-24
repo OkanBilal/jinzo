@@ -56,13 +56,18 @@ const PROVIDER_METADATA_DEFAULTS: Record<string, Record<string, string>> = {
 // `getConnectionAndSecrets` below, which also surfaces the typed
 // connection row for follow-up queries on metadata.
 // ─────────────────────────────────────────────────────────────
-export async function getConnectionWithSecrets(provider: string): Promise<{
+export async function getConnectionWithSecrets(
+  provider: string,
+  connectionId?: string,
+): Promise<{
   id: string;
   secrets: Record<string, string>;
   metadata: Record<string, unknown>;
 } | null> {
-  const connection = await connectionsRepo.findByProvider(provider);
-  if (!connection) return null;
+  const connection = connectionId
+    ? await connectionsRepo.findById(connectionId)
+    : await connectionsRepo.findByProvider(provider);
+  if (!connection || connection.provider !== provider) return null;
 
   const token = await connectionsRepo.findCurrentToken(connection.id);
   if (!token?.accessTokenEnc) return null;

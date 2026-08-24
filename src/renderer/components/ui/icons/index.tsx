@@ -153,6 +153,8 @@ export { default as Minimize} from "./minimize"
 export { default as Write} from "./write"
 export { default as Box} from "./box"
 export { default as New} from "./new"
+export { default as Link} from "./link"
+
 
 
 

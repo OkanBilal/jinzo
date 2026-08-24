@@ -1,5 +1,6 @@
 import type {
   AddCollectionSourcePayload,
+  CollectionIdentityOptions,
   CreateCollectionPayload,
   UpdateCollectionPayload,
 } from "./collections.dto";
@@ -43,6 +44,22 @@ export function validateCreateCollection(
     ...(data as unknown as CreateCollectionPayload),
     name: obj.name.trim(),
   };
+}
+
+export function validateCollectionIdentity(
+  payload: unknown,
+): CollectionIdentityOptions {
+  if (!payload || typeof payload !== "object") {
+    throw new Error("Collection identity must be an object");
+  }
+  const obj = payload as Record<string, unknown>;
+  if (typeof obj.id !== "string" || !obj.id.trim()) {
+    throw new Error("Collection id is required");
+  }
+  if (typeof obj.accountId !== "string" || !obj.accountId.trim()) {
+    throw new Error("accountId is required");
+  }
+  return { id: obj.id, accountId: obj.accountId };
 }
 
 export function validateUpdateCollection(

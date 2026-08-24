@@ -129,8 +129,8 @@ export interface WorkspaceListResponse {
  * out one call per row.
  */
 export interface ArchivedWorkspaceResponse extends WorkspaceResponse {
-  /** Display name of the owning Developer Project. */
-  projectName: string;
+  /** Display name of the owning Developer Project, or null for a dangling row. */
+  projectName: string | null;
   /** Whether `rootPath` is still on disk. See `workspacePathExists`. */
   pathExists: boolean;
   /**

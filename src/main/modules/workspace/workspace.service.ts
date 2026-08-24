@@ -462,13 +462,9 @@ export const workspaceService = {
 
     return archived.map((workspace) => {
       const worktree = workspace.metadata?.worktree;
-      const projectName = nameByProject.get(workspace.projectId);
-      if (!projectName) {
-        throw new Error("Workspace project not found");
-      }
       return {
         ...workspace,
-        projectName,
+        projectName: nameByProject.get(workspace.projectId) ?? null,
         pathExists: workspacePathExists(workspace.rootPath),
         worktree: worktree?.enabled ? worktree : null,
       };
@@ -915,6 +911,9 @@ export const workspaceService = {
   async unarchive(id: string): Promise<WorkspaceResponse> {
     const workspace = await workspaceRepo.findById(id);
     if (!workspace) throw new Error("Workspace not found");
+    if (!(await projectsRepo.findById(workspace.projectId))) {
+      throw new Error("Workspace project not found");
+    }
 
     const unarchived = await workspaceRepo.unarchive(id);
     if (!unarchived) throw new Error("Failed to unarchive workspace");

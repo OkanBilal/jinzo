@@ -11,7 +11,7 @@ import { DEFAULT_MODE_ID, type ModeId } from "../../../shared/modes";
 import {
   composeConfigSnapshot,
   composeExtraInstructions,
-  getModeHarness,
+  composeToolPolicy,
 } from "../../../shared/mode-harness";
 import {
   createWorkAdapter,
@@ -19,9 +19,13 @@ import {
   type WorkRunAdapter,
   type WorkRunEvent,
 } from "../providers/adapters";
-import type { WorkRunResult, WorkRunToolPolicy } from "../../../shared/adapter.types";
+import type { WorkRunResult } from "../../../shared/adapter.types";
 import { createRunSession, type RunSession, type RunSessionResult } from "./run-session";
-import { managedRunDir, resolveRunExecution } from "./run-execution";
+import {
+  managedRunDir,
+  removeManagedRunDir,
+  resolveRunExecution,
+} from "./run-execution";
 import { materializeCollectionSourceContext } from "./run-collection-sources";
 import { emit } from "../../ipc-kit";
 import { runSessionRegistry } from "./run-session-registry";
@@ -124,7 +128,7 @@ async function validateCollectionForRun(
   if (mode === "developer") {
     throw new Error("Developer runs cannot belong to a collection");
   }
-  const collection = await collectionsService.get(collectionId);
+  const collection = await collectionsService.get({ id: collectionId, accountId });
   if (!collection) throw new Error("Collection not found");
   if (collection.accountId !== accountId) {
     throw new Error("Collection does not belong to this account");
@@ -462,6 +466,7 @@ export const runsService = {
     const run = await runsRepo.findRunById(id);
     if (!run) throw new Error("Run not found");
     await syncCodexRunSession(run, "delete");
+    removeManagedRunDir(run.id, run.mode);
     await runsRepo.deleteRun(id);
   },
 
@@ -494,7 +499,10 @@ export const runsService = {
       throw new Error("Cannot restore a developer run without a workspace");
     }
     if (run.collectionId) {
-      const collection = await collectionsService.get(run.collectionId);
+      const collection = await collectionsService.get({
+        id: run.collectionId,
+        accountId: run.accountId,
+      });
       if (!collection || collection.isArchived) {
         await runsRepo.moveToCollection(run.id, null);
       }
@@ -625,9 +633,7 @@ export const runsService = {
       const extraInstructions = composeExtraInstructions(mode, space?.systemPrompt);
       // Persist the *composed* values — the run row records what actually ran.
       const configSnapshot = composeConfigSnapshot(mode, payload.providerId, payload.configSnapshot);
-      const toolPolicy =
-        (payload.toolPolicySnapshot as WorkRunToolPolicy | undefined) ??
-        getModeHarness(mode).toolPolicy;
+      const toolPolicy = composeToolPolicy(mode, payload.toolPolicySnapshot);
 
       await runsRepo.insertRun({
         id: runId,
@@ -888,11 +894,23 @@ export const runsService = {
         await workspaceService.update(workspace.id, { status: "in_progress" });
       }
 
+      const toolPolicy = composeToolPolicy(
+        run.mode,
+        run.toolPolicySnapshot,
+      );
+      const configSnapshot = composeConfigSnapshot(
+        run.mode,
+        run.providerId,
+        run.configSnapshot,
+      );
+
       await runsRepo.updateRun(runId, {
         status: "running",
         startedAt: new Date(),
         endedAt: null,
         lastError: null,
+        configSnapshot: configSnapshot ?? undefined,
+        toolPolicySnapshot: toolPolicy ?? undefined,
       });
 
       const collectionContext = await materializeCollectionSourceContext({
@@ -942,10 +960,8 @@ export const runsService = {
           systemPrompt: run.systemPrompt,
           mode: run.mode,
           extraInstructions: composeExtraInstructions(run.mode, space?.systemPrompt),
-          toolPolicy:
-            (run.toolPolicySnapshot as WorkRunToolPolicy | null) ??
-            getModeHarness(run.mode).toolPolicy,
-          configSnapshot: composeConfigSnapshot(run.mode, run.providerId, run.configSnapshot),
+          toolPolicy,
+          configSnapshot,
           context:
             effectiveAdditionalContext.length > 0
               ? effectiveAdditionalContext
@@ -1020,6 +1036,16 @@ export const runsService = {
         await workspaceService.update(workspace.id, { status: "in_progress" });
       }
 
+      const toolPolicy = composeToolPolicy(
+        sourceRun.mode,
+        sourceRun.toolPolicySnapshot,
+      );
+      const configSnapshot = composeConfigSnapshot(
+        sourceRun.mode,
+        sourceRun.providerId,
+        sourceRun.configSnapshot,
+      );
+
       await runsRepo.insertRun({
         id: newRunId,
         accountId,
@@ -1032,8 +1058,8 @@ export const runsService = {
         goal: message,
         status: "running",
         systemPrompt: sourceRun.systemPrompt ?? undefined,
-        configSnapshot: sourceRun.configSnapshot ?? undefined,
-        toolPolicySnapshot: sourceRun.toolPolicySnapshot ?? undefined,
+        configSnapshot: configSnapshot ?? undefined,
+        toolPolicySnapshot: toolPolicy ?? undefined,
       });
 
       const execution = resolveRunExecution({
@@ -1094,14 +1120,8 @@ export const runsService = {
           model: sourceRun.model ?? undefined,
           mode: sourceRun.mode,
           extraInstructions: composeExtraInstructions(sourceRun.mode, sourceSpace?.systemPrompt),
-          toolPolicy:
-            (sourceRun.toolPolicySnapshot as WorkRunToolPolicy | null) ??
-            getModeHarness(sourceRun.mode).toolPolicy,
-          configSnapshot: composeConfigSnapshot(
-            sourceRun.mode,
-            sourceRun.providerId,
-            sourceRun.configSnapshot,
-          ),
+          toolPolicy,
+          configSnapshot,
           context:
             effectiveAdditionalContext.length > 0
               ? effectiveAdditionalContext

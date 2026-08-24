@@ -17,6 +17,11 @@ export interface ListCollectionsOptions {
   includeArchived?: boolean;
 }
 
+export interface CollectionIdentityOptions {
+  id: string;
+  accountId: string;
+}
+
 export interface CreateCollectionPayload {
   id?: string;
   accountId: string;

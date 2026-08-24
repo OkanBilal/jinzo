@@ -2,6 +2,7 @@ import { CHANNELS } from "../../../shared/ipc-kit/channels";
 import { handle } from "../../ipc-kit/handle";
 import { ipcMain } from "../../ipc-kit/ipc-main";
 import type {
+  CollectionIdentityOptions,
   ListCollectionsOptions,
   ListCollectionSourcesOptions,
   RemoveCollectionSourcePayload,
@@ -15,7 +16,7 @@ export function registerCollectionsIpc(): void {
   );
   ipcMain.handle(
     CHANNELS.collections.get,
-    handle((id: string) => collectionsService.get(id)),
+    handle((options: CollectionIdentityOptions) => collectionsService.get(options)),
   );
   ipcMain.handle(
     CHANNELS.collections.create,
@@ -23,19 +24,27 @@ export function registerCollectionsIpc(): void {
   );
   ipcMain.handle(
     CHANNELS.collections.update,
-    handle((id: string, payload: unknown) => collectionsService.update(id, payload)),
+    handle((options: CollectionIdentityOptions, payload: unknown) =>
+      collectionsService.update(options, payload),
+    ),
   );
   ipcMain.handle(
     CHANNELS.collections.archive,
-    handle((id: string) => collectionsService.archive(id)),
+    handle((options: CollectionIdentityOptions) =>
+      collectionsService.archive(options),
+    ),
   );
   ipcMain.handle(
     CHANNELS.collections.unarchive,
-    handle((id: string) => collectionsService.unarchive(id)),
+    handle((options: CollectionIdentityOptions) =>
+      collectionsService.unarchive(options),
+    ),
   );
   ipcMain.handle(
     CHANNELS.collections.remove,
-    handle((id: string) => collectionsService.remove(id)),
+    handle((options: CollectionIdentityOptions) =>
+      collectionsService.remove(options),
+    ),
   );
   ipcMain.handle(
     CHANNELS.collections.listSources,

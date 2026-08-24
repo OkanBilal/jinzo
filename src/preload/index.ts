@@ -38,6 +38,8 @@ const api = {
       ipcRenderer.invoke(CHANNELS.issues.getAll, options),
     getById: (entityId: string) =>
       ipcRenderer.invoke(CHANNELS.issues.getById, entityId),
+    getDetail: (entityId: string) =>
+      ipcRenderer.invoke(CHANNELS.issues.getDetail, entityId),
     create: (payload: unknown) => ipcRenderer.invoke(CHANNELS.issues.create, payload),
     update: (entityId: string, payload: unknown) =>
       ipcRenderer.invoke(CHANNELS.issues.update, entityId, payload),
@@ -200,17 +202,18 @@ const api = {
       accountId: string;
       includeArchived?: boolean;
     }) => ipcRenderer.invoke(CHANNELS.collections.list, options),
-    get: (id: string) => ipcRenderer.invoke(CHANNELS.collections.get, id),
+    get: (options: { id: string; accountId: string }) =>
+      ipcRenderer.invoke(CHANNELS.collections.get, options),
     create: (payload: unknown) =>
       ipcRenderer.invoke(CHANNELS.collections.create, payload),
-    update: (id: string, payload: unknown) =>
-      ipcRenderer.invoke(CHANNELS.collections.update, id, payload),
-    archive: (id: string) =>
-      ipcRenderer.invoke(CHANNELS.collections.archive, id),
-    unarchive: (id: string) =>
-      ipcRenderer.invoke(CHANNELS.collections.unarchive, id),
-    remove: (id: string) =>
-      ipcRenderer.invoke(CHANNELS.collections.remove, id),
+    update: (options: { id: string; accountId: string }, payload: unknown) =>
+      ipcRenderer.invoke(CHANNELS.collections.update, options, payload),
+    archive: (options: { id: string; accountId: string }) =>
+      ipcRenderer.invoke(CHANNELS.collections.archive, options),
+    unarchive: (options: { id: string; accountId: string }) =>
+      ipcRenderer.invoke(CHANNELS.collections.unarchive, options),
+    remove: (options: { id: string; accountId: string }) =>
+      ipcRenderer.invoke(CHANNELS.collections.remove, options),
     listSources: (options: { accountId: string; collectionId: string }) =>
       ipcRenderer.invoke(CHANNELS.collections.listSources, options),
     addSource: (payload: unknown) =>

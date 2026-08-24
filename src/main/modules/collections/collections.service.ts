@@ -2,10 +2,12 @@ import { createHash, randomUUID } from "crypto";
 import { collectionsRepo } from "./collections.repo";
 import {
   validateAddCollectionSource,
+  validateCollectionIdentity,
   validateCreateCollection,
   validateUpdateCollection,
 } from "./collections.validation";
 import type {
+  CollectionIdentityOptions,
   CollectionResponse,
   CollectionSourceResponse,
   CollectionSourceMaterial,
@@ -42,8 +44,17 @@ async function requireOwnedCollection(
   collectionId: string,
   accountId: string,
 ): Promise<CollectionResponse> {
-  const collection = await collectionsRepo.findById(collectionId);
+  const collection = await findOwnedCollection({ id: collectionId, accountId });
   if (!collection) throw new Error("Collection not found");
+  return collection;
+}
+
+async function findOwnedCollection(
+  options: CollectionIdentityOptions,
+): Promise<CollectionResponse | null> {
+  const { id, accountId } = validateCollectionIdentity(options);
+  const collection = await collectionsRepo.findById(id);
+  if (!collection) return null;
   if (collection.accountId !== accountId) {
     throw new Error("Collection does not belong to this account");
   }
@@ -55,8 +66,10 @@ export const collectionsService = {
     return collectionsRepo.list(options);
   },
 
-  async get(id: string): Promise<CollectionResponse | null> {
-    return collectionsRepo.findById(id);
+  async get(
+    options: CollectionIdentityOptions,
+  ): Promise<CollectionResponse | null> {
+    return findOwnedCollection(options);
   },
 
   async create(payload: unknown): Promise<CollectionResponse> {
@@ -68,33 +81,69 @@ export const collectionsService = {
     return created;
   },
 
-  async update(id: string, payload: unknown): Promise<CollectionResponse> {
+  async update(
+    options: CollectionIdentityOptions,
+    payload: unknown,
+  ): Promise<CollectionResponse> {
+    const collection = await requireOwnedCollection(
+      options.id,
+      options.accountId,
+    );
     const data = validateUpdateCollection(payload);
-    const updated = await collectionsRepo.update(id, data);
+    const updated = await collectionsRepo.update(
+      collection.id,
+      collection.accountId,
+      data,
+    );
     if (!updated) throw new Error("Collection not found");
     return updated;
   },
 
-  async archive(id: string): Promise<CollectionResponse> {
-    const archived = await collectionsRepo.setArchived(id, true);
+  async archive(
+    options: CollectionIdentityOptions,
+  ): Promise<CollectionResponse> {
+    const collection = await requireOwnedCollection(
+      options.id,
+      options.accountId,
+    );
+    const archived = await collectionsRepo.setArchived(
+      collection.id,
+      collection.accountId,
+      true,
+    );
     if (!archived) throw new Error("Collection not found");
     return archived;
   },
 
-  async unarchive(id: string): Promise<CollectionResponse> {
-    const restored = await collectionsRepo.setArchived(id, false);
+  async unarchive(
+    options: CollectionIdentityOptions,
+  ): Promise<CollectionResponse> {
+    const collection = await requireOwnedCollection(
+      options.id,
+      options.accountId,
+    );
+    const restored = await collectionsRepo.setArchived(
+      collection.id,
+      collection.accountId,
+      false,
+    );
     if (!restored) throw new Error("Collection not found");
     return restored;
   },
 
   /** Removing a Collection preserves its runs; the FK detaches them. */
-  async remove(id: string): Promise<void> {
-    if (!(await collectionsRepo.findById(id))) {
-      throw new Error("Collection not found");
-    }
-    const stagedStorage = stageCollectionStorageRemoval(id);
+  async remove(options: CollectionIdentityOptions): Promise<void> {
+    const collection = await requireOwnedCollection(
+      options.id,
+      options.accountId,
+    );
+    const stagedStorage = stageCollectionStorageRemoval(collection.id);
     try {
-      await collectionsRepo.remove(id);
+      const removed = await collectionsRepo.remove(
+        collection.id,
+        collection.accountId,
+      );
+      if (!removed) throw new Error("Collection not found");
       stagedStorage.commit();
     } catch (error) {
       stagedStorage.restore();

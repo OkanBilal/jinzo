@@ -54,7 +54,7 @@ export interface WorkspaceWorktree {
 
 /** An archived workspace enriched for Settings › Archive. */
 export interface ArchivedWorkspace extends Workspace {
-  projectName: string;
+  projectName: string | null;
   pathExists: boolean;
   /** Non-null only for worktree workspaces — the one case Delete can clean up. */
   worktree: WorkspaceWorktree | null;

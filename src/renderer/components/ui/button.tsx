@@ -39,7 +39,7 @@ const variantStyles: Record<ButtonVariant, string> = {
   danger: "text-primary glass-danger",
   icon: "p-1 rounded-md text-primary-600 dark:text-primary-400 hover:bg-primary-200/40 dark:hover:bg-primary-700",
   subtle:
-    "flex items-center gap-2 hover:bg-primary/80 dark:hover:bg-primary/10",
+    "flex items-center gap-2 hover:bg-primary/50 dark:hover:bg-primary/5",
   bare: "",
 };
 

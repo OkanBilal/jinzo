@@ -5,6 +5,7 @@ export {
 export { collectionsService } from "./collections.service";
 export type {
   AddCollectionSourcePayload,
+  CollectionIdentityOptions,
   CollectionResponse,
   CollectionSourceResponse,
   CreateCollectionPayload,

@@ -147,6 +147,7 @@ export const CHANNELS = {
     delete: "issues:delete",
     getAll: "issues:getAll",
     getById: "issues:getById",
+    getDetail: "issues:getDetail",
     update: "issues:update",
   },
   projects: {

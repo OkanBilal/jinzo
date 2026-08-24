@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import { readFileSync } from 'fs';
 
-const pkg = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf-8'));
+const pkg = JSON.parse(readFileSync(path.resolve(import.meta.dirname, 'package.json'), 'utf-8'));
 
 //  https://vitejs.dev/config
 export default defineConfig({
@@ -12,17 +12,17 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
-  root: path.resolve(__dirname, 'src/renderer'),
+  root: path.resolve(import.meta.dirname, 'src/renderer'),
   build: {
-    outDir: path.resolve(__dirname, '.vite/renderer'),
+    outDir: path.resolve(import.meta.dirname, '.vite/renderer'),
     emptyOutDir: true,
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src/renderer'),
+      '@': path.resolve(import.meta.dirname, 'src/renderer'),
     },
   },
   css: {
-    postcss: path.resolve(__dirname, 'postcss.config.js'),
+    postcss: path.resolve(import.meta.dirname, 'postcss.config.js'),
   },
 });

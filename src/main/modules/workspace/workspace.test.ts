@@ -616,6 +616,28 @@ describe("workspaceService — workspace lifecycle", () => {
       expect(row.projectName).toBe("Test Project");
     });
 
+    it("keeps the Archive list usable when one Workspace project is missing", async () => {
+      createWorkspace(db, {
+        id: "valid",
+        projectId: "valid-project",
+        isArchived: true,
+      });
+      createWorkspace(db, {
+        id: "dangling",
+        projectId: "missing-project",
+        isArchived: true,
+      });
+      _sqlite.pragma("foreign_keys = OFF");
+      _sqlite.prepare("DELETE FROM projects WHERE id = ?").run("missing-project");
+      _sqlite.pragma("foreign_keys = ON");
+
+      const rows = await workspaceService.listArchived();
+      const byId = new Map(rows.map((row) => [row.id, row]));
+
+      expect(byId.get("valid")?.projectName).toBe("Test Project");
+      expect(byId.get("dangling")?.projectName).toBeNull();
+    });
+
     it("exposes worktree metadata only for worktree workspaces", async () => {
       createWorkspace(db, {
         id: "wt",
@@ -667,6 +689,23 @@ describe("workspaceService — workspace lifecycle", () => {
       await expect(workspaceService.unarchive("missing")).rejects.toThrow(
         "Workspace not found",
       );
+    });
+
+    it("refuses to restore a Workspace whose Project is missing", async () => {
+      const workspace = createWorkspace(db, {
+        id: "dangling",
+        isArchived: true,
+      });
+      _sqlite.pragma("foreign_keys = OFF");
+      _sqlite.prepare("DELETE FROM projects WHERE id = ?").run(workspace.projectId);
+      _sqlite.pragma("foreign_keys = ON");
+
+      await expect(workspaceService.unarchive(workspace.id)).rejects.toThrow(
+        "Workspace project not found",
+      );
+      expect(await workspaceRepo.findById(workspace.id)).toMatchObject({
+        isArchived: true,
+      });
     });
 
     // Unarchiving must not re-run setup or touch the repo — the row comes back

@@ -25,11 +25,21 @@ function assertSafeRunId(runId: string): void {
  * against it (the file explorer, the renderer's file-open) must not.
  */
 export function managedRunDir(runId: string, mode: ModeId): string {
-  if (mode === "work") {
-    assertSafeRunId(runId);
-    return path.join(userDataRoot(), "runs", runId, "work");
+  if (mode === "developer") {
+    throw new Error("Developer runs do not have managed working directories");
   }
-  return path.join(userDataRoot(), "runtime", "chat");
+  assertSafeRunId(runId);
+  return path.join(userDataRoot(), "runs", runId, mode);
+}
+
+/** Remove the app-owned execution tree for one workspace-less run. */
+export function removeManagedRunDir(runId: string, mode: ModeId): void {
+  if (mode === "developer") return;
+  assertSafeRunId(runId);
+  fs.rmSync(path.join(userDataRoot(), "runs", runId), {
+    recursive: true,
+    force: true,
+  });
 }
 
 /**
@@ -39,15 +49,14 @@ export function managedRunDir(runId: string, mode: ModeId): string {
  * workspace. `runs` covers every per-run directory with one entry.
  */
 export function managedExecutionRoots(): string[] {
-  const root = userDataRoot();
-  return [path.join(root, "runs"), path.join(root, "runtime", "chat")];
+  return [path.join(userDataRoot(), "runs")];
 }
 
 /**
  * Resolve the explicit cwd handed to every provider adapter.
  *
- * Developer and legacy non-developer runs keep their real Workspace path.
- * New Work runs get a durable per-run directory; Chat shares one neutral cwd.
+ * Developer runs keep their real Workspace path.
+ * Work and Chat runs each get a durable per-run directory.
  */
 export function resolveRunExecution(args: {
   runId: string;

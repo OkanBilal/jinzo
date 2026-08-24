@@ -53,31 +53,45 @@ export const collectionsRepo = {
 
   async update(
     id: string,
+    accountId: string,
     payload: UpdateCollectionPayload,
   ): Promise<CollectionResponse | null> {
     const db = getDb();
-    await db
+    const [row] = await db
       .update(collections)
       .set({ ...payload, updatedAt: sql`(unixepoch())` })
-      .where(eq(collections.id, id));
-    return this.findById(id);
+      .where(
+        and(eq(collections.id, id), eq(collections.accountId, accountId)),
+      )
+      .returning();
+    return row ? formatCollectionResponse(row) : null;
   },
 
   async setArchived(
     id: string,
+    accountId: string,
     isArchived: boolean,
   ): Promise<CollectionResponse | null> {
     const db = getDb();
-    await db
+    const [row] = await db
       .update(collections)
       .set({ isArchived, updatedAt: sql`(unixepoch())` })
-      .where(eq(collections.id, id));
-    return this.findById(id);
+      .where(
+        and(eq(collections.id, id), eq(collections.accountId, accountId)),
+      )
+      .returning();
+    return row ? formatCollectionResponse(row) : null;
   },
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, accountId: string): Promise<boolean> {
     const db = getDb();
-    await db.delete(collections).where(eq(collections.id, id));
+    const deleted = await db
+      .delete(collections)
+      .where(
+        and(eq(collections.id, id), eq(collections.accountId, accountId)),
+      )
+      .returning({ id: collections.id });
+    return deleted.length > 0;
   },
 
   async listSources(collectionId: string): Promise<CollectionSourceResponse[]> {

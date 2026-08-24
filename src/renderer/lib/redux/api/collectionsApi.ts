@@ -17,6 +17,11 @@ export interface CreateCollectionPayload {
   icon?: string;
 }
 
+export interface CollectionIdentityOptions {
+  id: string;
+  accountId: string;
+}
+
 export interface CollectionSource {
   id: string;
   collectionId: string;
@@ -58,9 +63,14 @@ export const collectionsApi = baseApi.injectEndpoints({
       }),
       providesTags: ["Collections"],
     }),
-    getCollection: builder.query<Collection | null, string>({
-      query: (id) => ({ handler: CHANNELS.collections.get, args: [id] }),
-      providesTags: (_result, _error, id) => [{ type: "Collections", id }],
+    getCollection: builder.query<Collection | null, CollectionIdentityOptions>({
+      query: (options) => ({
+        handler: CHANNELS.collections.get,
+        args: [options],
+      }),
+      providesTags: (_result, _error, { id }) => [
+        { type: "Collections", id },
+      ],
     }),
     createCollection: builder.mutation<Collection, CreateCollectionPayload>({
       query: (payload) => ({
@@ -71,24 +81,35 @@ export const collectionsApi = baseApi.injectEndpoints({
     }),
     updateCollection: builder.mutation<
       Collection,
-      { id: string; payload: { name?: string; icon?: string | null } }
+      CollectionIdentityOptions & {
+        payload: { name?: string; icon?: string | null };
+      }
     >({
-      query: ({ id, payload }) => ({
+      query: ({ id, accountId, payload }) => ({
         handler: CHANNELS.collections.update,
-        args: [id, payload],
+        args: [{ id, accountId }, payload],
       }),
       invalidatesTags: ["Collections"],
     }),
-    archiveCollection: builder.mutation<Collection, string>({
-      query: (id) => ({ handler: CHANNELS.collections.archive, args: [id] }),
+    archiveCollection: builder.mutation<Collection, CollectionIdentityOptions>({
+      query: (options) => ({
+        handler: CHANNELS.collections.archive,
+        args: [options],
+      }),
       invalidatesTags: ["Collections"],
     }),
-    unarchiveCollection: builder.mutation<Collection, string>({
-      query: (id) => ({ handler: CHANNELS.collections.unarchive, args: [id] }),
+    unarchiveCollection: builder.mutation<Collection, CollectionIdentityOptions>({
+      query: (options) => ({
+        handler: CHANNELS.collections.unarchive,
+        args: [options],
+      }),
       invalidatesTags: ["Collections"],
     }),
-    removeCollection: builder.mutation<void, string>({
-      query: (id) => ({ handler: CHANNELS.collections.remove, args: [id] }),
+    removeCollection: builder.mutation<void, CollectionIdentityOptions>({
+      query: (options) => ({
+        handler: CHANNELS.collections.remove,
+        args: [options],
+      }),
       invalidatesTags: ["Collections", "RunsRecent"],
     }),
     listCollectionSources: builder.query<

@@ -350,7 +350,7 @@ function ArchivedRunsPanel({ runs }: { runs: ArchivedRun[] }) {
   );
 }
 
-function ArchivedWorkspaceRow({
+export function ArchivedWorkspaceRow({
   workspace,
   onUnarchive,
   onDelete,
@@ -361,6 +361,7 @@ function ArchivedWorkspaceRow({
 }) {
   const branch = workspace.worktree?.name ?? workspace.baseBranch;
   const statusConfig = getWorkspaceStatusConfig(workspace.status);
+  const projectMissing = workspace.projectName === null;
 
   return (
     <div className="flex flex-col gap-3 py-3 md:flex-row md:items-center md:justify-between md:gap-8">
@@ -379,6 +380,17 @@ function ArchivedWorkspaceRow({
               Folder missing
             </Text>
           )}
+          {projectMissing && (
+            <Text
+              as="span"
+              size="t"
+              tone="warning"
+              className="flex shrink-0 items-center gap-1 rounded-full bg-warning/10 px-1.5 py-0.5"
+            >
+              <Danger className="size-3" />
+              Project missing
+            </Text>
+          )}
         </div>
 
         <div className="mt-0.5 flex min-w-0 items-center gap-1">
@@ -395,7 +407,16 @@ function ArchivedWorkspaceRow({
         </div>
       </div>
 
-      <ArchiveRowActions onDelete={onDelete} onUnarchive={onUnarchive} />
+      <ArchiveRowActions
+        onDelete={onDelete}
+        onUnarchive={onUnarchive}
+        unarchiveDisabled={projectMissing}
+        unarchiveTooltip={
+          projectMissing
+            ? "This workspace's Project is missing and it cannot be restored"
+            : undefined
+        }
+      />
     </div>
   );
 }

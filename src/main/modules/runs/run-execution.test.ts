@@ -12,6 +12,7 @@ vi.mock("electron", () => ({
 import {
   managedExecutionRoots,
   managedRunDir,
+  removeManagedRunDir,
   resolveRunExecution,
 } from "./run-execution";
 
@@ -38,15 +39,16 @@ describe("resolveRunExecution", () => {
     expect(fs.statSync(first.cwd).isDirectory()).toBe(true);
   });
 
-  it("shares one neutral directory for Chat runs", () => {
+  it("creates one durable directory per Chat run", () => {
     const first = resolveRunExecution({ runId: "chat-1", mode: "chat" });
     const second = resolveRunExecution({ runId: "chat-2", mode: "chat" });
 
     expect(first).toEqual({
       workspaceId: null,
-      cwd: path.join(TEST_USER_DATA, "runtime", "chat"),
+      cwd: path.join(TEST_USER_DATA, "runs", "chat-1", "chat"),
     });
-    expect(second.cwd).toBe(first.cwd);
+    expect(second.cwd).not.toBe(first.cwd);
+    expect(fs.statSync(second.cwd).isDirectory()).toBe(true);
   });
 
   it("rejects a Developer run without a Workspace", () => {
@@ -66,24 +68,40 @@ describe("managedRunDir", () => {
     expect(fs.existsSync(dir)).toBe(false);
   });
 
-  it("shares one directory across Chat runs", () => {
-    expect(managedRunDir("chat-1", "chat")).toBe(
+  it("gives each Chat run its own directory", () => {
+    expect(managedRunDir("chat-1", "chat")).not.toBe(
       managedRunDir("chat-2", "chat"),
     );
   });
 
   it("rejects a run id that would escape the runs directory", () => {
     expect(() => managedRunDir("../escape", "work")).toThrow();
+    expect(() => managedRunDir("../escape", "chat")).toThrow();
   });
 });
 
 describe("managedExecutionRoots", () => {
-  it("covers both managed directories with the runs parent", () => {
+  it("covers every managed directory with the runs parent", () => {
     const roots = managedExecutionRoots();
 
-    expect(roots).toContain(path.join(TEST_USER_DATA, "runs"));
-    expect(roots).toContain(path.join(TEST_USER_DATA, "runtime", "chat"));
-    // Every Work run sits under the first entry, so one root admits them all.
+    expect(roots).toEqual([path.join(TEST_USER_DATA, "runs")]);
     expect(managedRunDir("any-run", "work").startsWith(roots[0])).toBe(true);
+    expect(managedRunDir("any-chat", "chat").startsWith(roots[0])).toBe(true);
+  });
+});
+
+describe("removeManagedRunDir", () => {
+  it("removes only the target run's managed tree", () => {
+    const first = resolveRunExecution({ runId: "chat-1", mode: "chat" });
+    const second = resolveRunExecution({ runId: "chat-2", mode: "chat" });
+    fs.writeFileSync(path.join(first.cwd, "source.txt"), "first");
+    fs.writeFileSync(path.join(second.cwd, "source.txt"), "second");
+
+    removeManagedRunDir("chat-1", "chat");
+
+    expect(fs.existsSync(first.cwd)).toBe(false);
+    expect(fs.readFileSync(path.join(second.cwd, "source.txt"), "utf8")).toBe(
+      "second",
+    );
   });
 });

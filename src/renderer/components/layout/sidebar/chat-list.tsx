@@ -212,11 +212,12 @@ export function SidebarChatList({
     name: string;
     icon: string | null;
   }) => {
-    if (!editCollection) return;
+    if (!editCollection || !account) return;
     setIsSavingCollection(true);
     try {
       await updateCollection({
         id: editCollection.id,
+        accountId: account.id,
         payload: { name: draft.name, icon: draft.icon },
       }).unwrap();
       setEditCollection(null);
@@ -229,10 +230,13 @@ export function SidebarChatList({
   };
 
   const handleDeleteCollection = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget || !account) return;
     setIsDeletingCollection(true);
     try {
-      await removeCollection(deleteTarget.id).unwrap();
+      await removeCollection({
+        id: deleteTarget.id,
+        accountId: account.id,
+      }).unwrap();
       setDeleteTarget(null);
     } catch (error) {
       console.error("Failed to delete collection:", error);

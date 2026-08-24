@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { existsSync } from "fs";
+import { existsSync, mkdirSync, statSync, writeFileSync } from "fs";
 import { createTestDb } from "../../../test/setup-db";
 import {
   createAccount,
@@ -97,6 +97,7 @@ vi.mock("../workspace", async () => {
 
 import { runsService } from "./runs.service";
 import { runsRepo } from "./runs.repo";
+import { managedRunDir } from "./run-execution";
 import { runSessionRegistry } from "./run-session-registry";
 import { createWorkAdapter } from "../providers/adapters";
 import { gitService } from "../git/git.service";
@@ -592,6 +593,32 @@ describe("runsService", () => {
       });
     });
 
+    it("chat's tool policy beats a caller snapshot that restores write access", async () => {
+      createSpace(db, {
+        id: "sp-chat-policy",
+        accountId: "default",
+        providerId: "claude_code",
+        mode: "chat",
+      });
+      const startRun = mockStartAdapter();
+
+      const { runId } = await runsService.executeRun({
+        accountId: "default",
+        spaceId: "sp-chat-policy",
+        providerId: "claude_code",
+        goal: "explain this repo",
+        toolPolicySnapshot: { allowedTools: null, disallowedTools: [] },
+      });
+      await flushBackground();
+
+      const request = startRun.mock.calls[0][0];
+      expect(request.toolPolicy.allowedTools).not.toContain("Bash");
+      expect(request.toolPolicy.disallowedTools).toContain("Bash");
+      expect((await runsService.getRunById(runId))?.toolPolicySnapshot).toEqual(
+        request.toolPolicy,
+      );
+    });
+
     it("layers the space's custom system prompt after the mode delta", async () => {
       createSpace(db, {
         id: "sp-sys",
@@ -680,6 +707,41 @@ describe("runsService", () => {
       });
       expect(request.toolPolicy?.allowedTools).not.toBeNull();
       expect(request.toolPolicy?.disallowedTools).toContain("Bash");
+    });
+
+    it("clamps and repairs an elevated chat policy snapshot on resume", async () => {
+      createRun(db, {
+        id: "run-chat-elevated",
+        accountId: "default",
+        providerId: "claude_code",
+        mode: "chat",
+        status: "succeeded",
+        sessionId: "sess-elevated",
+        toolPolicySnapshot: JSON.stringify({
+          allowedTools: null,
+          disallowedTools: [],
+        }),
+      });
+      const continueRun = vi.fn().mockResolvedValue({ status: "succeeded" });
+      vi.mocked(createWorkAdapter).mockReturnValue({
+        continueRun,
+        canResumeSession: vi.fn().mockResolvedValue(true),
+      } as any);
+
+      await runsService.continueRun({
+        runId: "run-chat-elevated",
+        accountId: "default",
+        message: "continue",
+      });
+      await flushBackground();
+
+      const policy = continueRun.mock.calls[0][0].toolPolicy;
+      expect(policy.allowedTools).not.toContain("Bash");
+      expect(policy.disallowedTools).toContain("Bash");
+      expect(
+        (await runsService.getRunById("run-chat-elevated"))
+          ?.toolPolicySnapshot,
+      ).toEqual(policy);
     });
   });
 
@@ -888,6 +950,21 @@ describe("runsService", () => {
       await runsService.deleteRun("r1");
 
       expect(await runsService.getRunById("r1")).toBeNull();
+    });
+
+    it("removes a workspace-less run's managed execution tree", async () => {
+      createRun(db, {
+        id: "chat-delete",
+        providerId: "claude_code",
+        mode: "chat",
+      });
+      const runDir = managedRunDir("chat-delete", "chat");
+      mkdirSync(runDir, { recursive: true });
+      writeFileSync(`${runDir}/source.txt`, "private context");
+
+      await runsService.deleteRun("chat-delete");
+
+      expect(() => statSync(runDir)).toThrow();
     });
 
     it("returns error when run does not exist", async () => {
@@ -2111,6 +2188,35 @@ describe("runsService", () => {
       expect(newRun).toBeTruthy();
       expect(newRun!.goal).toBe("fork it");
       await flushBackground();
+    });
+
+    it("clamps an elevated chat policy before persisting and starting a fork", async () => {
+      createRun(db, {
+        id: "chat-source",
+        accountId: "default",
+        providerId: "claude_code",
+        mode: "chat",
+        status: "succeeded",
+        toolPolicySnapshot: JSON.stringify({
+          allowedTools: null,
+          disallowedTools: [],
+        }),
+      });
+      const adapter = setupForkAdapter();
+
+      const result = await runsService.forkRun({
+        sourceRunId: "chat-source",
+        accountId: "default",
+        message: "fork safely",
+      });
+      await flushBackground();
+
+      const policy = adapter.forkRun.mock.calls[0][0].toolPolicy;
+      expect(policy.allowedTools).not.toContain("Bash");
+      expect(policy.disallowedTools).toContain("Bash");
+      expect((await runsService.getRunById(result.runId))?.toolPolicySnapshot).toEqual(
+        policy,
+      );
     });
 
     it("calls adapter.forkRun", async () => {

@@ -22,6 +22,7 @@ vi.mock("electron", () => ({
 vi.mock("../../db/client", () => ({ getDb: () => db }));
 
 import { collectionsService } from "./collections.service";
+import { collectionsRepo } from "./collections.repo";
 import { runsRepo } from "../runs/runs.repo";
 
 describe("collectionsService", () => {
@@ -76,6 +77,28 @@ describe("collectionsService", () => {
     ).resolves.toHaveLength(1);
   });
 
+  it("reads and mutates an owned Collection through the account-scoped identity", async () => {
+    createCollection(db, { id: "collection-1", name: "Draft" });
+    const identity = { id: "collection-1", accountId: "default" };
+
+    await expect(collectionsService.get(identity)).resolves.toMatchObject({
+      name: "Draft",
+      isArchived: false,
+    });
+    await expect(
+      collectionsService.update(identity, { name: "Published" }),
+    ).resolves.toMatchObject({ name: "Published" });
+    await expect(collectionsService.archive(identity)).resolves.toMatchObject({
+      isArchived: true,
+    });
+    await expect(
+      collectionsService.unarchive(identity),
+    ).resolves.toMatchObject({ isArchived: false });
+    await expect(
+      collectionsService.get({ id: "missing", accountId: "default" }),
+    ).resolves.toBeNull();
+  });
+
   it("removing a Collection detaches and preserves its runs", async () => {
     createCollection(db, { id: "collection-1" });
     createRun(db, {
@@ -84,7 +107,10 @@ describe("collectionsService", () => {
       collectionId: "collection-1",
     });
 
-    await collectionsService.remove("collection-1");
+    await collectionsService.remove({
+      id: "collection-1",
+      accountId: "default",
+    });
 
     const run = await runsRepo.findRunById("run-1");
     expect(run?.collectionId).toBeNull();
@@ -158,6 +184,84 @@ describe("collectionsService", () => {
     ).rejects.toThrow("does not belong");
   });
 
+  it("rejects parent access from another account without changing rows or storage", async () => {
+    createAccount(db, { id: "other" });
+    createCollection(db, {
+      id: "private-collection",
+      accountId: "other",
+      name: "Private",
+    });
+    createRun(db, {
+      id: "private-run",
+      accountId: "other",
+      mode: "work",
+      collectionId: "private-collection",
+    });
+    const source = await collectionsService.addSource({
+      accountId: "other",
+      collectionId: "private-collection",
+      kind: "text",
+      name: "Secret",
+      text: "private context",
+    });
+    const identity = {
+      id: "private-collection",
+      accountId: "default",
+    };
+
+    for (const attempt of [
+      () => collectionsService.get(identity),
+      () => collectionsService.update(identity, { name: "Taken over" }),
+      () => collectionsService.archive(identity),
+      () => collectionsService.unarchive(identity),
+      () => collectionsService.remove(identity),
+    ]) {
+      await expect(attempt()).rejects.toThrow("does not belong");
+    }
+
+    await expect(
+      collectionsRepo.findById("private-collection"),
+    ).resolves.toMatchObject({ name: "Private", isArchived: false });
+    await expect(runsRepo.findRunById("private-run")).resolves.toMatchObject({
+      collectionId: "private-collection",
+    });
+    expect(
+      fs.existsSync(
+        path.join(
+          TEST_USER_DATA,
+          "collections",
+          "private-collection",
+          "sources",
+          source.id,
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it("also scopes parent mutations by account at the repository seam", async () => {
+    createAccount(db, { id: "other" });
+    createCollection(db, {
+      id: "private-collection",
+      accountId: "other",
+      name: "Private",
+    });
+
+    await expect(
+      collectionsRepo.update("private-collection", "default", {
+        name: "Taken over",
+      }),
+    ).resolves.toBeNull();
+    await expect(
+      collectionsRepo.setArchived("private-collection", "default", true),
+    ).resolves.toBeNull();
+    await expect(
+      collectionsRepo.remove("private-collection", "default"),
+    ).resolves.toBe(false);
+    await expect(
+      collectionsRepo.findById("private-collection"),
+    ).resolves.toMatchObject({ name: "Private", isArchived: false });
+  });
+
   it("removes the exact managed Collection directory with the Collection", async () => {
     createCollection(db, { id: "collection-1" });
     await collectionsService.addSource({
@@ -169,7 +273,10 @@ describe("collectionsService", () => {
       data: Buffer.from("notes").toString("base64"),
     });
 
-    await collectionsService.remove("collection-1");
+    await collectionsService.remove({
+      id: "collection-1",
+      accountId: "default",
+    });
 
     expect(
       fs.existsSync(path.join(TEST_USER_DATA, "collections", "collection-1")),
