@@ -64,6 +64,31 @@ describe("backendRepo (paired devices)", () => {
     ).toBeNull();
   });
 
+  describe("command receipts", () => {
+    it("stores the first result for a device+command and keeps it on conflict", async () => {
+      await insert("d1");
+      expect(await backendRepo.findCommandReceipt("d1", "c1")).toBeNull();
+
+      await backendRepo.insertCommandReceipt({ deviceId: "d1", commandId: "c1", channel: "runs:continue", result: "first" });
+      await backendRepo.insertCommandReceipt({ deviceId: "d1", commandId: "c1", channel: "runs:continue", result: "second" });
+
+      expect(await backendRepo.findCommandReceipt("d1", "c1")).toBe("first");
+      expect(await backendRepo.findCommandReceipt("d1", "c2")).toBeNull();
+      expect(await backendRepo.findCommandReceipt("d2", "c1")).toBeNull();
+    });
+
+    it("prunes receipts older than a cutoff", async () => {
+      await insert("d1");
+      await backendRepo.insertCommandReceipt({ deviceId: "d1", commandId: "c1", channel: "runs:continue", result: "r" });
+
+      expect(await backendRepo.pruneCommandReceipts(new Date(Date.now() - 60_000))).toBe(0);
+      expect(await backendRepo.findCommandReceipt("d1", "c1")).toBe("r");
+
+      expect(await backendRepo.pruneCommandReceipts(new Date(Date.now() + 60_000))).toBe(1);
+      expect(await backendRepo.findCommandReceipt("d1", "c1")).toBeNull();
+    });
+  });
+
   it("touchPairedDeviceLastSeen stamps the device", async () => {
     await insert("d1");
     expect(

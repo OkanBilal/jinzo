@@ -7,6 +7,7 @@ export {
   buildPairingLink,
   clearPairingCodes,
   PAIRED_DEVICE_CHANNELS,
+  PAIRED_DEVICE_COMMANDS,
 } from "./backend.service";
 
 // Repository (module-internal — not exported)
@@ -20,6 +21,7 @@ export type {
   PairedDevice,
   PairedDeviceAccess,
   PairedDevicePlatform,
+  CommandReceiptRecord,
   PairingCode,
   PairDeviceInput,
   PairDeviceResult,

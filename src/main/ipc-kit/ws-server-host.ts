@@ -17,13 +17,19 @@ import {
 import { registerEventSink } from "./event-bus";
 import { isLoopbackHost, tokensMatch } from "./ws-auth";
 import { WebSocketSink } from "./websocket-sink";
-import { serveConnection, type WsConnection } from "./ws-server";
+import {
+  serveConnection,
+  type CommandReceiptStore,
+  type WsConnection,
+} from "./ws-server";
 
 /** A device token the host accepted at the handshake. */
 export interface VerifiedDevice {
   deviceId: string;
   /** Channels the device may invoke; undefined = everything the shared token can. */
   channels?: ReadonlySet<string>;
+  /** Mutations the device may issue, each only with a `commandId`. */
+  commandChannels?: ReadonlySet<string>;
 }
 
 export interface WsHost {
@@ -74,6 +80,12 @@ export interface WsHostOptions {
    * handler validates and throws; the host replies 400 with the message.
    */
   pairDevice?: (body: unknown) => Promise<unknown>;
+  /**
+   * Receipt store that makes a paired device's commands idempotent: a repeated
+   * `commandId` replays the stored result instead of running the handler
+   * again. Without it, device commands run every time they arrive.
+   */
+  commandReceipts?: CommandReceiptStore;
 }
 
 const MAX_PROXY_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -326,7 +338,9 @@ export function startWsHost(options: WsHostOptions): Promise<WsHost> {
   });
 
   wss.on("connection", (socket: WebSocket, req: IncomingMessage) => {
-    serveConnection(adaptSocket(socket, authenticatedDevices.get(req)), sink);
+    serveConnection(adaptSocket(socket, authenticatedDevices.get(req)), sink, {
+      commandReceipts: options.commandReceipts,
+    });
   });
 
   return new Promise<WsHost>((resolve, reject) => {
@@ -361,6 +375,7 @@ function adaptSocket(socket: WebSocket, device?: VerifiedDevice): WsConnection {
     id: randomUUID(),
     deviceId: device?.deviceId,
     allowedChannels: device?.channels,
+    commandChannels: device?.commandChannels,
     send: (data) => socket.send(data),
     onMessage: (listener) =>
       socket.on("message", (raw: RawData, isBinary: boolean) => {

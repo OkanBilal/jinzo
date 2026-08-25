@@ -22,6 +22,13 @@ export interface WsInvokeMessage {
   id: number;
   channel: string;
   args: unknown[];
+  /**
+   * Idempotency key for a mutation from a paired device: the router replays
+   * the stored response for a repeated `commandId` instead of running the
+   * handler again, so a command re-sent after a dropped connection can't apply
+   * twice. Required on command channels for devices; ignored otherwise.
+   */
+  commandId?: string;
 }
 
 /** Server → client: the result of a prior {@link WsInvokeMessage}. */
@@ -119,6 +126,16 @@ function dateReviver(_key: string, value: unknown): unknown {
 
 export function encodeWsMessage(message: WsMessage): string {
   return JSON.stringify(message, dateReplacer);
+}
+
+/** Encode a value (e.g. a stored ServiceResponse) with the wire's Date/undefined tags. */
+export function encodeWireValue(value: unknown): string {
+  return JSON.stringify(value, dateReplacer);
+}
+
+/** Inverse of {@link encodeWireValue}. */
+export function decodeWireValue(text: string): unknown {
+  return JSON.parse(text, dateReviver);
 }
 
 /**

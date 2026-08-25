@@ -192,6 +192,7 @@ async function reconcileHost(): Promise<void> {
         notifyPairedDevicesChanged();
         return result;
       },
+      commandReceipts: backendService.commandReceipts,
     });
     bindHost = desiredBind;
     port = wsHost.port;

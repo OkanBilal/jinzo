@@ -7,6 +7,7 @@ import {
   index,
   uniqueIndex,
   check,
+  primaryKey,
 } from "drizzle-orm/sqlite-core";
 import { PROVIDER_IDS, SUPPORTED_PROVIDER_IDS } from "../../shared/provider-ids";
 import { DEFAULT_MODE_ID, MODE_IDS } from "../../shared/modes";
@@ -132,6 +133,32 @@ export const pairedDevices = sqliteTable(
   (t) => [
     uniqueIndex("uniq_paired_devices_token_hash").on(t.tokenHash),
     index("idx_paired_devices_revoked_at").on(t.revokedAt),
+  ],
+);
+
+/* -----------------------------
+   COMMAND RECEIPTS (idempotent mutations from paired devices)
+------------------------------ */
+
+export const commandReceipts = sqliteTable(
+  "command_receipts",
+  {
+    deviceId: text("device_id")
+      .notNull()
+      .references(() => pairedDevices.id, { onDelete: "cascade" }),
+    /** Chosen by the device; the same id on a retry replays `result`. */
+    commandId: text("command_id").notNull(),
+    channel: text("channel").notNull(),
+    // The ServiceResponse the command produced, wire-encoded (Date tags and
+    // all) so a replay sends byte-for-byte what the first attempt got.
+    result: text("result").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    primaryKey({ columns: [t.deviceId, t.commandId] }),
+    index("idx_command_receipts_created_at").on(t.createdAt),
   ],
 );
 

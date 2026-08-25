@@ -1,6 +1,6 @@
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, lt, sql } from "drizzle-orm";
 import { getDb } from "../../db/client";
-import { pairedDevices } from "../../db/schema";
+import { commandReceipts, pairedDevices } from "../../db/schema";
 import type { PairedDeviceRecord, PairedDevicePlatform } from "./backend.dto";
 
 // ─────────────────────────────────────────────────────────────
@@ -57,5 +57,38 @@ export const backendRepo = {
       .set({ revokedAt: sql`(unixepoch())` })
       .where(and(eq(pairedDevices.id, id), isNull(pairedDevices.revokedAt)));
     return result.changes > 0;
+  },
+
+  // ── command receipts ──
+
+  /** The wire-encoded result a device's command produced, or null if never seen. */
+  async findCommandReceipt(deviceId: string, commandId: string): Promise<string | null> {
+    const db = getDb();
+    const row = await db.query.commandReceipts.findFirst({
+      where: and(
+        eq(commandReceipts.deviceId, deviceId),
+        eq(commandReceipts.commandId, commandId),
+      ),
+    });
+    return row?.result ?? null;
+  },
+
+  async insertCommandReceipt(data: {
+    deviceId: string;
+    commandId: string;
+    channel: string;
+    result: string;
+  }): Promise<void> {
+    const db = getDb();
+    await db.insert(commandReceipts).values(data).onConflictDoNothing();
+  },
+
+  /** Drop receipts older than `before`. Returns how many went. */
+  async pruneCommandReceipts(before: Date): Promise<number> {
+    const db = getDb();
+    const result = await db
+      .delete(commandReceipts)
+      .where(lt(commandReceipts.createdAt, before));
+    return result.changes;
   },
 };

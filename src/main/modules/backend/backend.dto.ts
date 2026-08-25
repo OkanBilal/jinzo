@@ -1,4 +1,4 @@
-import type { pairedDevices } from "../../db/schema";
+import type { commandReceipts, pairedDevices } from "../../db/schema";
 
 // ─────────────────────────────────────────────────────────────
 // Identity
@@ -67,5 +67,10 @@ export interface PairDeviceResult {
 /** A device token resolved at the WS handshake: who it is and what it may invoke. */
 export interface PairedDeviceAccess {
   deviceId: string;
+  /** Read-only channels, invokable as-is. */
   channels: ReadonlySet<string>;
+  /** Mutations — invokable only with a `commandId` (see `command_receipts`). */
+  commandChannels: ReadonlySet<string>;
 }
+
+export type CommandReceiptRecord = typeof commandReceipts.$inferSelect;

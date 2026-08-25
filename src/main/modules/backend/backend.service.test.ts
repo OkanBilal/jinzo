@@ -18,6 +18,7 @@ import {
   backendService,
   clearPairingCodes,
   PAIRED_DEVICE_CHANNELS,
+  PAIRED_DEVICE_COMMANDS,
 } from "./backend.service";
 
 const ok = (data: unknown) => ({ success: true as const, data });
@@ -147,6 +148,38 @@ describe("backendService", () => {
     });
   });
 
+  describe("PAIRED_DEVICE_COMMANDS", () => {
+    it("is exactly the control loop's three verbs, disjoint from the read list", () => {
+      expect([...PAIRED_DEVICE_COMMANDS].sort()).toEqual([
+        "runs:continue",
+        "runs:execute",
+        "runs:toolApprovalResponse",
+      ]);
+      for (const channel of PAIRED_DEVICE_COMMANDS) {
+        expect(PAIRED_DEVICE_CHANNELS.has(channel)).toBe(false);
+      }
+    });
+
+    it("counts toward a paired device's capabilities", async () => {
+      registerHandler("runs:continue", async () => ok(null));
+      registerHandler("terminal:write", async () => ok(null));
+      expect(
+        (await backendService.describe({ pairedDevice: true })).capabilities,
+      ).toEqual(["runs"]);
+    });
+  });
+
+  describe("commandReceipts", () => {
+    it("records and finds a device's command result", async () => {
+      const { code } = await backendService.createPairingCode(ENDPOINTS);
+      const { deviceId } = await backendService.pairDevice(phone(code));
+
+      expect(await backendService.commandReceipts.find(deviceId, "c1")).toBeNull();
+      await backendService.commandReceipts.record(deviceId, "c1", "runs:continue", "{\"success\":true}");
+      expect(await backendService.commandReceipts.find(deviceId, "c1")).toBe("{\"success\":true}");
+    });
+  });
+
   describe("createPairingCode", () => {
     it("refuses when the phone would have nothing to reach", async () => {
       await expect(backendService.createPairingCode([])).rejects.toThrow(
@@ -248,6 +281,7 @@ describe("backendService", () => {
       const access = await backendService.verifyDeviceToken(deviceToken);
       expect(access?.deviceId).toBe(deviceId);
       expect(access?.channels).toBe(PAIRED_DEVICE_CHANNELS);
+      expect(access?.commandChannels).toBe(PAIRED_DEVICE_COMMANDS);
 
       const [device] = await backendService.listPairedDevices();
       expect(device.lastSeenAt).not.toBeNull();

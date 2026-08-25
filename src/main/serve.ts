@@ -144,6 +144,7 @@ export async function startBackendServer(
     verifyDeviceToken: (deviceToken) =>
       backendService.verifyDeviceToken(deviceToken),
     pairDevice: (body) => backendService.pairDevice(body),
+    commandReceipts: backendService.commandReceipts,
   });
   console.log(`[serve] mains backend listening on ws://${host}:${wsHost.port}`);
   if (token) {

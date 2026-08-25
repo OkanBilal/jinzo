@@ -163,6 +163,170 @@ describe("startWsHost — paired devices and POST /pair", () => {
     expect(await whoAmI(client)).toEqual({ clientId: expect.any(String) });
   });
 
+  describe("commands (idempotent mutations)", () => {
+    function memoryReceipts() {
+      const rows = new Map<string, string>();
+      return {
+        rows,
+        store: {
+          find: async (deviceId: string, commandId: string) =>
+            rows.get(`${deviceId}:${commandId}`) ?? null,
+          record: async (deviceId: string, commandId: string, _channel: string, result: string) => {
+            rows.set(`${deviceId}:${commandId}`, result);
+          },
+        },
+      };
+    }
+
+    async function commandHost(store: ReturnType<typeof memoryReceipts>["store"]) {
+      return startWsHost({
+        port: 0,
+        host: "127.0.0.1",
+        token: SHARED_TOKEN,
+        verifyDeviceToken: async (token) =>
+          token === DEVICE_TOKEN
+            ? {
+                deviceId: "d1",
+                channels: new Set(["who:ami"]),
+                commandChannels: new Set(["runs:continue"]),
+              }
+            : null,
+        commandReceipts: store,
+      });
+    }
+
+    function invoke(ws: WebSocket, id: number, commandId?: string): Promise<string> {
+      const response = nextMessage(ws);
+      ws.send(
+        JSON.stringify({
+          kind: "invoke",
+          id,
+          channel: "runs:continue",
+          args: [{ runId: "r1" }],
+          ...(commandId ? { commandId } : {}),
+        }),
+      );
+      return response;
+    }
+
+    it("runs a command once and replays its receipt for the same commandId", async () => {
+      const { store, rows } = memoryReceipts();
+      host = await commandHost(store);
+      let calls = 0;
+      registerHandler("runs:continue", async () => {
+        calls += 1;
+        return { success: true, data: { call: calls, at: new Date("2026-08-25T10:00:00Z") } };
+      });
+
+      client = new WebSocket(`ws://127.0.0.1:${host.port}`, buildSubprotocols(DEVICE_TOKEN));
+      await opened(client);
+
+      const first = JSON.parse(await invoke(client, 1, "cmd-1"));
+      const again = JSON.parse(await invoke(client, 2, "cmd-1"));
+
+      expect(calls).toBe(1);
+      expect(first.result).toEqual({
+        success: true,
+        data: { call: 1, at: { $date: "2026-08-25T10:00:00.000Z" } },
+      });
+      expect(again.result).toEqual(first.result);
+      expect(again.id).toBe(2);
+      expect(rows.size).toBe(1);
+
+      // A different id is a different command.
+      JSON.parse(await invoke(client, 3, "cmd-2"));
+      expect(calls).toBe(2);
+    });
+
+    it("replays across a new connection — the retry after a drop", async () => {
+      const { store } = memoryReceipts();
+      host = await commandHost(store);
+      let calls = 0;
+      registerHandler("runs:continue", async () => ({ success: true, data: ++calls }));
+
+      client = new WebSocket(`ws://127.0.0.1:${host.port}`, buildSubprotocols(DEVICE_TOKEN));
+      await opened(client);
+      const first = JSON.parse(await invoke(client, 1, "cmd-1"));
+      client.close();
+
+      const second = new WebSocket(`ws://127.0.0.1:${host.port}`, buildSubprotocols(DEVICE_TOKEN));
+      await opened(second);
+      const retry = JSON.parse(await invoke(second, 1, "cmd-1"));
+      second.close();
+
+      expect(calls).toBe(1);
+      expect(retry.result).toEqual(first.result);
+    });
+
+    it("holds a concurrent retry until the first attempt finishes", async () => {
+      const { store } = memoryReceipts();
+      host = await commandHost(store);
+      let calls = 0;
+      let release: (() => void) | null = null;
+      registerHandler("runs:continue", async () => {
+        calls += 1;
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        return { success: true, data: `done-${calls}` };
+      });
+
+      client = new WebSocket(`ws://127.0.0.1:${host.port}`, buildSubprotocols(DEVICE_TOKEN));
+      await opened(client);
+
+      const replies: string[] = [];
+      const gotTwo = new Promise<void>((resolve) => {
+        client!.on("message", (data) => {
+          replies.push(data.toString());
+          if (replies.length === 2) resolve();
+        });
+      });
+      client.send(JSON.stringify({ kind: "invoke", id: 1, channel: "runs:continue", args: [], commandId: "cmd-1" }));
+      client.send(JSON.stringify({ kind: "invoke", id: 2, channel: "runs:continue", args: [], commandId: "cmd-1" }));
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(calls).toBe(1);
+      release!();
+      await gotTwo;
+
+      const results = replies.map((r) => JSON.parse(r).result);
+      expect(results).toEqual([
+        { success: true, data: "done-1" },
+        { success: true, data: "done-1" },
+      ]);
+    });
+
+    it("refuses a command without a commandId", async () => {
+      const { store } = memoryReceipts();
+      host = await commandHost(store);
+      let calls = 0;
+      registerHandler("runs:continue", async () => ({ success: true, data: ++calls }));
+
+      client = new WebSocket(`ws://127.0.0.1:${host.port}`, buildSubprotocols(DEVICE_TOKEN));
+      await opened(client);
+
+      expect(JSON.parse(await invoke(client, 1)).result).toEqual({
+        success: false,
+        error: 'Channel "runs:continue" requires a commandId from paired devices',
+      });
+      expect(calls).toBe(0);
+    });
+
+    it("leaves shared-token clients alone: no device, no receipts", async () => {
+      const { store, rows } = memoryReceipts();
+      host = await commandHost(store);
+      let calls = 0;
+      registerHandler("runs:continue", async () => ({ success: true, data: ++calls }));
+
+      client = new WebSocket(`ws://127.0.0.1:${host.port}`, buildSubprotocols(SHARED_TOKEN));
+      await opened(client);
+      await invoke(client, 1, "cmd-1");
+      await invoke(client, 2, "cmd-1");
+
+      expect(calls).toBe(2);
+      expect(rows.size).toBe(0);
+    });
+  });
+
   describe("POST /pair", () => {
     it("routes the JSON body through the pairDevice hook", async () => {
       host = await startWsHost({

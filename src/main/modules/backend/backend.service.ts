@@ -47,6 +47,21 @@ export const PAIRED_DEVICE_CHANNELS: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * Mutations a paired device may issue — only with a `commandId`, which the WS
+ * router turns into exactly-once semantics through `command_receipts`. The
+ * control loop's three verbs and nothing else: answer a request, continue a
+ * run, start one. Anything touching files, git, terminal or settings stays out.
+ */
+export const PAIRED_DEVICE_COMMANDS: ReadonlySet<string> = new Set([
+  CHANNELS.runs.toolApprovalResponse,
+  CHANNELS.runs.continue,
+  CHANNELS.runs.execute,
+]);
+
+/** Receipts older than this are forgotten; a device never retries that late. */
+const COMMAND_RECEIPT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
  * This install as a backend: who it is, and who may talk to it.
  *
  * **Identity** — `backendId`, minted once and persisted for good, plus the
@@ -163,7 +178,10 @@ export const backendService = {
     const backendId = await this.getBackendId();
     const served = registeredChannels();
     const reachable = options.pairedDevice
-      ? served.filter((channel) => PAIRED_DEVICE_CHANNELS.has(channel))
+      ? served.filter(
+          (channel) =>
+            PAIRED_DEVICE_CHANNELS.has(channel) || PAIRED_DEVICE_COMMANDS.has(channel),
+        )
       : served;
     const capabilities = [...new Set(reachable.map(namespaceOf))].sort();
     return {
@@ -231,7 +249,29 @@ export const backendService = {
     );
     if (!device) return null;
     await backendRepo.touchPairedDeviceLastSeen(device.id);
-    return { deviceId: device.id, channels: PAIRED_DEVICE_CHANNELS };
+    return {
+      deviceId: device.id,
+      channels: PAIRED_DEVICE_CHANNELS,
+      commandChannels: PAIRED_DEVICE_COMMANDS,
+    };
+  },
+
+  // ── Command receipts (the WS router's idempotency store) ──
+
+  commandReceipts: {
+    find(deviceId: string, commandId: string): Promise<string | null> {
+      return backendRepo.findCommandReceipt(deviceId, commandId);
+    },
+    async record(
+      deviceId: string,
+      commandId: string,
+      channel: string,
+      result: string,
+    ): Promise<void> {
+      await backendRepo.insertCommandReceipt({ deviceId, commandId, channel, result });
+      // Piggyback the sweep on writes: cheap (indexed) and needs no timer.
+      await backendRepo.pruneCommandReceipts(new Date(Date.now() - COMMAND_RECEIPT_TTL_MS));
+    },
   },
 
   async listPairedDevices(): Promise<PairedDevice[]> {
