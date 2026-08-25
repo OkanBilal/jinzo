@@ -54,9 +54,75 @@ export interface WsHostOptions {
   serveLocalImage?: (url: URL) => Promise<Response>;
   /** Signed local-document server — `GET /__localdoc?…`; mirrors `mains-localdoc://`. */
   serveLocalDocument?: (url: URL) => Promise<Response>;
+  /**
+   * Authenticate a paired device's token (see modules/backend). Consulted only
+   * when a `token` is required and the presented one is not it — so a device
+   * token is an additional credential, never a way to relax an open loopback.
+   * Resolves the device on success, null otherwise.
+   */
+  verifyDeviceToken?: (token: string) => Promise<{ deviceId: string } | null>;
+  /**
+   * Exchange a one-time pairing code for a device token — `POST /pair` with a
+   * JSON body. Unauthenticated by design (the code IS the credential). The
+   * handler validates and throws; the host replies 400 with the message.
+   */
+  pairDevice?: (body: unknown) => Promise<unknown>;
 }
 
 const MAX_PROXY_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_PAIR_BODY_BYTES = 16 * 1024;
+
+function writeJson(res: ServerResponse, status: number, payload: unknown): void {
+  res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
+  res.end(JSON.stringify(payload));
+}
+
+function readJsonBody(req: IncomingMessage, limit: number): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let size = 0;
+    req.on("data", (chunk: Buffer) => {
+      size += chunk.length;
+      if (size > limit) {
+        reject(new Error("Request body too large"));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", () => {
+      try {
+        resolve(JSON.parse(Buffer.concat(chunks).toString("utf8") || "null"));
+      } catch {
+        reject(new Error("Request body is not valid JSON"));
+      }
+    });
+    req.on("error", reject);
+  });
+}
+
+async function handlePairing(
+  req: IncomingMessage,
+  res: ServerResponse,
+  pairDevice: (body: unknown) => Promise<unknown>,
+): Promise<void> {
+  let body: unknown;
+  try {
+    body = await readJsonBody(req, MAX_PAIR_BODY_BYTES);
+  } catch (error) {
+    writeJson(res, 400, {
+      error: error instanceof Error ? error.message : "Invalid request",
+    });
+    return;
+  }
+  try {
+    writeJson(res, 200, await pairDevice(body));
+  } catch (error) {
+    writeJson(res, 400, {
+      error: error instanceof Error ? error.message : "Pairing failed",
+    });
+  }
+}
 
 /** Pipe a Web `Response` (from the signed local-file servers) to the Node res. */
 async function handleLocalFile(
@@ -194,7 +260,13 @@ export function startWsHost(options: WsHostOptions): Promise<WsHost> {
 
   const httpServer: Server = createServer((req, res) => {
     const url = req.url ?? "";
-    if (options.fetchProxiedImage && url.startsWith("/__img")) {
+    if (
+      options.pairDevice &&
+      req.method === "POST" &&
+      url.split("?")[0] === "/pair"
+    ) {
+      void handlePairing(req, res, options.pairDevice);
+    } else if (options.fetchProxiedImage && url.startsWith("/__img")) {
       void handleImageProxy(req, res, options.fetchProxiedImage);
     } else if (options.serveLocalImage && url.startsWith("/__localimg")) {
       void handleLocalFile(req, res, options.serveLocalImage);
@@ -210,6 +282,25 @@ export function startWsHost(options: WsHostOptions): Promise<WsHost> {
 
   const sink = new WebSocketSink();
   const unregisterSink = registerEventSink(sink);
+
+  // Device identity survives from the handshake to the `connection` event via
+  // the request object, which `ws` hands to both.
+  const authenticatedDevices = new WeakMap<IncomingMessage, string>();
+  const authorize = async (req: IncomingMessage): Promise<boolean> => {
+    const raw = req.headers["sec-websocket-protocol"];
+    const header = Array.isArray(raw) ? raw.join(",") : raw;
+    const presented = extractToken(parseProtocolHeader(header));
+    if (token && tokensMatch(token, presented)) return true;
+    if (presented && options.verifyDeviceToken) {
+      const device = await options.verifyDeviceToken(presented).catch(() => null);
+      if (device) {
+        authenticatedDevices.set(req, device.deviceId);
+        return true;
+      }
+    }
+    return false;
+  };
+
   const wss = new WebSocketServer({
     server: httpServer,
     // Echo the base subprotocol; the token subprotocol is validated, not echoed.
@@ -219,17 +310,16 @@ export function startWsHost(options: WsHostOptions): Promise<WsHost> {
     // an unauthenticated socket never opens.
     verifyClient: token
       ? (info, cb) => {
-          const raw = info.req.headers["sec-websocket-protocol"];
-          const header = Array.isArray(raw) ? raw.join(",") : raw;
-          const presented = extractToken(parseProtocolHeader(header));
-          if (tokensMatch(token, presented)) cb(true);
-          else cb(false, 401, "Unauthorized");
+          void authorize(info.req).then((allowed) => {
+            if (allowed) cb(true);
+            else cb(false, 401, "Unauthorized");
+          });
         }
       : undefined,
   });
 
-  wss.on("connection", (socket: WebSocket) => {
-    serveConnection(adaptSocket(socket), sink);
+  wss.on("connection", (socket: WebSocket, req: IncomingMessage) => {
+    serveConnection(adaptSocket(socket, authenticatedDevices.get(req)), sink);
   });
 
   return new Promise<WsHost>((resolve, reject) => {
@@ -259,9 +349,10 @@ export function startWsHost(options: WsHostOptions): Promise<WsHost> {
   });
 }
 
-function adaptSocket(socket: WebSocket): WsConnection {
+function adaptSocket(socket: WebSocket, deviceId?: string): WsConnection {
   return {
     id: randomUUID(),
+    deviceId,
     send: (data) => socket.send(data),
     onMessage: (listener) =>
       socket.on("message", (raw: RawData, isBinary: boolean) => {

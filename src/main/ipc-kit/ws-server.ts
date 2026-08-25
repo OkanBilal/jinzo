@@ -10,6 +10,8 @@ import type { WebSocketSink, WsClientConnection } from "./websocket-sink";
  * server library. A thin adapter maps the chosen `ws`-style socket onto this.
  */
 export interface WsConnection extends WsClientConnection {
+  /** Paired device this connection authenticated as, if it used a device token. */
+  readonly deviceId?: string;
   onMessage(listener: (data: string) => void): void;
   onClose(listener: () => void): void;
 }
@@ -43,9 +45,12 @@ async function routeMessage(conn: WsConnection, data: string): Promise<void> {
   // The server only accepts client→server invokes; response/event are outbound.
   if (message.kind !== "invoke") return;
 
-  const result = await invokeHandler(message.channel, message.args, {
-    clientId: conn.id,
-  });
+  // Only set `deviceId` when there is one: a bare `undefined` would be tagged
+  // by the wire codec and show up as a key in every handler's ctx.
+  const ctx = conn.deviceId
+    ? { clientId: conn.id, deviceId: conn.deviceId }
+    : { clientId: conn.id };
+  const result = await invokeHandler(message.channel, message.args, ctx);
   conn.send(
     encodeWsMessage({ kind: "response", id: message.id, result }),
   );

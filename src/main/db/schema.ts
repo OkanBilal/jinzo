@@ -89,6 +89,10 @@ export const appSettings = sqliteTable("app_settings", {
   backendTailscaleHttps: integer("backend_tailscale_https", { mode: "boolean" })
     .notNull()
     .default(false),
+  // Stable identity of THIS install as a backend. Minted on first use and never
+  // rotated: a paired phone keys its saved backend on it, so it must outlive
+  // restarts and pairing-token changes. Null until first minted.
+  backendId: text("backend_id"),
 
   commitInstructions: text("commit_instructions").notNull().default(""),
   prInstructions: text("pr_instructions").notNull().default(""),
@@ -102,6 +106,34 @@ export const appSettings = sqliteTable("app_settings", {
     .notNull()
     .default(sql`(unixepoch())`),
 });
+
+/* -----------------------------
+   PAIRED DEVICES (phones / remote clients of THIS backend)
+------------------------------ */
+
+export const pairedDevices = sqliteTable(
+  "paired_devices",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    platform: text("platform", { enum: ["ios", "android", "web", "unknown"] })
+      .notNull()
+      .default("unknown"),
+    appVersion: text("app_version"),
+    // sha256 hex of the device token; the token itself is never stored.
+    tokenHash: text("token_hash").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    lastSeenAt: integer("last_seen_at", { mode: "timestamp" }),
+    // Revoked rows stay for the audit trail but no longer authenticate.
+    revokedAt: integer("revoked_at", { mode: "timestamp" }),
+  },
+  (t) => [
+    uniqueIndex("uniq_paired_devices_token_hash").on(t.tokenHash),
+    index("idx_paired_devices_revoked_at").on(t.revokedAt),
+  ],
+);
 
 /* -----------------------------
    PROVIDERS (LLM / agent runtimes)

@@ -24,6 +24,11 @@ import { fail, type ServiceResponse } from "../../shared/ipc-kit/service-respons
 export interface IpcInvokeContext {
   /** Connected client id on the WS path; undefined on the local Electron path. */
   clientId?: string;
+  /**
+   * The paired device the WS client authenticated as, when it presented a
+   * device token rather than the shared pairing token. Undefined locally.
+   */
+  deviceId?: string;
 }
 
 export type IpcHandler = (
@@ -42,6 +47,11 @@ export function unregisterHandler(channel: string): void {
 
 export function hasHandler(channel: string): boolean {
   return handlers.has(channel);
+}
+
+/** Every channel currently registered — what a remote client can invoke. */
+export function registeredChannels(): string[] {
+  return [...handlers.keys()];
 }
 
 /**

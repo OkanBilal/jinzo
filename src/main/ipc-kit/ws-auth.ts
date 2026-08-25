@@ -35,3 +35,11 @@ export function isLoopbackHost(host: string | undefined | null): boolean {
 export function generateToken(): string {
   return randomBytes(32).toString("base64url");
 }
+
+/**
+ * One-way fingerprint of a token for at-rest storage and lookup (paired-device
+ * tokens are stored only as this hash). Hex so it can live in a text column.
+ */
+export function hashToken(token: string): string {
+  return digest(token).toString("hex");
+}

@@ -12,7 +12,7 @@ open-source software. They are redistributed, unmodified, as part of this
 application under the redistribution terms of their respective licenses,
 which are reproduced in their sections below.
 
-Packages: 425
+Packages: 426
 Bundled assets: 1 (Inter@4.001)
 
 ========================================================================
@@ -11305,6 +11305,14 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+
+========================================================================
+qrcode-generator@2.0.4
+License: MIT
+Repository: https://github.com/kazuhikoarase/qrcode-generator.git
+========================================================================
+
+(No license file shipped in the package; see the repository above for the full MIT text.)
 
 ========================================================================
 qs@6.15.3

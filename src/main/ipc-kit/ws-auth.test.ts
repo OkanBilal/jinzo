@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { generateToken, isLoopbackHost, tokensMatch } from "./ws-auth";
+import {
+  generateToken,
+  hashToken,
+  isLoopbackHost,
+  tokensMatch,
+} from "./ws-auth";
 
 describe("tokensMatch", () => {
   it("accepts an exact match", () => {
@@ -35,5 +40,16 @@ describe("generateToken", () => {
     expect(a).not.toBe(b);
     expect(a).toMatch(/^[A-Za-z0-9_-]+$/);
     expect(a.length).toBeGreaterThanOrEqual(40);
+  });
+});
+
+describe("hashToken", () => {
+  it("is deterministic, hex, and does not echo the token", () => {
+    const token = generateToken();
+    const hash = hashToken(token);
+    expect(hash).toBe(hashToken(token));
+    expect(hash).toMatch(/^[0-9a-f]{64}$/);
+    expect(hash).not.toContain(token);
+    expect(hashToken(generateToken())).not.toBe(hash);
   });
 });

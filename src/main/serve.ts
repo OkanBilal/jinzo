@@ -8,6 +8,7 @@ import { generateToken, isLoopbackHost } from "./ipc-kit/ws-auth";
 // headless backend: browser (drives a local BrowserView), imageProxy (custom
 // protocol serving a local renderer), and updates (app self-update).
 import { registerAccountIpc } from "./modules/account";
+import { backendService, registerBackendIpc } from "./modules/backend";
 import { registerSyncIpc } from "./modules/sync";
 import { registerEntitiesHandlers } from "./modules/entities";
 import { registerConnectionsHandlers } from "./modules/connections";
@@ -93,6 +94,7 @@ export async function startBackendServer(
   });
 
   registerAccountIpc();
+  registerBackendIpc();
   registerSyncIpc();
   registerEntitiesHandlers();
   registerConnectionsHandlers();
@@ -137,6 +139,11 @@ export async function startBackendServer(
     fetchProxiedImage: (url) => imageProxyService.proxyImage(url),
     serveLocalImage: (url) => serveLocalImage(url),
     serveLocalDocument: (url) => serveLocalDocument(url),
+    // Phones paired through the desktop app share this machine's DB, so their
+    // device tokens work against the headless host too.
+    verifyDeviceToken: (deviceToken) =>
+      backendService.verifyDeviceToken(deviceToken),
+    pairDevice: (body) => backendService.pairDevice(body),
   });
   console.log(`[serve] mains backend listening on ws://${host}:${wsHost.port}`);
   if (token) {

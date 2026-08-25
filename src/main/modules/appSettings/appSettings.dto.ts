@@ -20,6 +20,7 @@ export type AppSettingsPatch = Partial<{
   backendRemoteAccess: boolean;
   backendLanAccess: boolean;
   backendTailscaleHttps: boolean;
+  backendId: string | null;
   commitInstructions: string;
   prInstructions: string;
 }>;

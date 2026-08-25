@@ -128,16 +128,24 @@ export const CHANNELS = {
     openTunnel: "ssh:openTunnel",
     closeTunnel: "ssh:closeTunnel",
   },
-  backendAuth: {
-    setToken: "backendAuth:setToken",
-    getToken: "backendAuth:getToken",
-    deleteToken: "backendAuth:deleteToken",
+  backend: {
+    describe: "backend:describe",
+  },
+  remoteBackends: {
+    setToken: "remoteBackends:setToken",
+    getToken: "remoteBackends:getToken",
+    deleteToken: "remoteBackends:deleteToken",
   },
   localBackend: {
     getStatus: "localBackend:getStatus",
     setRemoteAccess: "localBackend:setRemoteAccess",
     setLanAccess: "localBackend:setLanAccess",
     setTailscaleHttps: "localBackend:setTailscaleHttps",
+    createPairingCode: "localBackend:createPairingCode",
+    listPairedDevices: "localBackend:listPairedDevices",
+    revokePairedDevice: "localBackend:revokePairedDevice",
+    // main → renderer: a phone paired, connected (last-seen), or was revoked
+    pairedDevicesChanged: "localBackend:pairedDevicesChanged",
   },
   imageProxy: {
     sign: "imageProxy:sign",

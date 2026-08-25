@@ -141,13 +141,13 @@ const api = {
       ipcRenderer.invoke(CHANNELS.ssh.closeTunnel, id),
   },
   // Encrypted at-rest storage for direct-mode backend pairing tokens (local-only)
-  backendAuth: {
+  remoteBackends: {
     setToken: (id: string, token: string) =>
-      ipcRenderer.invoke(CHANNELS.backendAuth.setToken, id, token),
+      ipcRenderer.invoke(CHANNELS.remoteBackends.setToken, id, token),
     getToken: (id: string) =>
-      ipcRenderer.invoke(CHANNELS.backendAuth.getToken, id),
+      ipcRenderer.invoke(CHANNELS.remoteBackends.getToken, id),
     deleteToken: (id: string) =>
-      ipcRenderer.invoke(CHANNELS.backendAuth.deleteToken, id),
+      ipcRenderer.invoke(CHANNELS.remoteBackends.deleteToken, id),
   },
   // Expose THIS desktop app as a backend (network / SSH / tailnet) — local-only control
   localBackend: {
@@ -162,6 +162,22 @@ const api = {
         enabled,
         httpsPort,
       ),
+    // Phone pairing — mint a QR code, list/revoke the phones that used one
+    createPairingCode: () =>
+      ipcRenderer.invoke(CHANNELS.localBackend.createPairingCode),
+    listPairedDevices: () =>
+      ipcRenderer.invoke(CHANNELS.localBackend.listPairedDevices),
+    revokePairedDevice: (id: string) =>
+      ipcRenderer.invoke(CHANNELS.localBackend.revokePairedDevice, id),
+    onPairedDevicesChanged: (callback: () => void) => {
+      const listener = () => callback();
+      ipcRenderer.on(CHANNELS.localBackend.pairedDevicesChanged, listener);
+      return () =>
+        ipcRenderer.removeListener(
+          CHANNELS.localBackend.pairedDevicesChanged,
+          listener,
+        );
+    },
   },
   // Projects operations (incl. project_resources + linked-issue queries)
   projects: {

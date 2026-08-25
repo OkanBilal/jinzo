@@ -10,6 +10,7 @@ export {
   unregisterHandler,
   hasHandler,
   invokeHandler,
+  registeredChannels,
   clearHandlers,
   type IpcHandler,
   type IpcInvokeContext,

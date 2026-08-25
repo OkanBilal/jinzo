@@ -55,7 +55,7 @@ function decrypt(stored: string): string {
 
 // Throw-style: plain values out, throws on failure; envelope applied by
 // handle() at the IPC seam.
-export const backendAuthService = {
+export const remoteBackendsService = {
   async setToken(id: string, token: string): Promise<void> {
     const map = await readMap();
     map[id] = encrypt(token);

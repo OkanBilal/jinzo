@@ -49,6 +49,42 @@ export function registerLocalBackendIpc() {
       }
     },
   );
+
+  // Phone pairing rides on the exposure above, so it is local-only for the same
+  // reason: a remote client must not be able to mint codes or revoke devices.
+  ipcMain.handle(CHANNELS.localBackend.createPairingCode, async () => {
+    try {
+      return ok(await localBackendService.createPairingCode());
+    } catch (error) {
+      return fail(
+        error instanceof Error ? error.message : "Failed to create pairing code",
+      );
+    }
+  });
+
+  ipcMain.handle(CHANNELS.localBackend.listPairedDevices, async () => {
+    try {
+      return ok(await localBackendService.listPairedDevices());
+    } catch (error) {
+      return fail(
+        error instanceof Error ? error.message : "Failed to list paired devices",
+      );
+    }
+  });
+
+  ipcMain.handle(
+    CHANNELS.localBackend.revokePairedDevice,
+    async (_e, id: string) => {
+      try {
+        await localBackendService.revokePairedDevice(id);
+        return ok(undefined);
+      } catch (error) {
+        return fail(
+          error instanceof Error ? error.message : "Failed to revoke device",
+        );
+      }
+    },
+  );
 }
 
 export function unregisterLocalBackendIpc() {
@@ -56,4 +92,7 @@ export function unregisterLocalBackendIpc() {
   ipcMain.removeHandler(CHANNELS.localBackend.setRemoteAccess);
   ipcMain.removeHandler(CHANNELS.localBackend.setLanAccess);
   ipcMain.removeHandler(CHANNELS.localBackend.setTailscaleHttps);
+  ipcMain.removeHandler(CHANNELS.localBackend.createPairingCode);
+  ipcMain.removeHandler(CHANNELS.localBackend.listPairedDevices);
+  ipcMain.removeHandler(CHANNELS.localBackend.revokePairedDevice);
 }

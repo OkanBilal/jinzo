@@ -126,9 +126,10 @@ import {
   localBackendService,
 } from "./modules/localBackend";
 import {
-  registerBackendAuthIpc,
-  unregisterBackendAuthIpc,
-} from "./modules/backendAuth";
+  registerRemoteBackendsIpc,
+  unregisterRemoteBackendsIpc,
+} from "./modules/remoteBackends";
+import { registerBackendIpc, unregisterBackendIpc } from "./modules/backend";
 import { CHANNELS } from "../shared/ipc-kit/channels";
 
 // ─────────────────────────────────────────────────────────────
@@ -788,7 +789,8 @@ async function initializeApp() {
     registerPullRequestsIpc();
     registerBrowserIpc();
     registerSshIpc();
-    registerBackendAuthIpc();
+    registerRemoteBackendsIpc();
+    registerBackendIpc();
     registerLocalBackendIpc();
     // Re-apply any persisted "This machine" exposure (survives app restarts).
     void localBackendService.restore();
@@ -1102,7 +1104,8 @@ async function cleanupApp() {
     try { browserService.destroy(); } catch { /* ignore */ }
     unregisterBrowserIpc();
     unregisterSshIpc();
-    unregisterBackendAuthIpc();
+    unregisterRemoteBackendsIpc();
+    unregisterBackendIpc();
     unregisterLocalBackendIpc();
     ipcMain.removeHandler(CHANNELS.shell.openExternal);
     ipcMain.removeHandler(CHANNELS.shell.openPath);

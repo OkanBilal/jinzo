@@ -1,11 +1,18 @@
 import { networkInterfaces } from "node:os";
+import { emit } from "../../ipc-kit";
 import { startWsHost, type WsHost } from "../../ipc-kit/ws-server-host";
 import { generateToken } from "../../ipc-kit/ws-auth";
+import { CHANNELS } from "../../../shared/ipc-kit/channels";
 import { resolveWebRoot } from "../../web-root";
 import { imageProxyService } from "../imageProxy/imageProxy.service";
 import { serveLocalImage, serveLocalDocument } from "../imageProxy";
 import { tailscaleService } from "../tailscale";
 import { appSettingsService } from "../appSettings";
+import {
+  backendService,
+  type PairedDevice,
+  type PairingCode,
+} from "../backend";
 
 /**
  * "This machine" exposure — turns the RUNNING desktop app into a backend other
@@ -128,6 +135,11 @@ function buildStatus(): LocalBackendStatus {
   };
 }
 
+/** Let the desktop UI refresh its paired-phone list (a pairing, a connection, a revoke). */
+function notifyPairedDevicesChanged(): void {
+  emit(CHANNELS.localBackend.pairedDevicesChanged, {});
+}
+
 /** Persist the toggle state so it's restored on the next launch (best-effort). */
 function persist(): void {
   void appSettingsService
@@ -168,10 +180,42 @@ async function reconcileHost(): Promise<void> {
       fetchProxiedImage: (url) => imageProxyService.proxyImage(url),
       serveLocalImage: (url) => serveLocalImage(url),
       serveLocalDocument: (url) => serveLocalDocument(url),
+      // Paired phones authenticate with their own token instead of the shared
+      // session token, and new ones pair through `POST /pair`.
+      verifyDeviceToken: async (token) => {
+        const device = await backendService.verifyDeviceToken(token);
+        if (device) notifyPairedDevicesChanged();
+        return device;
+      },
+      pairDevice: async (body) => {
+        const result = await backendService.pairDevice(body);
+        notifyPairedDevicesChanged();
+        return result;
+      },
     });
     bindHost = desiredBind;
     port = wsHost.port;
   }
+}
+
+/**
+ * Addresses a phone could reach this host on, most private first. Loopback is
+ * omitted — nothing off this machine can use it. Empty when only loopback is
+ * bound, which is the signal that pairing can't work yet.
+ */
+function pairingEndpoints(): string[] {
+  const out: string[] = [];
+  if (tailscale?.magicDnsName) {
+    out.push(
+      tailscaleService.resolveHttpsUrl(tailscale.magicDnsName, tailscale.httpsPort),
+    );
+  }
+  if (lanAccess) {
+    const { lan, tailscale: tsIp } = localIps();
+    if (lan) out.push(`http://${lan}:${port}`);
+    if (tsIp) out.push(`http://${tsIp}:${port}`);
+  }
+  return out;
 }
 
 export const localBackendService = {
@@ -242,6 +286,27 @@ export const localBackendService = {
     }
     persist();
     return buildStatus();
+  },
+
+  /**
+   * Mint a one-time pairing code (QR) for a phone. Needs the host up on an
+   * address a phone can reach (LAN or Tailscale HTTPS), otherwise throws with
+   * the toggle the user should flip.
+   */
+  async createPairingCode(): Promise<PairingCode> {
+    if (!wsHost) {
+      throw new Error("Turn on remote access before pairing a phone");
+    }
+    return backendService.createPairingCode(pairingEndpoints());
+  },
+
+  listPairedDevices(): Promise<PairedDevice[]> {
+    return backendService.listPairedDevices();
+  },
+
+  async revokePairedDevice(id: string): Promise<void> {
+    await backendService.revokePairedDevice(id);
+    notifyPairedDevicesChanged();
   },
 
   /**

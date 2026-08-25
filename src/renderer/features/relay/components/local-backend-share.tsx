@@ -12,6 +12,7 @@ import {
   SettingsSection,
   SettingsDivider,
 } from "@/features/settings/components/settings-layout";
+import { PhonePairing } from "./phone-pairing";
 
 interface Address {
   label: string;
@@ -219,6 +220,10 @@ export function LocalBackendShare() {
           )} */}
         </div>
       )}
+
+      <SettingsDivider />
+
+      <PhonePairing canPair={lanOn || tailscaleOn} />
     </SettingsSection>
   );
 }

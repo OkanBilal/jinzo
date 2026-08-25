@@ -82,7 +82,7 @@ export function useBackendConnection() {
       // Fall back to the stored pairing token (direct mode, or SSH to a
       // pre-running token-protected backend).
       if (!token && backend.hasToken) {
-        const stored = await window.api.backendAuth.getToken(id);
+        const stored = await window.api.remoteBackends.getToken(id);
         if (stored.success && stored.data) token = stored.data;
       }
       if (!url) throw new Error("Backend has no address");
@@ -111,7 +111,7 @@ export function useBackendConnection() {
       token?: string;
     }) => {
       const id = nanoid();
-      if (input.token) await window.api.backendAuth.setToken(id, input.token);
+      if (input.token) await window.api.remoteBackends.setToken(id, input.token);
       dispatch(
         addBackend({
           id,
@@ -129,7 +129,7 @@ export function useBackendConnection() {
     (id: string) => {
       if (id === activeBackendId) void disconnect();
       const backend = saved.find((b) => b.id === id);
-      if (backend?.hasToken) void window.api.backendAuth.deleteToken(id);
+      if (backend?.hasToken) void window.api.remoteBackends.deleteToken(id);
       dispatch(removeBackend(id));
     },
     [dispatch, activeBackendId, disconnect, saved],

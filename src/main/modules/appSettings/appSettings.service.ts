@@ -43,6 +43,15 @@ export const appSettingsService = {
     await appSettingsRepo.update(SETTINGS_ID, patch);
   },
 
+  /**
+   * Internal write for the backend identity — minted once by the backend
+   * module, never settable from the renderer (absent from the patch allowlist).
+   */
+  async setBackendId(backendId: string): Promise<void> {
+    await this.ensureSettings();
+    await appSettingsRepo.update(SETTINGS_ID, { backendId });
+  },
+
   async updateSettings(patch: unknown): Promise<AppSettingsRecord> {
     const sanitized = sanitizeAppSettingsPatch(patch);
     if (!sanitized) {

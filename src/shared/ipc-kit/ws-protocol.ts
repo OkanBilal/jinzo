@@ -49,6 +49,12 @@ export type WsMessage = WsClientMessage | WsServerMessage;
 
 /** Base subprotocol both sides advertise (also the one the server echoes back). */
 export const WS_SUBPROTOCOL = "mains.v1";
+/**
+ * Version of the invoke/response/event framing plus the channel payload shapes a
+ * client may rely on. Reported by `backend:describe`; bump on a breaking change
+ * so an older phone build can refuse to sync rather than misread frames.
+ */
+export const WS_PROTOCOL_VERSION = 1;
 const TOKEN_SUBPROTOCOL_PREFIX = "mains.token.";
 
 /** Build the subprotocol list a client sends (token optional). */

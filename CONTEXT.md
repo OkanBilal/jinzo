@@ -86,6 +86,16 @@ A **collection** is the account-scoped, non-developer, project-like grouping sha
 The module owns `collections` and `collection_sources`. Sources are canonical, immutable context stored under `<userData>/collections/<collectionId>/sources/<sourceId>/`; display names are metadata and never become ownership paths. When a Collection run starts, resumes, or forks, its current Sources are copied into that run's managed execution tree and recorded once in `run_context` with source identity + content hash. Moving a run changes which Sources future turns receive without moving its cwd or rewriting prior snapshots; removing a Collection detaches its runs and removes only the Collection-owned canonical files.
 _Avoid_: attaching workspaces to collections; adding branch/worktree/remote fields to collections; putting work/chat grouping fields on `projects`; moving a run's working directory when its collection membership changes; handing the whole Collections storage root to the file explorer; editing historical run-context rows when Collection Sources change.
 
+### backend
+
+The `backend` module is **this install as a backend**: its identity and who may talk to it. It owns the `app_settings.backend_id` column (a stable id minted on first use, never rotated — a paired phone keys its saved backend on it) and the `paired_devices` table. Two credentials with deliberately different lifetimes: a **pairing code** (minted by the desktop, shown as a QR, five minutes, single exchange, memory-only) and a **device token** (what the code is exchanged for; long-lived, stored on the phone, stored here only as a `token_hash`, revocable per device). `backend:describe` is the one IPC channel — registered through the shim so it is reachable over WebSocket, and the first thing a remote client asks. Pairing itself has no channel: `POST /pair` and the handshake-time `verifyDeviceToken` reach the service through hooks the WS host is given.
+
+Three neighbouring modules are easy to confuse, so the split is by *direction*:
+- **backend** — me as a backend (identity, paired devices). Served by both the desktop app and headless `serve`.
+- **localBackend** — exposing this machine (WS host lifecycle, bind/port, Tailscale serve, addresses). Desktop-only, real `ipcMain` (local-only control: a remote client must never toggle the exposure it rides on). Owns the desktop-facing pairing handlers (`localBackend:createPairingCode/listPairedDevices/revokePairedDevice` + the `pairedDevicesChanged` push) because a code needs the host's reachable addresses.
+- **remoteBackends** — *other* backends this desktop connects to: the encrypted at-rest store for their pairing tokens (`remoteBackends:setToken/getToken/deleteToken`; the catalog of `KnownBackend`s lives in the renderer). Formerly `backendAuth`.
+_Avoid_: t3code's vocabulary (`environmentId`, pairing grant, device session) — see `docs/design/mobile-app.md` §10.1 for the mapping; a `pairing` module (it was folded in: pairing always travelled with `describe`); moving identity into `localBackend` (headless `serve` needs it, and the trust boundary differs); registering `backend:describe` on raw `ipcMain` (it must be reachable over the wire).
+
 ## Operations
 
 ### Workspace intake

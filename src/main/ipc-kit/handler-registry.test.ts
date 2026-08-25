@@ -4,6 +4,7 @@ import {
   hasHandler,
   invokeHandler,
   registerHandler,
+  registeredChannels,
   unregisterHandler,
 } from "./handler-registry";
 
@@ -55,6 +56,15 @@ describe("handler-registry", () => {
     expect(hasHandler("a:b")).toBe(true);
     unregisterHandler("a:b");
     expect(hasHandler("a:b")).toBe(false);
+  });
+
+  it("lists registered channels", () => {
+    expect(registeredChannels()).toEqual([]);
+    registerHandler("runs:list", async () => ({ success: true, data: 1 }));
+    registerHandler("workspace:get", async () => ({ success: true, data: 1 }));
+    expect(registeredChannels().sort()).toEqual(["runs:list", "workspace:get"]);
+    unregisterHandler("runs:list");
+    expect(registeredChannels()).toEqual(["workspace:get"]);
   });
 
   it("clearHandlers empties the registry", () => {
