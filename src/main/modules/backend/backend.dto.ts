@@ -63,3 +63,9 @@ export interface PairDeviceResult {
   deviceToken: string;
   backend: BackendDescriptor;
 }
+
+/** A device token resolved at the WS handshake: who it is and what it may invoke. */
+export interface PairedDeviceAccess {
+  deviceId: string;
+  channels: ReadonlySet<string>;
+}

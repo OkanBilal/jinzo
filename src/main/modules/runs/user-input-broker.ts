@@ -1,5 +1,9 @@
 import { BrowserWindow, Notification } from "electron";
-import type { ToolApprovalRequest, ToolApprovalResponse } from "./runs.dto";
+import type {
+  PendingApproval,
+  ToolApprovalRequest,
+  ToolApprovalResponse,
+} from "./runs.dto";
 import { appSettingsService } from "../appSettings";
 import { emit } from "../../ipc-kit";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
@@ -21,6 +25,9 @@ const REQUEST_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
 interface PendingRequest {
   runId: string;
+  /** Kept so a client that missed the broadcast can still read the request. */
+  request: ToolApprovalRequest;
+  expiresAt: number;
   resolve: (response: ToolApprovalResponse) => void;
   timer: NodeJS.Timeout;
 }
@@ -55,6 +62,8 @@ export function requestToolApproval(
 
     pending.set(req.requestId, {
       runId: req.runId,
+      request: req,
+      expiresAt: Date.now() + timeoutMs,
       resolve,
       timer,
     });
@@ -84,6 +93,22 @@ export function requestToolApproval(
 }
 
 /**
+ * Every request still waiting on an answer, oldest first — what a client that
+ * wasn't connected when the request was broadcast (a phone waking up on a
+ * push) asks for. Process memory only, deliberately: a Mac restart loses the
+ * run that asked, so there is nothing durable to recover yet
+ * (docs/design/mobile-app.md §5.5, transitional design).
+ */
+export function listPendingApprovals(runId?: string): PendingApproval[] {
+  const out: PendingApproval[] = [];
+  for (const entry of pending.values()) {
+    if (runId && entry.runId !== runId) continue;
+    out.push({ ...entry.request, expiresAt: entry.expiresAt });
+  }
+  return out.sort((a, b) => a.timestamp - b.timestamp);
+}
+
+/**
  * Resolve a pending approval request with the user's response.
  * Called from the IPC handler when the renderer sends back a decision.
  */
@@ -94,6 +119,13 @@ export function handleToolApprovalResponse(resp: ToolApprovalResponse): void {
   clearTimeout(entry.timer);
   pending.delete(resp.requestId);
   entry.resolve(resp);
+  // The client that answered already dismissed its dialog; every other client
+  // (a phone showing the same request) learns here that it is settled.
+  emit(
+    CHANNELS.runs.toolApprovalResolved,
+    { requestId: resp.requestId },
+    { runId: entry.runId },
+  );
 }
 
 /** Resolve one provider-owned request as denied when the provider closes it. */
@@ -126,6 +158,7 @@ export function cancelPendingRequests(runId: string): void {
       clearTimeout(entry.timer);
       pending.delete(requestId);
       entry.resolve({ requestId, approved: false });
+      emit(CHANNELS.runs.toolApprovalResolved, { requestId }, { runId });
     }
   }
 }

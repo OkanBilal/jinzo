@@ -599,6 +599,8 @@ const api = {
       return () =>
         ipcRenderer.removeListener(CHANNELS.runs.toolApprovalResolved, listener);
     },
+    listPendingApprovals: (runId?: string) =>
+      ipcRenderer.invoke(CHANNELS.runs.listPendingApprovals, runId),
     respondToolApproval: (response: {
       requestId: string;
       approved: boolean;

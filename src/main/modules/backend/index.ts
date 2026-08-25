@@ -6,6 +6,7 @@ export {
   backendService,
   buildPairingLink,
   clearPairingCodes,
+  PAIRED_DEVICE_CHANNELS,
 } from "./backend.service";
 
 // Repository (module-internal — not exported)
@@ -17,6 +18,7 @@ export { parsePairDeviceInput } from "./backend.validation";
 export type {
   BackendDescriptor,
   PairedDevice,
+  PairedDeviceAccess,
   PairedDevicePlatform,
   PairingCode,
   PairDeviceInput,

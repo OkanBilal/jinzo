@@ -277,6 +277,7 @@ export const CHANNELS = {
     getByWorkspace: "runs:getByWorkspace",
     getDetails: "runs:getDetails",
     listActive: "runs:listActive",
+    listPendingApprovals: "runs:listPendingApprovals",
     listRecent: "runs:listRecent",
     moveToCollection: "runs:moveToCollection",
     start: "runs:start",

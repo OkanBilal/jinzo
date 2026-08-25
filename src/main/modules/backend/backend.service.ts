@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { hostname } from "node:os";
 import { app } from "electron";
+import { CHANNELS } from "../../../shared/ipc-kit/channels";
 import { WS_PROTOCOL_VERSION } from "../../../shared/ipc-kit/ws-protocol";
 import { registeredChannels } from "../../ipc-kit";
 import { generateToken, hashToken, tokensMatch } from "../../ipc-kit/ws-auth";
@@ -11,9 +12,39 @@ import type {
   BackendDescriptor,
   PairDeviceResult,
   PairedDevice,
+  PairedDeviceAccess,
   PairedDeviceRecord,
   PairingCode,
 } from "./backend.dto";
+
+/**
+ * What a paired device may invoke. Read-only for now: every mutation waits for
+ * the commandId/receipt contract (mobile plan, phase 4) so a command retried
+ * after a dropped connection can't run twice. Terminal, filesystem, git and
+ * settings stay off this list for good — a phone in the wrong hands must not
+ * become a shell on the Mac. Enforced by the WS router before any handler runs.
+ */
+export const PAIRED_DEVICE_CHANNELS: ReadonlySet<string> = new Set([
+  CHANNELS.backend.describe,
+  CHANNELS.account.get,
+  CHANNELS.runs.getAll,
+  CHANNELS.runs.listActive,
+  CHANNELS.runs.listRecent,
+  CHANNELS.runs.listArchived,
+  CHANNELS.runs.getById,
+  CHANNELS.runs.getDetails,
+  CHANNELS.runs.getByWorkspace,
+  CHANNELS.runs.listPendingApprovals,
+  CHANNELS.runTurns.getByRun,
+  CHANNELS.runToolCalls.getByRun,
+  CHANNELS.runArtifacts.getByRun,
+  CHANNELS.runContext.getByRun,
+  CHANNELS.workspace.list,
+  CHANNELS.workspace.get,
+  CHANNELS.projects.list,
+  CHANNELS.projects.get,
+  CHANNELS.collections.list,
+]);
 
 /**
  * This install as a backend: who it is, and who may talk to it.
@@ -122,11 +153,19 @@ export const backendService = {
     return minting;
   },
 
-  async describe(): Promise<BackendDescriptor> {
+  /**
+   * A paired device sees only the namespaces it may actually reach, so the
+   * phone can hide features (terminal, files) it would be refused anyway.
+   */
+  async describe(
+    options: { pairedDevice?: boolean } = {},
+  ): Promise<BackendDescriptor> {
     const backendId = await this.getBackendId();
-    const capabilities = [
-      ...new Set(registeredChannels().map(namespaceOf)),
-    ].sort();
+    const served = registeredChannels();
+    const reachable = options.pairedDevice
+      ? served.filter((channel) => PAIRED_DEVICE_CHANNELS.has(channel))
+      : served;
+    const capabilities = [...new Set(reachable.map(namespaceOf))].sort();
     return {
       backendId,
       name: machineName(),
@@ -186,13 +225,13 @@ export const backendService = {
   },
 
   /** Resolve a presented device token, recording the sighting. Null when unknown or revoked. */
-  async verifyDeviceToken(token: string): Promise<{ deviceId: string } | null> {
+  async verifyDeviceToken(token: string): Promise<PairedDeviceAccess | null> {
     const device = await backendRepo.findActivePairedDeviceByTokenHash(
       hashToken(token),
     );
     if (!device) return null;
     await backendRepo.touchPairedDeviceLastSeen(device.id);
-    return { deviceId: device.id };
+    return { deviceId: device.id, channels: PAIRED_DEVICE_CHANNELS };
   },
 
   async listPairedDevices(): Promise<PairedDevice[]> {

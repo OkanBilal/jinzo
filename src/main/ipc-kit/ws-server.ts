@@ -1,3 +1,4 @@
+import { fail } from "../../shared/ipc-kit/service-response";
 import {
   decodeWsMessage,
   encodeWsMessage,
@@ -12,6 +13,11 @@ import type { WebSocketSink, WsClientConnection } from "./websocket-sink";
 export interface WsConnection extends WsClientConnection {
   /** Paired device this connection authenticated as, if it used a device token. */
   readonly deviceId?: string;
+  /**
+   * Channels a paired device may invoke; undefined means unrestricted (the
+   * shared pairing token, which grants full control by design).
+   */
+  readonly allowedChannels?: ReadonlySet<string>;
   onMessage(listener: (data: string) => void): void;
   onClose(listener: () => void): void;
 }
@@ -44,6 +50,21 @@ async function routeMessage(conn: WsConnection, data: string): Promise<void> {
   }
   // The server only accepts client→server invokes; response/event are outbound.
   if (message.kind !== "invoke") return;
+
+  // A paired device's allowlist is checked here, before any handler runs, so
+  // no module has to know about devices to be safe from one.
+  if (conn.allowedChannels && !conn.allowedChannels.has(message.channel)) {
+    conn.send(
+      encodeWsMessage({
+        kind: "response",
+        id: message.id,
+        result: fail(
+          `Channel "${message.channel}" is not available to paired devices`,
+        ),
+      }),
+    );
+    return;
+  }
 
   // Only set `deviceId` when there is one: a bare `undefined` would be tagged
   // by the wire codec and show up as a key in every handler's ctx.

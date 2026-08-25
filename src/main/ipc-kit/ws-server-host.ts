@@ -19,6 +19,13 @@ import { isLoopbackHost, tokensMatch } from "./ws-auth";
 import { WebSocketSink } from "./websocket-sink";
 import { serveConnection, type WsConnection } from "./ws-server";
 
+/** A device token the host accepted at the handshake. */
+export interface VerifiedDevice {
+  deviceId: string;
+  /** Channels the device may invoke; undefined = everything the shared token can. */
+  channels?: ReadonlySet<string>;
+}
+
 export interface WsHost {
   readonly sink: WebSocketSink;
   /** The actual listening port (resolved even when started with port 0). */
@@ -60,7 +67,7 @@ export interface WsHostOptions {
    * token is an additional credential, never a way to relax an open loopback.
    * Resolves the device on success, null otherwise.
    */
-  verifyDeviceToken?: (token: string) => Promise<{ deviceId: string } | null>;
+  verifyDeviceToken?: (token: string) => Promise<VerifiedDevice | null>;
   /**
    * Exchange a one-time pairing code for a device token — `POST /pair` with a
    * JSON body. Unauthenticated by design (the code IS the credential). The
@@ -285,7 +292,7 @@ export function startWsHost(options: WsHostOptions): Promise<WsHost> {
 
   // Device identity survives from the handshake to the `connection` event via
   // the request object, which `ws` hands to both.
-  const authenticatedDevices = new WeakMap<IncomingMessage, string>();
+  const authenticatedDevices = new WeakMap<IncomingMessage, VerifiedDevice>();
   const authorize = async (req: IncomingMessage): Promise<boolean> => {
     const raw = req.headers["sec-websocket-protocol"];
     const header = Array.isArray(raw) ? raw.join(",") : raw;
@@ -294,7 +301,7 @@ export function startWsHost(options: WsHostOptions): Promise<WsHost> {
     if (presented && options.verifyDeviceToken) {
       const device = await options.verifyDeviceToken(presented).catch(() => null);
       if (device) {
-        authenticatedDevices.set(req, device.deviceId);
+        authenticatedDevices.set(req, device);
         return true;
       }
     }
@@ -349,10 +356,11 @@ export function startWsHost(options: WsHostOptions): Promise<WsHost> {
   });
 }
 
-function adaptSocket(socket: WebSocket, deviceId?: string): WsConnection {
+function adaptSocket(socket: WebSocket, device?: VerifiedDevice): WsConnection {
   return {
     id: randomUUID(),
-    deviceId,
+    deviceId: device?.deviceId,
+    allowedChannels: device?.channels,
     send: (data) => socket.send(data),
     onMessage: (listener) =>
       socket.on("message", (raw: RawData, isBinary: boolean) => {

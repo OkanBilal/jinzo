@@ -27,4 +27,5 @@ export type {
   StartRunPayload,
   StartRunResponse,
   RunDetailsResponse,
+  PendingApproval,
 } from "./runs.dto";

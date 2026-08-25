@@ -105,6 +105,49 @@ describe("startWsHost — paired devices and POST /pair", () => {
     expect(await rejected(client)).toBe("Unexpected server response: 401");
   });
 
+  it("refuses channels outside a device's allowlist before any handler runs", async () => {
+    host = await startWsHost({
+      port: 0,
+      host: "127.0.0.1",
+      token: SHARED_TOKEN,
+      verifyDeviceToken: async (token) =>
+        token === DEVICE_TOKEN
+          ? { deviceId: "d1", channels: new Set(["who:ami"]) }
+          : null,
+    });
+    let secretCalls = 0;
+    registerHandler("who:ami", async (ctx) => ({ success: true, data: ctx }));
+    registerHandler("secret:op", async () => {
+      secretCalls += 1;
+      return { success: true, data: "leaked" };
+    });
+
+    client = new WebSocket(
+      `ws://127.0.0.1:${host.port}`,
+      buildSubprotocols(DEVICE_TOKEN),
+    );
+    await opened(client);
+
+    const refused = nextMessage(client);
+    client.send(
+      JSON.stringify({ kind: "invoke", id: 7, channel: "secret:op", args: [] }),
+    );
+    expect(JSON.parse(await refused)).toEqual({
+      kind: "response",
+      id: 7,
+      result: {
+        success: false,
+        error: 'Channel "secret:op" is not available to paired devices',
+      },
+    });
+    expect(secretCalls).toBe(0);
+
+    expect(await whoAmI(client)).toEqual({
+      clientId: expect.any(String),
+      deviceId: "d1",
+    });
+  });
+
   it("does not consult device tokens when no shared token is required", async () => {
     // Loopback without a token is open by design; a device hook must not
     // silently turn that into an authenticated host.

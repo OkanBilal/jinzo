@@ -17,7 +17,10 @@ import type {
   WorkspaceRunListOptions,
   MoveRunToCollectionPayload,
 } from "./runs.dto";
-import { handleToolApprovalResponse } from "./user-input-broker";
+import {
+  handleToolApprovalResponse,
+  listPendingApprovals,
+} from "./user-input-broker";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
 
 // ─────────────────────────────────────────────────────────────
@@ -221,6 +224,13 @@ export function registerRunsIpc(): void {
       return ok(undefined);
     },
   );
+
+  // Requests still waiting on the user — for a client (phone) that connected
+  // after the push went out, or is reopening on a notification.
+  ipcMain.handle(
+    CHANNELS.runs.listPendingApprovals,
+    handle((runId?: string) => listPendingApprovals(runId)),
+  );
 }
 
 export function unregisterRunsIpc(): void {
@@ -261,5 +271,6 @@ export function unregisterRunsIpc(): void {
     CHANNELS.runToolCalls.getByRun,
     CHANNELS.runTurns.getByRun,
     CHANNELS.runs.toolApprovalResponse,
+    CHANNELS.runs.listPendingApprovals,
   ].forEach((channel) => ipcMain.removeHandler(channel));
 }

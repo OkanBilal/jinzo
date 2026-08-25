@@ -490,6 +490,16 @@ export interface ToolApprovalRequest {
   timestamp: number;
 }
 
+/**
+ * A request still waiting on the user, as `runs:listPendingApprovals` reports
+ * it — the same shape the `runs:toolApprovalRequest` push carries, plus when
+ * the broker will auto-deny it.
+ */
+export interface PendingApproval extends ToolApprovalRequest {
+  /** Epoch ms after which the broker resolves the request as denied. */
+  expiresAt: number;
+}
+
 export interface ToolApprovalResponse {
   requestId: string;
   approved: boolean;

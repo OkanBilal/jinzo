@@ -14,7 +14,11 @@ vi.mock("../../db/client", () => ({
 }));
 
 // Import after mock so it picks up the mocked getDb
-import { backendService, clearPairingCodes } from "./backend.service";
+import {
+  backendService,
+  clearPairingCodes,
+  PAIRED_DEVICE_CHANNELS,
+} from "./backend.service";
 
 const ok = (data: unknown) => ({ success: true as const, data });
 
@@ -109,6 +113,37 @@ describe("backendService", () => {
     it("lists no capabilities when nothing is registered", async () => {
       const descriptor = await backendService.describe();
       expect(descriptor.capabilities).toEqual([]);
+    });
+
+    it("shows a paired device only the namespaces it may reach", async () => {
+      registerHandler("runs:getAll", async () => ok([]));
+      registerHandler("runs:execute", async () => ok(null));
+      registerHandler("terminal:write", async () => ok(null));
+      registerHandler("fileExplorer:readFile", async () => ok(null));
+
+      expect((await backendService.describe()).capabilities).toEqual([
+        "fileExplorer",
+        "runs",
+        "terminal",
+      ]);
+      expect(
+        (await backendService.describe({ pairedDevice: true })).capabilities,
+      ).toEqual(["runs"]);
+    });
+  });
+
+  describe("PAIRED_DEVICE_CHANNELS", () => {
+    it("is read-only: no mutation, terminal, or filesystem channel", () => {
+      for (const channel of PAIRED_DEVICE_CHANNELS) {
+        expect(channel).not.toMatch(
+          /^(terminal|fileExplorer|gitFlow|ssh|localBackend|remoteBackends|appSettings):/,
+        );
+        expect(channel).not.toMatch(
+          /:(execute|continue|fork|create|update|delete|abort|cancel|archive|start|add|remove|respond)/,
+        );
+      }
+      expect(PAIRED_DEVICE_CHANNELS.has("backend:describe")).toBe(true);
+      expect(PAIRED_DEVICE_CHANNELS.has("runs:getAll")).toBe(true);
     });
   });
 
@@ -210,9 +245,9 @@ describe("backendService", () => {
         phone(code),
       );
 
-      expect(await backendService.verifyDeviceToken(deviceToken)).toEqual({
-        deviceId,
-      });
+      const access = await backendService.verifyDeviceToken(deviceToken);
+      expect(access?.deviceId).toBe(deviceId);
+      expect(access?.channels).toBe(PAIRED_DEVICE_CHANNELS);
 
       const [device] = await backendService.listPairedDevices();
       expect(device.lastSeenAt).not.toBeNull();
