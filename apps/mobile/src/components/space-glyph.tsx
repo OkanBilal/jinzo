@@ -1,6 +1,6 @@
 import { useColorScheme, View } from "react-native";
 
-import { iconTint, parseIcon } from "@/lib/icon-registry";
+import { iconTint, parseIcon } from "@mains/icons/registry";
 import { colors, useBrandColors } from "@/theme";
 
 import { GlassSurface } from "./glass-surface";

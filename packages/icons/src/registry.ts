@@ -1,8 +1,8 @@
-import { ICON_SHAPES } from "./icon-registry.generated";
+import { ICON_SHAPES } from "./shapes.generated";
 
 /**
- * The phone-side half of the desktop icon registry
- * (`mains/src/renderer/lib/icon-registry.tsx`). Spaces and projects store
+ * The data half of the desktop icon registry
+ * (`apps/desktop/src/renderer/lib/icon-registry.tsx`). Spaces and projects store
  * their icon as `icon:<name>|<color>` or `emoji:<emoji>` (legacy rows hold a
  * bare registry name or a raw emoji); the shapes themselves live in the
  * generated file next to this one, produced from the desktop SVG components

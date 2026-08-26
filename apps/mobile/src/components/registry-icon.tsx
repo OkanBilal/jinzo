@@ -1,10 +1,10 @@
 import type { ColorValue } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
-import type { IconShape } from "@/lib/icon-registry";
+import type { IconShape } from "@mains/icons/registry";
 
 /**
- * Draws one desktop registry icon (see `lib/icon-registry.ts`) at a given
+ * Draws one desktop registry icon (see `@mains/icons/registry`) at a given
  * size and color — the phone's stand-in for the desktop's SVG components.
  */
 export function RegistryIcon({

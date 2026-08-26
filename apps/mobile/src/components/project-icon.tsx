@@ -1,6 +1,6 @@
 import { useColorScheme, type ColorValue } from "react-native";
 
-import { iconTint, parseIcon } from "@/lib/icon-registry";
+import { iconTint, parseIcon } from "@mains/icons/registry";
 
 import { RegistryIcon } from "./registry-icon";
 import { SFSymbol } from "./sf-symbol";
