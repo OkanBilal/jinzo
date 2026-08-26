@@ -10,6 +10,11 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# The desktop app lives in apps/desktop; every npm command runs there.
+defaults:
+  run:
+    working-directory: apps/desktop
+
 jobs:
   lint:
     name: Lint
@@ -20,6 +25,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
       - run: npm ci
       - run: npm run lint
 
@@ -32,6 +38,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
       - run: npm ci
       - run: npm run typecheck
 
@@ -44,6 +51,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
       - run: npm ci
       - run: npm rebuild better-sqlite3
       - run: npm test
@@ -61,6 +69,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
       - run: npm ci
       - name: Install Codex CLI
         run: npm install --global @openai/codex@${{ matrix.codex-version }}
