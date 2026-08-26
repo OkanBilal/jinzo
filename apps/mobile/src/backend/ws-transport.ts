@@ -3,7 +3,7 @@ import {
   decodeWsMessage,
   encodeWsMessage,
   type ServiceResponse,
-} from "@/contracts/ws-protocol";
+} from "@mains/contracts/ws-protocol";
 
 /**
  * Port of mains's renderer `WsTransport` (src/renderer/lib/transport/

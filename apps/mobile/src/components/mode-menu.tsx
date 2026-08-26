@@ -1,6 +1,6 @@
 import { Host, Picker } from "@expo/ui";
 
-import { modeLabel, type ModeId } from "@/contracts/runs";
+import { modeLabel, type ModeId } from "@mains/contracts/runs";
 import { radius, spacing } from "@/theme";
 
 import { GlassSurface } from "./glass-surface";

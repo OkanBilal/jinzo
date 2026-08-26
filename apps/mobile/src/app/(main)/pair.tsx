@@ -15,7 +15,7 @@ import {
   parsePairingLink,
   type PairedDevicePlatform,
   type PairingLink,
-} from "@/contracts/backend";
+} from "@mains/contracts/backend";
 import { colors, radius, shadows, spacing, type, useBrandColors } from "@/theme";
 
 type ScanState =

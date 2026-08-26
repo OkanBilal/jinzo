@@ -16,7 +16,7 @@ import { SFSymbol } from "@/components/sf-symbol";
 import { SidebarIcon } from "@/components/sidebar-icon";
 import { ConnectionBadge } from "@/components/status";
 import { ThemedText } from "@/components/themed-text";
-import { providerModes, type ModeId } from "@/contracts/runs";
+import { providerModes, type ModeId } from "@mains/contracts/runs";
 import { useModelSelection } from "@/lib/use-model-selection";
 import { db } from "@/db/client";
 import { collections, pendingApprovals, providers, spaceTargets, spaces, workspaces } from "@/db/schema";

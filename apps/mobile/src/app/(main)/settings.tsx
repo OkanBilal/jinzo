@@ -6,8 +6,8 @@ import { Alert, ScrollView, View } from "react-native";
 import { backendSession, useSession } from "@/backend/backend-session";
 import { Button } from "@/components/button";
 import { ThemedText } from "@/components/themed-text";
-import { endpointHost } from "@/contracts/backend";
-import { WS_PROTOCOL_VERSION } from "@/contracts/ws-protocol";
+import { endpointHost } from "@mains/contracts/backend";
+import { WS_PROTOCOL_VERSION } from "@mains/contracts/ws-protocol";
 import { connectionDetail, connectionLabel } from "@/lib/format";
 import { spacing } from "@/theme";
 

@@ -39,7 +39,8 @@
     "react-native-svg": "15.15.4",
     "react-native-web": "~0.21.0",
     "react-native-worklets": "0.10.1",
-    "react-redux": "^9.3.0"
+    "react-redux": "^9.3.0",
+    "@mains/contracts": "file:../../packages/contracts"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",

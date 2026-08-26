@@ -1,9 +1,9 @@
-import { toWebSocketUrl, type BackendDescriptor } from "@/contracts/backend";
+import { toWebSocketUrl, type BackendDescriptor } from "@mains/contracts/backend";
 import {
   buildSubprotocols,
   decodeWsMessage,
   encodeWsMessage,
-} from "@/contracts/ws-protocol";
+} from "@mains/contracts/ws-protocol";
 import type { PairedBackend } from "./paired-backend-store";
 
 const PROBE_TIMEOUT_MS = 8000;

@@ -1,4 +1,4 @@
-import { EFFORT_LEVELS } from "@/contracts/runs";
+import { EFFORT_LEVELS } from "@mains/contracts/runs";
 
 /**
  * Model and effort helpers — the phone's half of the desktop's

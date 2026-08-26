@@ -16,7 +16,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const mainsRoot = path.resolve(process.argv[2] ?? path.join(here, "..", "..", "mains"));
+const mainsRoot = path.resolve(process.argv[2] ?? path.join(here, "..", "..", "desktop"));
 const iconsDir = path.join(mainsRoot, "src/renderer/components/ui/icons");
 const registryFile = path.join(mainsRoot, "src/renderer/lib/icon-registry.tsx");
 const outFile = path.join(here, "..", "src/lib/icon-registry.generated.ts");

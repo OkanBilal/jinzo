@@ -3,7 +3,7 @@ import { Picker, Text } from "@expo/ui/swift-ui";
 import { fixedSize, lineLimit, pickerStyle, tag, tint } from "@expo/ui/swift-ui/modifiers";
 import { useColorScheme } from "react-native";
 
-import { modeLabel, type ModeId } from "@/contracts/runs";
+import { modeLabel, type ModeId } from "@mains/contracts/runs";
 import { radius, spacing } from "@/theme";
 
 import { GlassSurface } from "./glass-surface";

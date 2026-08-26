@@ -1,5 +1,5 @@
 import type { ConnectionState } from "@/backend/connection-supervisor";
-import { endpointHost } from "@/contracts/backend";
+import { endpointHost } from "@mains/contracts/backend";
 
 export function relativeTime(value: Date | null | undefined, now = Date.now()): string {
   if (!value) return "—";

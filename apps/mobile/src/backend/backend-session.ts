@@ -2,8 +2,8 @@ import * as Network from "expo-network";
 import { useSyncExternalStore } from "react";
 import { AppState } from "react-native";
 
-import { toWebSocketUrl } from "@/contracts/backend";
-import { CHANNELS } from "@/contracts/channels";
+import { toWebSocketUrl } from "@mains/contracts/backend";
+import { CHANNELS } from "@mains/contracts/channels";
 import type {
   AccountResponse,
   ContinueRunPayload,
@@ -14,11 +14,11 @@ import type {
   StartRunResponse,
   ToolApprovalResponse,
   UpdateRunSettingsPayload,
-} from "@/contracts/runs";
+} from "@mains/contracts/runs";
 import { db } from "@/db/client";
 import { runs, spaces } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
-import type { ServiceResponse } from "@/contracts/ws-protocol";
+import type { ServiceResponse } from "@mains/contracts/ws-protocol";
 import { newCommandId } from "@/lib/ids";
 
 import {

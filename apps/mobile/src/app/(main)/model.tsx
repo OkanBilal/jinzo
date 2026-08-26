@@ -6,7 +6,7 @@ import { backendSession, useSession } from "@/backend/backend-session";
 import { setModelChoice } from "@/backend/sync";
 import { SFSymbol } from "@/components/sf-symbol";
 import { ThemedText } from "@/components/themed-text";
-import type { UpdateRunSettingsPayload } from "@/contracts/runs";
+import type { UpdateRunSettingsPayload } from "@mains/contracts/runs";
 import {
   effortOffAllowed,
   formatEffortLevel,

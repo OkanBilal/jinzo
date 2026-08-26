@@ -3,7 +3,7 @@ import {
   type PairDeviceInput,
   type PairDeviceResult,
   type PairingLink,
-} from "@/contracts/backend";
+} from "@mains/contracts/backend";
 import type { PairedBackend } from "./paired-backend-store";
 
 const PAIR_TIMEOUT_MS = 8000;

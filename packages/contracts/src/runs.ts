@@ -6,24 +6,10 @@
  * codec in ws-protocol.ts.
  */
 
-export type ModeId = "developer" | "work" | "chat";
-export const MODE_IDS: readonly ModeId[] = ["developer", "work", "chat"];
+export { MODE_IDS, providerModes } from "./modes";
+export type { ModeId } from "./modes";
+import type { ModeId } from "./modes";
 
-/** Which experiences each provider drives — mirror of `mains/src/shared/modes.ts`. */
-// Keys are mains's PROVIDER_IDS (`src/shared/provider-ids.ts`), verbatim.
-const PROVIDER_MODES: Record<string, readonly ModeId[]> = {
-  claude_code: MODE_IDS,
-  codex: MODE_IDS,
-  copilot_cli: ["developer"],
-  cursor: ["developer"],
-};
-
-/** Modes a provider offers. An id outside the table is left unrestricted. */
-export function providerModes(providerId: string): readonly ModeId[] {
-  return PROVIDER_MODES[providerId] ?? MODE_IDS;
-}
-
-/** The desktop calls developer mode "Code" in its UI. */
 export function modeLabel(mode: ModeId): string {
   switch (mode) {
     case "developer":
@@ -143,8 +129,9 @@ export interface ProviderSummary {
 }
 
 /** Reasoning-effort levels, low → high (mirror of mains `shared/effort-levels.ts`). */
-export const EFFORT_LEVELS = ["minimal", "low", "medium", "high", "xhigh", "max"] as const;
-export type EffortLevel = (typeof EFFORT_LEVELS)[number];
+export { EFFORT_LEVELS } from "./effort-levels";
+export type { EffortLevel } from "./effort-levels";
+import type { EffortLevel } from "./effort-levels";
 
 /** `providers:getModels` row — the subset of the desktop's `ModelInfo` the picker shows. */
 export interface ModelInfo {

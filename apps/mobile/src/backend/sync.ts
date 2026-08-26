@@ -1,7 +1,7 @@
 import { and, eq, notInArray } from "drizzle-orm";
 
-import { type BackendDescriptor } from "@/contracts/backend";
-import { CHANNELS } from "@/contracts/channels";
+import { type BackendDescriptor } from "@mains/contracts/backend";
+import { CHANNELS } from "@mains/contracts/channels";
 import {
   APPROVAL_TIMEOUT_MS,
   isTerminalRunStatus,
@@ -26,8 +26,8 @@ import {
   type WorkspaceDiffSummary,
   type WorkspaceGitState,
   type WorkspaceResponse,
-} from "@/contracts/runs";
-import { WS_PROTOCOL_VERSION } from "@/contracts/ws-protocol";
+} from "@mains/contracts/runs";
+import { WS_PROTOCOL_VERSION } from "@mains/contracts/ws-protocol";
 import { db } from "@/db/client";
 import {
   backends,

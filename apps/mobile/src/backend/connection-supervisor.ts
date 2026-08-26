@@ -1,4 +1,4 @@
-import type { BackendDescriptor } from "@/contracts/backend";
+import type { BackendDescriptor } from "@mains/contracts/backend";
 import type { WsTransport } from "./ws-transport";
 
 /**
