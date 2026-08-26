@@ -36,7 +36,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   return {
     ...config,
     name: variant.appName,
-    slug: "mobile",
+    slug: "mains",
+    owner: "okanbilal",
     version: "0.1.0",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
@@ -50,6 +51,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       supportsTablet: false,
       icon: "./assets/expo.icon",
       infoPlist: {
+        // Only TLS and WebSockets: the standard exemption, declared so
+        // TestFlight stops asking about export compliance on every build.
+        ITSAppUsesNonExemptEncryption: false,
         NSLocalNetworkUsageDescription:
           "Mains connects to the companion app running on your Mac.",
         NSAppTransportSecurity: allowsDevelopmentLan
@@ -115,6 +119,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     extra: {
       appVariant,
+      eas: { projectId: "8da88a86-04be-44cc-afd4-64bbea9939bc" },
     },
   };
 };
