@@ -48,6 +48,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     ios: {
       bundleIdentifier: variant.identifier,
+      // Prebuild writes this into the Xcode project as DEVELOPMENT_TEAM, so a
+      // cabled `expo run:ios --device` signs without opening Xcode.
+      appleTeamId: "Y4MVJ7JSH6",
       supportsTablet: false,
       icon: "./assets/expo.icon",
       infoPlist: {
