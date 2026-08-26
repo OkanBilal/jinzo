@@ -77,10 +77,12 @@ Mains is an Electron 41 desktop app (React 19 renderer, SQLite + Drizzle ORM). C
 - React app with Redux Toolkit, React Router (HashRouter), `@/` alias → `src/renderer/`
 - Routes: `/` (default route), `/code[/:workspaceId]` (unified agent workspace — all providers), `/settings`, `/plugins`, `/pulse`, `/relay`, `/tasks` (issue + pull-request inbox)
 - `/code` hosts every agent provider; which provider it drives comes from the active space's `providerId` column (`claude_code`, `copilot_cli`, `codex`, `cursor`) — switching space via the space picker switches the provider. There are no per-provider routes.
-- The space's `mode` column (`developer`, `work`, `chat` — see `src/shared/modes.ts`) selects the UI shape via `src/renderer/lib/mode-config.ts` (`MODE_CONFIGS`, read through `useModeConfig`): which route `/` redirects to, plus per-mode capability flags (`showGitActions`, `showTerminal`, `showChangesTab`, `showPermissionControls`, `showPlanControls`, `showGoalControls`). Developer is all-true; work hides the git ceremony; chat hides every write-adjacent affordance. The agent-side half of a mode is the **mode harness** (`src/shared/mode-harness.ts`, see Provider Adapters)
+- The space's `mode` column (`developer`, `work`, `chat` — see `@mains/contracts/modes`) selects the UI shape via `src/renderer/lib/mode-config.ts` (`MODE_CONFIGS`, read through `useModeConfig`): which route `/` redirects to, plus per-mode capability flags (`showGitActions`, `showTerminal`, `showChangesTab`, `showPermissionControls`, `showPlanControls`, `showGoalControls`). Developer is all-true; work hides the git ceremony; chat hides every write-adjacent affordance. The agent-side half of a mode is the **mode harness** (`src/shared/mode-harness.ts`, see Provider Adapters)
 - Route table lives in `src/renderer/components/layout/main/main-routes.tsx`; page components in `src/renderer/routes/`
 
-### IPC Transport (`src/main/ipc-kit/`, `src/shared/ipc-kit/`)
+### IPC Transport (`src/main/ipc-kit/`, `@mains/contracts`)
+
+The wire-level pieces — the channel map, the WS protocol, `ServiceResponse`, provider ids, modes, effort levels, run settings — live in the shared `@mains/contracts` package (`packages/contracts/src`, plain TS source linked via `file:`); `src/shared` keeps re-export shims at the old paths, so existing imports still resolve. New code imports from `@mains/contracts/...`.
 
 The IPC layer is transport-agnostic so the same handlers can serve a local renderer *or* a remote client:
 
@@ -88,7 +90,7 @@ The IPC layer is transport-agnostic so the same handlers can serve a local rende
 - `handler-registry.ts` — channel → handler map, keyed by `"domain:action"`. Handlers keep the `(ctx, ...args)` shape; `ctx` is the Electron `IpcMainInvokeEvent` locally or a synthetic `{ clientId }` over WebSocket. Handlers that genuinely need the Electron event (terminal streaming via `event.sender`) stay on raw `ipcMain` and are not registered.
 - `handle.ts` — the wrapper at the IPC seam: resolved value → `ok(data)`, throw → log + `fail(message)`. Every `*.ipc.ts` handler uses it except the handful needing the invoke context (native dialog, terminal streaming, imageProxy signing, localBackend).
 - `event-bus.ts` — the single outbound path for main → client events (`emit`), Electron-free. Sinks: `browser-window-sink.ts` (local renderer) and `websocket-sink.ts` (remote clients).
-- `ws-server.ts` / `ws-server-host.ts` / `ws-auth.ts` — WebSocket router + in-process host + token auth; wire format in `src/shared/ipc-kit/ws-protocol.ts`.
+- `ws-server.ts` / `ws-server-host.ts` / `ws-auth.ts` — WebSocket router + in-process host + token auth; wire format in `@mains/contracts/ws-protocol`.
 
 See `docs/design/remote-backend.md` for the full design.
 
@@ -124,7 +126,7 @@ Not every module has all six files. Modules that own no tables skip `repo`/`dto`
 
 ### IPC Convention
 
-Channel format: `"domain:action"` (e.g. `"entities:getAll"`). All channels are defined once in `src/shared/ipc-kit/channels.ts` as a typed map (`CHANNELS.entities.getAll`). Main, preload, and renderer all import and reference values from that map — never type the channel string literally. Adding a channel = one edit; renaming = one edit; typo = compile-time error.
+Channel format: `"domain:action"` (e.g. `"entities:getAll"`). All channels are defined once in `@mains/contracts/channels` as a typed map (`CHANNELS.entities.getAll`). Main, preload, and renderer all import and reference values from that map — never type the channel string literally. Adding a channel = one edit; renaming = one edit; typo = compile-time error.
 
 Sites that reference the registry:
 
@@ -134,7 +136,7 @@ Sites that reference the registry:
 
 Channel namespaces: `account`, `app`, `appSettings`, `automations`, `backendAuth`, `browser`, `connections`, `documents`, `entities`, `fileExplorer`, `gitFlow`, `guards`, `imageProxy`, `issues`, `localBackend`, `projects`, `providers`, `pullRequests`, `pulse`, `runArtifacts`, `runContext`, `runToolCalls`, `runTurns`, `runs`, `shell`, `signals`, `space`, `ssh`, `stats`, `sync`, `tasks`, `terminal`, `toolCalls`, `updates`, `workspace`.
 
-All IPC responses use the `ServiceResponse<T>` envelope: `{ success: true, data }` or `{ success: false, error }`, built by `ok()` / `fail()` from `src/shared/ipc-kit/service-response.ts`. The renderer unwraps it exactly once, in `ipcBaseQuery` — never in `transformResponse`.
+All IPC responses use the `ServiceResponse<T>` envelope: `{ success: true, data }` or `{ success: false, error }`, built by `ok()` / `fail()` from `@mains/contracts/service-response`. The renderer unwraps it exactly once, in `ipcBaseQuery` — never in `transformResponse`.
 
 ### Data Flow
 
@@ -156,7 +158,7 @@ Conventions:
 Core tables:
 - `accounts` — User profiles (display name, email, bio, avatar)
 - `appSettings` — App-level config (activeSpaceId, enableWorktrees, seedVersion)
-- `providers` — Agent runtimes; ids come from `src/shared/provider-ids.ts` (`copilot_cli`, `claude_code`, `codex`, `cursor`)
+- `providers` — Agent runtimes; ids come from `@mains/contracts/provider-ids` (`copilot_cli`, `claude_code`, `codex`, `cursor`)
 - `projects` — Groups workspaces by shared remote origin (rootPath, workspacesPath, defaultBranch, scripts)
 - `projectResources` — Pivot linking projects to `connectionResources` (owned by the `projects` aggregate)
 - `workspaces` — Local repos with status tracking (backlog → todo → in_progress → in_review → done → canceled → duplicate)
@@ -164,7 +166,7 @@ Core tables:
 - `tasks` / `issues` — Domain-specific views on entities
 - `signals` — Lightweight notification/event records surfaced in the UI
 - `connections` / `connectionTokens` / `connectionResources` / `connectionStates` — External service connections, encrypted token blobs, linked resources, integration state
-- `spaces` — User-defined UI/prompt configurations; `providerId` (agent engine) and `mode` (developer/work/chat) drive `/code`. Which modes a provider offers lives in `PROVIDER_MODES` (`src/shared/modes.ts`) — claude and codex drive all three, copilot and cursor are developer-only for now
+- `spaces` — User-defined UI/prompt configurations; `providerId` (agent engine) and `mode` (developer/work/chat) drive `/code`. Which modes a provider offers lives in `PROVIDER_MODES` (`@mains/contracts/modes`) — claude and codex drive all three, copilot and cursor are developer-only for now
 - `runs` / `runTurns` / `runContext` / `runArtifacts` — Agent run flow with session resumption via `sessionId` and turn tracking
 - `toolCalls` — Tool invocation tracking with nested calls (`parentToolCallId`). There is no `tools` table — the registry is in-code.
 - `automations` / `automationRuns` — Scheduled/triggered automation definitions and their execution records

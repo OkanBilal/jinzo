@@ -61,7 +61,8 @@
     "build:preview": "npx eas-cli@latest build --platform all --profile preview",
     "build:production": "npx eas-cli@latest build --platform all --profile production",
     "release": "npx eas-cli@latest build --platform all --profile production --auto-submit",
-    "sync-icons": "node scripts/sync-icon-registry.mjs"
+    "sync-icons": "node scripts/sync-icon-registry.mjs",
+    "licenses:generate": "node scripts/generate-third-party-notices.mjs"
   },
   "private": true
 }
