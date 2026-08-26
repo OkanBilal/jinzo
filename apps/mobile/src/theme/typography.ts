@@ -9,7 +9,7 @@ export const type = {
   title2: { fontSize: 22, fontWeight: "700", letterSpacing: 0.35, color: colors.label },
   title3: { fontSize: 20, fontWeight: "600", letterSpacing: 0.38, color: colors.label },
   headline: { fontSize: 17, fontWeight: "600", letterSpacing: -0.4, color: colors.label },
-  body: { fontSize: 17, fontWeight: "400", letterSpacing: -0.4, lineHeight: 22, color: colors.label },
+  body: { fontSize: 16, fontWeight: "400", letterSpacing: -0.4, lineHeight: 22, color: colors.label },
   callout: { fontSize: 16, fontWeight: "400", letterSpacing: -0.3, lineHeight: 21, color: colors.label },
   /**
    * Chat prose — `callout`'s size with the leading a wall of text needs. A

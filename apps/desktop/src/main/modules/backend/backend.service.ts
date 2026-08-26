@@ -64,14 +64,21 @@ export const PAIRED_DEVICE_CHANNELS: ReadonlySet<string> = new Set([
 /**
  * Mutations a paired device may issue — only with a `commandId`, which the WS
  * router turns into exactly-once semantics through `command_receipts`. The
- * control loop's three verbs — answer a request, continue a run, start one —
- * plus the two picker writes the composer needs. Anything touching files,
- * git, terminal or settings stays out.
+ * control loop's four verbs — answer a request, continue a run, start one,
+ * branch one — plus the two picker writes the composer needs. Anything
+ * touching files, git, terminal or settings stays out.
  */
 export const PAIRED_DEVICE_COMMANDS: ReadonlySet<string> = new Set([
   CHANNELS.runs.toolApprovalResponse,
   CHANNELS.runs.continue,
   CHANNELS.runs.execute,
+  // Branching a run reaches no further than continuing one: the fork inherits
+  // the source's workspace, mode and policy snapshot wholesale, so a device
+  // can't widen its own reach by forking.
+  CHANNELS.runs.fork,
+  // Stopping a run you can already start and continue takes nothing further —
+  // it only ends work the device itself asked for.
+  CHANNELS.runs.abort,
   // The desktop's mode picker is a space update; the phone's works the same way.
   CHANNELS.space.update,
   // The composer toolbar's settings (effort, permission mode, fast / goal /

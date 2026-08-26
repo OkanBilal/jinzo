@@ -354,6 +354,23 @@ export interface ContinueRunResponse {
   resumed: boolean;
 }
 
+/**
+ * The subset of `runs:fork`'s payload the phone sends. A fork branches the
+ * source run's *session* into a new run — everything else (workspace, mode,
+ * model, policy) is inherited from the source on the Mac, so the phone only
+ * names the run to branch from and the message the branch opens with.
+ */
+export interface ForkRunPayload {
+  sourceRunId: string;
+  accountId: string;
+  message: string;
+}
+
+export interface ForkRunResponse {
+  runId: string;
+  sourceRunId: string;
+}
+
 /** The broker's cap on how long any request may wait (user-input-broker.ts). */
 export const APPROVAL_TIMEOUT_MS = 5 * 60 * 1000;
 

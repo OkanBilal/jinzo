@@ -7,7 +7,7 @@ import { colors, spacing } from "@/theme";
 
 import { SFSymbol } from "./sf-symbol";
 import { ThemedText } from "./themed-text";
-import { TranscriptRow } from "./transcript-row";
+import { TranscriptRow, type TranscriptActions } from "./transcript-row";
 
 /**
  * One planned row of the transcript: either a flat run of items, or a turn
@@ -21,29 +21,41 @@ export function TranscriptTurn({
   row,
   providerId,
   isRunInProgress,
+  actions,
 }: {
   row: TurnRow;
   providerId?: string | null;
   /** True only for the last row while the run is still going (see the screen). */
   isRunInProgress: boolean;
+  /** Passed through untouched to whichever rows hold an agent message. */
+  actions?: TranscriptActions;
 }) {
   if (row.kind === "flat") {
-    return <ItemList items={row.items} providerId={providerId} />;
+    return <ItemList items={row.items} providerId={providerId} actions={actions} />;
   }
-  return <TurnAccordion row={row} providerId={providerId} isRunInProgress={isRunInProgress} />;
+  return (
+    <TurnAccordion
+      row={row}
+      providerId={providerId}
+      isRunInProgress={isRunInProgress}
+      actions={actions}
+    />
+  );
 }
 
 function ItemList({
   items,
   providerId,
+  actions,
 }: {
   items: TranscriptItem[];
   providerId?: string | null;
+  actions?: TranscriptActions;
 }) {
   return (
     <View style={{ gap: spacing.md }}>
       {items.map((item) => (
-        <TranscriptRow key={item.key} item={item} providerId={providerId} />
+        <TranscriptRow key={item.key} item={item} providerId={providerId} actions={actions} />
       ))}
     </View>
   );
@@ -53,10 +65,12 @@ function TurnAccordion({
   row,
   providerId,
   isRunInProgress,
+  actions,
 }: {
   row: Extract<TurnRow, { kind: "accordion" }>;
   providerId?: string | null;
   isRunInProgress: boolean;
+  actions?: TranscriptActions;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -98,9 +112,13 @@ function TurnAccordion({
         </View>
       )}
 
-      {expanded ? <ItemList items={row.previous} providerId={providerId} /> : null}
-      {row.breakout.length > 0 ? <ItemList items={row.breakout} providerId={providerId} /> : null}
-      <ItemList items={row.last} providerId={providerId} />
+      {expanded ? (
+        <ItemList items={row.previous} providerId={providerId} actions={actions} />
+      ) : null}
+      {row.breakout.length > 0 ? (
+        <ItemList items={row.breakout} providerId={providerId} actions={actions} />
+      ) : null}
+      <ItemList items={row.last} providerId={providerId} actions={actions} />
     </View>
   );
 }

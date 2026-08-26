@@ -8,6 +8,8 @@ import type {
   AccountResponse,
   ContinueRunPayload,
   ContinueRunResponse,
+  ForkRunPayload,
+  ForkRunResponse,
   ModeId,
   SkillSummary,
   SpaceModePayload,
@@ -401,6 +403,46 @@ class BackendSession {
     const result = await this.command<ContinueRunResponse>(CHANNELS.runs.continue, [payload]);
     if (result.success && this.transport) {
       void syncRun(this.transport, backend.backendId, runId).catch(() => {});
+    }
+    return result;
+  }
+
+  /**
+   * Branch a finished run into a new one. The Mac forks the provider session,
+   * so the new run inherits the source's workspace, mode, policy and model —
+   * only the opening message is ours to send. Resolves the new run's id.
+   */
+  async forkRun(
+    sourceRunId: string,
+    message: string,
+  ): Promise<ServiceResponse<ForkRunResponse>> {
+    const { accountId, backend } = this.snapshot;
+    if (!accountId || !backend) {
+      return { success: false, error: "Not connected to your Mac yet" };
+    }
+    const payload: ForkRunPayload = { sourceRunId, accountId, message };
+    const result = await this.command<ForkRunResponse>(CHANNELS.runs.fork, [payload]);
+    if (result.success && this.transport) {
+      // The new run has no row in the projection yet; pull it before the
+      // screen that is about to open queries for it.
+      void syncRun(this.transport, backend.backendId, result.data.runId).catch(() => {});
+    }
+    return result;
+  }
+
+  /**
+   * Stop a run mid-flight — the desktop's own verb (`runs:abort`, what its
+   * composer's stop button calls). The Mac settles the run's status and pushes
+   * it; the refetch here is only so the screen does not wait on that round trip.
+   */
+  async abortRun(runId: string): Promise<ServiceResponse<void>> {
+    if (!this.snapshot.backend) {
+      return { success: false, error: "Not connected to your Mac yet" };
+    }
+    const backendId = this.snapshot.backend.backendId;
+    const result = await this.command<void>(CHANNELS.runs.abort, [runId]);
+    if (result.success && this.transport) {
+      void syncRun(this.transport, backendId, runId).catch(() => {});
     }
     return result;
   }

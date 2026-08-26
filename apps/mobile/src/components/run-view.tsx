@@ -1,0 +1,463 @@
+import { and, asc, eq } from "drizzle-orm";
+import { useLiveQuery } from "drizzle-orm/expo-sqlite";
+import { useFocusEffect, useRouter, type Href } from "expo-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ScrollView, View, type NativeScrollEvent } from "react-native";
+import Animated, { useAnimatedKeyboard, useAnimatedStyle } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { backendSession, useSession } from "@/backend/backend-session";
+import { db } from "@/db/client";
+import { pendingApprovals, runArtifacts, runs, toolCalls, workspaces } from "@/db/schema";
+import { isModeId, DEFAULT_MODE_ID } from "@mains/contracts/modes";
+import { attachedSkills, composeGoal } from "@/lib/context-picker";
+import type { PromptSkill } from "@/lib/prompt-chips";
+import { buildTranscript, type TranscriptItem } from "@/lib/transcript";
+import { buildTurnRows } from "@/lib/transcript-rows";
+import { useKeyboardInset } from "@/lib/use-keyboard-inset";
+import { useModelSelection } from "@/lib/use-model-selection";
+import { useNow } from "@/lib/use-now";
+import { colors, radius, shadows, spacing } from "@/theme";
+
+import { AsciiLoader, latestThinking } from "./ascii-loader";
+import { ComposerBar } from "./composer-bar";
+import { FORK_MESSAGE } from "./message-actions";
+import { PendingApprovalCard } from "./pending-approval-card";
+import { ThemedText } from "./themed-text";
+import { TranscriptRow, type TranscriptActions } from "./transcript-row";
+import { TranscriptTurn } from "./transcript-turn";
+
+/**
+ * How far above the end a reader can rest and still count as following it. At
+ * the true end the list sits a home-indicator inset *past* its content, so this
+ * allows about a composer's height of drift before the chase lets go.
+ */
+const PIN_DISTANCE = 80;
+
+/** A prompt as it was sent, drawn before the Mac's own copy of it arrives. */
+export interface PendingPrompt {
+  /** The composed goal — what was typed plus a token per attached skill. */
+  text: string;
+  skills: PromptSkill[];
+}
+
+/**
+ * A run's conversation: its transcript, the agent's progress, any approval it
+ * is waiting on, and the composer to continue or stop it. The run screen shows
+ * one under a navigation bar; home shows the run it just started under its
+ * floating controls — the same view, so a send never has to change screens.
+ */
+export function RunView({
+  runId,
+  pending = null,
+  providerId: expectedProviderId = null,
+  topInset,
+  topPadding = 0,
+}: {
+  /** Empty while a send is still waiting on the Mac for its id. */
+  runId: string;
+  /** What was just sent, shown as the first bubble until the transcript has it. */
+  pending?: PendingPrompt | null;
+  /** The provider expected to answer — tints the bubble before the run row lands. */
+  providerId?: string | null;
+  /**
+   * How far iOS insets the top of the list on this screen: the navigation
+   * bar's height under a header, the status bar's without one. The scroll
+   * model needs it to tell "at rest" from "scrolled under the title".
+   */
+  topInset: number;
+  /** Content padding beneath that inset, for controls floating over the list. */
+  topPadding?: number;
+}) {
+  const session = useSession();
+  const backendId = session.backend?.backendId ?? "";
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const openRunOptions = (providerId: string) =>
+    router.push({ pathname: "/model", params: { providerId } } as Href);
+
+  // While this transcript is on screen its events trigger refetches.
+  useFocusEffect(
+    useCallback(() => {
+      if (!runId) return;
+      backendSession.openRun(runId);
+      return () => backendSession.closeRun(runId);
+    }, [runId]),
+  );
+
+  const runQuery = useLiveQuery(
+    db.select().from(runs).where(and(eq(runs.backendId, backendId), eq(runs.id, runId))).limit(1),
+    [backendId, runId],
+  );
+  const artifactQuery = useLiveQuery(
+    db
+      .select()
+      .from(runArtifacts)
+      .where(and(eq(runArtifacts.backendId, backendId), eq(runArtifacts.runId, runId)))
+      .orderBy(asc(runArtifacts.createdAt), asc(runArtifacts.id)),
+    [backendId, runId],
+  );
+  const callQuery = useLiveQuery(
+    db
+      .select()
+      .from(toolCalls)
+      .where(and(eq(toolCalls.backendId, backendId), eq(toolCalls.runId, runId)))
+      .orderBy(asc(toolCalls.createdAt), asc(toolCalls.id)),
+    [backendId, runId],
+  );
+  const approvalQuery = useLiveQuery(
+    db
+      .select()
+      .from(pendingApprovals)
+      .where(and(eq(pendingApprovals.backendId, backendId), eq(pendingApprovals.runId, runId)))
+      .orderBy(asc(pendingApprovals.requestedAt)),
+    [backendId, runId],
+  );
+  const now = useNow(1000, approvalQuery.data.length > 0);
+  const waiting = useMemo(
+    () => approvalQuery.data.filter((a) => a.expiresAt.getTime() > now),
+    [approvalQuery.data, now],
+  );
+
+  const run = runQuery.data[0];
+  // Until the run row lands, the provider is the one the send was aimed at:
+  // the bubble's tint and the composer's chips must not flicker in later.
+  const providerId = run?.providerId ?? expectedProviderId ?? "";
+  // A run's workspace scopes what its provider lists behind `@` / `$`.
+  const workspaceQuery = useLiveQuery(
+    db
+      .select({ rootPath: workspaces.rootPath })
+      .from(workspaces)
+      .where(and(eq(workspaces.backendId, backendId), eq(workspaces.id, run?.workspaceId ?? "")))
+      .limit(1),
+    [backendId, run?.workspaceId],
+  );
+  const modelSelection = useModelSelection(backendId, providerId);
+  const runIsLive = run?.status === "running" || run?.status === "queued";
+  /** Sent, but the Mac has yet to answer with a run. */
+  const starting = pending !== null && !run;
+  const connected = session.connection.kind === "connected";
+  // Two passes, as on the desktop: the transcript's items, then the plan for
+  // how a turn's items collapse into rows.
+  const items = useMemo(
+    () => buildTranscript(artifactQuery.data, callQuery.data),
+    [artifactQuery.data, callQuery.data],
+  );
+  const rows = useMemo(() => buildTurnRows(items), [items]);
+  // The prompt as sent stands in for the Mac's copy only until that arrives;
+  // the two draw identically, so the swap is invisible.
+  const pendingItem = useMemo<TranscriptItem | null>(() => {
+    if (!pending || items.some((item) => item.kind === "prompt")) return null;
+    return { key: "pending-prompt", kind: "prompt", text: pending.text, at: 0, skills: pending.skills, files: [] };
+  }, [pending, items]);
+  // The run's closing message: the one the action row treats specially.
+  const closingKey = useMemo(() => {
+    for (let i = items.length - 1; i >= 0; i--) {
+      if (items[i].kind === "response") return items[i].key;
+    }
+    return null;
+  }, [items]);
+  const thinking = useMemo(() => latestThinking(artifactQuery.data), [artifactQuery.data]);
+  const mode = isModeId(run?.mode) ? run.mode : DEFAULT_MODE_ID;
+
+  const [draft, setDraft] = useState("");
+  const [contextSkills, setContextSkills] = useState<PromptSkill[]>([]);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const send = async () => {
+    const message = composeGoal(draft, contextSkills);
+    if (!message || !run || runIsLive || !connected || sending) return;
+    setSending(true);
+    setSendError(null);
+    try {
+      const result = await backendSession.continueRun(runId, message, attachedSkills(draft, contextSkills));
+      if (!result.success) {
+        setSendError(result.error);
+        return;
+      }
+      setDraft("");
+      setContextSkills([]);
+    } catch (caught) {
+      setSendError(caught instanceof Error ? caught.message : "Could not send");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Forking branches this run's session into a new one and opens it. The Mac
+  // inherits everything else from the source, so the phone sends only the
+  // opening line — the desktop's, word for word.
+  const fork = useCallback(async () => {
+    setSendError(null);
+    try {
+      const result = await backendSession.forkRun(runId, FORK_MESSAGE);
+      if (!result.success) {
+        setSendError(result.error);
+        return;
+      }
+      router.push(`/run/${result.data.runId}` as Href);
+    } catch (caught) {
+      setSendError(caught instanceof Error ? caught.message : "Could not fork this run");
+    }
+  }, [runId, router]);
+
+  const actions = useMemo<TranscriptActions | undefined>(
+    () =>
+      run
+        ? {
+            closingKey,
+            isRunLive: runIsLive,
+            // A fork starts a run on the Mac; without one in reach, the button
+            // has nothing to offer, so it stays off the row entirely.
+            onFork: connected && !runIsLive ? fork : undefined,
+          }
+        : undefined,
+    [run, closingKey, runIsLive, connected, fork],
+  );
+
+  // Stop, the desktop's verb: `runs:abort`, what its composer's stop button
+  // calls. The Mac settles the run's status and pushes it back.
+  const stop = async () => {
+    setSendError(null);
+    const result = await backendSession.abortRun(runId);
+    if (!result.success) setSendError(result.error);
+  };
+
+  const listRef = useRef<ScrollView>(null);
+
+  // Room for the keyboard under the transcript, as padding: a short transcript
+  // stays where it is, a long one can still be scrolled clear of the keys.
+  const keyboardInset = useKeyboardInset();
+  const composerHeight = 72 + insets.bottom;
+
+  /**
+   * Where the transcript sits, in a chat's terms: it opens on its last message
+   * and follows the end while the reader stays near it; the moment they scroll
+   * up to read, it holds still until they come back.
+   *
+   * The offsets are worked out here, from what the list reports, because the
+   * native `scrollToEnd` knows nothing of the insets iOS adds for the
+   * transparent header and the home indicator: it tucked a short transcript up
+   * under the title and stopped an inset short of the true end on a long one.
+   * `scrollToOverflowEnabled` is what lets the header's negative rest offset
+   * through.
+   */
+  const metrics = useRef({ frame: 0, content: 0, offset: null as number | null });
+  /** Following the end: cleared by a drag, restored by letting go near it. */
+  const pinned = useRef(true);
+  /** Set a beat after the transcript first lands; only moves after that animate. */
+  const placed = useRef(false);
+  const placedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (placedTimer.current) clearTimeout(placedTimer.current);
+    },
+    [],
+  );
+  // Only iOS insets the content for the header and the home indicator.
+  const restOffset = process.env.EXPO_OS === "ios" ? -topInset : 0;
+  const bottomInset = process.env.EXPO_OS === "ios" ? insets.bottom : 0;
+
+  /** Move to wherever the transcript should be, if that is somewhere else. */
+  const place = () => {
+    const { frame, content, offset } = metrics.current;
+    if (frame === 0 || content === 0) return;
+    const end = content - frame + bottomInset;
+    // A transcript that fits stays at rest under the header; scrolling a short
+    // one "to the end" is what used to slide its first message off the top.
+    const max = Math.max(restOffset, end);
+    const current = offset ?? restOffset;
+    // Unpinned, the only move is back into range: when the content shrinks
+    // under the reader — a turn folding as its run settles — iOS leaves the
+    // offset past the end, showing nothing, until something scrolls.
+    if (!pinned.current && current <= max) return;
+    if (Math.abs(max - current) < 1) return;
+    listRef.current?.scrollTo({ y: max, animated: placed.current });
+    metrics.current.offset = max;
+  };
+
+  /** Re-read whether the reader is at the end once a scroll comes to rest. */
+  const settle = (event: NativeScrollEvent) => {
+    const { contentOffset, contentSize, layoutMeasurement, targetContentOffset } = event;
+    // A fling reports where it will stop; judge by that rather than by where
+    // the finger left, or a flick up from the end would be chased straight back.
+    const y = targetContentOffset?.y ?? contentOffset.y;
+    pinned.current = contentSize.height - layoutMeasurement.height - y < PIN_DISTANCE;
+  };
+
+  // The composer rides the keyboard itself, as the workspace screen's bar does:
+  // an absolutely positioned child sees none of a KeyboardAvoidingView's
+  // padding, so the wrapper only ever cost us — nested inside it the transcript
+  // stopped being the screen's primary scroll view, and iOS dropped the
+  // nav-bar inset that keeps content from sliding under the title.
+  const keyboard = useAnimatedKeyboard();
+  const lift = useAnimatedStyle(() => ({
+    transform: [{ translateY: -Math.max(0, keyboard.height.value - insets.bottom) }],
+  }));
+
+  const placeholder = !connected
+    ? "Connect to your Mac to continue this run"
+    : runIsLive
+      ? "The agent is still working…"
+      : !run
+        ? starting
+          ? "Starting the run…"
+          : "Loading run…"
+        : "Continue this run…";
+
+  return (
+    <View style={{ flex: 1 }}>
+      {/*
+        A ScrollView rather than a FlatList. The rows are whole turns, of which
+        a run has a few dozen at most, and a virtualized list sizes what it has
+        not rendered yet by estimate — an "end" that keeps moving as the tail
+        fills in, which is no place to land a chat. Rendered whole, a fold also
+        keeps its open state when it scrolls out of view.
+      */}
+      <ScrollView
+        ref={listRef}
+        contentInsetAdjustmentBehavior="automatic"
+        scrollToOverflowEnabled
+        scrollEventThrottle={16}
+        keyboardDismissMode="interactive"
+        contentContainerStyle={{
+          paddingHorizontal: spacing.md,
+          paddingTop: spacing.sm + topPadding,
+          paddingBottom: composerHeight + spacing.md + keyboardInset,
+          gap: spacing.md,
+        }}
+        onLayout={(event) => {
+          metrics.current.frame = event.nativeEvent.layout.height;
+          place();
+        }}
+        onContentSizeChange={(_width, height) => {
+          metrics.current.content = height;
+          place();
+          // The first rows land in one piece and without animation; from a
+          // beat later on, growth — a streaming answer, the keyboard's room —
+          // is followed with one.
+          if ((rows.length > 0 || pendingItem !== null) && placedTimer.current === null) {
+            placedTimer.current = setTimeout(() => {
+              placed.current = true;
+            }, 300);
+          }
+        }}
+        onScroll={(event) => {
+          metrics.current.offset = event.nativeEvent.contentOffset.y;
+        }}
+        onScrollBeginDrag={() => {
+          pinned.current = false;
+        }}
+        onScrollEndDrag={(event) => settle(event.nativeEvent)}
+        onMomentumScrollEnd={(event) => settle(event.nativeEvent)}
+      >
+        {pendingItem ? <TranscriptRow item={pendingItem} providerId={providerId} /> : null}
+        {rows.length === 0 && !pendingItem ? (
+          <ThemedText variant="subhead" style={{ paddingVertical: spacing.xl, textAlign: "center" }}>
+            {run ? "Nothing in this run yet." : "Loading run…"}
+          </ThemedText>
+        ) : (
+          rows.map((row, index) => (
+            <TranscriptTurn
+              key={row.key}
+              row={row}
+              providerId={providerId}
+              // Only the final row can be the turn the agent is still inside.
+              isRunInProgress={Boolean(runIsLive) && index === rows.length - 1}
+              actions={actions}
+            />
+          ))
+        )}
+        <View style={{ gap: spacing.md }}>
+          {runIsLive || starting ? <AsciiLoader mode={mode} thinkingText={thinking} /> : null}
+          {waiting.map((approval) => (
+            <PendingApprovalCard
+              key={approval.requestId}
+              approval={approval}
+              now={now}
+              onRespond={async ({ approved, answer }) => {
+                const result = await backendSession.respondToApproval(
+                  approval.requestId,
+                  approved,
+                  answer,
+                );
+                if (!result.success) throw new Error(result.error);
+              }}
+            />
+          ))}
+          {run?.lastError ? (
+            <View
+              style={{
+                padding: spacing.md,
+                borderRadius: radius.lg,
+                borderCurve: "continuous",
+                backgroundColor: colors.groupedCell,
+                boxShadow: shadows.card,
+                gap: spacing.xs,
+              }}
+            >
+              <ThemedText variant="caption" style={{ color: colors.systemRed, fontWeight: "600" }}>
+                RUN FAILED
+              </ThemedText>
+              <ThemedText variant="subhead" selectable>
+                {run.lastError}
+              </ThemedText>
+            </View>
+          ) : null}
+        </View>
+      </ScrollView>
+
+      <Animated.View
+        style={[
+          {
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            paddingBottom: insets.bottom + spacing.sm,
+          },
+          lift,
+        ]}
+      >
+        <ComposerBar
+          value={draft}
+          onChangeText={setDraft}
+          onSend={() => void send()}
+          // Only offered while there is something to stop, and only when the
+          // Mac is reachable to hear it.
+          onStop={runIsLive && connected ? () => void stop() : undefined}
+          sending={sending}
+          disabled={!connected || !!runIsLive || !run}
+          error={sendError}
+          placeholder={placeholder}
+          model={
+            providerId && modelSelection.label
+              ? {
+                  label: modelSelection.label,
+                  effort: modelSelection.effortLabel,
+                  onPress: () => openRunOptions(providerId),
+                }
+              : null
+          }
+          permission={
+            providerId && modelSelection.permissionLabel
+              ? { label: modelSelection.permissionLabel, onPress: () => openRunOptions(providerId) }
+              : null
+          }
+          providerId={providerId || undefined}
+          context={
+            backendId && providerId
+              ? {
+                  backendId,
+                  providerId,
+                  workspacePath: workspaceQuery.data[0]?.rootPath ?? null,
+                  skills: contextSkills,
+                  onSkillsChange: setContextSkills,
+                }
+              : null
+          }
+        />
+      </Animated.View>
+    </View>
+  );
+}

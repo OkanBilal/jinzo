@@ -45,26 +45,26 @@ export function WorkspaceRow({
         flexDirection: "row",
         alignItems: "center",
         gap: spacing.ms,
-        paddingVertical: spacing.ms,
+        paddingVertical: spacing.sm,
         paddingHorizontal: spacing.sm,
-        borderRadius: radius.sm,
+        borderRadius: radius.lg,
         borderCurve: "continuous",
         backgroundColor: pressed || selected ? colors.fill : "transparent",
       })}
     >
       <View style={{ flex: 1, gap: spacing.xxs }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
           <View style={{ width: 18, alignItems: "center" }}>
-            <ProjectIcon icon={projectIcon} size={16} color={colors.secondaryLabel} />
+            <ProjectIcon icon={projectIcon} size={14} color={colors.secondaryLabel} />
           </View>
-          <ThemedText variant="body" numberOfLines={1} style={{ flex: 1, fontWeight: "500" }}>
+          <ThemedText variant="body" numberOfLines={1} style={{ flex: 1, fontWeight: "400" }}>
             {workspace.name}
           </ThemedText>
         </View>
         {detail ? (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
             <View style={{ width: 18, alignItems: "center" }}>
-              <WorkspaceStatusIcon status={workspace.status} size={14} />
+              <WorkspaceStatusIcon status={workspace.status} size={12} />
             </View>
             <ThemedText
               variant="footnote"

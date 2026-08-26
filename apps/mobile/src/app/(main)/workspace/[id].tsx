@@ -14,6 +14,8 @@ import { ThemedText } from "@/components/themed-text";
 import { db } from "@/db/client";
 import { runs, spaceTargets, spaces, workspaces, type RunRow as RunRecord } from "@/db/schema";
 import { relativeTime, runStatusLabel } from "@/lib/format";
+import { goHome } from "@/lib/home-run";
+import { useKeyboardInset } from "@/lib/use-keyboard-inset";
 import { colors, radius, spacing, type, useBrandColors } from "@/theme";
 
 /** The bar's controls share one height, like the Codex app's search pill and compose button. */
@@ -76,6 +78,10 @@ export default function WorkspaceScreen() {
     transform: [{ translateY: -Math.max(0, keyboard.height.value - insets.bottom) }],
   }));
 
+  // Room under the list while the search keyboard is up, so the last rows can
+  // be scrolled clear of it — as padding; see the hook for why not the prop.
+  const keyboardInset = useKeyboardInset();
+
   const searchRef = useRef<TextInput>(null);
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState("");
@@ -104,7 +110,7 @@ export default function WorkspaceScreen() {
     if (space) {
       setSpaceTarget(backendId, space.id, { workspaceId, collectionId: target?.collectionId ?? null });
     }
-    router.dismissTo("/" as Href);
+    goHome();
   };
 
   return (
@@ -120,13 +126,12 @@ export default function WorkspaceScreen() {
         data={visible}
         keyExtractor={(run) => run.id}
         contentInsetAdjustmentBehavior="automatic"
-        automaticallyAdjustKeyboardInsets
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
           paddingHorizontal: spacing.md,
           paddingTop: spacing.sm,
-          paddingBottom: insets.bottom + BAR_HEIGHT + spacing.xl,
+          paddingBottom: insets.bottom + BAR_HEIGHT + spacing.xl + keyboardInset,
         }}
         ListEmptyComponent={
           <ThemedText variant="subhead" style={{ paddingVertical: spacing.md, fontWeight: 600 }}>

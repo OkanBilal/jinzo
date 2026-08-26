@@ -11,7 +11,7 @@ import {
   type PickerRow,
 } from "@/lib/context-picker";
 import type { PromptSkill } from "@/lib/prompt-chips";
-import { colors, radius, spacing, type, useBrandColors } from "@/theme";
+import { colors, radius, spacing, type, useProviderAccent } from "@/theme";
 
 import { ContextPicker } from "./context-picker";
 import { GlassSurface } from "./glass-surface";
@@ -47,9 +47,11 @@ export function ComposerBar({
   sending = false,
   error,
   onAdd,
+  onStop,
   model,
   permission,
   context,
+  providerId,
 }: {
   value: string;
   onChangeText: (text: string) => void;
@@ -60,14 +62,21 @@ export function ComposerBar({
   error?: string | null;
   /** The "+" button; without a handler it is shown but inert. */
   onAdd?: () => void;
+  /**
+   * Given only while a run is in flight: the send button becomes a stop button,
+   * as it does on the desktop (`SendButton` swaps on `loading && onStop`).
+   */
+  onStop?: () => void;
   /** The model pill: what is selected, its effort, and what tapping opens. */
   model?: { label: string; effort?: string | null; onPress: () => void } | null;
   /** The permission-mode pill — worth seeing before sending from a phone. */
   permission?: { label: string; onPress: () => void } | null;
   /** Skills and commands behind `@` / `/` / `$` and the "+" button. */
   context?: ComposerContext | null;
+  /** Tints the send button, the way the provider tints its prompt bubbles. */
+  providerId?: string | null;
 }) {
-  const brand = useBrandColors();
+  const accent = useProviderAccent(providerId);
   const canSend = !disabled && !sending && value.trim().length > 0;
 
   // The "+" button opens the plugins bucket with no token in the text, the way
@@ -141,7 +150,7 @@ export function ComposerBar({
           style={[
             type.body,
             {
-              minHeight: 28,
+              minHeight: 32,
               maxHeight: 132,
               paddingHorizontal: spacing.xs,
               paddingTop: spacing.xs,
@@ -196,23 +205,28 @@ export function ComposerBar({
 
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Send"
-            disabled={!canSend}
-            onPress={onSend}
+            accessibilityLabel={onStop ? "Stop run" : "Send"}
+            // Stopping stays available while the composer itself is disabled —
+            // a run in flight is exactly when the field is closed for typing.
+            disabled={onStop ? false : !canSend}
+            onPress={onStop ?? onSend}
             style={({ pressed }) => ({
               width: 36,
               height: 36,
               borderRadius: 18,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: canSend ? brand.accent : colors.fill,
+              // Always the provider's color, disabled or not: the button says
+              // whose agent this is, and greying it out for an empty field made
+              // the composer read as unavailable rather than simply idle.
+              backgroundColor: accent,
               opacity: pressed ? 0.7 : 1,
             })}
           >
             <SFSymbol
-              name={sending ? "ellipsis" : "arrow.up"}
-              size={16}
-              tint={canSend ? brand.accentContrast : colors.tertiaryLabel}
+              name={onStop ? "stop.fill" : sending ? "ellipsis" : "arrow.up"}
+              size={onStop ? 13 : 16}
+              tint={colors.onTint}
             />
           </Pressable>
         </View>
@@ -254,9 +268,8 @@ function Pill({
         alignItems: "center",
         gap: spacing.xs + 2,
         height: 36,
-        paddingHorizontal: spacing.ms,
+        paddingHorizontal: spacing.xs,
         borderRadius: radius.full,
-        backgroundColor: colors.fill,
         opacity: pressed ? 0.7 : 1,
         flexShrink: 1,
       })}

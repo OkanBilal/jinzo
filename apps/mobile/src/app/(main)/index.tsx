@@ -1,28 +1,37 @@
+import { MenuView } from "@expo/ui/community/menu";
 import { and, eq } from "drizzle-orm";
 import { useLiveQuery } from "drizzle-orm/expo-sqlite";
 import { useNavigation, useRouter, type Href } from "expo-router";
 import { DrawerActions } from "expo-router/react-navigation";
-import { useState } from "react";
-import { Keyboard, KeyboardAvoidingView, Pressable, View } from "react-native";
+import { useState, type ComponentProps } from "react";
+import { Keyboard, Pressable, View } from "react-native";
+import Animated, { useAnimatedKeyboard, useAnimatedStyle } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { backendSession, useSession } from "@/backend/backend-session";
 import { Button } from "@/components/button";
 import { ComposerBar } from "@/components/composer-bar";
+import { GlassSurface } from "@/components/glass-surface";
 import { attachedSkills, composeGoal } from "@/lib/context-picker";
 import type { PromptSkill } from "@/lib/prompt-chips";
 import { ModeMenu } from "@/components/mode-menu";
 import { ProjectIcon } from "@/components/project-icon";
 import { RoundGlassButton } from "@/components/round-glass-button";
+import { RunView } from "@/components/run-view";
 import { SFSymbol } from "@/components/sf-symbol";
 import { SidebarIcon } from "@/components/sidebar-icon";
 import { ConnectionBadge } from "@/components/status";
 import { ThemedText } from "@/components/themed-text";
 import { providerModes, type ModeId } from "@mains/contracts/runs";
+import { homeRun, useHomeRun } from "@/lib/home-run";
 import { useModelSelection } from "@/lib/use-model-selection";
+import { useRunTitle } from "@/lib/use-run-title";
 import { db } from "@/db/client";
-import { collections, pendingApprovals, providers, spaceTargets, spaces, workspaces } from "@/db/schema";
+import { collections, projects, providers, spaceTargets, spaces, workspaces } from "@/db/schema";
 import { colors, radius, shadows, spacing, useBrandColors } from "@/theme";
+
+/** The round glass buttons' size, and the pills' height, along the top. */
+const CONTROL_HEIGHT = 46;
 
 /**
  * Home, in the shape of a chat app's "new conversation": the mode segment on
@@ -30,6 +39,11 @@ import { colors, radius, shadows, spacing, useBrandColors } from "@/theme";
  * the bottom. The target model is the desktop's: the space chosen in the
  * sidebar pins provider + mode; Code runs need a workspace, Work/Chat may
  * take a project.
+ *
+ * And, as in a chat app, a send does not leave the screen: the conversation
+ * starts right here, and the top row becomes the run screen's — its title
+ * where the mode segment was, its toolbar on the right — so a run looks the
+ * same whether it began here or was opened from a list.
  */
 export default function NewRunScreen() {
   const navigation = useNavigation();
@@ -40,13 +54,6 @@ export default function NewRunScreen() {
   const spaceId = session.selectedSpaceId ?? "";
   const connected = session.connection.kind === "connected";
 
-  const pendingList = useLiveQuery(
-    db
-      .select({ requestId: pendingApprovals.requestId })
-      .from(pendingApprovals)
-      .where(eq(pendingApprovals.backendId, backendId)),
-    [backendId],
-  );
   const spaceQuery = useLiveQuery(
     db.select().from(spaces).where(and(eq(spaces.backendId, backendId), eq(spaces.id, spaceId))).limit(1),
     [backendId, spaceId],
@@ -67,6 +74,11 @@ export default function NewRunScreen() {
     db.select().from(collections).where(eq(collections.backendId, backendId)),
     [backendId],
   );
+  // A workspace wears its project's icon, as it does in the sidebar's rows.
+  const projectQuery = useLiveQuery(
+    db.select().from(projects).where(eq(projects.backendId, backendId)),
+    [backendId],
+  );
   const providerQuery = useLiveQuery(
     db.select().from(providers).where(eq(providers.backendId, backendId)),
     [backendId],
@@ -77,6 +89,7 @@ export default function NewRunScreen() {
   const isCode = space?.mode === "developer";
   const workspace = workspaceQuery.data.find((w) => w.id === target?.workspaceId);
   const collection = collectionQuery.data.find((c) => c.id === target?.collectionId);
+  const project = projectQuery.data.find((p) => p.id === workspace?.projectId);
   const providerEnabled = space
     ? providerQuery.data.some((p) => p.id === space.providerId && p.isEnabled)
     : true;
@@ -88,6 +101,18 @@ export default function NewRunScreen() {
   const [sending, setSending] = useState(false);
   const [pendingMode, setPendingMode] = useState<ModeId | null>(null);
   const [hint, setHint] = useState<string | null>(null);
+
+  // The run this screen is showing, once one has been started from it.
+  const home = useHomeRun();
+  const inRun = home.pending !== null || home.runId !== null;
+  const title = useRunTitle(home.runId ?? "");
+
+  // Same rule as the run and workspace screens: move by the keyboard's height
+  // less the safe-area inset the bar already sits above.
+  const keyboard = useAnimatedKeyboard();
+  const lift = useAnimatedStyle(() => ({
+    transform: [{ translateY: -Math.max(0, keyboard.height.value - insets.bottom) }],
+  }));
 
   const openRunOptions = (providerId: string) =>
     router.push({ pathname: "/model", params: { providerId } } as Href);
@@ -117,23 +142,31 @@ export default function NewRunScreen() {
       setHint("Pick a workspace for this Code run first.");
       return;
     }
+    const skills = attachedSkills(draft, contextSkills);
     setSending(true);
     setHint(null);
+    // The conversation starts here and now: the prompt goes up as a bubble
+    // before the Mac has answered, and the transcript fills in under it once
+    // it has. A refusal takes the bubble back down and leaves the draft as it
+    // was, with the reason under it.
+    homeRun.start({ text: goal, skills });
     try {
       const result = await backendSession.startRun({
         goal,
         workspaceId: workspace?.id ?? null,
         collectionId: collection?.id ?? null,
-        contextSkills: attachedSkills(draft, contextSkills),
+        contextSkills: skills,
       });
       if (!result.success) {
+        homeRun.clear();
         setHint(result.error);
         return;
       }
       setDraft("");
       setContextSkills([]);
-      router.push(`/run/${result.data.runId}` as Href);
+      homeRun.started(result.data.runId);
     } catch (caught) {
+      homeRun.clear();
       setHint(caught instanceof Error ? caught.message : "Could not start the run");
     } finally {
       setSending(false);
@@ -145,10 +178,7 @@ export default function NewRunScreen() {
     : (collection?.name ?? "No project");
 
   return (
-    <KeyboardAvoidingView
-      behavior={process.env.EXPO_OS === "ios" ? "padding" : undefined}
-      style={{ flex: 1, backgroundColor: colors.systemBackground }}
-    >
+    <View style={{ flex: 1, backgroundColor: colors.systemBackground }}>
       {/* Floating controls instead of a navigation bar */}
       <View
         style={{
@@ -167,147 +197,221 @@ export default function NewRunScreen() {
           label="Open sidebar"
           onPress={openSidebar}
         />
-        {space ? (
-          <ModeMenu
-            modes={modes}
-            value={pendingMode ?? (space.mode as ModeId)}
-            pending={pendingMode !== null}
-            onChange={(mode) => void changeMode(mode)}
-          />
-        ) : (
-          <View />
-        )}
-        <RoundGlassButton
-          icon={pendingList.data.length > 0 ? "bell.badge" : "tray"}
-          label="Activity"
-          badge={pendingList.data.length > 0 ? pendingList.data.length : undefined}
-          onPress={() => router.push("/inbox" as Href)}
-        />
-      </View>
-
-      {/* The canvas stays empty on purpose. */}
-      <View style={{ flex: 1 }} />
-
-      <View style={{ paddingBottom: insets.bottom + spacing.sm, gap: spacing.ms }}>
-        {!session.backend && session.loaded && (
-          <View
-            style={{
-              marginHorizontal: spacing.ms,
-              padding: spacing.md,
-              borderRadius: radius.lg,
-              borderCurve: "continuous",
-              backgroundColor: colors.groupedCell,
-              boxShadow: shadows.card,
-              gap: spacing.sm,
-            }}
-          >
-            <ThemedText variant="headline">No Mac paired</ThemedText>
-            <ThemedText variant="subhead">
-              Open Mains on the desktop, turn on network access or Tailscale HTTPS, and scan its pairing code.
+        {inRun ? (
+          <>
+            <ThemedText variant="headline" numberOfLines={1} style={{ flex: 1, marginHorizontal: spacing.md }}>
+              {title ?? space?.name ?? "Run"}
             </ThemedText>
-            <Button title="Scan pairing code" onPress={() => router.push("/pair" as Href)} />
-          </View>
+            <RunToolbar onNewRun={() => homeRun.clear()} />
+          </>
+        ) : (
+          <>
+            {space ? (
+              <ModeMenu
+                modes={modes}
+                value={pendingMode ?? (space.mode as ModeId)}
+                pending={pendingMode !== null}
+                onChange={(mode) => void changeMode(mode)}
+              />
+            ) : (
+              <View />
+            )}
+            {/* Balances the sidebar button, so the mode segment sits centered. */}
+            <View style={{ width: CONTROL_HEIGHT }} />
+          </>
         )}
-
-        {session.backend && !connected && (
-          <View
-            style={{
-              alignSelf: "center",
-              flexDirection: "row",
-              alignItems: "center",
-              gap: spacing.sm,
-              paddingHorizontal: spacing.ms,
-              paddingVertical: spacing.xs + 2,
-              borderRadius: radius.full,
-              backgroundColor: colors.fill,
-            }}
-          >
-            <ThemedText variant="footnote">{session.backend.name}</ThemedText>
-            <ConnectionBadge state={session.connection} />
-          </View>
-        )}
-
-        {/* Run target */}
-        {space && (
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: spacing.sm,
-              paddingHorizontal: spacing.md,
-            }}
-          >
-            <TargetChip
-              icon={isCode ? "folder" : collection ? null : "tray"}
-              projectIcon={collection?.icon ?? null}
-              label={targetLabel}
-              emphasized={isCode && !workspace}
-              onPress={() => router.push("/target" as Href)}
-            />
-          </View>
-        )}
-
-        {hint ? (
-          <ThemedText
-            variant="footnote"
-            selectable
-            style={{ textAlign: "center", paddingHorizontal: spacing.lg, color: colors.systemOrange }}
-          >
-            {hint}
-          </ThemedText>
-        ) : null}
-
-        <ComposerBar
-          value={draft}
-          onChangeText={(text) => {
-            setDraft(text);
-            if (hint) setHint(null);
-          }}
-          onSend={() => void send()}
-          sending={sending}
-          placeholder={space ? `Start a run in ${space.name}` : "Start a run"}
-          disabled={!session.backend || !connected || !space || !providerEnabled}
-          model={
-            space && modelSelection.label
-              ? {
-                  label: modelSelection.label,
-                  effort: modelSelection.effortLabel,
-                  onPress: () => openRunOptions(space.providerId),
-                }
-              : null
-          }
-          permission={
-            space && modelSelection.permissionLabel
-              ? { label: modelSelection.permissionLabel, onPress: () => openRunOptions(space.providerId) }
-              : null
-          }
-          context={
-            backendId && space
-              ? {
-                  backendId,
-                  providerId: space.providerId,
-                  workspacePath: workspace?.rootPath ?? null,
-                  skills: contextSkills,
-                  onSkillsChange: setContextSkills,
-                }
-              : null
-          }
-        />
       </View>
-    </KeyboardAvoidingView>
+
+      {inRun ? (
+        <RunView
+          runId={home.runId ?? ""}
+          pending={home.pending}
+          providerId={space?.providerId ?? null}
+          topInset={insets.top}
+          // Under the floating controls, with the same gap again beneath them.
+          topPadding={CONTROL_HEIGHT + spacing.sm}
+        />
+      ) : (
+        // The canvas stays empty on purpose.
+        <View style={{ flex: 1 }} />
+      )}
+
+      {/* The composer rides the keyboard rather than being padded above it:
+          KeyboardAvoidingView lifts by the *whole* keyboard height, on top of
+          the home-indicator inset this block already carries, which left a
+          band of background between the bar and the keys. */}
+      {!inRun ? (
+        <Animated.View style={[{ paddingBottom: insets.bottom + spacing.sm, gap: spacing.ms }, lift]}>
+          {!session.backend && session.loaded && (
+            <View
+              style={{
+                marginHorizontal: spacing.ms,
+                padding: spacing.md,
+                borderRadius: radius.lg,
+                borderCurve: "continuous",
+                backgroundColor: colors.groupedCell,
+                boxShadow: shadows.card,
+                gap: spacing.sm,
+              }}
+            >
+              <ThemedText variant="headline">No Mac paired</ThemedText>
+              <ThemedText variant="subhead">
+                Open Mains on the desktop, turn on network access or Tailscale HTTPS, and scan its pairing code.
+              </ThemedText>
+              <Button title="Scan pairing code" onPress={() => router.push("/pair" as Href)} />
+            </View>
+          )}
+
+          {session.backend && !connected && (
+            <View
+              style={{
+                alignSelf: "center",
+                flexDirection: "row",
+                alignItems: "center",
+                gap: spacing.sm,
+                paddingHorizontal: spacing.ms,
+                paddingVertical: spacing.xs + 2,
+                borderRadius: radius.full,
+                backgroundColor: colors.fill,
+              }}
+            >
+              <ThemedText variant="footnote">{session.backend.name}</ThemedText>
+              <ConnectionBadge state={session.connection} />
+            </View>
+          )}
+
+          {/* Run target */}
+          {space && (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: spacing.sm,
+                paddingHorizontal: spacing.md,
+              }}
+            >
+              <TargetChip
+                icon={isCode ? (project?.icon ?? null) : (collection?.icon ?? null)}
+                fallbackSymbol={isCode ? "folder" : "tray"}
+                label={targetLabel}
+                emphasized={isCode && !workspace}
+                onPress={() => router.push("/target" as Href)}
+              />
+            </View>
+          )}
+
+          {hint ? (
+            <ThemedText
+              variant="footnote"
+              selectable
+              style={{ textAlign: "center", paddingHorizontal: spacing.lg, color: colors.systemOrange }}
+            >
+              {hint}
+            </ThemedText>
+          ) : null}
+
+          <ComposerBar
+            value={draft}
+            onChangeText={(text) => {
+              setDraft(text);
+              if (hint) setHint(null);
+            }}
+            onSend={() => void send()}
+            sending={sending}
+            placeholder={space ? `Start a run in ${space.name}` : "Start a run"}
+            disabled={!session.backend || !connected || !space || !providerEnabled}
+            model={
+              space && modelSelection.label
+                ? {
+                    label: modelSelection.label,
+                    effort: modelSelection.effortLabel,
+                    onPress: () => openRunOptions(space.providerId),
+                  }
+                : null
+            }
+            permission={
+              space && modelSelection.permissionLabel
+                ? { label: modelSelection.permissionLabel, onPress: () => openRunOptions(space.providerId) }
+                : null
+            }
+            providerId={space?.providerId}
+            context={
+              backendId && space
+                ? {
+                    backendId,
+                    providerId: space.providerId,
+                    workspacePath: workspace?.rootPath ?? null,
+                    skills: contextSkills,
+                    onSkillsChange: setContextSkills,
+                  }
+                : null
+            }
+          />
+        </Animated.View>
+      ) : null}
+    </View>
+  );
+}
+
+/**
+ * The run screen's toolbar, drawn by hand: "new run" beside a menu, in one
+ * glass capsule — what its native `Stack.Toolbar` renders under a header.
+ */
+function RunToolbar({ onNewRun }: { onNewRun: () => void }) {
+  return (
+    <GlassSurface
+      interactive
+      style={{
+        height: CONTROL_HEIGHT,
+        borderRadius: radius.full,
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: spacing.xs,
+      }}
+    >
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="New run"
+        onPress={onNewRun}
+        style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+      >
+        <ToolbarGlyph icon="square.and.pencil" />
+      </Pressable>
+      {/* The menu owns the tap: its trigger is a plain view, not a pressable. */}
+      <MenuView
+        actions={[{ id: "sync", title: "Sync now", image: "arrow.clockwise" }]}
+        onPressAction={({ nativeEvent }) => {
+          if (nativeEvent.event === "sync") void backendSession.refresh();
+        }}
+      >
+        <ToolbarGlyph icon="ellipsis" />
+      </MenuView>
+    </GlassSurface>
+  );
+}
+
+function ToolbarGlyph({ icon }: { icon: ComponentProps<typeof SFSymbol>["name"] }) {
+  return (
+    <View
+      accessibilityLabel={icon === "ellipsis" ? "More" : undefined}
+      style={{ width: 44, height: CONTROL_HEIGHT, alignItems: "center", justifyContent: "center" }}
+    >
+      <SFSymbol name={icon} size={20} tint={colors.label} />
+    </View>
   );
 }
 
 function TargetChip({
   icon,
-  projectIcon,
+  fallbackSymbol,
   label,
   emphasized = false,
   onPress,
 }: {
-  /** An SF Symbol, or `null` to show the chosen project's own icon instead. */
+  /** The project's or collection's stored icon; null when it has none. */
   icon: string | null;
-  projectIcon: string | null;
+  /** SF Symbol drawn when there is no icon to show — what the target *is*. */
+  fallbackSymbol: string;
   label: string;
   emphasized?: boolean;
   onPress: () => void;
@@ -332,9 +436,9 @@ function TargetChip({
       })}
     >
       {icon ? (
-        <SFSymbol name={icon} size={14} tint={tint} />
+        <ProjectIcon icon={icon} size={14} color={tint} />
       ) : (
-        <ProjectIcon icon={projectIcon} size={14} color={tint} />
+        <SFSymbol name={fallbackSymbol} size={14} tint={tint} />
       )}
       <ThemedText
         variant="footnote"

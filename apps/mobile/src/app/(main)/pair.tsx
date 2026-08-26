@@ -16,6 +16,7 @@ import {
   type PairedDevicePlatform,
   type PairingLink,
 } from "@mains/contracts/backend";
+import { goHome } from "@/lib/home-run";
 import { colors, radius, shadows, spacing, type, useBrandColors } from "@/theme";
 
 type ScanState =
@@ -78,7 +79,7 @@ export default function PairScreen() {
         });
         await savePairedBackend(backend);
         void backendSession.start();
-        router.dismissTo("/");
+        goHome();
       } catch (error) {
         setScanState({
           kind: "failed",
@@ -87,7 +88,7 @@ export default function PairScreen() {
         });
       }
     },
-    [router],
+    [],
   );
 
   const reset = () => setScanState({ kind: "scanning" });

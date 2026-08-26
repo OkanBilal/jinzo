@@ -19,6 +19,7 @@ import {
   type RunRow as RunRecord,
   type WorkspaceRow as WorkspaceRecord,
 } from "@/db/schema";
+import { goHome } from "@/lib/home-run";
 import { colors, radius, spacing, type } from "@/theme";
 
 import { ProjectIcon } from "./project-icon";
@@ -260,26 +261,13 @@ export function Sidebar({ navigation }: { navigation: { closeDrawer(): void } })
         keyExtractor={(item) => item.key}
         keyboardDismissMode="on-drag"
         contentContainerStyle={{ paddingBottom: spacing.md }}
-        ListHeaderComponent={
-          !searching ? (
-            <View>
-
-              {/* <NavItem
-                icon="desktopcomputer"
-                label={session.backend ? session.backend.name : "Pair a Mac"}
-                trailing={session.backend ? <ConnectionBadge state={session.connection} /> : undefined}
-                onPress={() => go(session.backend ? ("/settings" as Href) : ("/pair" as Href))}
-              /> */}
-            </View>
-          ) : null
-        }
         renderItem={({ item }) => {
           switch (item.kind) {
             case "header":
               return (
                 <ThemedText
-                  variant="headline"
-                  style={{ paddingHorizontal: spacing.md, paddingTop: spacing.lg, paddingBottom: spacing.xs }}
+                  variant="body"
+                  style={{ paddingHorizontal: spacing.md, paddingTop: spacing.lg, paddingBottom: spacing.xs, fontWeight:600 }}
                 >
                   {item.title}
                 </ThemedText>
@@ -354,7 +342,7 @@ export function Sidebar({ navigation }: { navigation: { closeDrawer(): void } })
               onPress={() => {
                 backendSession.selectSpace(item.id);
                 navigation.closeDrawer();
-                router.dismissTo("/" as Href);
+                goHome();
               }}
               style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
             >
@@ -395,9 +383,9 @@ function GroupHeader({
       style={({ pressed }) => ({
         flexDirection: "row",
         alignItems: "center",
-        gap: spacing.ms,
+        gap: spacing.xs,
         marginHorizontal: spacing.sm,
-        paddingVertical: spacing.sm + 2,
+        paddingVertical: spacing.sm,
         paddingHorizontal: spacing.sm,
         borderRadius: radius.sm,
         borderCurve: "continuous",
@@ -405,7 +393,7 @@ function GroupHeader({
       })}
     >
       <View style={{ width: 22, alignItems: "center" }}>
-        <ProjectIcon icon={collection.icon} size={18} color={colors.secondaryLabel} />
+        <ProjectIcon icon={collection.icon} size={16} color={colors.secondaryLabel} />
       </View>
       <ThemedText variant="body" numberOfLines={1} style={{ flex: 1, fontWeight: "600" }}>
         {collection.name}

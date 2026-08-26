@@ -9,6 +9,7 @@ import { ThemedText } from "@/components/themed-text";
 import { endpointHost } from "@mains/contracts/backend";
 import { WS_PROTOCOL_VERSION } from "@mains/contracts/ws-protocol";
 import { connectionDetail, connectionLabel } from "@/lib/format";
+import { goHome } from "@/lib/home-run";
 import { spacing } from "@/theme";
 
 export default function SettingsScreen() {
@@ -26,7 +27,7 @@ export default function SettingsScreen() {
           text: "Forget",
           style: "destructive",
           onPress: () => {
-            void backendSession.forget().then(() => router.dismissTo("/" as Href));
+            void backendSession.forget().then(goHome);
           },
         },
       ],

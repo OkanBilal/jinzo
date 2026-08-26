@@ -5,13 +5,11 @@ import type { RunRow as RunRecord } from "@/db/schema";
 import { relativeTime, runStatusLabel } from "@/lib/format";
 import { colors, radius, spacing } from "@/theme";
 
-import { StatusDot } from "./status";
 import { ThemedText } from "./themed-text";
 
 /** One run in a list: status dot, title, workspace · mode, and when. */
 export function RunRow({
   run,
-  workspaceName,
   onNavigate,
   grouped = true,
 }: {
@@ -24,7 +22,6 @@ export function RunRow({
 }) {
   const router = useRouter();
   const live = run.status === "running" || run.status === "queued";
-  const meta = [workspaceName, run.mode].filter(Boolean).join(" · ");
   return (
     <Pressable
       accessibilityRole="button"
@@ -36,23 +33,18 @@ export function RunRow({
         flexDirection: "row",
         alignItems: "center",
         gap: spacing.ms,
-        paddingVertical: spacing.ms,
+        paddingVertical: spacing.xs + 2,
         paddingHorizontal: grouped ? spacing.md : spacing.sm,
         borderRadius: grouped ? 0 : radius.sm,
         borderCurve: "continuous",
         backgroundColor: pressed ? colors.fill : "transparent",
       })}
     >
-      <StatusDot status={run.status} />
       <View style={{ flex: 1, gap: spacing.xxs }}>
-        <ThemedText variant="body" numberOfLines={1} style={{ fontWeight: "500" }}>
+        <ThemedText variant="body" numberOfLines={1} style={{ fontWeight: "400" }}>
           {run.title?.trim() || "Untitled run"}
         </ThemedText>
-        {meta ? (
-          <ThemedText variant="footnote" numberOfLines={1}>
-            {meta}
-          </ThemedText>
-        ) : null}
+
       </View>
       <ThemedText variant="caption" style={{ fontVariant: ["tabular-nums"] }}>
         {live ? runStatusLabel(run.status) : relativeTime(run.updatedAt)}
