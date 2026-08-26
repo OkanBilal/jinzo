@@ -1,0 +1,486 @@
+import { and, asc, desc, eq } from "drizzle-orm";
+import { useLiveQuery } from "drizzle-orm/expo-sqlite";
+import { useRouter, type Href } from "expo-router";
+import { useMemo, useState } from "react";
+import { FlatList, Pressable, ScrollView, TextInput, View, type ColorValue } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { backendSession, useSession } from "@/backend/backend-session";
+import { setSpaceTarget } from "@/backend/sync";
+import { db } from "@/db/client";
+import {
+  collections,
+  pendingApprovals,
+  projects,
+  runs,
+  spaceTargets,
+  spaces,
+  workspaces,
+  type CollectionRow,
+  type RunRow as RunRecord,
+  type WorkspaceRow as WorkspaceRecord,
+} from "@/db/schema";
+import { colors, radius, spacing, type, useBrandColors } from "@/theme";
+
+import { ProjectIcon } from "./project-icon";
+import { RoundGlassButton } from "./round-glass-button";
+import { RunRow } from "./run-row";
+import { SFSymbol } from "./sf-symbol";
+import { SpaceGlyph } from "./space-glyph";
+import { ConnectionBadge } from "./status";
+import { ThemedText } from "./themed-text";
+import { WorkspaceRow } from "./workspace-row";
+
+/** How many rows the flat Recents section shows (the desktop's `RECENTS_LIMIT`). */
+const RECENTS_LIMIT = 20;
+
+/**
+ * The drawer, in the shape of the ChatGPT / Claude sidebars: an opaque panel
+ * with a title and a search button, a short list of destinations, then what
+ * the desktop sidebar shows for the selected space — a Code space lists its
+ * workspaces; a Work or Chat space lists that provider's chats, the ones
+ * filed under a project grouped beneath it and the rest under Recents. The
+ * space switcher is pinned to the bottom next to Settings.
+ */
+export function Sidebar({ navigation }: { navigation: { closeDrawer(): void } }) {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const session = useSession();
+  const backendId = session.backend?.backendId ?? "";
+  const spaceId = session.selectedSpaceId ?? "";
+  const [searching, setSearching] = useState(false);
+  const [query, setQuery] = useState("");
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+
+  const runList = useLiveQuery(
+    db
+      .select()
+      .from(runs)
+      .where(and(eq(runs.backendId, backendId), eq(runs.isArchived, false)))
+      .orderBy(desc(runs.updatedAt))
+      .limit(200),
+    [backendId],
+  );
+  const workspaceList = useLiveQuery(
+    db
+      .select()
+      .from(workspaces)
+      .where(and(eq(workspaces.backendId, backendId), eq(workspaces.isArchived, false))),
+    [backendId],
+  );
+  const projectList = useLiveQuery(
+    db.select().from(projects).where(eq(projects.backendId, backendId)),
+    [backendId],
+  );
+  const collectionList = useLiveQuery(
+    db
+      .select()
+      .from(collections)
+      .where(and(eq(collections.backendId, backendId), eq(collections.isArchived, false)))
+      .orderBy(asc(collections.name)),
+    [backendId],
+  );
+  const pendingList = useLiveQuery(
+    db
+      .select({ requestId: pendingApprovals.requestId })
+      .from(pendingApprovals)
+      .where(eq(pendingApprovals.backendId, backendId)),
+    [backendId],
+  );
+  const spaceList = useLiveQuery(
+    db
+      .select()
+      .from(spaces)
+      .where(and(eq(spaces.backendId, backendId), eq(spaces.isArchived, false)))
+      .orderBy(asc(spaces.sortOrder), asc(spaces.name)),
+    [backendId],
+  );
+  const targetQuery = useLiveQuery(
+    db
+      .select()
+      .from(spaceTargets)
+      .where(and(eq(spaceTargets.backendId, backendId), eq(spaceTargets.spaceId, spaceId)))
+      .limit(1),
+    [backendId, spaceId],
+  );
+
+  const space = spaceList.data.find((s) => s.id === spaceId);
+  const target = targetQuery.data[0];
+  const isCode = space?.mode === "developer";
+  const projectIcons = useMemo(
+    () => new Map(projectList.data.map((p) => [p.id, p.icon])),
+    [projectList.data],
+  );
+  const workspaceNames = useMemo(
+    () => new Map(workspaceList.data.map((w) => [w.id, w.name])),
+    [workspaceList.data],
+  );
+
+  const items = useMemo<SidebarItem[]>(() => {
+    const needle = query.trim().toLowerCase();
+    const out: SidebarItem[] = [];
+    if (!session.backend) {
+      out.push({ kind: "empty", key: "unpaired", text: "Pair a Mac to see its work here." });
+      return out;
+    }
+    if (isCode) {
+      const list = workspaceList.data
+        .filter(
+          (w) =>
+            !needle ||
+            w.name.toLowerCase().includes(needle) ||
+            (w.branch ?? "").toLowerCase().includes(needle),
+        )
+        .sort((a, b) => (b.updatedAt?.getTime() ?? 0) - (a.updatedAt?.getTime() ?? 0));
+      out.push({ kind: "header", key: "h-workspaces", title: needle ? "Results" : "Workspaces" });
+      if (list.length === 0) {
+        out.push({ kind: "empty", key: "e-workspaces", text: needle ? "No workspaces match." : "No workspaces yet." });
+      }
+      for (const workspace of list) out.push({ kind: "workspace", key: workspace.id, workspace });
+      return out;
+    }
+    // Chats: this space's provider and mode, like the desktop's recent list.
+    const chats = runList.data.filter(
+      (run) =>
+        (!space || (run.providerId === space.providerId && run.mode === space.mode)) &&
+        (!needle || (run.title ?? "").toLowerCase().includes(needle)),
+    );
+    const byCollection = new Map<string, RunRecord[]>();
+    for (const run of chats) {
+      if (!run.collectionId) continue;
+      const bucket = byCollection.get(run.collectionId);
+      if (bucket) bucket.push(run);
+      else byCollection.set(run.collectionId, [run]);
+    }
+    const groups = collectionList.data.filter(
+      (collection) =>
+        !needle ||
+        collection.name.toLowerCase().includes(needle) ||
+        (byCollection.get(collection.id)?.length ?? 0) > 0,
+    );
+    if (groups.length > 0) {
+      out.push({ kind: "header", key: "h-projects", title: "Projects" });
+      for (const collection of groups) {
+        const inside = byCollection.get(collection.id) ?? [];
+        const open = !collapsed.has(collection.id);
+        out.push({ kind: "group", key: `g-${collection.id}`, collection, count: inside.length, open });
+        if (!open) continue;
+        if (inside.length === 0) {
+          out.push({ kind: "empty", key: `e-${collection.id}`, text: "No chats yet.", nested: true });
+        }
+        for (const run of inside) out.push({ kind: "run", key: `${collection.id}/${run.id}`, run, nested: true });
+      }
+    }
+    const recents = chats.filter((run) => !run.collectionId).slice(0, RECENTS_LIMIT);
+    out.push({ kind: "header", key: "h-recents", title: needle ? "Results" : "Recents" });
+    if (recents.length === 0) {
+      out.push({ kind: "empty", key: "e-recents", text: needle ? "No chats match." : "No chats yet." });
+    }
+    for (const run of recents) out.push({ kind: "run", key: run.id, run });
+    return out;
+  }, [session.backend, isCode, space, query, workspaceList.data, runList.data, collectionList.data, collapsed]);
+
+  const go = (href: Href) => {
+    navigation.closeDrawer();
+    router.push(href);
+  };
+
+  const openWorkspace = (workspace: WorkspaceRecord) => {
+    // Like the desktop, picking a workspace also makes it where new runs go.
+    if (space) {
+      setSpaceTarget(backendId, space.id, {
+        workspaceId: workspace.id,
+        collectionId: target?.collectionId ?? null,
+      });
+    }
+    go(`/workspace/${workspace.id}` as Href);
+  };
+
+  const toggleGroup = (collectionId: string) => {
+    setCollapsed((current) => {
+      const next = new Set(current);
+      if (next.has(collectionId)) next.delete(collectionId);
+      else next.add(collectionId);
+      return next;
+    });
+  };
+
+  return (
+    <View
+      style={{
+        flex: 1,
+        // Same ground as the scene; the card sets itself apart by dimming.
+        backgroundColor: colors.systemBackground,
+        paddingTop: insets.top + spacing.sm,
+        paddingBottom: insets.bottom + spacing.sm,
+      }}
+    >
+      {/* Title + search */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.xxs,
+        }}
+      >
+        <ThemedText variant="title2">Mains</ThemedText>
+        <RoundGlassButton
+          size={44}
+          icon={searching ? "xmark" : "magnifyingglass"}
+          label={searching ? "Close search" : isCode ? "Search workspaces" : "Search chats"}
+          onPress={() => {
+            setSearching((on) => !on);
+            setQuery("");
+          }}
+        />
+      </View>
+
+      {searching && (
+        <View style={{ paddingHorizontal: spacing.md, paddingBottom: spacing.sm }}>
+          <TextInput
+            accessibilityLabel={isCode ? "Search workspaces" : "Search chats"}
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoFocus
+            clearButtonMode="while-editing"
+            onChangeText={setQuery}
+            placeholder={isCode ? "Search workspaces" : "Search chats"}
+            placeholderTextColor={colors.tertiaryLabel as string}
+            style={[
+              type.callout,
+              {
+                height: 40,
+                paddingHorizontal: spacing.ms,
+                borderRadius: radius.md,
+                borderCurve: "continuous",
+                backgroundColor: colors.fill,
+                color: colors.label,
+              },
+            ]}
+            value={query}
+          />
+        </View>
+      )}
+
+      <FlatList
+        data={items}
+        keyExtractor={(item) => item.key}
+        keyboardDismissMode="on-drag"
+        contentContainerStyle={{ paddingBottom: spacing.md }}
+        ListHeaderComponent={
+          !searching ? (
+            <View>
+
+              {/* <NavItem
+                icon="desktopcomputer"
+                label={session.backend ? session.backend.name : "Pair a Mac"}
+                trailing={session.backend ? <ConnectionBadge state={session.connection} /> : undefined}
+                onPress={() => go(session.backend ? ("/settings" as Href) : ("/pair" as Href))}
+              /> */}
+            </View>
+          ) : null
+        }
+        renderItem={({ item }) => {
+          switch (item.kind) {
+            case "header":
+              return (
+                <ThemedText
+                  variant="headline"
+                  style={{ paddingHorizontal: spacing.md, paddingTop: spacing.lg, paddingBottom: spacing.xs }}
+                >
+                  {item.title}
+                </ThemedText>
+              );
+            case "empty":
+              return (
+                <ThemedText
+                  variant="subhead"
+                  style={{ paddingHorizontal: item.nested ? spacing.xl : spacing.md, paddingVertical: spacing.xs }}
+                >
+                  {item.text}
+                </ThemedText>
+              );
+            case "group":
+              return (
+                <GroupHeader
+                  collection={item.collection}
+                  count={item.count}
+                  open={item.open}
+                  onPress={() => toggleGroup(item.collection.id)}
+                />
+              );
+            case "workspace":
+              return (
+                <View style={{ paddingHorizontal: spacing.sm }}>
+                  <WorkspaceRow
+                    workspace={item.workspace}
+                    projectIcon={projectIcons.get(item.workspace.projectId ?? "") ?? null}
+                    selected={target?.workspaceId === item.workspace.id}
+                    onPress={() => openWorkspace(item.workspace)}
+                  />
+                </View>
+              );
+            case "run":
+              return (
+                <View style={{ paddingLeft: item.nested ? spacing.lg : spacing.sm, paddingRight: spacing.sm }}>
+                  <RunRow
+                    run={item.run}
+                    grouped={false}
+                    workspaceName={isCode ? workspaceNames.get(item.run.workspaceId ?? "") : undefined}
+                    onNavigate={() => navigation.closeDrawer()}
+                  />
+                </View>
+              );
+          }
+        }}
+      />
+
+      {/* Space switcher + settings — the space is where a new run goes. */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: spacing.md,
+          paddingHorizontal: spacing.md,
+          paddingTop: spacing.sm,
+        }}
+      >
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: spacing.sm, alignItems: "center" }}
+          style={{ flex: 1 }}
+        >
+          {spaceList.data.map((item) => (
+            <Pressable
+              key={item.id}
+              accessibilityRole="button"
+              accessibilityLabel={`${item.name} space`}
+              accessibilityState={{ selected: item.id === spaceId }}
+              onPress={() => {
+                backendSession.selectSpace(item.id);
+                navigation.closeDrawer();
+                router.dismissTo("/" as Href);
+              }}
+              style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+            >
+              <SpaceGlyph space={item} size={44} selected={item.id === spaceId} />
+            </Pressable>
+          ))}
+        </ScrollView>
+        <RoundGlassButton size={44} icon="gearshape" label="Settings" onPress={() => go("/settings" as Href)} />
+      </View>
+    </View>
+  );
+}
+
+type SidebarItem =
+  | { kind: "header"; key: string; title: string }
+  | { kind: "empty"; key: string; text: string; nested?: boolean }
+  | { kind: "group"; key: string; collection: CollectionRow; count: number; open: boolean }
+  | { kind: "workspace"; key: string; workspace: WorkspaceRecord }
+  | { kind: "run"; key: string; run: RunRecord; nested?: boolean };
+
+/** A project (collection) in the chat sidebar: icon, name, chat count, disclosure. */
+function GroupHeader({
+  collection,
+  count,
+  open,
+  onPress,
+}: {
+  collection: CollectionRow;
+  count: number;
+  open: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ expanded: open }}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.ms,
+        marginHorizontal: spacing.sm,
+        paddingVertical: spacing.sm + 2,
+        paddingHorizontal: spacing.sm,
+        borderRadius: radius.sm,
+        borderCurve: "continuous",
+        backgroundColor: pressed ? colors.fill : "transparent",
+      })}
+    >
+      <View style={{ width: 22, alignItems: "center" }}>
+        <ProjectIcon icon={collection.icon} size={18} color={colors.secondaryLabel} />
+      </View>
+      <ThemedText variant="body" numberOfLines={1} style={{ flex: 1, fontWeight: "600" }}>
+        {collection.name}
+      </ThemedText>
+      {count > 0 && (
+        <ThemedText variant="caption" style={{ fontVariant: ["tabular-nums"] }}>
+          {count}
+        </ThemedText>
+      )}
+      <SFSymbol name={open ? "chevron.down" : "chevron.right"} size={12} tint={colors.tertiaryLabel} />
+    </Pressable>
+  );
+}
+
+function NavItem({
+  icon,
+  label,
+  badge,
+  trailing,
+  onPress,
+}: {
+  icon: string;
+  label: string;
+  badge?: number;
+  trailing?: React.ReactNode;
+  onPress: () => void;
+}) {
+  const brand = useBrandColors();
+  const tint: ColorValue = badge ? brand.accent : colors.label;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.md,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.ms,
+        backgroundColor: pressed ? colors.fill : "transparent",
+      })}
+    >
+      <SFSymbol name={icon} size={22} tint={tint} />
+      <ThemedText variant="body" numberOfLines={1} style={{ flex: 1, fontWeight: "500" }}>
+        {label}
+      </ThemedText>
+      {badge !== undefined && (
+        <View
+          style={{
+            minWidth: 24,
+            paddingHorizontal: spacing.sm,
+            paddingVertical: spacing.xxs,
+            borderRadius: radius.full,
+            backgroundColor: brand.accent,
+            alignItems: "center",
+          }}
+        >
+          <ThemedText
+            variant="caption"
+            style={{ color: brand.accentContrast, fontWeight: "700", fontVariant: ["tabular-nums"] }}
+          >
+            {badge}
+          </ThemedText>
+        </View>
+      )}
+      {trailing}
+    </Pressable>
+  );
+}
