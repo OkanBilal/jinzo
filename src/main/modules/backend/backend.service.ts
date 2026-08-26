@@ -41,21 +41,38 @@ export const PAIRED_DEVICE_CHANNELS: ReadonlySet<string> = new Set([
   CHANNELS.runContext.getByRun,
   CHANNELS.workspace.list,
   CHANNELS.workspace.get,
+  // The Code sidebar's workspace rows: current branch and the last diff's size.
+  CHANNELS.workspace.listGitStates,
+  CHANNELS.workspace.getLatestDiffSummary,
   CHANNELS.projects.list,
   CHANNELS.projects.get,
   CHANNELS.collections.list,
+  // Starting a run needs a target: spaces carry provider + mode, providers
+  // say which of them are enabled.
+  CHANNELS.space.getAll,
+  CHANNELS.providers.getEnabled,
+  // The composer's model picker: what each provider can run, with the effort
+  // levels each model supports.
+  CHANNELS.providers.getModels,
 ]);
 
 /**
  * Mutations a paired device may issue — only with a `commandId`, which the WS
  * router turns into exactly-once semantics through `command_receipts`. The
- * control loop's three verbs and nothing else: answer a request, continue a
- * run, start one. Anything touching files, git, terminal or settings stays out.
+ * control loop's three verbs — answer a request, continue a run, start one —
+ * plus the two picker writes the composer needs. Anything touching files,
+ * git, terminal or settings stays out.
  */
 export const PAIRED_DEVICE_COMMANDS: ReadonlySet<string> = new Set([
   CHANNELS.runs.toolApprovalResponse,
   CHANNELS.runs.continue,
   CHANNELS.runs.execute,
+  // The desktop's mode picker is a space update; the phone's works the same way.
+  CHANNELS.space.update,
+  // The composer toolbar's settings (effort, permission mode, fast / goal /
+  // plan) as one narrow patch: `providers:update` replaces the whole config,
+  // credentials included, and stays desktop-only.
+  CHANNELS.providers.updateRunSettings,
 ]);
 
 /** Receipts older than this are forgotten; a device never retries that late. */

@@ -134,6 +134,112 @@ describe("providersService", () => {
     });
   });
 
+  describe("updateRunSettings", () => {
+    it("writes effortLevel + thinkingMode for Claude and turns ultracode off", async () => {
+      createProvider(db, {
+        id: "claude_code",
+        config: JSON.stringify({ apiKey: "secret", ultracode: true, effortLevel: "medium", thinkingMode: true }),
+      });
+      const updated = await providersService.updateRunSettings("claude_code", { effortLevel: "high" });
+      expect(updated.config).toMatchObject({
+        apiKey: "secret",
+        effortLevel: "high",
+        thinkingMode: true,
+        ultracode: false,
+      });
+    });
+
+    it("stores Codex's effort as modelReasoningEffort", async () => {
+      createProvider(db, { id: "codex", config: JSON.stringify({ sandboxMode: "workspace-write" }) });
+      const updated = await providersService.updateRunSettings("codex", { effortLevel: "low" });
+      expect(updated.config).toMatchObject({
+        sandboxMode: "workspace-write",
+        modelReasoningEffort: "low",
+        thinkingMode: true,
+      });
+      expect(updated.config).not.toHaveProperty("effortLevel");
+    });
+
+    it("clears the level when reasoning is turned off", async () => {
+      createProvider(db, {
+        id: "claude_code",
+        config: JSON.stringify({ effortLevel: "high", thinkingMode: true }),
+      });
+      const updated = await providersService.updateRunSettings("claude_code", { effortLevel: "" });
+      expect(updated.config).not.toHaveProperty("effortLevel");
+      expect(updated.config).toMatchObject({ thinkingMode: false });
+    });
+
+    it("rejects unknown effort levels", async () => {
+      createProvider(db, { id: "claude_code" });
+      await expect(
+        providersService.updateRunSettings("claude_code", { effortLevel: "ludicrous" }),
+      ).rejects.toThrow(/Unknown effort level/);
+    });
+
+    it("writes the permission mode under each provider's own key", async () => {
+      createProvider(db, { id: "claude_code" });
+      createProvider(db, { id: "codex" });
+      createProvider(db, { id: "cursor" });
+      expect(
+        (await providersService.updateRunSettings("claude_code", { permissionMode: "acceptEdits" })).config,
+      ).toMatchObject({ permissionMode: "acceptEdits" });
+      expect(
+        (await providersService.updateRunSettings("codex", { permissionMode: "read-only" })).config,
+      ).toMatchObject({ sandboxMode: "read-only" });
+      expect(
+        (await providersService.updateRunSettings("cursor", { permissionMode: "plan" })).config,
+      ).toMatchObject({ mode: "plan" });
+    });
+
+    it("rejects a permission mode the provider does not have", async () => {
+      createProvider(db, { id: "copilot_cli" });
+      await expect(
+        providersService.updateRunSettings("copilot_cli", { permissionMode: "dontAsk" }),
+      ).rejects.toThrow(/Unknown permission mode/);
+    });
+
+    it("maps fast mode to Codex's service tier and a boolean elsewhere", async () => {
+      createProvider(db, { id: "codex" });
+      createProvider(db, { id: "claude_code" });
+      expect(
+        (await providersService.updateRunSettings("codex", { fastMode: true })).config,
+      ).toMatchObject({ serviceTier: "fast" });
+      expect(
+        (await providersService.updateRunSettings("codex", { fastMode: false })).config,
+      ).not.toHaveProperty("serviceTier");
+      expect(
+        (await providersService.updateRunSettings("claude_code", { fastMode: true })).config,
+      ).toMatchObject({ fastMode: true });
+    });
+
+    it("keeps Codex's goal and plan modes mutually exclusive", async () => {
+      createProvider(db, { id: "codex", config: JSON.stringify({ planMode: true }) });
+      expect(
+        (await providersService.updateRunSettings("codex", { goalMode: true })).config,
+      ).toMatchObject({ goalMode: true, planMode: false });
+      expect(
+        (await providersService.updateRunSettings("codex", { planMode: true })).config,
+      ).toMatchObject({ goalMode: false, planMode: true });
+    });
+
+    it("refuses goal and plan toggles outside Codex", async () => {
+      createProvider(db, { id: "claude_code" });
+      await expect(
+        providersService.updateRunSettings("claude_code", { goalMode: true }),
+      ).rejects.toThrow(/Codex/);
+      await expect(
+        providersService.updateRunSettings("claude_code", { planMode: true }),
+      ).rejects.toThrow(/Codex/);
+    });
+
+    it("throws for a missing provider", async () => {
+      await expect(
+        providersService.updateRunSettings("nope", { effortLevel: "high" }),
+      ).rejects.toThrow("Provider not found");
+    });
+  });
+
   describe("delete", () => {
     it("deletes a provider", async () => {
       createProvider(db, { id: "p1" });

@@ -211,6 +211,8 @@ export const CHANNELS = {
     setPluginEnabled: "providers:setPluginEnabled",
     updatePlugin: "providers:updatePlugin",
     update: "providers:update",
+    /** The composer toolbar's settings as one narrow, patch-shaped write a paired device may issue. */
+    updateRunSettings: "providers:updateRunSettings",
     updateCli: "providers:updateCli",
   },
   pullRequests: {

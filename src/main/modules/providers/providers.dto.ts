@@ -41,6 +41,21 @@ export interface UpdateProviderPayload {
   defaultModel?: string;
 }
 
+/**
+ * `providers:updateRunSettings` — the settings the composer's toolbar edits,
+ * as a patch: only the keys present change. `effortLevel` is a level from
+ * `EFFORT_LEVELS` or "" for reasoning off; `permissionMode` is one of the
+ * provider's ids (`shared/run-settings.ts`); `goalMode` / `planMode` are
+ * Codex-only.
+ */
+export interface UpdateRunSettingsPayload {
+  effortLevel?: string;
+  permissionMode?: string;
+  fastMode?: boolean;
+  goalMode?: boolean;
+  planMode?: boolean;
+}
+
 // ─────────────────────────────────────────────────────────────
 // Response Types
 // ─────────────────────────────────────────────────────────────

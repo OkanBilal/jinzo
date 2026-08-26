@@ -149,11 +149,13 @@ describe("backendService", () => {
   });
 
   describe("PAIRED_DEVICE_COMMANDS", () => {
-    it("is exactly the control loop's three verbs, disjoint from the read list", () => {
+    it("is exactly the control loop's verbs plus the picker writes, disjoint from the read list", () => {
       expect([...PAIRED_DEVICE_COMMANDS].sort()).toEqual([
+        "providers:updateRunSettings",
         "runs:continue",
         "runs:execute",
         "runs:toolApprovalResponse",
+        "space:update",
       ]);
       for (const channel of PAIRED_DEVICE_COMMANDS) {
         expect(PAIRED_DEVICE_CHANNELS.has(channel)).toBe(false);

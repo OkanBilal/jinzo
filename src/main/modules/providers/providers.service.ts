@@ -3,9 +3,13 @@ import { detectInstalledClis } from "./providers.utils";
 import type {
   CreateProviderPayload,
   UpdateProviderPayload,
+  UpdateRunSettingsPayload,
   ProviderResponse,
   DetectedClisResponse,
 } from "./providers.dto";
+import { isEffortLevel } from "../../../shared/effort-levels";
+import { PROVIDER_IDS } from "../../../shared/provider-ids";
+import { permissionConfigKeyFor, permissionModeIdsFor } from "../../../shared/run-settings";
 import {
   listModelsForProvider,
   listCommandsForProvider,
@@ -100,6 +104,79 @@ export const providersService = {
     refreshWorkAdapterConfig(updated);
 
     return updated;
+  },
+
+  /**
+   * Edit the settings the composer's toolbar changes — effort, permission /
+   * sandbox mode, fast mode, Codex's goal and plan modes — as one narrow,
+   * patch-shaped write. The desktop toolbar still goes through `update` with
+   * the whole config; this exists for paired devices, which must neither
+   * round-trip credentials nor reach the rest of the config. Mirrors the
+   * renderer's `use-provider-models.ts` handlers: Codex and Copilot store
+   * effort as `modelReasoningEffort` and infer thinking from it, Claude and
+   * Cursor keep `thinkingMode` + `effortLevel` (an explicit level turns
+   * ultracode off); fast mode is Codex's "fast" service tier and a boolean
+   * elsewhere; goal and plan are Codex-only and mutually exclusive.
+   */
+  async updateRunSettings(
+    id: string,
+    patch: UpdateRunSettingsPayload,
+  ): Promise<ProviderResponse> {
+    const provider = await providersRepo.findById(id);
+    if (!provider) throw new Error("Provider not found");
+    const config: Record<string, unknown> = { ...(provider.config ?? {}) };
+
+    if (patch.effortLevel !== undefined) {
+      const level = String(patch.effortLevel).trim().toLowerCase();
+      if (level && !isEffortLevel(level)) {
+        throw new Error(`Unknown effort level "${patch.effortLevel}"`);
+      }
+      if (id === PROVIDER_IDS.codex || id === PROVIDER_IDS.copilot) {
+        if (level) config.modelReasoningEffort = level;
+        else delete config.modelReasoningEffort;
+        config.thinkingMode = !!level;
+      } else {
+        if (level) config.effortLevel = level;
+        else delete config.effortLevel;
+        config.thinkingMode = !!level;
+        config.ultracode = false;
+      }
+    }
+
+    if (patch.permissionMode !== undefined) {
+      const mode = String(patch.permissionMode);
+      const key = permissionConfigKeyFor(id);
+      if (!key || !permissionModeIdsFor(id).includes(mode)) {
+        throw new Error(`Unknown permission mode "${mode}" for ${id}`);
+      }
+      config[key] = mode;
+    }
+
+    if (patch.fastMode !== undefined) {
+      const on = patch.fastMode === true;
+      if (id === PROVIDER_IDS.codex) {
+        if (on) config.serviceTier = "fast";
+        else delete config.serviceTier;
+      } else {
+        config.fastMode = on;
+      }
+    }
+
+    if (patch.goalMode !== undefined) {
+      if (id !== PROVIDER_IDS.codex) throw new Error("Goal mode is a Codex setting");
+      config.goalMode = patch.goalMode === true;
+      if (config.goalMode) config.planMode = false;
+    }
+
+    if (patch.planMode !== undefined) {
+      if (id !== PROVIDER_IDS.codex) {
+        throw new Error('Plan mode is a Codex toggle; elsewhere it is the "plan" permission mode');
+      }
+      config.planMode = patch.planMode === true;
+      if (config.planMode) config.goalMode = false;
+    }
+
+    return providersService.update(id, { config });
   },
 
   async delete(id: string): Promise<void> {

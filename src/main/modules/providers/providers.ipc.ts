@@ -1,7 +1,12 @@
 import { ipcMain } from "../../ipc-kit/ipc-main";
 import { handle } from "../../ipc-kit/handle";
 import { providersService } from "./providers.service";
-import type { CreateProviderPayload, UpdateProviderPayload, ProviderKind } from "./providers.dto";
+import type {
+  CreateProviderPayload,
+  UpdateProviderPayload,
+  UpdateRunSettingsPayload,
+  ProviderKind,
+} from "./providers.dto";
 import type { PluginScope } from "../../../shared/adapter.types";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
 
@@ -39,6 +44,13 @@ export function registerProvidersIpc(): void {
   ipcMain.handle(
     CHANNELS.providers.update,
     handle((id: string, payload: UpdateProviderPayload) => providersService.update(id, payload)),
+  );
+
+  ipcMain.handle(
+    CHANNELS.providers.updateRunSettings,
+    handle((id: string, patch: UpdateRunSettingsPayload) =>
+      providersService.updateRunSettings(id, patch),
+    ),
   );
 
   ipcMain.handle(
@@ -150,6 +162,7 @@ export function unregisterProvidersIpc(): void {
     CHANNELS.providers.getEnabled,
     CHANNELS.providers.create,
     CHANNELS.providers.update,
+    CHANNELS.providers.updateRunSettings,
     CHANNELS.providers.delete,
     CHANNELS.providers.enable,
     CHANNELS.providers.disable,

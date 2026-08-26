@@ -273,6 +273,16 @@ const api = {
       ipcRenderer.invoke(CHANNELS.providers.create, payload),
     update: (id: string, payload: unknown) =>
       ipcRenderer.invoke(CHANNELS.providers.update, id, payload),
+    updateRunSettings: (
+      id: string,
+      patch: {
+        effortLevel?: string;
+        permissionMode?: string;
+        fastMode?: boolean;
+        goalMode?: boolean;
+        planMode?: boolean;
+      },
+    ) => ipcRenderer.invoke(CHANNELS.providers.updateRunSettings, id, patch),
     delete: (id: string) => ipcRenderer.invoke(CHANNELS.providers.delete, id),
     enable: (id: string) => ipcRenderer.invoke(CHANNELS.providers.enable, id),
     disable: (id: string) => ipcRenderer.invoke(CHANNELS.providers.disable, id),
