@@ -1,6 +1,8 @@
 import { ipcMain } from "../../ipc-kit/ipc-main";
 import { handle } from "../../ipc-kit/handle";
-import { providersService } from "./providers.service";
+import type { IpcInvokeContext } from "../../ipc-kit/handler-registry";
+import { ok, fail } from "../../../shared/ipc-kit/service-response";
+import { providersService, providerForPairedDevice } from "./providers.service";
 import type {
   CreateProviderPayload,
   UpdateProviderPayload,
@@ -31,10 +33,16 @@ export function registerProvidersIpc(): void {
     handle((kind: ProviderKind) => providersService.getByKind(kind)),
   );
 
-  ipcMain.handle(
-    CHANNELS.providers.getEnabled,
-    handle(() => providersService.getEnabled()),
-  );
+  // Hand-written rather than `handle()`: the invoke context says whether the
+  // caller is a paired device, which is shown a credential-free provider row.
+  ipcMain.handle(CHANNELS.providers.getEnabled, async (ctx: IpcInvokeContext) => {
+    try {
+      const list = await providersService.getEnabled();
+      return ok(ctx?.deviceId ? list.map(providerForPairedDevice) : list);
+    } catch (error) {
+      return fail(error instanceof Error ? error.message : "Failed to list providers");
+    }
+  });
 
   ipcMain.handle(
     CHANNELS.providers.create,

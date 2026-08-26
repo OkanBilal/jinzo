@@ -28,3 +28,23 @@ export function permissionModeIdsFor(providerId: string): readonly string[] {
 export function permissionConfigKeyFor(providerId: string): string | null {
   return PERMISSION_CONFIG_KEY[providerId as ProviderId] ?? null;
 }
+
+/**
+ * The provider-config keys the composer's run settings live under — and the
+ * only config keys a paired device is shown (the desktop's
+ * `providerForPairedDevice`): everything else in the blob, apiKey and baseUrl
+ * first of all, never leaves the Mac.
+ */
+export const RUN_SETTING_CONFIG_KEYS = [
+  "effortLevel",
+  "thinkingMode",
+  "ultracode",
+  "modelReasoningEffort",
+  "permissionMode",
+  "sandboxMode",
+  "mode",
+  "fastMode",
+  "serviceTier",
+  "goalMode",
+  "planMode",
+] as const;

@@ -71,6 +71,8 @@ export interface PairedDeviceAccess {
   channels: ReadonlySet<string>;
   /** Mutations — invokable only with a `commandId` (see `command_receipts`). */
   commandChannels: ReadonlySet<string>;
+  /** Events pushed to the device; everything else on the bus stays local. */
+  eventChannels: ReadonlySet<string>;
 }
 
 export type CommandReceiptRecord = typeof commandReceipts.$inferSelect;

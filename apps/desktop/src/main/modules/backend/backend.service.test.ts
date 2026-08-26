@@ -19,6 +19,7 @@ import {
   clearPairingCodes,
   PAIRED_DEVICE_CHANNELS,
   PAIRED_DEVICE_COMMANDS,
+  PAIRED_DEVICE_EVENTS,
 } from "./backend.service";
 
 const ok = (data: unknown) => ({ success: true as const, data });
@@ -322,5 +323,20 @@ describe("backendService", () => {
         "Paired device not found",
       );
     });
+  });
+});
+
+describe("PAIRED_DEVICE_EVENTS", () => {
+  it("is exactly the pushes the phone subscribes to", () => {
+    expect([...PAIRED_DEVICE_EVENTS].sort()).toEqual([
+      "providers:modelsUpdated",
+      "runs:diffUpdated",
+      "runs:eventPersisted",
+      "runs:statusChanged",
+      "runs:toolApprovalRequest",
+      "runs:toolApprovalResolved",
+      "runs:updated",
+      "workspace:gitStateChanged",
+    ]);
   });
 });

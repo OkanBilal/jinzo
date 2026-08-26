@@ -9,7 +9,11 @@ import type {
 } from "./providers.dto";
 import { isEffortLevel } from "../../../shared/effort-levels";
 import { PROVIDER_IDS } from "../../../shared/provider-ids";
-import { permissionConfigKeyFor, permissionModeIdsFor } from "../../../shared/run-settings";
+import {
+  permissionConfigKeyFor,
+  permissionModeIdsFor,
+  RUN_SETTING_CONFIG_KEYS,
+} from "../../../shared/run-settings";
 import {
   listModelsForProvider,
   listCommandsForProvider,
@@ -294,3 +298,18 @@ export const providersService = {
     return detectInstalledClis();
   },
 };
+
+/**
+ * The provider row a paired device may see. `config` is the Mac's settings
+ * blob, credentials included — a device gets only the run-settings keys the
+ * composer reads (`RUN_SETTING_CONFIG_KEYS`); everything else, apiKey and
+ * baseUrl first of all, never leaves the machine.
+ */
+export function providerForPairedDevice(provider: ProviderResponse): ProviderResponse {
+  if (!provider.config) return provider;
+  const config: Record<string, unknown> = {};
+  for (const key of RUN_SETTING_CONFIG_KEYS) {
+    if (key in provider.config) config[key] = provider.config[key];
+  }
+  return { ...provider, config };
+}

@@ -4,6 +4,8 @@ import type { EventScope, EventSink } from "./event-bus";
 /** A connected client the sink can write event frames to. */
 export interface WsClientConnection {
   readonly id: string;
+  /** Events a paired device may receive; undefined = all (the shared token). */
+  readonly eventChannels?: ReadonlySet<string>;
   send(data: string): void;
 }
 
@@ -37,6 +39,10 @@ export class WebSocketSink implements EventSink {
       // scope.clientId, when present, targets a single client (e.g. terminal
       // output); otherwise the event is broadcast to everyone.
       if (scope?.clientId && client.id !== scope.clientId) continue;
+      // A paired device only receives the events on its allowlist — everything
+      // else on the bus (terminal output, settings, window chrome) stays
+      // between the desktop's own processes.
+      if (client.eventChannels && !client.eventChannels.has(channel)) continue;
       try {
         client.send(frame);
       } catch {

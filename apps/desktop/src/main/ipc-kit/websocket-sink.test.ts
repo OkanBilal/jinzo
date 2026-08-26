@@ -68,3 +68,24 @@ describe("WebSocketSink", () => {
     expect(good.sent).toHaveLength(1);
   });
 });
+
+describe("event allowlist", () => {
+  it("delivers only allowlisted events to a device connection", () => {
+    const sink = new WebSocketSink();
+    const device: string[] = [];
+    const desktop: string[] = [];
+    sink.addClient({
+      id: "device",
+      eventChannels: new Set(["runs:statusChanged"]),
+      send: (data) => device.push(data),
+    });
+    sink.addClient({ id: "desktop", send: (data) => desktop.push(data) });
+
+    sink.send("runs:statusChanged", { runId: "r1" });
+    sink.send("terminal:output", { data: "not for phones" });
+
+    expect(desktop).toHaveLength(2);
+    expect(device).toHaveLength(1);
+    expect(device[0]).toContain("runs:statusChanged");
+  });
+});

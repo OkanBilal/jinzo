@@ -30,6 +30,8 @@ export interface VerifiedDevice {
   channels?: ReadonlySet<string>;
   /** Mutations the device may issue, each only with a `commandId`. */
   commandChannels?: ReadonlySet<string>;
+  /** Events pushed to the device; undefined = everything on the bus. */
+  eventChannels?: ReadonlySet<string>;
 }
 
 export interface WsHost {
@@ -376,6 +378,7 @@ function adaptSocket(socket: WebSocket, device?: VerifiedDevice): WsConnection {
     deviceId: device?.deviceId,
     allowedChannels: device?.channels,
     commandChannels: device?.commandChannels,
+    eventChannels: device?.eventChannels,
     send: (data) => socket.send(data),
     onMessage: (listener) =>
       socket.on("message", (raw: RawData, isBinary: boolean) => {

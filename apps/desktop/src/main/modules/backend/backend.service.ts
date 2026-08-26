@@ -75,6 +75,23 @@ export const PAIRED_DEVICE_COMMANDS: ReadonlySet<string> = new Set([
   CHANNELS.providers.updateRunSettings,
 ]);
 
+/**
+ * Pushes a paired device receives. Everything else emitted on the bus —
+ * terminal output, settings, window chrome — stays between the desktop's own
+ * processes: the WebSocket sink drops events off this list for device
+ * connections. Exactly the channels the phone subscribes to.
+ */
+export const PAIRED_DEVICE_EVENTS: ReadonlySet<string> = new Set([
+  CHANNELS.runs.statusChanged,
+  CHANNELS.runs.updated,
+  CHANNELS.runs.eventPersisted,
+  CHANNELS.runs.toolApprovalRequest,
+  CHANNELS.runs.toolApprovalResolved,
+  CHANNELS.runs.diffUpdated,
+  CHANNELS.providers.modelsUpdated,
+  CHANNELS.workspace.gitStateChanged,
+]);
+
 /** Receipts older than this are forgotten; a device never retries that late. */
 const COMMAND_RECEIPT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -270,6 +287,7 @@ export const backendService = {
       deviceId: device.id,
       channels: PAIRED_DEVICE_CHANNELS,
       commandChannels: PAIRED_DEVICE_COMMANDS,
+      eventChannels: PAIRED_DEVICE_EVENTS,
     };
   },
 

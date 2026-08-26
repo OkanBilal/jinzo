@@ -39,7 +39,7 @@ vi.mock("./adapters", () => ({
   refreshWorkAdapterConfig: vi.fn(),
 }));
 
-import { providersService } from "./providers.service";
+import { providersService, providerForPairedDevice } from "./providers.service";
 
 describe("providersService", () => {
   beforeEach(() => {
@@ -237,6 +237,31 @@ describe("providersService", () => {
       await expect(
         providersService.updateRunSettings("nope", { effortLevel: "high" }),
       ).rejects.toThrow("Provider not found");
+    });
+  });
+
+  describe("providerForPairedDevice", () => {
+    it("keeps run settings and drops credentials", async () => {
+      createProvider(db, {
+        id: "claude_code",
+        config: JSON.stringify({
+          apiKey: "secret",
+          baseUrl: "http://internal",
+          timeout: 5,
+          effortLevel: "high",
+          thinkingMode: true,
+          permissionMode: "auto",
+          fastMode: true,
+        }),
+      });
+      const provider = await providersService.getById("claude_code");
+      const view = providerForPairedDevice(provider!);
+      expect(view.config).toEqual({
+        effortLevel: "high",
+        thinkingMode: true,
+        permissionMode: "auto",
+        fastMode: true,
+      });
     });
   });
 
