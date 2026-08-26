@@ -7,6 +7,7 @@ import {
   isTerminalRunStatus,
   type AccountResponse,
   type CollectionResponse,
+  type CommandSummary,
   type ModelInfo,
   type PendingApproval,
   type ProjectResponse,
@@ -20,6 +21,7 @@ import {
   type RunStatusChangedEvent,
   type RunTurnResponse,
   type RunUpdatedEvent,
+  type SkillSummary,
   type ToolApprovalRequest,
   type ToolApprovalResolvedEvent,
   type ToolCallResponse,
@@ -33,6 +35,7 @@ import {
   backends,
   collections,
   modelChoices,
+  commands,
   models,
   pendingApprovals,
   projects,
@@ -40,6 +43,7 @@ import {
   runArtifacts,
   runTurns,
   runs,
+  skills,
   spaceTargets,
   spaces,
   syncCursors,
@@ -154,6 +158,7 @@ function upsertWorkspace(backendId: string, workspace: WorkspaceResponse): void 
   const set = {
     name: workspace.name,
     projectId: workspace.projectId ?? null,
+    rootPath: workspace.rootPath ?? null,
     status: workspace.status ?? null,
     updatedAt: toDate(workspace.updatedAt),
     isArchived: Boolean(workspace.isArchived),
@@ -387,11 +392,11 @@ export async function syncTargets(transport: WsTransport, backendId: string): Pr
         .run();
     }
   });
-  await syncModels(
-    transport,
-    backendId,
-    providerList.filter((p) => p.isEnabled !== false).map((p) => p.id),
-  );
+  const enabledIds = providerList.filter((p) => p.isEnabled !== false).map((p) => p.id);
+  await syncModels(transport, backendId, enabledIds);
+  // Skills and commands change far less often than models and nothing waits on
+  // them, so a slow CLI listing must not hold the snapshot open.
+  syncContextSources(transport, backendId, enabledIds).catch(() => {});
 }
 
 /**
@@ -437,6 +442,166 @@ export async function syncModels(
       });
     }
   });
+}
+
+/**
+ * `providers:getSkills` + `providers:getCommands` per provider — what the
+ * composer's context picker lists behind `@`, `$` and `/`.
+ *
+ * Same tolerance as the model sync: one provider whose CLI is missing must not
+ * take the others' skills down with it. Both listings are replaced wholesale
+ * per provider, because the Mac is the only writer and a removed skill has to
+ * disappear here too.
+ */
+/**
+ * A listing the Mac refused or failed is not the same as an empty one, and the
+ * picker cannot tell them apart from the rows alone — so say it out loud. The
+ * usual cause is a Mac still running a build whose device allowlist predates
+ * these two channels.
+ */
+/**
+ * First occurrence of each name wins.
+ *
+ * A provider may name the same thing twice — codex walks one entry per cwd and
+ * repeats a skill that several of them see. The rows are keyed by name, so a
+ * repeat used to abort the whole write and take the provider's commands down
+ * with its skills. The desktop dedupes the same way where it merges plugins
+ * into skills (`seenNames` in `mergeSkillsWithInstalledPlugins`).
+ */
+function dedupeByName<T extends { name: string }>(list: T[]): T[] {
+  const seen = new Set<string>();
+  return list.filter((item) => {
+    if (!item.name || seen.has(item.name)) return false;
+    seen.add(item.name);
+    return true;
+  });
+}
+
+function reportUnavailable(channel: string, providerId: string, sink: string[]) {
+  return (error: unknown): null => {
+    const reason = error instanceof Error ? error.message : String(error);
+    sink.push(reason);
+    console.warn(`[sync] ${channel} unavailable for ${providerId}: ${reason}`);
+    return null;
+  };
+}
+
+/**
+ * What one provider's listing came back as. `null` means the Mac refused or
+ * failed the call — which is not the same as answering "nothing", and the two
+ * look identical from the rows alone.
+ */
+export interface ContextSourcesResult {
+  providerId: string;
+  skills: number | null;
+  commands: number | null;
+  /** Set when either call failed; the first reason, for the picker to show. */
+  error: string | null;
+}
+
+export async function syncContextSources(
+  transport: WsTransport,
+  backendId: string,
+  providerIds: string[],
+  /**
+   * The workspace a listing is scoped to. Providers answer differently with and
+   * without it — codex asks its app-server for `skills/list` against this cwd,
+   * so project-scoped skills exist only when it is supplied.
+   */
+  workspacePath?: string | null,
+): Promise<ContextSourcesResult[]> {
+  const args = workspacePath ? [workspacePath] : [];
+  const results = await Promise.all(
+    providerIds.map(async (providerId) => {
+      const failures: string[] = [];
+      const [skillList, commandList] = await Promise.all([
+        invoke<unknown>(transport, CHANNELS.providers.getSkills, [providerId, ...args])
+          .then((d) => asList<SkillSummary>(d, "skills"))
+          .catch(reportUnavailable(CHANNELS.providers.getSkills, providerId, failures)),
+        invoke<unknown>(transport, CHANNELS.providers.getCommands, [providerId, ...args])
+          .then((d) => asList<CommandSummary>(d, "commands"))
+          .catch(reportUnavailable(CHANNELS.providers.getCommands, providerId, failures)),
+      ]);
+      if (skillList?.length === 0 && commandList?.length === 0) {
+        // Not an error — but the picker will read as broken, and a provider
+        // that answers nothing is worth seeing while diagnosing.
+        console.warn(
+          `[sync] ${providerId} listed no skills and no commands` +
+            (workspacePath ? ` for ${workspacePath}` : " (no workspace path)"),
+        );
+      }
+      return {
+        providerId,
+        skillList: skillList && dedupeByName(skillList),
+        commandList: commandList && dedupeByName(commandList),
+        error: failures[0] ?? null,
+      };
+    }),
+  );
+
+  db.transaction(() => {
+    for (const { providerId, skillList, commandList } of results) {
+      if (skillList) {
+        db.delete(skills)
+          .where(and(eq(skills.backendId, backendId), eq(skills.providerId, providerId)))
+          .run();
+        // Model-invoked-only skills never appear in a picker, so they are
+        // dropped here rather than filtered at every read.
+        skillList
+          .filter((skill) => skill.name && skill.userInvokable !== false)
+          .forEach((skill, index) => {
+            db.insert(skills)
+              .values({
+                backendId,
+                providerId,
+                name: skill.name,
+                displayName: skill.displayName ?? null,
+                description: skill.description ?? null,
+                shortDescription: skill.shortDescription ?? null,
+                argumentHint: skill.argumentHint ?? null,
+                iconSmall: skill.iconSmall ?? null,
+                iconLarge: skill.iconLarge ?? null,
+                brandColor: skill.brandColor ?? null,
+                scope: skill.scope ?? null,
+                path: skill.path ?? null,
+                sortOrder: index,
+              })
+              // Deduped above; this is the backstop that keeps a surprise
+              // repeat from rolling back the whole provider's listing.
+              .onConflictDoNothing()
+              .run();
+          });
+      }
+
+      if (commandList) {
+        db.delete(commands)
+          .where(and(eq(commands.backendId, backendId), eq(commands.providerId, providerId)))
+          .run();
+        commandList
+          .filter((command) => command.name && command.userFacing !== false)
+          .forEach((command, index) => {
+            db.insert(commands)
+              .values({
+                backendId,
+                providerId,
+                name: command.name,
+                description: command.description ?? null,
+                argumentHint: command.argumentHint ?? null,
+                sortOrder: index,
+              })
+              .onConflictDoNothing()
+              .run();
+          });
+      }
+    }
+  });
+
+  return results.map(({ providerId, skillList, commandList, error }) => ({
+    providerId,
+    skills: skillList?.length ?? null,
+    commands: commandList?.length ?? null,
+    error,
+  }));
 }
 
 /** Keeps the model lists fresh: async capability discovery pushes `providers:modelsUpdated`. */
@@ -807,6 +972,8 @@ export function clearBackend(backendId: string): void {
     db.delete(providers).where(eq(providers.backendId, backendId)).run();
     db.delete(projects).where(eq(projects.backendId, backendId)).run();
     db.delete(models).where(eq(models.backendId, backendId)).run();
+    db.delete(skills).where(eq(skills.backendId, backendId)).run();
+    db.delete(commands).where(eq(commands.backendId, backendId)).run();
     db.delete(modelChoices).where(eq(modelChoices.backendId, backendId)).run();
     db.delete(pendingApprovals).where(eq(pendingApprovals.backendId, backendId)).run();
     db.delete(runArtifacts).where(eq(runArtifacts.backendId, backendId)).run();

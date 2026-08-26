@@ -109,3 +109,27 @@ export function useStatusColors() {
     canceled: colors.tertiaryLabel,
   } as const;
 }
+
+/**
+ * Provider brand colors, lifted from the desktop's `--color-claude`,
+ * `--color-copilot`, `--color-codex` and `--color-cursor`
+ * (`src/renderer/index.css`) and keyed by the contract's provider ids, so a run
+ * can look up the color of the agent that produced it.
+ *
+ * Text over a filled one of these is `colors.onTint` — white, in both modes,
+ * for every provider. Claude's orange carries white at 3.1:1 rather than the
+ * 4.5:1 body text usually wants; that is a deliberate call for the brand hue
+ * over the ratio, and the bubble is short, high-weight text.
+ */
+const providerAccents = {
+  claude_code: "#D97757",
+  copilot_cli: "#8534F3",
+  codex: "#0169CC",
+  cursor: "#727272",
+} as const;
+
+/** A provider's brand color, falling back to the app's own accent. */
+export function useProviderAccent(providerId: string | null | undefined): string {
+  const brand = useBrandColors();
+  return providerAccents[providerId as keyof typeof providerAccents] ?? brand.accent;
+}

@@ -1,19 +1,32 @@
 import { View } from "react-native";
 
-import type { ToolCallRow } from "@/db/schema";
-import { toolInputPreview } from "@/lib/format";
+import { parsePromptContent } from "@/lib/prompt-chips";
 import type { TranscriptItem } from "@/lib/transcript";
-import { colors, radius, spacing, useBrandColors } from "@/theme";
+import { colors, radius, spacing, useProviderAccent } from "@/theme";
 
-import { StatusDot } from "./status";
+import { Markdown } from "./markdown";
+import { PromptSegmentView } from "./prompt-chips";
 import { ThemedText } from "./themed-text";
+import { ToolBlock } from "./tools/tool-block";
 
-export function TranscriptRow({ item }: { item: TranscriptItem }) {
+/**
+ * One line of a transcript. The user speaks in a bubble tinted with the
+ * provider that answered; the agent speaks flush to the column, the way the
+ * desktop's transcript does; a tool call is a row that opens.
+ */
+export function TranscriptRow({
+  item,
+  providerId,
+}: {
+  item: TranscriptItem;
+  /** The run's provider — decides the prompt bubble's color. */
+  providerId?: string | null;
+}) {
   switch (item.kind) {
     case "prompt":
-      return <PromptBubble text={item.text} />;
-    case "tool":
-      return <ToolCallLine call={item.call} />;
+      return <PromptBubble item={item} providerId={providerId} />;
+    case "tools":
+      return <ToolBlock calls={item.calls} />;
     case "note":
       return (
         <ThemedText variant="monoCaption" selectable>
@@ -21,27 +34,24 @@ export function TranscriptRow({ item }: { item: TranscriptItem }) {
         </ThemedText>
       );
     case "response":
-      return (
-        <View style={{ gap: spacing.xs }}>
-          {item.live && (
-            <ThemedText variant="caption2" style={{ fontWeight: "600", letterSpacing: 0.6 }}>
-              WORKING…
-            </ThemedText>
-          )}
-          {item.text ? (
-            <ThemedText variant="body" selectable>
-              {item.text}
-            </ThemedText>
-          ) : null}
-        </View>
-      );
+      // "Still working" is the transcript's footer loader, not a badge on the
+      // last message — the agent is working on the run, not on that paragraph.
+      return <Markdown source={item.text} />;
   }
 }
 
-function PromptBubble({ text }: { text: string }) {
-  const brand = useBrandColors();
+function PromptBubble({
+  item,
+  providerId,
+}: {
+  item: Extract<TranscriptItem, { kind: "prompt" }>;
+  providerId?: string | null;
+}) {
+  const accent = useProviderAccent(providerId);
+  const { segments } = parsePromptContent(item.text, item.skills, item.files);
+
   return (
-    <View style={{ alignItems: "flex-end" }}>
+    <View style={{ alignItems: "flex-end", paddingVertical: spacing.sm }}>
       <View
         style={{
           maxWidth: "84%",
@@ -49,36 +59,14 @@ function PromptBubble({ text }: { text: string }) {
           paddingVertical: spacing.ms,
           borderRadius: radius.xl,
           borderCurve: "continuous",
-          backgroundColor: brand.accent,
+          backgroundColor: accent,
         }}
       >
-        <ThemedText variant="body" selectable style={{ color: brand.accentContrast }}>
-          {text}
+        <ThemedText variant="prose" selectable style={{ color: colors.onTint }}>
+          {segments.map((segment, i) => (
+            <PromptSegmentView key={i} segment={segment} onAccent />
+          ))}
         </ThemedText>
-      </View>
-    </View>
-  );
-}
-
-function ToolCallLine({ call }: { call: ToolCallRow }) {
-  const preview = toolInputPreview(call.inputJson);
-  return (
-    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: spacing.sm }}>
-      <View style={{ paddingTop: 6 }}>
-        <StatusDot status={call.status} size={6} />
-      </View>
-      <View style={{ flex: 1, gap: spacing.xxs }}>
-        <ThemedText variant="mono" numberOfLines={1}>
-          <ThemedText variant="mono" style={{ color: colors.label }}>
-            {call.toolName}
-          </ThemedText>
-          {preview ? `  ${preview}` : ""}
-        </ThemedText>
-        {call.error ? (
-          <ThemedText variant="footnote" numberOfLines={2} style={{ color: colors.systemRed }}>
-            {call.error}
-          </ThemedText>
-        ) : null}
       </View>
     </View>
   );

@@ -95,6 +95,46 @@ export const models = sqliteTable(
 );
 
 /**
+ * `providers:getSkills` — what the composer's picker lists behind `@` / `$`.
+ * Bucketed by `scope` at render time (plugin / mac app / plain skill), exactly
+ * as the desktop's `bucketSkill` does.
+ */
+export const skills = sqliteTable(
+  "skills",
+  {
+    backendId: text("backend_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    name: text("name").notNull(),
+    displayName: text("display_name"),
+    description: text("description"),
+    shortDescription: text("short_description"),
+    argumentHint: text("argument_hint"),
+    /** Absolute paths on the Mac: unreadable here, kept so context round-trips. */
+    iconSmall: text("icon_small"),
+    iconLarge: text("icon_large"),
+    brandColor: text("brand_color"),
+    scope: text("scope"),
+    path: text("path"),
+    sortOrder: integer("sort_order").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.backendId, t.providerId, t.name] })],
+);
+
+/** `providers:getCommands` — the slash commands behind `/`. */
+export const commands = sqliteTable(
+  "commands",
+  {
+    backendId: text("backend_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    argumentHint: text("argument_hint"),
+    sortOrder: integer("sort_order").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.backendId, t.providerId, t.name] })],
+);
+
+/**
  * The model this phone picked per provider — local state, like the desktop's
  * own selection: it rides on `runs:execute` / `runs:continue` as `model`.
  */
@@ -127,6 +167,8 @@ export const workspaces = sqliteTable(
     id: text("id").notNull(),
     name: text("name").notNull(),
     projectId: text("project_id"),
+    /** Absolute path on the Mac. Unreadable here, but skills are scoped by it. */
+    rootPath: text("root_path"),
     status: text("status"),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }),
     isArchived: integer("is_archived", { mode: "boolean" }).notNull().default(false),
@@ -304,3 +346,5 @@ export type CollectionRow = typeof collections.$inferSelect;
 export type ProviderRow = typeof providers.$inferSelect;
 export type SpaceTargetRow = typeof spaceTargets.$inferSelect;
 export type ProjectRow = typeof projects.$inferSelect;
+export type SkillRow = typeof skills.$inferSelect;
+export type CommandRow = typeof commands.$inferSelect;

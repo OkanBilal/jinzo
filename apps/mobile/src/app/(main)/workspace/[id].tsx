@@ -79,11 +79,18 @@ export default function WorkspaceScreen() {
   const searchRef = useRef<TextInput>(null);
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState("");
+  // Scoped to the space you are in, the way the sidebar's chat list and the
+  // desktop's own workspace page are (`loadWorkspaceRuns` passes providerId and
+  // mode). Provider and mode, not space id: two spaces can drive the same agent
+  // in the same mode, and a run belongs under either of them.
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    if (!needle) return runQuery.data;
-    return runQuery.data.filter((run) => runTitle(run).toLowerCase().includes(needle));
-  }, [runQuery.data, query]);
+    return runQuery.data.filter(
+      (run) =>
+        (!space || (run.providerId === space.providerId && run.mode === space.mode)) &&
+        (!needle || runTitle(run).toLowerCase().includes(needle)),
+    );
+  }, [runQuery.data, query, space]);
 
   const closeSearch = () => {
     setQuery("");

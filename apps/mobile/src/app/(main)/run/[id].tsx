@@ -7,14 +7,17 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { backendSession, useSession } from "@/backend/backend-session";
 import { ComposerBar } from "@/components/composer-bar";
+import { AsciiLoader, latestThinking } from "@/components/ascii-loader";
 import { PendingApprovalCard } from "@/components/pending-approval-card";
-import { ConnectionBadge, StatusDot } from "@/components/status";
 import { ThemedText } from "@/components/themed-text";
-import { TranscriptRow } from "@/components/transcript-row";
+import { TranscriptTurn } from "@/components/transcript-turn";
 import { db } from "@/db/client";
-import { pendingApprovals, runArtifacts, runs, toolCalls } from "@/db/schema";
-import { relativeTime, runStatusLabel } from "@/lib/format";
-import { buildTranscript, type TranscriptItem } from "@/lib/transcript";
+import { pendingApprovals, runArtifacts, runs, toolCalls, workspaces } from "@/db/schema";
+import { isModeId, DEFAULT_MODE_ID } from "@mains/contracts/modes";
+import { attachedSkills, composeGoal } from "@/lib/context-picker";
+import type { PromptSkill } from "@/lib/prompt-chips";
+import { buildTranscript } from "@/lib/transcript";
+import { buildTurnRows, type TurnRow } from "@/lib/transcript-rows";
 import { useModelSelection } from "@/lib/use-model-selection";
 import { useNow } from "@/lib/use-now";
 import { colors, radius, shadows, spacing } from "@/theme";
@@ -72,29 +75,44 @@ export default function RunScreen() {
   );
 
   const run = runQuery.data[0];
+  // A run's workspace scopes what its provider lists behind `@` / `$`.
+  const workspaceQuery = useLiveQuery(
+    db
+      .select({ rootPath: workspaces.rootPath })
+      .from(workspaces)
+      .where(and(eq(workspaces.backendId, backendId), eq(workspaces.id, run?.workspaceId ?? "")))
+      .limit(1),
+    [backendId, run?.workspaceId],
+  );
   const modelSelection = useModelSelection(backendId, run?.providerId ?? "");
   const runIsLive = run?.status === "running" || run?.status === "queued";
   const connected = session.connection.kind === "connected";
-  const items = useMemo(
-    () => buildTranscript(artifactQuery.data, callQuery.data, Boolean(runIsLive)),
-    [artifactQuery.data, callQuery.data, runIsLive],
+  // Two passes, as on the desktop: the transcript's items, then the plan for
+  // how a turn's items collapse into rows.
+  const rows = useMemo(
+    () => buildTurnRows(buildTranscript(artifactQuery.data, callQuery.data)),
+    [artifactQuery.data, callQuery.data],
   );
+  const thinking = useMemo(() => latestThinking(artifactQuery.data), [artifactQuery.data]);
+  const mode = isModeId(run?.mode) ? run.mode : DEFAULT_MODE_ID;
 
   const [draft, setDraft] = useState("");
+  const [contextSkills, setContextSkills] = useState<PromptSkill[]>([]);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const send = async () => {
-    const message = draft.trim();
+    const message = composeGoal(draft, contextSkills);
     if (!message || !run || runIsLive || !connected || sending) return;
     setSending(true);
     setSendError(null);
     try {
-      const result = await backendSession.continueRun(runId, message);
+      const result = await backendSession.continueRun(runId, message, attachedSkills(draft, contextSkills));
       if (!result.success) {
         setSendError(result.error);
         return;
       }
       setDraft("");
+      setContextSkills([]);
     } catch (caught) {
       setSendError(caught instanceof Error ? caught.message : "Could not send");
     } finally {
@@ -102,7 +120,7 @@ export default function RunScreen() {
     }
   };
 
-  const listRef = useRef<FlatList<TranscriptItem>>(null);
+  const listRef = useRef<FlatList<TurnRow>>(null);
   const composerHeight = 72 + insets.bottom;
 
   return (
@@ -114,8 +132,8 @@ export default function RunScreen() {
 
       <FlatList
         ref={listRef}
-        data={items}
-        keyExtractor={(item) => item.key}
+        data={rows}
+        keyExtractor={(row) => row.key}
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={{
           paddingHorizontal: spacing.md,
@@ -127,27 +145,6 @@ export default function RunScreen() {
         onContentSizeChange={() => {
           if (runIsLive) listRef.current?.scrollToEnd({ animated: true });
         }}
-        ListHeaderComponent={
-          run ? (
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                paddingBottom: spacing.xs,
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
-                <StatusDot status={run.status} />
-                <ThemedText variant="footnote">
-                  {runStatusLabel(run.status)}
-                  {runIsLive ? "" : ` · ${relativeTime(run.endedAt ?? run.updatedAt)}`}
-                </ThemedText>
-              </View>
-              <ConnectionBadge state={session.connection} />
-            </View>
-          ) : null
-        }
         ListEmptyComponent={
           <ThemedText variant="subhead" style={{ paddingVertical: spacing.xl, textAlign: "center" }}>
             {run ? "Nothing in this run yet." : "Loading run…"}
@@ -155,6 +152,7 @@ export default function RunScreen() {
         }
         ListFooterComponent={
           <View style={{ gap: spacing.md }}>
+            {runIsLive ? <AsciiLoader mode={mode} thinkingText={thinking} /> : null}
             {waiting.map((approval) => (
               <PendingApprovalCard
                 key={approval.requestId}
@@ -191,7 +189,14 @@ export default function RunScreen() {
             ) : null}
           </View>
         }
-        renderItem={({ item }) => <TranscriptRow item={item} />}
+        renderItem={({ item, index }) => (
+          <TranscriptTurn
+            row={item}
+            providerId={run?.providerId}
+            // Only the final row can be the turn the agent is still inside.
+            isRunInProgress={Boolean(runIsLive) && index === rows.length - 1}
+          />
+        )}
       />
 
       <View
@@ -229,6 +234,17 @@ export default function RunScreen() {
           permission={
             run && modelSelection.permissionLabel
               ? { label: modelSelection.permissionLabel, onPress: () => openRunOptions(run.providerId) }
+              : null
+          }
+          context={
+            backendId && run
+              ? {
+                  backendId,
+                  providerId: run.providerId,
+                  workspacePath: workspaceQuery.data[0]?.rootPath ?? null,
+                  skills: contextSkills,
+                  onSkillsChange: setContextSkills,
+                }
               : null
           }
         />

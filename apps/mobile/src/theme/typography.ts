@@ -11,6 +11,12 @@ export const type = {
   headline: { fontSize: 17, fontWeight: "600", letterSpacing: -0.4, color: colors.label },
   body: { fontSize: 17, fontWeight: "400", letterSpacing: -0.4, lineHeight: 22, color: colors.label },
   callout: { fontSize: 16, fontWeight: "400", letterSpacing: -0.3, lineHeight: 21, color: colors.label },
+  /**
+   * Chat prose — `callout`'s size with the leading a wall of text needs. A
+   * transcript is read in paragraphs, not glanced at like a list row, and
+   * callout's 21pt line box sets them too tight to scan.
+   */
+  prose: { fontSize: 16, fontWeight: "400", letterSpacing: -0.3, lineHeight: 24, color: colors.label },
   subhead: { fontSize: 15, fontWeight: "400", letterSpacing: -0.2, lineHeight: 20, color: colors.secondaryLabel },
   footnote: { fontSize: 13, fontWeight: "400", letterSpacing: -0.08, lineHeight: 18, color: colors.secondaryLabel },
   caption: { fontSize: 12, fontWeight: "400", color: colors.secondaryLabel },

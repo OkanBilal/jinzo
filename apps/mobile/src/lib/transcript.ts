@@ -1,9 +1,12 @@
 import type { RunArtifactRow, ToolCallRow } from "@/db/schema";
 
+import { promptFileFromPath, type PromptFile, type PromptSkill } from "./prompt-chips";
+
 /**
  * The phone's transcript layout — a port of the rules in the desktop's
- * `group-events.ts`, minus grouping: artifacts and tool calls interleaved by
- * time, each artifact classified by `metadata.kind`.
+ * `group-events.ts`: artifacts and tool calls interleaved by time, each
+ * artifact classified by its `kind`, and a run of consecutive tool calls folded
+ * into one block.
  *
  *  - "user-prompt"            → a prompt bubble
  *  - "thinking", subagent     → hidden (UI-only on desktop too)
@@ -11,17 +14,36 @@ import type { RunArtifactRow, ToolCallRow } from "@/db/schema";
  *  - "image"                  → a placeholder line (blobs never sync)
  *  - kind "log" artifacts     → hidden unless they are errors
  *  - anything else            → an assistant message
+ *
+ * The fold is the phone's own call. The desktop can afford to list thirty tool
+ * rows under a turn; here a stretch of them becomes a single "Worked for 24s"
+ * line that opens, so scrolling a transcript means scrolling what was *said*.
  */
 export type TranscriptItem =
-  | { key: string; kind: "prompt"; text: string; at: number }
-  | { key: string; kind: "response"; text: string; at: number; live: boolean }
-  | { key: string; kind: "tool"; call: ToolCallRow; at: number }
+  | {
+      key: string;
+      kind: "prompt";
+      text: string;
+      at: number;
+      /** Structured context the prompt carried — what its chips are drawn from. */
+      skills: PromptSkill[];
+      files: PromptFile[];
+    }
+  | { key: string; kind: "response"; text: string; at: number }
+  | { key: string; kind: "tools"; calls: ToolCallRow[]; at: number }
   | { key: string; kind: "note"; text: string; at: number };
 
+/** Pre-fold shape: one entry per tool call, before consecutive ones merge. */
+type FlatItem =
+  | Exclude<TranscriptItem, { kind: "tools" }>
+  | { key: string; kind: "tool"; call: ToolCallRow; at: number };
+
 interface ArtifactMetadata {
-  kind?: unknown;
   level?: unknown;
   isFromSubagent?: unknown;
+  /** Present on a user prompt: the skills and files the composer attached. */
+  skills?: unknown;
+  files?: unknown;
 }
 
 function metadataOf(artifact: RunArtifactRow): ArtifactMetadata {
@@ -34,73 +56,113 @@ function metadataOf(artifact: RunArtifactRow): ArtifactMetadata {
   }
 }
 
-function artifactItem(artifact: RunArtifactRow): TranscriptItem | null {
+function artifactItem(artifact: RunArtifactRow): FlatItem | null {
   const meta = metadataOf(artifact);
   const at = artifact.createdAt.getTime();
   const key = `artifact-${artifact.id}`;
 
   if (meta.isFromSubagent) return null;
 
-  if (artifact.kind === "log") {
-    const level = typeof meta.level === "string" ? meta.level : "";
-    if (level !== "error" || !artifact.content) return null;
-    return { key, kind: "note", text: artifact.content, at };
-  }
-
-  switch (meta.kind) {
+  // The `kind` *column* is the discriminator, not anything inside the metadata
+  // blob. The desktop reads `metadata.kind` only because its event mapper
+  // stamps `{ ...parseMetadata(row.metadata), kind: row.kind }` on the way out
+  // — the column always wins there. The adapter writes the prompt as
+  // `kind: "user-prompt"` with `metadata: { source: "user" }`, so keying off
+  // the metadata here filed every prompt under "assistant message".
+  switch (artifact.kind) {
+    case "log": {
+      const level = typeof meta.level === "string" ? meta.level : "";
+      if (level !== "error" || !artifact.content) return null;
+      return { key, kind: "note", text: artifact.content, at };
+    }
     case "thinking":
     case "prompt_suggestion":
       return null;
     case "user-prompt":
-      return artifact.content ? { key, kind: "prompt", text: artifact.content, at } : null;
+      return artifact.content
+        ? {
+            key,
+            kind: "prompt",
+            text: artifact.content,
+            at,
+            skills: promptSkills(meta),
+            files: promptFiles(meta),
+          }
+        : null;
     case "image":
       return { key, kind: "note", text: `Image${artifact.path ? ` · ${artifact.path}` : ""}`, at };
     default: {
       const text = artifact.content ?? artifact.path ?? "";
-      return text ? { key, kind: "response", text, at, live: false } : null;
+      return text ? { key, kind: "response", text, at } : null;
     }
   }
+}
+
+/** `metadata.skills` — the composer's own records, passed through unchanged. */
+function promptSkills(meta: ArtifactMetadata): PromptSkill[] {
+  if (!Array.isArray(meta.skills)) return [];
+  return meta.skills.filter(
+    (s): s is PromptSkill =>
+      Boolean(s) && typeof s === "object" && typeof (s as PromptSkill).name === "string",
+  );
+}
+
+/** `metadata.files` — `{ path }` records; the chip needs the basename too. */
+function promptFiles(meta: ArtifactMetadata): PromptFile[] {
+  if (!Array.isArray(meta.files)) return [];
+  const out: PromptFile[] = [];
+  for (const entry of meta.files) {
+    if (!entry || typeof entry !== "object") continue;
+    const path = (entry as { path?: unknown }).path;
+    if (typeof path === "string" && path) out.push(promptFileFromPath(path));
+  }
+  return out;
 }
 
 export function buildTranscript(
   artifacts: RunArtifactRow[],
   calls: ToolCallRow[],
-  runIsLive: boolean,
 ): TranscriptItem[] {
-  const items: TranscriptItem[] = [];
+  const flat: FlatItem[] = [];
   for (const artifact of artifacts) {
     const item = artifactItem(artifact);
-    if (item) items.push(item);
+    if (item) flat.push(item);
   }
   for (const call of calls) {
-    items.push({ key: `tool-${call.id}`, kind: "tool", call, at: call.createdAt.getTime() });
+    flat.push({ key: `tool-${call.id}`, kind: "tool", call, at: call.createdAt.getTime() });
   }
 
   // Same tie-break as the desktop: on equal timestamps artifacts come before
   // tool calls, then by source-row id.
-  items.sort((a, b) => {
+  flat.sort((a, b) => {
     if (a.at !== b.at) return a.at - b.at;
-    const rank = (i: TranscriptItem) => (i.kind === "tool" ? 1 : 0);
+    const rank = (i: FlatItem) => (i.kind === "tool" ? 1 : 0);
     if (rank(a) !== rank(b)) return rank(a) - rank(b);
     return numericId(a.key) - numericId(b.key);
   });
 
-  // A running agent whose last visible item isn't a message is still
-  // working: show it, so the screen never looks finished while it isn't.
-  const last = items[items.length - 1];
-  if (runIsLive) {
-    if (last && last.kind === "response") {
-      last.live = true;
-    } else {
-      items.push({
-        key: "live-placeholder",
-        kind: "response",
-        text: "",
-        at: Number.MAX_SAFE_INTEGER,
-        live: true,
-      });
+  return foldToolRuns(flat);
+}
+
+/** Consecutive tool calls become one block, keyed by the first call in it. */
+function foldToolRuns(flat: FlatItem[]): TranscriptItem[] {
+  const items: TranscriptItem[] = [];
+  let block: { key: string; kind: "tools"; calls: ToolCallRow[]; at: number } | null = null;
+
+  for (const item of flat) {
+    if (item.kind === "tool") {
+      if (block) {
+        block.calls.push(item.call);
+      } else {
+        block = { key: `tools-${item.call.id}`, kind: "tools", calls: [item.call], at: item.at };
+        items.push(block);
+      }
+      continue;
     }
+    block = null;
+    items.push(item);
   }
+
   return items;
 }
 

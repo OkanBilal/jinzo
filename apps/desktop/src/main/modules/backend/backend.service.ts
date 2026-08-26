@@ -54,6 +54,11 @@ export const PAIRED_DEVICE_CHANNELS: ReadonlySet<string> = new Set([
   // The composer's model picker: what each provider can run, with the effort
   // levels each model supports.
   CHANNELS.providers.getModels,
+  // The composer's context picker: the skills and slash commands a provider
+  // offers, so a phone can attach one the way the desktop's "@" menu does.
+  // Read-only listings — installing or editing a skill stays off this list.
+  CHANNELS.providers.getSkills,
+  CHANNELS.providers.getCommands,
 ]);
 
 /**

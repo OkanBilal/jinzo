@@ -1,10 +1,36 @@
+import { useState } from "react";
 import { Pressable, TextInput, View } from "react-native";
 
+import {
+  detectTrigger,
+  replaceTrigger,
+  skillContext,
+  skillMention,
+  type ContextBucket,
+  type ContextTrigger,
+  type PickerRow,
+} from "@/lib/context-picker";
+import type { PromptSkill } from "@/lib/prompt-chips";
 import { colors, radius, spacing, type, useBrandColors } from "@/theme";
 
+import { ContextPicker } from "./context-picker";
 import { GlassSurface } from "./glass-surface";
 import { SFSymbol } from "./sf-symbol";
 import { ThemedText } from "./themed-text";
+
+/**
+ * What the composer needs to offer its context menu. Omitted on a screen with
+ * no backend to ask — the "+" button then stays inert, as before.
+ */
+export interface ComposerContext {
+  backendId: string;
+  providerId: string;
+  /** The run target's folder on the Mac, when there is one. */
+  workspacePath?: string | null;
+  /** Skills attached to the next send; the caller passes them to the Mac. */
+  skills: PromptSkill[];
+  onSkillsChange: (skills: PromptSkill[]) => void;
+}
 
 /**
  * The floating glass composer, in two rows like the Claude app's: the text on
@@ -23,6 +49,7 @@ export function ComposerBar({
   onAdd,
   model,
   permission,
+  context,
 }: {
   value: string;
   onChangeText: (text: string) => void;
@@ -37,9 +64,56 @@ export function ComposerBar({
   model?: { label: string; effort?: string | null; onPress: () => void } | null;
   /** The permission-mode pill — worth seeing before sending from a phone. */
   permission?: { label: string; onPress: () => void } | null;
+  /** Skills and commands behind `@` / `/` / `$` and the "+" button. */
+  context?: ComposerContext | null;
 }) {
   const brand = useBrandColors();
   const canSend = !disabled && !sending && value.trim().length > 0;
+
+  // The "+" button opens the plugins bucket with no token in the text, the way
+  // the desktop's toolbar picker does; typing a trigger opens the full menu.
+  const [pickerBucket, setPickerBucket] = useState<ContextBucket | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const typed = context ? detectTrigger(value) : null;
+  const trigger: ContextTrigger = pickerBucket ? "$" : (typed?.trigger ?? "@");
+  const menuVisible = Boolean(context) && (pickerOpen || typed !== null);
+
+  const closeMenu = () => {
+    setPickerOpen(false);
+    setPickerBucket(null);
+    // A typed trigger keeps the menu open on its own, so dismissing means
+    // dropping the token — otherwise the sheet reopens on the next render.
+    if (typed) onChangeText(replaceTrigger(value, typed, ""));
+  };
+
+  const pick = (row: PickerRow) => {
+    if (!context) return;
+    if (row.kind === "skill") {
+      const picked = skillContext(row.skill);
+      // The label lands where the trigger was, so the sentence still reads as
+      // it was meant; `composeGoal` swaps it back to `$name` on the way out.
+      const mention = skillMention(picked);
+      onChangeText(
+        typed
+          ? replaceTrigger(value, typed, mention)
+          : `${value}${value && !/\s$/.test(value) ? " " : ""}${mention} `,
+      );
+      if (!context.skills.some((s) => s.name === picked.name)) {
+        context.onSkillsChange([...context.skills, picked]);
+      }
+    } else {
+      // A command is not an attachment; it *is* the message, so it stays put.
+      const replacement = `/${row.command.name}`;
+      onChangeText(
+        typed
+          ? replaceTrigger(value, typed, replacement)
+          : `${value}${value && !/\s$/.test(value) ? " " : ""}${replacement} `,
+      );
+    }
+    setPickerOpen(false);
+    setPickerBucket(null);
+  };
+
   return (
     <View style={{ paddingHorizontal: spacing.ms, gap: spacing.xs }}>
       {error ? (
@@ -79,7 +153,18 @@ export function ComposerBar({
         />
 
         <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
-          <RoundControl label="Add" onPress={onAdd} disabled={!onAdd}>
+          <RoundControl
+            label={context ? "Plugins and skills" : "Add"}
+            onPress={
+              context
+                ? () => {
+                    setPickerBucket("plugins");
+                    setPickerOpen(true);
+                  }
+                : onAdd
+            }
+            disabled={!context && !onAdd}
+          >
             <SFSymbol name="plus" size={18} tint={colors.label} />
           </RoundControl>
 
@@ -132,6 +217,20 @@ export function ComposerBar({
           </Pressable>
         </View>
       </GlassSurface>
+
+      {context ? (
+        <ContextPicker
+          visible={menuVisible}
+          backendId={context.backendId}
+          providerId={context.providerId}
+          workspacePath={context.workspacePath}
+          trigger={trigger}
+          bucket={pickerBucket}
+          filter={pickerBucket ? "" : (typed?.filter ?? "")}
+          onSelect={pick}
+          onClose={closeMenu}
+        />
+      ) : null}
     </View>
   );
 }

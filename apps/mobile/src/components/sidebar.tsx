@@ -2,7 +2,7 @@ import { and, asc, desc, eq } from "drizzle-orm";
 import { useLiveQuery } from "drizzle-orm/expo-sqlite";
 import { useRouter, type Href } from "expo-router";
 import { useMemo, useState } from "react";
-import { FlatList, Pressable, ScrollView, TextInput, View, type ColorValue } from "react-native";
+import { FlatList, Pressable, ScrollView, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { backendSession, useSession } from "@/backend/backend-session";
@@ -10,7 +10,6 @@ import { setSpaceTarget } from "@/backend/sync";
 import { db } from "@/db/client";
 import {
   collections,
-  pendingApprovals,
   projects,
   runs,
   spaceTargets,
@@ -20,14 +19,13 @@ import {
   type RunRow as RunRecord,
   type WorkspaceRow as WorkspaceRecord,
 } from "@/db/schema";
-import { colors, radius, spacing, type, useBrandColors } from "@/theme";
+import { colors, radius, spacing, type } from "@/theme";
 
 import { ProjectIcon } from "./project-icon";
 import { RoundGlassButton } from "./round-glass-button";
 import { RunRow } from "./run-row";
 import { SFSymbol } from "./sf-symbol";
 import { SpaceGlyph } from "./space-glyph";
-import { ConnectionBadge } from "./status";
 import { ThemedText } from "./themed-text";
 import { WorkspaceRow } from "./workspace-row";
 
@@ -78,13 +76,6 @@ export function Sidebar({ navigation }: { navigation: { closeDrawer(): void } })
       .from(collections)
       .where(and(eq(collections.backendId, backendId), eq(collections.isArchived, false)))
       .orderBy(asc(collections.name)),
-    [backendId],
-  );
-  const pendingList = useLiveQuery(
-    db
-      .select({ requestId: pendingApprovals.requestId })
-      .from(pendingApprovals)
-      .where(eq(pendingApprovals.backendId, backendId)),
     [backendId],
   );
   const spaceList = useLiveQuery(
@@ -425,62 +416,6 @@ function GroupHeader({
         </ThemedText>
       )}
       <SFSymbol name={open ? "chevron.down" : "chevron.right"} size={12} tint={colors.tertiaryLabel} />
-    </Pressable>
-  );
-}
-
-function NavItem({
-  icon,
-  label,
-  badge,
-  trailing,
-  onPress,
-}: {
-  icon: string;
-  label: string;
-  badge?: number;
-  trailing?: React.ReactNode;
-  onPress: () => void;
-}) {
-  const brand = useBrandColors();
-  const tint: ColorValue = badge ? brand.accent : colors.label;
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => ({
-        flexDirection: "row",
-        alignItems: "center",
-        gap: spacing.md,
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.ms,
-        backgroundColor: pressed ? colors.fill : "transparent",
-      })}
-    >
-      <SFSymbol name={icon} size={22} tint={tint} />
-      <ThemedText variant="body" numberOfLines={1} style={{ flex: 1, fontWeight: "500" }}>
-        {label}
-      </ThemedText>
-      {badge !== undefined && (
-        <View
-          style={{
-            minWidth: 24,
-            paddingHorizontal: spacing.sm,
-            paddingVertical: spacing.xxs,
-            borderRadius: radius.full,
-            backgroundColor: brand.accent,
-            alignItems: "center",
-          }}
-        >
-          <ThemedText
-            variant="caption"
-            style={{ color: brand.accentContrast, fontWeight: "700", fontVariant: ["tabular-nums"] }}
-          >
-            {badge}
-          </ThemedText>
-        </View>
-      )}
-      {trailing}
     </Pressable>
   );
 }

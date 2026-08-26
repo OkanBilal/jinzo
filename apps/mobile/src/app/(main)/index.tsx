@@ -9,6 +9,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { backendSession, useSession } from "@/backend/backend-session";
 import { Button } from "@/components/button";
 import { ComposerBar } from "@/components/composer-bar";
+import { attachedSkills, composeGoal } from "@/lib/context-picker";
+import type { PromptSkill } from "@/lib/prompt-chips";
 import { ModeMenu } from "@/components/mode-menu";
 import { ProjectIcon } from "@/components/project-icon";
 import { RoundGlassButton } from "@/components/round-glass-button";
@@ -82,6 +84,7 @@ export default function NewRunScreen() {
   const modelSelection = useModelSelection(backendId, space?.providerId ?? "");
 
   const [draft, setDraft] = useState("");
+  const [contextSkills, setContextSkills] = useState<PromptSkill[]>([]);
   const [sending, setSending] = useState(false);
   const [pendingMode, setPendingMode] = useState<ModeId | null>(null);
   const [hint, setHint] = useState<string | null>(null);
@@ -106,7 +109,9 @@ export default function NewRunScreen() {
   };
 
   const send = async () => {
-    const goal = draft.trim();
+    // What was typed plus a token per attached skill — the chips never put one
+    // in the input, but the transcript needs it to draw them back.
+    const goal = composeGoal(draft, contextSkills);
     if (!goal || !space || !connected || sending) return;
     if (isCode && !workspace) {
       setHint("Pick a workspace for this Code run first.");
@@ -119,12 +124,14 @@ export default function NewRunScreen() {
         goal,
         workspaceId: workspace?.id ?? null,
         collectionId: collection?.id ?? null,
+        contextSkills: attachedSkills(draft, contextSkills),
       });
       if (!result.success) {
         setHint(result.error);
         return;
       }
       setDraft("");
+      setContextSkills([]);
       router.push(`/run/${result.data.runId}` as Href);
     } catch (caught) {
       setHint(caught instanceof Error ? caught.message : "Could not start the run");
@@ -237,10 +244,6 @@ export default function NewRunScreen() {
               emphasized={isCode && !workspace}
               onPress={() => router.push("/target" as Href)}
             />
-            <ThemedText variant="caption" numberOfLines={1} style={{ flex: 1 }}>
-              {space.name}
-              {!providerEnabled ? " · provider disabled on the Mac" : ""}
-            </ThemedText>
           </View>
         )}
 
@@ -276,6 +279,17 @@ export default function NewRunScreen() {
           permission={
             space && modelSelection.permissionLabel
               ? { label: modelSelection.permissionLabel, onPress: () => openRunOptions(space.providerId) }
+              : null
+          }
+          context={
+            backendId && space
+              ? {
+                  backendId,
+                  providerId: space.providerId,
+                  workspacePath: workspace?.rootPath ?? null,
+                  skills: contextSkills,
+                  onSkillsChange: setContextSkills,
+                }
               : null
           }
         />

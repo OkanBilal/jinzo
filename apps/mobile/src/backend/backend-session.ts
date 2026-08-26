@@ -9,6 +9,7 @@ import type {
   ContinueRunPayload,
   ContinueRunResponse,
   ModeId,
+  SkillSummary,
   SpaceModePayload,
   StartRunPayload,
   StartRunResponse,
@@ -41,6 +42,8 @@ import {
   getLastSpaceId,
   getModelChoice,
   setLastSpaceId,
+  syncContextSources,
+  type ContextSourcesResult,
   syncRun,
   syncSnapshot,
   syncTargets,
@@ -289,6 +292,8 @@ class BackendSession {
     goal: string;
     workspaceId?: string | null;
     collectionId?: string | null;
+    /** Skills the composer attached; the Mac injects them and chips the prompt. */
+    contextSkills?: SkillSummary[];
   }): Promise<ServiceResponse<StartRunResponse>> {
     const { accountId, backend, selectedSpaceId } = this.snapshot;
     if (!accountId || !backend) {
@@ -315,6 +320,7 @@ class BackendSession {
       ...(model ? { model } : {}),
       ...(space.mode === "developer" && input.workspaceId ? { workspaceId: input.workspaceId } : {}),
       ...(space.mode !== "developer" && input.collectionId ? { collectionId: input.collectionId } : {}),
+      ...(input.contextSkills?.length ? { contextSkills: input.contextSkills } : {}),
     };
     const result = await this.command<StartRunResponse>(CHANNELS.runs.execute, [payload]);
     if (result.success && this.transport) {
@@ -324,6 +330,35 @@ class BackendSession {
   }
 
   // ── Actions (the control loop's verbs, each an idempotent command) ──
+
+  /**
+   * Re-list one provider's skills and commands. The snapshot fetches them once;
+   * this is for the moments a stale listing shows: opening the picker, or a
+   * plugin installed on the Mac since the phone last connected.
+   */
+  async refreshContextSources(
+    providerId: string,
+    workspacePath?: string | null,
+  ): Promise<ContextSourcesResult | null> {
+    const backendId = this.snapshot.backend?.backendId;
+    if (!this.transport || !backendId || !providerId) return null;
+    try {
+      const [result] = await syncContextSources(
+        this.transport,
+        backendId,
+        [providerId],
+        workspacePath,
+      );
+      return result ?? null;
+    } catch (error) {
+      return {
+        providerId,
+        skills: null,
+        commands: null,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
 
   /** Answer an agent's request. The row leaves the projection as soon as the Mac confirms. */
   async respondToApproval(
@@ -341,7 +376,11 @@ class BackendSession {
   }
 
   /** Send a follow-up message to a finished run; the Mac resumes the session. */
-  async continueRun(runId: string, message: string): Promise<ServiceResponse<ContinueRunResponse>> {
+  async continueRun(
+    runId: string,
+    message: string,
+    contextSkills?: SkillSummary[],
+  ): Promise<ServiceResponse<ContinueRunResponse>> {
     const { accountId, backend } = this.snapshot;
     if (!accountId || !backend) {
       return { success: false, error: "Not connected to your Mac yet" };
@@ -352,7 +391,13 @@ class BackendSession {
       .where(and(eq(runs.backendId, backend.backendId), eq(runs.id, runId)))
       .get();
     const model = run ? getModelChoice(backend.backendId, run.providerId) : null;
-    const payload: ContinueRunPayload = { runId, accountId, message, ...(model ? { model } : {}) };
+    const payload: ContinueRunPayload = {
+      runId,
+      accountId,
+      message,
+      ...(model ? { model } : {}),
+      ...(contextSkills?.length ? { contextSkills } : {}),
+    };
     const result = await this.command<ContinueRunResponse>(CHANNELS.runs.continue, [payload]);
     if (result.success && this.transport) {
       void syncRun(this.transport, backend.backendId, runId).catch(() => {});

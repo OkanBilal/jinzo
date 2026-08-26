@@ -209,4 +209,36 @@ export const MIGRATIONS: readonly string[] = [
   ALTER TABLE workspaces ADD COLUMN diff_additions INTEGER;
   ALTER TABLE workspaces ADD COLUMN diff_deletions INTEGER;
   `,
+  // v10 — the composer's context picker: what a provider offers behind @ / $ / /
+  `
+  CREATE TABLE skills (
+    backend_id TEXT NOT NULL,
+    provider_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    display_name TEXT,
+    description TEXT,
+    short_description TEXT,
+    argument_hint TEXT,
+    icon_small TEXT,
+    icon_large TEXT,
+    brand_color TEXT,
+    scope TEXT,
+    path TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (backend_id, provider_id, name)
+  );
+  CREATE TABLE commands (
+    backend_id TEXT NOT NULL,
+    provider_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    argument_hint TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (backend_id, provider_id, name)
+  );
+  `,
+  // v11 — a workspace's path on the Mac: skills and commands are listed against it
+  `
+  ALTER TABLE workspaces ADD COLUMN root_path TEXT;
+  `,
 ];

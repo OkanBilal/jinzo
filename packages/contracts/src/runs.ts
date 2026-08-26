@@ -171,6 +171,40 @@ export interface CollectionResponse {
 }
 
 /** The subset of `runs:execute`'s payload the phone sends. */
+/**
+ * `providers:getSkills` row, as a paired device sees it. A narrowing of the
+ * desktop's `SkillInfo`: what the composer's picker needs to list a skill and
+ * echo it back as context, and nothing else.
+ *
+ * `iconSmall` / `iconLarge` are absolute paths on the Mac — a device cannot
+ * read them, and carries them only so the value round-trips into the prompt's
+ * artifact metadata untouched.
+ */
+export interface SkillSummary {
+  name: string;
+  displayName?: string;
+  description?: string;
+  shortDescription?: string;
+  argumentHint?: string;
+  /** False for skills the model invokes on its own — those never list. */
+  userInvokable?: boolean;
+  path?: string;
+  iconSmall?: string;
+  iconLarge?: string;
+  brandColor?: string;
+  /** "plugin" | "mac" | "user" | "project" | "system" — the picker's buckets. */
+  scope?: string;
+}
+
+/** `providers:getCommands` row — a slash command the provider offers. */
+export interface CommandSummary {
+  name: string;
+  description?: string;
+  argumentHint?: string;
+  /** False for internal commands; those never list. */
+  userFacing?: boolean;
+}
+
 export interface StartRunPayload {
   accountId: string;
   spaceId: string;
@@ -179,6 +213,8 @@ export interface StartRunPayload {
   workspaceId?: string;
   collectionId?: string;
   model?: string;
+  /** Skills the composer attached — the Mac injects them and chips the prompt. */
+  contextSkills?: SkillSummary[];
 }
 
 export interface StartRunResponse {
@@ -309,6 +345,8 @@ export interface ContinueRunPayload {
   message: string;
   /** Model for this continuation; omitted = the provider's default. */
   model?: string | null;
+  /** Skills attached to this follow-up. */
+  contextSkills?: SkillSummary[];
 }
 
 export interface ContinueRunResponse {
