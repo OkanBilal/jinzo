@@ -92,6 +92,8 @@ export default function TargetSheet() {
                 key={workspace.id}
                 first={index === 0}
                 label={workspace.name}
+                // Worktrees of one repo share a name; the branch tells them apart.
+                detail={workspace.branch}
                 selected={target?.workspaceId === workspace.id}
                 onPress={() => choose({ workspaceId: workspace.id })}
               />
@@ -129,12 +131,15 @@ export default function TargetSheet() {
 
 function Row({
   label,
+  detail = null,
   leading,
   selected,
   onPress,
   first,
 }: {
   label: string;
+  /** A second line under the name — a workspace's branch. */
+  detail?: string | null;
   /** The project's icon; workspace rows have none. */
   leading?: React.ReactNode;
   selected: boolean;
@@ -161,9 +166,16 @@ function Row({
         {leading && (
           <View style={{ width: 22, alignItems: "center" }}>{leading}</View>
         )}
-        <ThemedText variant="body" numberOfLines={1} style={{ flex: 1 }}>
-          {label}
-        </ThemedText>
+        <View style={{ flex: 1, gap: 1 }}>
+          <ThemedText variant="body" numberOfLines={1}>
+            {label}
+          </ThemedText>
+          {detail ? (
+            <ThemedText variant="footnote" numberOfLines={1} style={{ color: colors.secondaryLabel }}>
+              {detail}
+            </ThemedText>
+          ) : null}
+        </View>
         {selected && <SFSymbol name="checkmark" size={16} tint={brand.accent} />}
       </Pressable>
     </View>

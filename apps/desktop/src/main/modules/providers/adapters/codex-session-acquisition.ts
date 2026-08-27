@@ -78,6 +78,12 @@ interface CodexSessionAcquisitionOptions {
     runId: string,
     threadId: string,
   ) => Promise<void>;
+  /**
+   * The live catalog's default, for a run that names no model and a config
+   * that pins none. The app-server refuses a `thread/resume` without one
+   * ("missing field `model`"), so this is what keeps a continued run alive.
+   */
+  resolveDefaultModel?: () => Promise<string | undefined>;
   establishGoal: (
     server: CodexAppServer,
     threadId: string | undefined,
@@ -373,10 +379,15 @@ export function createCodexSessionAcquisition(
   // (`ProviderDriver.updateConfig`).
   const timeout = () => config.timeout ?? 3_600_000;
 
-  function effectiveModel(
+  async function effectiveModel(
     requestedModel: string | null | undefined,
-  ): string | undefined {
-    return requestedModel || config.defaultModel || undefined;
+  ): Promise<string | undefined> {
+    return (
+      requestedModel ||
+      config.defaultModel ||
+      (await options.resolveDefaultModel?.()) ||
+      undefined
+    );
   }
 
   /**
@@ -445,7 +456,7 @@ export function createCodexSessionAcquisition(
     request: WorkRunRequest,
   ): Promise<AcquiredSession> {
     const { runId } = request;
-    const model = effectiveModel(request.model);
+    const model = await effectiveModel(request.model);
     const server = await ensureServer();
     const overrides = (
       request.configSnapshot ?? {}
@@ -531,7 +542,7 @@ export function createCodexSessionAcquisition(
     request: WorkRunContinueRequest,
   ): Promise<AcquiredSession> {
     const { runId, message } = request;
-    const model = effectiveModel(request.model);
+    const model = await effectiveModel(request.model);
     const server = await ensureServer();
     let threadId =
       runCoordinator.getSessionThread(runId) ??
@@ -646,7 +657,7 @@ export function createCodexSessionAcquisition(
     request: WorkRunForkRequest,
   ): Promise<AcquiredSession> {
     const { runId, sourceRunId, message } = request;
-    const model = effectiveModel(request.model);
+    const model = await effectiveModel(request.model);
     logger.info(
       `Forking session from run ${sourceRunId} into new run ${runId}`,
     );
@@ -728,7 +739,7 @@ export function createCodexSessionAcquisition(
   ): Promise<AcquiredSession> {
     const { runId } = request;
     const target = buildCodexReviewTarget(request.target);
-    const model = effectiveModel(request.model);
+    const model = await effectiveModel(request.model);
     const server = await ensureServer();
     const settings = threadSettingsFor();
     const threadStartParams: CodexThreadStartParams = {

@@ -19,10 +19,11 @@ export const FORK_MESSAGE = "Continue from where this session left off.";
  * its `SessionTimeBar`; here they sit under the message itself, since a phone
  * transcript has no time bar to hang them on.
  *
- * Copy is offered on every agent message. Fork is not: the Mac branches the
- * provider's *session*, not a point inside it, so it can only ever start from
- * the run's closing message — the caller decides which one that is and passes
- * `onFork` there alone.
+ * Copy sits under the last message of each agent turn and takes the whole
+ * turn with it. Fork is rarer still: the Mac branches the provider's
+ * *session*, not a point inside it, so it can only ever start from the run's
+ * closing message — the caller decides which one that is and passes `onFork`
+ * there alone.
  */
 export function MessageActions({
   text,

@@ -812,6 +812,8 @@ export function WorkspaceInput({
             query={goal}
             onQueryChange={handleGoalChange}
             onSubmit={handleSubmit}
+            // Mirrors the toolbar: while the agent works, Enter waits too.
+            submitDisabled={activeRun?.status === "running" || activeRun?.status === "queued"}
             onSkillChipsChange={handleSkillChipsChange}
             onFileChipsChange={handleFileChipsChange}
             onCodeChipsChange={handleCodeChipsChange}

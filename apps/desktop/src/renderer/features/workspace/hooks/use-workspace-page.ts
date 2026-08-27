@@ -261,6 +261,15 @@ export function useWorkspacePage(providerId: string) {
       toast.error("Select a workspace before sending a prompt.");
       return;
     }
+    // A run still working can take no second prompt — and must not become a
+    // new run either. The send button already reads Stop; Enter in the editor
+    // reaches here all the same, so the submit itself has to say no.
+    if (
+      composeTargetRun &&
+      (composeTargetRun.status === "running" || composeTargetRun.status === "queued")
+    ) {
+      return;
+    }
 
     const attachments = uploadedFiles.length > 0
       ? await serializeAttachments(uploadedFiles)
@@ -332,6 +341,8 @@ export function useWorkspacePage(providerId: string) {
     if (autoExecute && goal) {
       queueMicrotask(() => setAutoExecute(false));
       if (mode === "developer" && !workspaceId) return;
+      // Same rule as handleExecute: a live run is not a place to start another.
+      if (activeRun && (activeRun.status === "running" || activeRun.status === "queued")) return;
       const run = async () => {
         if (activeRunId && canResume && activeRun && activeRun.status !== "running") {
           const success =

@@ -7,7 +7,7 @@ import { colors, spacing } from "@/theme";
 
 import { SFSymbol } from "./sf-symbol";
 import { ThemedText } from "./themed-text";
-import { TranscriptRow, type TranscriptActions } from "./transcript-row";
+import { TranscriptRow, type TranscriptActions, type TurnActions } from "./transcript-row";
 
 /**
  * One planned row of the transcript: either a flat run of items, or a turn
@@ -31,7 +31,7 @@ export function TranscriptTurn({
   actions?: TranscriptActions;
 }) {
   if (row.kind === "flat") {
-    return <ItemList items={row.items} providerId={providerId} actions={actions} />;
+    return <ItemList items={row.items} providerId={providerId} actions={actions} turn={turnOf(row.items)} />;
   }
   return (
     <TurnAccordion
@@ -43,19 +43,30 @@ export function TranscriptTurn({
   );
 }
 
+/** What a turn's action row needs: which message ends the turn, and all of its text. */
+function turnOf(items: TranscriptItem[]): TurnActions {
+  const responses = items.filter((item) => item.kind === "response");
+  return {
+    lastResponseKey: responses.length > 0 ? responses[responses.length - 1].key : null,
+    text: responses.map((item) => item.text).join("\n\n"),
+  };
+}
+
 function ItemList({
   items,
   providerId,
   actions,
+  turn,
 }: {
   items: TranscriptItem[];
   providerId?: string | null;
   actions?: TranscriptActions;
+  turn?: TurnActions;
 }) {
   return (
     <View style={{ gap: spacing.md }}>
       {items.map((item) => (
-        <TranscriptRow key={item.key} item={item} providerId={providerId} actions={actions} />
+        <TranscriptRow key={item.key} item={item} providerId={providerId} actions={actions} turn={turn} />
       ))}
     </View>
   );
@@ -86,6 +97,8 @@ function TurnAccordion({
 
   const expanded = isRunInProgress || open;
   const label = accordionLabel(row.messageCount, row.toolSummary);
+  // The fold's messages and the closing one are one turn: one action row.
+  const turn = turnOf([...row.previous, ...row.last]);
 
   return (
     <View style={{ gap: spacing.md }}>
@@ -113,12 +126,12 @@ function TurnAccordion({
       )}
 
       {expanded ? (
-        <ItemList items={row.previous} providerId={providerId} actions={actions} />
+        <ItemList items={row.previous} providerId={providerId} actions={actions} turn={turn} />
       ) : null}
       {row.breakout.length > 0 ? (
-        <ItemList items={row.breakout} providerId={providerId} actions={actions} />
+        <ItemList items={row.breakout} providerId={providerId} actions={actions} turn={turn} />
       ) : null}
-      <ItemList items={row.last} providerId={providerId} actions={actions} />
+      <ItemList items={row.last} providerId={providerId} actions={actions} turn={turn} />
     </View>
   );
 }

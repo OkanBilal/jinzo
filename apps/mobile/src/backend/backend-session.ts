@@ -296,6 +296,8 @@ class BackendSession {
     collectionId?: string | null;
     /** Skills the composer attached; the Mac injects them and chips the prompt. */
     contextSkills?: SkillSummary[];
+    /** The model the composer shows — sent as is, so what you see is what runs. */
+    model?: string | null;
   }): Promise<ServiceResponse<StartRunResponse>> {
     const { accountId, backend, selectedSpaceId } = this.snapshot;
     if (!accountId || !backend) {
@@ -312,7 +314,7 @@ class BackendSession {
     if (!space) {
       return { success: false, error: "That space no longer exists on your Mac" };
     }
-    const model = getModelChoice(backend.backendId, space.providerId);
+    const model = input.model ?? getModelChoice(backend.backendId, space.providerId);
     const payload: StartRunPayload = {
       accountId,
       spaceId: space.id,
@@ -382,6 +384,8 @@ class BackendSession {
     runId: string,
     message: string,
     contextSkills?: SkillSummary[],
+    /** The model the composer shows; without one, the Mac keeps the run's. */
+    shownModel?: string | null,
   ): Promise<ServiceResponse<ContinueRunResponse>> {
     const { accountId, backend } = this.snapshot;
     if (!accountId || !backend) {
@@ -392,7 +396,7 @@ class BackendSession {
       .from(runs)
       .where(and(eq(runs.backendId, backend.backendId), eq(runs.id, runId)))
       .get();
-    const model = run ? getModelChoice(backend.backendId, run.providerId) : null;
+    const model = shownModel ?? (run ? getModelChoice(backend.backendId, run.providerId) : null);
     const payload: ContinueRunPayload = {
       runId,
       accountId,

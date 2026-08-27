@@ -1013,7 +1013,9 @@ export const runsService = {
           accountId,
           execution,
           message,
-          model: payload.model,
+          // The run's own model unless the caller names another: a phone that
+          // sends none means "as before", not "whatever the adapter has".
+          model: payload.model ?? run.model ?? undefined,
           systemPrompt: run.systemPrompt,
           mode: run.mode,
           extraInstructions: composeExtraInstructions(run.mode, space?.systemPrompt),

@@ -70,6 +70,20 @@ export default function MainLayout() {
             contentStyle: { backgroundColor: "transparent" },
           }}
         />
+        <Stack.Screen
+          name="search"
+          options={{ presentation: "fullScreenModal", animation: "fade", headerShown: false }}
+        />
+        <Stack.Screen
+          name="run-options"
+          options={{
+            presentation: "formSheet",
+            headerShown: false,
+            sheetGrabberVisible: true,
+            sheetAllowedDetents: [0.62, 1],
+            contentStyle: { backgroundColor: "transparent" },
+          }}
+        />
       </Stack>
     </SceneCard>
   );

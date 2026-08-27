@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { ActivityIndicator, Pressable, View } from "react-native";
+import { Pressable, View } from "react-native";
 
+import { AsciiSpinner } from "@/components/ascii-spinner";
 import { SFSymbol } from "@/components/sf-symbol";
 import { ThemedText } from "@/components/themed-text";
 import type { ToolCallRow } from "@/db/schema";
@@ -55,7 +56,7 @@ function Block({ calls }: { calls: ToolCallRow[] }) {
       >
         <View style={{ width: 15, alignItems: "center" }}>
           {summary.running ? (
-            <ActivityIndicator size="small" color={tint} style={{ transform: [{ scale: 0.7 }] }} />
+            <AsciiSpinner kind="square" size={12} color={tint} />
           ) : (
             <SFSymbol name={summary.symbol} size={14} tint={tint} />
           )}
@@ -80,9 +81,6 @@ function Block({ calls }: { calls: ToolCallRow[] }) {
         <View
           style={{
             gap: spacing.ms,
-            paddingLeft: spacing.sm,
-            borderLeftWidth: 1,
-            borderLeftColor: colors.separator,
           }}
         >
           {calls.map((call) => (

@@ -20,7 +20,7 @@ import { useNow } from "@/lib/use-now";
 import { colors, radius, shadows, spacing } from "@/theme";
 
 import { AsciiLoader, latestThinking } from "./ascii-loader";
-import { ComposerBar } from "./composer-bar";
+import { ComposerBar, composerBottomPadding } from "./composer-bar";
 import { FORK_MESSAGE } from "./message-actions";
 import { PendingApprovalCard } from "./pending-approval-card";
 import { ThemedText } from "./themed-text";
@@ -73,8 +73,12 @@ export function RunView({
   const backendId = session.backend?.backendId ?? "";
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const openRunOptions = (providerId: string) =>
+  // Two sheets behind the composer's two chips: the model (and its effort)
+  // behind the model chip, how the agent may act behind the permission chip.
+  const openModel = (providerId: string) =>
     router.push({ pathname: "/model", params: { providerId } } as Href);
+  const openRunOptions = (providerId: string) =>
+    router.push({ pathname: "/run-options", params: { providerId } } as Href);
 
   // While this transcript is on screen its events trigger refetches.
   useFocusEffect(
@@ -170,7 +174,12 @@ export function RunView({
     setSending(true);
     setSendError(null);
     try {
-      const result = await backendSession.continueRun(runId, message, attachedSkills(draft, contextSkills));
+      const result = await backendSession.continueRun(
+        runId,
+        message,
+        attachedSkills(draft, contextSkills),
+        modelSelection.selected?.id ?? null,
+      );
       if (!result.success) {
         setSendError(result.error);
         return;
@@ -414,12 +423,13 @@ export function RunView({
             left: 0,
             right: 0,
             bottom: 0,
-            paddingBottom: insets.bottom + spacing.sm,
+            paddingBottom: composerBottomPadding(insets.bottom),
           },
           lift,
         ]}
       >
         <ComposerBar
+          reservedTop={topInset + topPadding + spacing.sm}
           value={draft}
           onChangeText={setDraft}
           onSend={() => void send()}
@@ -435,7 +445,7 @@ export function RunView({
               ? {
                   label: modelSelection.label,
                   effort: modelSelection.effortLabel,
-                  onPress: () => openRunOptions(providerId),
+                  onPress: () => openModel(providerId),
                 }
               : null
           }

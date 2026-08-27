@@ -133,3 +133,25 @@ export function useProviderAccent(providerId: string | null | undefined): string
   const brand = useBrandColors();
   return providerAccents[providerId as keyof typeof providerAccents] ?? brand.accent;
 }
+
+/**
+ * A provider's accent as a pair: the color itself, and the wash a tinted
+ * surface wears under text in that color — the same opacities as the brand's
+ * `accentSoft`, so a provider-colored chip sits like a brand-colored one.
+ */
+export function useProviderAccentPair(providerId: string | null | undefined): {
+  accent: string;
+  soft: string;
+} {
+  const scheme = useColorScheme();
+  const accent = useProviderAccent(providerId);
+  return { accent, soft: withAlpha(accent, scheme === "dark" ? 0.18 : 0.12) };
+}
+
+/** `#rrggbb` at an opacity, as `rgba()`. Anything else is returned untouched. */
+export function withAlpha(hex: string, alpha: number): string {
+  const match = /^#([0-9a-f]{6})$/i.exec(hex);
+  if (!match) return hex;
+  const value = parseInt(match[1], 16);
+  return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}, ${alpha})`;
+}

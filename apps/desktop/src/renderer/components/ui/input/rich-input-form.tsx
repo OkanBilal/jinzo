@@ -61,6 +61,11 @@ interface RichInputFormProps {
   query: string;
   onQueryChange: (value: string) => void;
   onSubmit: () => void;
+  /**
+   * While true, Enter neither submits nor inserts a line — the text stays put,
+   * as it does when the toolbar's send button has become Stop.
+   */
+  submitDisabled?: boolean;
   onSkillChipsChange?: (names: string[]) => void;
   onFileChipsChange?: (paths: string[]) => void;
   onCodeChipsChange?: (keys: string[]) => void;
@@ -429,6 +434,7 @@ export const RichInputForm = forwardRef<RichInputFormHandle, RichInputFormProps>
       query,
       onQueryChange,
       onSubmit,
+      submitDisabled = false,
       onSkillChipsChange,
       onFileChipsChange,
       onCodeChipsChange,
@@ -612,10 +618,10 @@ export const RichInputForm = forwardRef<RichInputFormHandle, RichInputFormProps>
       (e: React.KeyboardEvent<HTMLDivElement>) => {
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault();
-          onSubmit();
+          if (!submitDisabled) onSubmit();
         }
       },
-      [onSubmit],
+      [onSubmit, submitDisabled],
     );
 
     const handlePaste = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {

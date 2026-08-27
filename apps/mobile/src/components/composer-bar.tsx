@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Pressable, TextInput, View } from "react-native";
+import { Pressable, TextInput, View, useWindowDimensions } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   detectTrigger,
@@ -11,6 +12,7 @@ import {
   type PickerRow,
 } from "@/lib/context-picker";
 import type { PromptSkill } from "@/lib/prompt-chips";
+import { useKeyboardInset } from "@/lib/use-keyboard-inset";
 import { colors, radius, spacing, type, useProviderAccent } from "@/theme";
 
 import { ContextPicker } from "./context-picker";
@@ -52,6 +54,7 @@ export function ComposerBar({
   permission,
   context,
   providerId,
+  reservedTop,
 }: {
   value: string;
   onChangeText: (text: string) => void;
@@ -75,6 +78,11 @@ export function ComposerBar({
   context?: ComposerContext | null;
   /** Tints the send button, the way the provider tints its prompt bubbles. */
   providerId?: string | null;
+  /**
+   * How far down from the top of the screen its floating controls reach — the
+   * header, or home's buttons — so the context picker stops short of them.
+   */
+  reservedTop?: number;
 }) {
   const accent = useProviderAccent(providerId);
   const canSend = !disabled && !sending && value.trim().length > 0;
@@ -83,6 +91,25 @@ export function ComposerBar({
   // the desktop's toolbar picker does; typing a trigger opens the full menu.
   const [pickerBucket, setPickerBucket] = useState<ContextBucket | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  // The picker opens upward from the bar and may grow until it meets whatever
+  // floats at the top of the screen — no further, or on a small phone with
+  // the keyboard up its header ended up under the screen's controls. The bar's
+  // top edge is known from the parts: the screen's bottom, less the keyboard,
+  // less the padding every screen gives the bar, less the bar itself.
+  const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const keyboardInset = useKeyboardInset();
+  const [barHeight, setBarHeight] = useState(0);
+  const pickerMaxHeight = Math.max(
+    160,
+    windowHeight -
+      keyboardInset -
+      composerBottomPadding(insets.bottom) -
+      barHeight -
+      spacing.xs -
+      (reservedTop ?? insets.top + spacing.sm),
+  );
   const typed = context ? detectTrigger(value) : null;
   const trigger: ContextTrigger = pickerBucket ? "$" : (typed?.trigger ?? "@");
   const menuVisible = Boolean(context) && (pickerOpen || typed !== null);
@@ -124,7 +151,10 @@ export function ComposerBar({
   };
 
   return (
-    <View style={{ paddingHorizontal: spacing.ms, gap: spacing.xs }}>
+    <View
+      style={{ paddingHorizontal: spacing.ms, gap: spacing.xs }}
+      onLayout={(event) => setBarHeight(event.nativeEvent.layout.height)}
+    >
       {error ? (
         <ThemedText variant="footnote" style={{ color: colors.systemRed, paddingHorizontal: spacing.sm }}>
           {error}
@@ -241,6 +271,7 @@ export function ComposerBar({
           trigger={trigger}
           bucket={pickerBucket}
           filter={pickerBucket ? "" : (typed?.filter ?? "")}
+          maxHeight={pickerMaxHeight}
           onSelect={pick}
           onClose={closeMenu}
         />
@@ -309,4 +340,12 @@ function RoundControl({
       {children}
     </Pressable>
   );
+}
+
+/**
+ * The space every screen leaves under the composer: the home indicator plus
+ * a little more. Shared so the bar can work out where its own top edge is.
+ */
+export function composerBottomPadding(bottomInset: number): number {
+  return bottomInset + spacing.sm;
 }

@@ -2,7 +2,7 @@ import { and, asc, desc, eq } from "drizzle-orm";
 import { useLiveQuery } from "drizzle-orm/expo-sqlite";
 import { useRouter, type Href } from "expo-router";
 import { useMemo, useState } from "react";
-import { FlatList, Pressable, ScrollView, TextInput, View } from "react-native";
+import { FlatList, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { backendSession, useSession } from "@/backend/backend-session";
@@ -20,7 +20,7 @@ import {
   type WorkspaceRow as WorkspaceRecord,
 } from "@/db/schema";
 import { goHome } from "@/lib/home-run";
-import { colors, radius, spacing, type } from "@/theme";
+import { colors, radius, spacing } from "@/theme";
 
 import { ProjectIcon } from "./project-icon";
 import { RoundGlassButton } from "./round-glass-button";
@@ -47,8 +47,6 @@ export function Sidebar({ navigation }: { navigation: { closeDrawer(): void } })
   const session = useSession();
   const backendId = session.backend?.backendId ?? "";
   const spaceId = session.selectedSpaceId ?? "";
-  const [searching, setSearching] = useState(false);
-  const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
 
   const runList = useLiveQuery(
@@ -109,33 +107,25 @@ export function Sidebar({ navigation }: { navigation: { closeDrawer(): void } })
   );
 
   const items = useMemo<SidebarItem[]>(() => {
-    const needle = query.trim().toLowerCase();
     const out: SidebarItem[] = [];
     if (!session.backend) {
       out.push({ kind: "empty", key: "unpaired", text: "Pair a Mac to see its work here." });
       return out;
     }
     if (isCode) {
-      const list = workspaceList.data
-        .filter(
-          (w) =>
-            !needle ||
-            w.name.toLowerCase().includes(needle) ||
-            (w.branch ?? "").toLowerCase().includes(needle),
-        )
-        .sort((a, b) => (b.updatedAt?.getTime() ?? 0) - (a.updatedAt?.getTime() ?? 0));
-      out.push({ kind: "header", key: "h-workspaces", title: needle ? "Results" : "Workspaces" });
+      const list = [...workspaceList.data].sort(
+        (a, b) => (b.updatedAt?.getTime() ?? 0) - (a.updatedAt?.getTime() ?? 0),
+      );
+      out.push({ kind: "header", key: "h-workspaces", title: "Workspaces" });
       if (list.length === 0) {
-        out.push({ kind: "empty", key: "e-workspaces", text: needle ? "No workspaces match." : "No workspaces yet." });
+        out.push({ kind: "empty", key: "e-workspaces", text: "No workspaces yet." });
       }
       for (const workspace of list) out.push({ kind: "workspace", key: workspace.id, workspace });
       return out;
     }
     // Chats: this space's provider and mode, like the desktop's recent list.
     const chats = runList.data.filter(
-      (run) =>
-        (!space || (run.providerId === space.providerId && run.mode === space.mode)) &&
-        (!needle || (run.title ?? "").toLowerCase().includes(needle)),
+      (run) => !space || (run.providerId === space.providerId && run.mode === space.mode),
     );
     const byCollection = new Map<string, RunRecord[]>();
     for (const run of chats) {
@@ -144,12 +134,7 @@ export function Sidebar({ navigation }: { navigation: { closeDrawer(): void } })
       if (bucket) bucket.push(run);
       else byCollection.set(run.collectionId, [run]);
     }
-    const groups = collectionList.data.filter(
-      (collection) =>
-        !needle ||
-        collection.name.toLowerCase().includes(needle) ||
-        (byCollection.get(collection.id)?.length ?? 0) > 0,
-    );
+    const groups = collectionList.data;
     if (groups.length > 0) {
       out.push({ kind: "header", key: "h-projects", title: "Projects" });
       for (const collection of groups) {
@@ -164,13 +149,13 @@ export function Sidebar({ navigation }: { navigation: { closeDrawer(): void } })
       }
     }
     const recents = chats.filter((run) => !run.collectionId).slice(0, RECENTS_LIMIT);
-    out.push({ kind: "header", key: "h-recents", title: needle ? "Results" : "Recents" });
+    out.push({ kind: "header", key: "h-recents", title: "Recents" });
     if (recents.length === 0) {
-      out.push({ kind: "empty", key: "e-recents", text: needle ? "No chats match." : "No chats yet." });
+      out.push({ kind: "empty", key: "e-recents", text: "No chats yet." });
     }
     for (const run of recents) out.push({ kind: "run", key: run.id, run });
     return out;
-  }, [session.backend, isCode, space, query, workspaceList.data, runList.data, collectionList.data, collapsed]);
+  }, [session.backend, isCode, space, workspaceList.data, runList.data, collectionList.data, collapsed]);
 
   const go = (href: Href) => {
     navigation.closeDrawer();
@@ -218,43 +203,9 @@ export function Sidebar({ navigation }: { navigation: { closeDrawer(): void } })
         }}
       >
         <ThemedText variant="title2">Mains</ThemedText>
-        <RoundGlassButton
-          size={44}
-          icon={searching ? "xmark" : "magnifyingglass"}
-          label={searching ? "Close search" : isCode ? "Search workspaces" : "Search chats"}
-          onPress={() => {
-            setSearching((on) => !on);
-            setQuery("");
-          }}
-        />
+        {/* Search is its own screen: everything on the Mac, whatever the space. */}
+        <RoundGlassButton size={44} icon="magnifyingglass" label="Search" onPress={() => go("/search" as Href)} />
       </View>
-
-      {searching && (
-        <View style={{ paddingHorizontal: spacing.md, paddingBottom: spacing.sm }}>
-          <TextInput
-            accessibilityLabel={isCode ? "Search workspaces" : "Search chats"}
-            autoCapitalize="none"
-            autoCorrect={false}
-            autoFocus
-            clearButtonMode="while-editing"
-            onChangeText={setQuery}
-            placeholder={isCode ? "Search workspaces" : "Search chats"}
-            placeholderTextColor={colors.tertiaryLabel as string}
-            style={[
-              type.callout,
-              {
-                height: 40,
-                paddingHorizontal: spacing.ms,
-                borderRadius: radius.md,
-                borderCurve: "continuous",
-                backgroundColor: colors.fill,
-                color: colors.label,
-              },
-            ]}
-            value={query}
-          />
-        </View>
-      )}
 
       <FlatList
         data={items}

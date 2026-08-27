@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { backendSession, useSession } from "@/backend/backend-session";
 import { Button } from "@/components/button";
-import { ComposerBar } from "@/components/composer-bar";
+import { ComposerBar, composerBottomPadding } from "@/components/composer-bar";
 import { GlassSurface } from "@/components/glass-surface";
 import { attachedSkills, composeGoal } from "@/lib/context-picker";
 import type { PromptSkill } from "@/lib/prompt-chips";
@@ -28,10 +28,12 @@ import { useModelSelection } from "@/lib/use-model-selection";
 import { useRunTitle } from "@/lib/use-run-title";
 import { db } from "@/db/client";
 import { collections, projects, providers, spaceTargets, spaces, workspaces } from "@/db/schema";
-import { colors, radius, shadows, spacing, useBrandColors } from "@/theme";
+import { colors, radius, shadows, spacing, useProviderAccentPair } from "@/theme";
 
 /** The round glass buttons' size, and the pills' height, along the top. */
 const CONTROL_HEIGHT = 46;
+/** The connection pill under them, shown while the Mac is out of reach. */
+const PILL_HEIGHT = 30;
 
 /**
  * Home, in the shape of a chat app's "new conversation": the mode segment on
@@ -105,6 +107,9 @@ export default function NewRunScreen() {
   // The run this screen is showing, once one has been started from it.
   const home = useHomeRun();
   const inRun = home.pending !== null || home.runId !== null;
+  // A paired Mac that cannot be reached right now: said under the controls,
+  // where a tap leads to the settings that explain and fix it.
+  const offline = Boolean(session.backend) && !connected;
   const title = useRunTitle(home.runId ?? "");
 
   // Same rule as the run and workspace screens: move by the keyboard's height
@@ -114,8 +119,12 @@ export default function NewRunScreen() {
     transform: [{ translateY: -Math.max(0, keyboard.height.value - insets.bottom) }],
   }));
 
-  const openRunOptions = (providerId: string) =>
+  // Two sheets behind the composer's two chips: the model (and its effort)
+  // behind the model chip, how the agent may act behind the permission chip.
+  const openModel = (providerId: string) =>
     router.push({ pathname: "/model", params: { providerId } } as Href);
+  const openRunOptions = (providerId: string) =>
+    router.push({ pathname: "/run-options", params: { providerId } } as Href);
 
   const openSidebar = () => {
     // The drawer only dismisses the keyboard for the swipe gesture; the
@@ -156,6 +165,7 @@ export default function NewRunScreen() {
         workspaceId: workspace?.id ?? null,
         collectionId: collection?.id ?? null,
         contextSkills: skills,
+        model: modelSelection.selected?.id ?? null,
       });
       if (!result.success) {
         homeRun.clear();
@@ -222,14 +232,30 @@ export default function NewRunScreen() {
         )}
       </View>
 
+      {offline && session.backend ? (
+        <View
+          style={{
+            position: "absolute",
+            top: insets.top + spacing.sm + CONTROL_HEIGHT + spacing.sm,
+            left: 0,
+            right: 0,
+            alignItems: "center",
+            zIndex: 1,
+          }}
+        >
+          <ConnectionPill name={session.backend.name} onPress={() => router.push("/settings" as Href)} />
+        </View>
+      ) : null}
+
       {inRun ? (
         <RunView
           runId={home.runId ?? ""}
           pending={home.pending}
           providerId={space?.providerId ?? null}
           topInset={insets.top}
-          // Under the floating controls, with the same gap again beneath them.
-          topPadding={CONTROL_HEIGHT + spacing.sm}
+          // Under the floating controls, with the same gap again beneath them —
+          // and under the connection pill too, while there is one.
+          topPadding={CONTROL_HEIGHT + spacing.sm + (offline ? PILL_HEIGHT + spacing.sm : 0)}
         />
       ) : (
         // The canvas stays empty on purpose.
@@ -241,7 +267,7 @@ export default function NewRunScreen() {
           the home-indicator inset this block already carries, which left a
           band of background between the bar and the keys. */}
       {!inRun ? (
-        <Animated.View style={[{ paddingBottom: insets.bottom + spacing.sm, gap: spacing.ms }, lift]}>
+        <Animated.View style={[{ paddingBottom: composerBottomPadding(insets.bottom), gap: spacing.ms }, lift]}>
           {!session.backend && session.loaded && (
             <View
               style={{
@@ -262,23 +288,6 @@ export default function NewRunScreen() {
             </View>
           )}
 
-          {session.backend && !connected && (
-            <View
-              style={{
-                alignSelf: "center",
-                flexDirection: "row",
-                alignItems: "center",
-                gap: spacing.sm,
-                paddingHorizontal: spacing.ms,
-                paddingVertical: spacing.xs + 2,
-                borderRadius: radius.full,
-                backgroundColor: colors.fill,
-              }}
-            >
-              <ThemedText variant="footnote">{session.backend.name}</ThemedText>
-              <ConnectionBadge state={session.connection} />
-            </View>
-          )}
 
           {/* Run target */}
           {space && (
@@ -295,6 +304,7 @@ export default function NewRunScreen() {
                 fallbackSymbol={isCode ? "folder" : "tray"}
                 label={targetLabel}
                 emphasized={isCode && !workspace}
+                providerId={space.providerId}
                 onPress={() => router.push("/target" as Href)}
               />
             </View>
@@ -311,6 +321,7 @@ export default function NewRunScreen() {
           ) : null}
 
           <ComposerBar
+            reservedTop={insets.top + spacing.sm + CONTROL_HEIGHT + spacing.sm}
             value={draft}
             onChangeText={(text) => {
               setDraft(text);
@@ -325,7 +336,7 @@ export default function NewRunScreen() {
                 ? {
                     label: modelSelection.label,
                     effort: modelSelection.effortLabel,
-                    onPress: () => openRunOptions(space.providerId),
+                    onPress: () => openModel(space.providerId),
                   }
                 : null
             }
@@ -350,6 +361,33 @@ export default function NewRunScreen() {
         </Animated.View>
       ) : null}
     </View>
+  );
+}
+
+/** The Mac's name and its state, as a pill that opens the settings behind it. */
+function ConnectionPill({ name, onPress }: { name: string; onPress: () => void }) {
+  const session = useSession();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${name}: unreachable. Open settings`}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.sm,
+        height: PILL_HEIGHT,
+        paddingLeft: spacing.ms,
+        paddingRight: spacing.sm,
+        borderRadius: radius.full,
+        backgroundColor: colors.fill,
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
+      <ThemedText variant="footnote">{name}</ThemedText>
+      <ConnectionBadge state={session.connection} />
+      <SFSymbol name="chevron.right" size={10} tint={colors.tertiaryLabel} />
+    </Pressable>
   );
 }
 
@@ -406,6 +444,7 @@ function TargetChip({
   fallbackSymbol,
   label,
   emphasized = false,
+  providerId = null,
   onPress,
 }: {
   /** The project's or collection's stored icon; null when it has none. */
@@ -413,11 +452,14 @@ function TargetChip({
   /** SF Symbol drawn when there is no icon to show — what the target *is*. */
   fallbackSymbol: string;
   label: string;
+  /** Draws attention to a target still to be chosen — in the provider's color. */
   emphasized?: boolean;
+  /** The space's provider: whose accent the emphasized chip wears. */
+  providerId?: string | null;
   onPress: () => void;
 }) {
-  const brand = useBrandColors();
-  const tint = emphasized ? brand.accent : colors.secondaryLabel;
+  const provider = useProviderAccentPair(providerId);
+  const tint = emphasized ? provider.accent : colors.secondaryLabel;
   return (
     <Pressable
       accessibilityRole="button"
@@ -430,7 +472,7 @@ function TargetChip({
         paddingRight: spacing.sm,
         height: 34,
         borderRadius: radius.full,
-        backgroundColor: emphasized ? brand.accentSoft : colors.fill,
+        backgroundColor: emphasized ? provider.soft : colors.fill,
         opacity: pressed ? 0.7 : 1,
         maxWidth: "70%",
       })}
@@ -443,11 +485,11 @@ function TargetChip({
       <ThemedText
         variant="footnote"
         numberOfLines={1}
-        style={{ color: emphasized ? brand.accent : colors.label, fontWeight: "600" }}
+        style={{ color: emphasized ? provider.accent : colors.label, fontWeight: "600" }}
       >
         {label}
       </ThemedText>
-      <SFSymbol name="chevron.down" size={11} tint={emphasized ? brand.accent : colors.tertiaryLabel} />
+      <SFSymbol name="chevron.down" size={11} tint={emphasized ? provider.accent : colors.tertiaryLabel} />
     </Pressable>
   );
 }

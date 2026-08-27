@@ -44,7 +44,7 @@ import { logWorkspaceActivity } from "../../workspace";
 // "Repos are module-internal"); goes away when review persistence routes
 // through the SaveReview/SaveFinding tools.
 import { workspaceRepo } from "../../workspace/workspace.repo";
-import { adoptConfig, createLogger } from "./adapter.shared";
+import { adoptConfig, createLogger, resolveCatalogDefaultId } from "./adapter.shared";
 import type { CodexAppServerParams } from "./codex-app-server-protocol/rpc";
 import { CodexAppServer } from "./codex-app-server.client";
 import {
@@ -432,6 +432,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       await runsRepo.updateRun(runId, { sessionId: threadId });
     },
     establishGoal: maybeSetThreadGoal,
+    resolveDefaultModel: catalogDefaultModel,
     logger: codexLogger,
   });
   const capabilities = createCodexCapabilities({
@@ -442,6 +443,41 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     getCliHealth: () => getCodexCliHealth(),
     logger: codexLogger,
   });
+
+  /**
+   * The catalog's own default — what the other drivers reach through
+   * `resolveCatalogDefaultId`, and what a turn falls back to when neither the
+   * run nor the config names a model. Cached briefly: `model/list` is a round
+   * trip to the app-server, and the answer only moves when models rotate.
+   */
+  const CATALOG_DEFAULT_TTL_MS = 5 * 60_000;
+  let catalogDefault: { at: number; value: Promise<string | undefined> } | null =
+    null;
+  function catalogDefaultModel(): Promise<string | undefined> {
+    const now = Date.now();
+    if (catalogDefault && now - catalogDefault.at < CATALOG_DEFAULT_TTL_MS) {
+      return catalogDefault.value;
+    }
+    const value = capabilities
+      .listModels()
+      .then((models) => {
+        const flagged = models.find((model) => model.isDefault)?.id;
+        return resolveCatalogDefaultId(
+          models.map((model) => model.id),
+          config.defaultModel,
+          flagged ? [flagged] : [],
+        );
+      })
+      .catch((error: unknown) => {
+        codexLogger.warn(
+          `Could not resolve a default model from the catalog: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        catalogDefault = null;
+        return undefined;
+      });
+    catalogDefault = { at: now, value };
+    return value;
+  }
 
   // ─────────────────────────────────────────────────────────────
   // Find codex binary

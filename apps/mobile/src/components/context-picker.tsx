@@ -39,6 +39,7 @@ export function ContextPicker({
   trigger,
   bucket = null,
   filter,
+  maxHeight,
   onSelect,
   onClose,
 }: {
@@ -50,6 +51,8 @@ export function ContextPicker({
   trigger: ContextTrigger;
   bucket?: ContextBucket | null;
   filter: string;
+  /** As tall as the room above the bar allows (the bar works this out). */
+  maxHeight: number;
   onSelect: (row: PickerRow) => void;
   onClose: () => void;
 }) {
@@ -134,7 +137,7 @@ export function ContextPicker({
         left: spacing.ms,
         right: spacing.ms,
         marginBottom: spacing.xs,
-        maxHeight: 300,
+        maxHeight,
         borderRadius: radius.lg,
         borderCurve: "continuous",
         backgroundColor: colors.secondarySystemBackground,
@@ -267,7 +270,10 @@ function SkillRowBody({ skill }: { skill: SkillRow }) {
                 backgroundColor: colors.fill,
               }}
             >
-              <ThemedText variant="caption2">{badge}</ThemedText>
+              {/* caption2's tertiary grey vanished into the fill; the badge reads in secondary. */}
+              <ThemedText variant="caption2" style={{ color: colors.secondaryLabel, fontWeight: "600" }}>
+                {badge}
+              </ThemedText>
             </View>
           ) : null}
         </View>
