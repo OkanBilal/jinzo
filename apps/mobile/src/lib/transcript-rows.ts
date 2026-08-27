@@ -27,7 +27,11 @@ export type TurnRow =
       kind: "accordion";
       /** Everything before the final segment — what the header collapses. */
       previous: TranscriptItem[];
-      /** Pulled out of `previous` and always shown: notes, which carry errors. */
+      /**
+       * Pulled out of `previous` and always shown: notes, which carry errors,
+       * and images — the desktop's media break-out, so a picture the agent
+       * made is never behind a fold.
+       */
       breakout: TranscriptItem[];
       /** The last segment: the turn's closing message and its trailing work. */
       last: TranscriptItem[];
@@ -142,8 +146,8 @@ export function buildTurnRows(items: TranscriptItem[]): TurnRow[] {
     ];
     const last = expand(items, segments[segments.length - 1]);
 
-    const breakout = previousAll.filter((item) => item.kind === "note");
-    const previous = previousAll.filter((item) => item.kind !== "note");
+    const breakout = previousAll.filter((item) => item.kind === "note" || item.kind === "images");
+    const previous = previousAll.filter((item) => item.kind !== "note" && item.kind !== "images");
 
     // Everything before the last segment was a note — there is nothing left to
     // collapse, so the turn is flat after all.

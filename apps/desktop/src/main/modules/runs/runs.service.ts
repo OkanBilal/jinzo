@@ -1,4 +1,5 @@
 import { createHash } from "crypto";
+import * as fs from "fs";
 
 import { PROVIDER_IDS } from "../../../shared/provider-ids";
 import { runsRepo } from "./runs.repo";
@@ -9,6 +10,7 @@ import { workspaceService, assertWorkspacePathExists } from "../workspace";
 import { spaceService } from "../space";
 import { appSettingsService } from "../appSettings";
 import { DEFAULT_MODE_ID, type ModeId } from "../../../shared/modes";
+import type { ArtifactImage, ReadArtifactImagePayload } from "@mains/contracts/runs";
 import {
   composeConfigSnapshot,
   composeExtraInstructions,
@@ -28,6 +30,21 @@ import {
   resolveRunExecution,
 } from "./run-execution";
 import { materializeCollectionSourceContext } from "./run-collection-sources";
+
+/** Longest side an image artifact is sent at — more than any phone shows. */
+const ARTIFACT_IMAGE_MAX_SIDE = 1600;
+/** A file sent as it is (a format the Mac can't scale) must fit in one message. */
+const ARTIFACT_IMAGE_RAW_LIMIT = 8 * 1024 * 1024;
+/** Image types the phone decodes on its own, by extension — `nativeImage` reads only PNG and JPEG. */
+const RAW_IMAGE_MIMES: Record<string, string> = {
+  webp: "image/webp",
+  gif: "image/gif",
+  heic: "image/heic",
+  heif: "image/heif",
+  avif: "image/avif",
+  bmp: "image/bmp",
+  svg: "image/svg+xml",
+};
 import { emit } from "../../ipc-kit";
 import { runSessionRegistry } from "./run-session-registry";
 import type {
@@ -577,6 +594,61 @@ export const runsService = {
     sinceId?: number,
   ): Promise<RunArtifactResponse[]> {
     return runsRepo.findArtifactsByRun(runId, sinceId);
+  },
+
+  /**
+   * An image artifact's pixels, sized for a phone. The desktop's renderer reads
+   * image files off the disk through a signed protocol; a paired device has no
+   * disk and only its socket, so the bytes go over that — after `nativeImage`
+   * has shrunk them to a screen's worth. Always JPEG: this is a chat preview,
+   * not the file.
+   */
+  async readArtifactImage(payload: ReadArtifactImagePayload): Promise<ArtifactImage> {
+    const artifact = await runsRepo.findArtifactById(payload.artifactId);
+    if (!artifact) throw new Error("Artifact not found");
+    if (artifact.kind !== "image") throw new Error("Not an image artifact");
+    // The adapters record where the file is in the metadata, not the column.
+    const filePath =
+      artifact.path ??
+      (typeof artifact.metadata?.path === "string" ? artifact.metadata.path : null);
+    const bytes =
+      artifact.blobData ??
+      (filePath && fs.existsSync(filePath) ? fs.readFileSync(filePath) : null);
+    if (!bytes) throw new Error("Image file is missing");
+    // Loaded here rather than at the top: the service also runs outside
+    // Electron (tests), where the module is a stub.
+    const { nativeImage } = await import("electron");
+    const source = nativeImage.createFromBuffer(bytes);
+    if (source.isEmpty()) {
+      // Not PNG or JPEG, so nothing here can scale it — but the phone reads
+      // WebP and friends itself, so the file goes as it is, within reason.
+      const ext = (filePath ?? "").split(".").pop()?.toLowerCase() ?? "";
+      const mime = RAW_IMAGE_MIMES[ext];
+      if (!mime) throw new Error("Unsupported image format");
+      if (bytes.length > ARTIFACT_IMAGE_RAW_LIMIT) throw new Error("Image is too large to send");
+      return { mime, base64: bytes.toString("base64"), width: null, height: null };
+    }
+    const maxSide = Math.min(
+      Math.max(payload.maxSide ?? ARTIFACT_IMAGE_MAX_SIDE, 128),
+      ARTIFACT_IMAGE_MAX_SIDE,
+    );
+    const size = source.getSize();
+    const scale = Math.min(1, maxSide / Math.max(size.width, size.height, 1));
+    const scaled =
+      scale < 1
+        ? source.resize({
+            width: Math.round(size.width * scale),
+            height: Math.round(size.height * scale),
+            quality: "good",
+          })
+        : source;
+    const out = scaled.getSize();
+    return {
+      mime: "image/jpeg",
+      base64: scaled.toJPEG(82).toString("base64"),
+      width: out.width,
+      height: out.height,
+    };
   },
 
   async addArtifact(payload: CreateRunArtifactPayload): Promise<number> {

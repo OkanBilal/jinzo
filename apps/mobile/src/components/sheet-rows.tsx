@@ -98,6 +98,7 @@ export function Row({
   selected = false,
   indented = false,
   disabled = false,
+  tone = "default",
   first,
   onPress,
 }: {
@@ -112,6 +113,8 @@ export function Row({
   selected?: boolean;
   indented?: boolean;
   disabled?: boolean;
+  /** `destructive` sets the title in red — a row that removes something. */
+  tone?: "default" | "destructive";
   first: boolean;
   onPress?: () => void;
 }) {
@@ -136,7 +139,11 @@ export function Row({
         })}
       >
         <View style={{ flex: 1, gap: 2 }}>
-          <ThemedText variant="body" numberOfLines={1}>
+          <ThemedText
+            variant="body"
+            numberOfLines={1}
+            style={tone === "destructive" ? { color: colors.systemRed } : undefined}
+          >
             {title}
           </ThemedText>
           {subtitle ? (

@@ -293,6 +293,16 @@ export const runsRepo = {
     return rows.map(mapArtifactRowToResponse);
   },
 
+  async findArtifactById(id: number): Promise<RunArtifactResponse | null> {
+    const db = getDb();
+    const rows = await db
+      .select()
+      .from(runArtifacts)
+      .where(eq(runArtifacts.id, id))
+      .limit(1);
+    return rows[0] ? mapArtifactRowToResponse(rows[0]) : null;
+  },
+
   async insertArtifact(payload: CreateRunArtifactPayload): Promise<number> {
     const db = getDb();
     const result = await db

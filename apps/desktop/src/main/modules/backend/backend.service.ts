@@ -38,6 +38,9 @@ export const PAIRED_DEVICE_CHANNELS: ReadonlySet<string> = new Set([
   CHANNELS.runTurns.getByRun,
   CHANNELS.runToolCalls.getByRun,
   CHANNELS.runArtifacts.getByRun,
+  // The pixels behind an image artifact, scaled down on the way — the one
+  // thing a transcript needs that its rows don't carry.
+  CHANNELS.runArtifacts.readImage,
   CHANNELS.runContext.getByRun,
   CHANNELS.workspace.list,
   CHANNELS.workspace.get,

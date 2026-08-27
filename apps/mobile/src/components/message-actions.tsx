@@ -61,12 +61,12 @@ export function MessageActions({
   };
 
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xxs }}>
       <ActionButton accessibilityLabel="Copy to clipboard" onPress={() => void copy()}>
         {copied ? (
-          <CheckIcon size={16} color={colors.secondaryLabel} />
+          <CheckIcon size={20} color={colors.secondaryLabel} />
         ) : (
-          <ClipboardIcon size={16} color={colors.secondaryLabel} />
+          <ClipboardIcon size={20} color={colors.secondaryLabel} />
         )}
       </ActionButton>
       {onFork ? (
@@ -75,7 +75,7 @@ export function MessageActions({
           busy={forking}
           onPress={() => void fork()}
         >
-          <ForkIcon size={16} color={colors.secondaryLabel} />
+          <ForkIcon size={20} color={colors.secondaryLabel} />
         </ActionButton>
       ) : null}
     </View>
@@ -106,7 +106,7 @@ function ActionButton({
         alignItems: "center",
         gap: spacing.xs,
         paddingVertical: spacing.sm,
-        paddingHorizontal: spacing.xs,
+        paddingHorizontal: spacing.sm,
         borderRadius: radius.full,
         borderCurve: "continuous",
         backgroundColor: pressed ? colors.fill : "transparent",

@@ -239,6 +239,7 @@ export const CHANNELS = {
   runArtifacts: {
     add: "runArtifacts:add",
     getByRun: "runArtifacts:getByRun",
+    readImage: "runArtifacts:readImage",
     remove: "runArtifacts:remove",
   },
   runContext: {

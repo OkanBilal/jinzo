@@ -75,6 +75,15 @@ export default function MainLayout() {
           options={{ presentation: "fullScreenModal", animation: "fade", headerShown: false }}
         />
         <Stack.Screen
+          name="image/[artifactId]"
+          options={{
+            presentation: "transparentModal",
+            animation: "fade",
+            headerShown: false,
+            contentStyle: { backgroundColor: "transparent" },
+          }}
+        />
+        <Stack.Screen
           name="run-options"
           options={{
             presentation: "formSheet",

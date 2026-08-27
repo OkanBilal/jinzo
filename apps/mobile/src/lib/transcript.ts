@@ -11,13 +11,15 @@ import { promptFileFromPath, type PromptFile, type PromptSkill } from "./prompt-
  *  - "user-prompt"            → a prompt bubble
  *  - "thinking", subagent     → hidden (UI-only on desktop too)
  *  - "prompt_suggestion"      → hidden (no composer on the phone yet)
- *  - "image"                  → a placeholder line (blobs never sync)
+ *  - "image"                  → an image; the pixels are fetched on demand
  *  - kind "log" artifacts     → hidden unless they are errors
  *  - anything else            → an assistant message
  *
  * The fold is the phone's own call. The desktop can afford to list thirty tool
  * rows under a turn; here a stretch of them becomes a single "Worked for 24s"
  * line that opens, so scrolling a transcript means scrolling what was *said*.
+ * Consecutive images fold the same way, into one gallery — as the desktop's
+ * `groupEvents` merges them.
  */
 export type TranscriptItem =
   | {
@@ -31,12 +33,20 @@ export type TranscriptItem =
     }
   | { key: string; kind: "response"; text: string; at: number }
   | { key: string; kind: "tools"; calls: ToolCallRow[]; at: number }
+  | { key: string; kind: "images"; images: TranscriptImage[]; at: number }
   | { key: string; kind: "note"; text: string; at: number };
 
-/** Pre-fold shape: one entry per tool call, before consecutive ones merge. */
+/** One image an agent produced. The Mac holds the file; the phone asks for pixels by id. */
+export interface TranscriptImage {
+  artifactId: number;
+  fileName: string;
+}
+
+/** Pre-fold shape: one entry per tool call or image, before consecutive ones merge. */
 type FlatItem =
-  | Exclude<TranscriptItem, { kind: "tools" }>
-  | { key: string; kind: "tool"; call: ToolCallRow; at: number };
+  | Exclude<TranscriptItem, { kind: "tools" } | { kind: "images" }>
+  | { key: string; kind: "tool"; call: ToolCallRow; at: number }
+  | { key: string; kind: "image"; image: TranscriptImage; at: number };
 
 interface ArtifactMetadata {
   level?: unknown;
@@ -44,6 +54,8 @@ interface ArtifactMetadata {
   /** Present on a user prompt: the skills and files the composer attached. */
   skills?: unknown;
   files?: unknown;
+  /** Present on an image: the file's own name, for a caption. */
+  fileName?: unknown;
 }
 
 function metadataOf(artifact: RunArtifactRow): ArtifactMetadata {
@@ -89,8 +101,13 @@ function artifactItem(artifact: RunArtifactRow): FlatItem | null {
             files: promptFiles(meta),
           }
         : null;
-    case "image":
-      return { key, kind: "note", text: `Image${artifact.path ? ` · ${artifact.path}` : ""}`, at };
+    case "image": {
+      const fileName =
+        typeof meta.fileName === "string" && meta.fileName
+          ? meta.fileName
+          : (artifact.path?.split("/").pop() ?? "image");
+      return { key, kind: "image", image: { artifactId: artifact.id, fileName }, at };
+    }
     default: {
       const text = artifact.content ?? artifact.path ?? "";
       return text ? { key, kind: "response", text, at } : null;
@@ -141,25 +158,41 @@ export function buildTranscript(
     return numericId(a.key) - numericId(b.key);
   });
 
-  return foldToolRuns(flat);
+  return foldRuns(flat);
 }
 
-/** Consecutive tool calls become one block, keyed by the first call in it. */
-function foldToolRuns(flat: FlatItem[]): TranscriptItem[] {
+/**
+ * Consecutive tool calls become one block and consecutive images one gallery,
+ * each keyed by the first of its kind in it.
+ */
+function foldRuns(flat: FlatItem[]): TranscriptItem[] {
   const items: TranscriptItem[] = [];
-  let block: { key: string; kind: "tools"; calls: ToolCallRow[]; at: number } | null = null;
+  let tools: { key: string; kind: "tools"; calls: ToolCallRow[]; at: number } | null = null;
+  let images: { key: string; kind: "images"; images: TranscriptImage[]; at: number } | null = null;
 
   for (const item of flat) {
     if (item.kind === "tool") {
-      if (block) {
-        block.calls.push(item.call);
+      images = null;
+      if (tools) {
+        tools.calls.push(item.call);
       } else {
-        block = { key: `tools-${item.call.id}`, kind: "tools", calls: [item.call], at: item.at };
-        items.push(block);
+        tools = { key: `tools-${item.call.id}`, kind: "tools", calls: [item.call], at: item.at };
+        items.push(tools);
       }
       continue;
     }
-    block = null;
+    if (item.kind === "image") {
+      tools = null;
+      if (images) {
+        images.images.push(item.image);
+      } else {
+        images = { key: `images-${item.image.artifactId}`, kind: "images", images: [item.image], at: item.at };
+        items.push(images);
+      }
+      continue;
+    }
+    tools = null;
+    images = null;
     items.push(item);
   }
 

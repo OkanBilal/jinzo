@@ -99,6 +99,28 @@ export interface RunArtifactResponse {
   createdAt: Date;
 }
 
+/**
+ * `runArtifacts:readImage` — an image artifact's pixels for a paired device,
+ * which has no path to the Mac's disk and no signed protocol to read it by.
+ */
+export interface ReadArtifactImagePayload {
+  artifactId: number;
+  /** Longest side the image is scaled down to before it travels; the Mac caps it. */
+  maxSide?: number;
+}
+
+export interface ArtifactImage {
+  /** `image/jpeg` once the Mac has scaled it; the file's own type when sent as is. */
+  mime: string;
+  base64: string;
+  /**
+   * The pixels' size, or null when the Mac sent the file untouched — a format
+   * it cannot decode (WebP, GIF, HEIC) but the phone can; the phone measures it.
+   */
+  width: number | null;
+  height: number | null;
+}
+
 /** `space:getAll` row — a run's home: it pins the provider and the mode. */
 export interface SpaceRecord {
   id: string;

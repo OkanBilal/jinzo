@@ -28,6 +28,7 @@ import {
   type WorkspaceDiffSummary,
   type WorkspaceGitState,
   type WorkspaceResponse,
+  ArtifactImage,
 } from "@mains/contracts/runs";
 import { WS_PROTOCOL_VERSION } from "@mains/contracts/ws-protocol";
 import { db } from "@/db/client";
@@ -753,6 +754,16 @@ export async function syncDiffSummary(
     .set({ diffAdditions: additions, diffDeletions: deletions })
     .where(and(eq(workspaces.backendId, backendId), eq(workspaces.id, workspaceId)))
     .run();
+}
+
+/** Longest side the phone asks an image artifact to be sent at. */
+const ARTIFACT_IMAGE_SIDE = 1200;
+
+/** An image artifact's pixels, as the Mac scales them for a phone. */
+export function readArtifactImage(transport: WsTransport, artifactId: number): Promise<ArtifactImage> {
+  return invoke<ArtifactImage>(transport, CHANNELS.runArtifacts.readImage, [
+    { artifactId, maxSide: ARTIFACT_IMAGE_SIDE },
+  ]);
 }
 
 // ── Per-run ──

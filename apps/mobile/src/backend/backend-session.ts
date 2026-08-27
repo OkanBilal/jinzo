@@ -17,6 +17,7 @@ import type {
   StartRunResponse,
   ToolApprovalResponse,
   UpdateRunSettingsPayload,
+  ArtifactImage,
 } from "@mains/contracts/runs";
 import { db } from "@/db/client";
 import { runs, spaces } from "@/db/schema";
@@ -50,6 +51,7 @@ import {
   syncSnapshot,
   syncTargets,
   upsertBackend,
+  readArtifactImage,
 } from "./sync";
 import { isConnectionLoss, WsTransport, type CloseInfo } from "./ws-transport";
 
@@ -70,6 +72,10 @@ export interface SessionSnapshot {
   accountId: string | null;
   /** The space new runs are aimed at; chosen in the sidebar, remembered per Mac. */
   selectedSpaceId: string | null;
+  /** When the projection last finished a full pull from the Mac; null before the first. */
+  lastSyncedAt: Date | null;
+  /** True while a "sync now" is out — the one pull the user asked for by hand. */
+  refreshing: boolean;
 }
 
 const IDLE: ConnectionState = { kind: "idle" };
@@ -113,6 +119,8 @@ class BackendSession {
     connection: IDLE,
     accountId: null,
     selectedSpaceId: null,
+    lastSyncedAt: null,
+    refreshing: false,
   };
   private readonly listeners = new Set<() => void>();
 
@@ -142,6 +150,8 @@ class BackendSession {
         connection: IDLE,
         accountId: null,
         selectedSpaceId: null,
+        lastSyncedAt: null,
+        refreshing: false,
       });
       return;
     }
@@ -159,6 +169,8 @@ class BackendSession {
       connection: { kind: "connecting", endpoint: backend.endpoints[0] ?? "" },
       accountId: null,
       selectedSpaceId: getLastSpaceId(backend.backendId) ?? firstSpaceId(backend.backendId),
+      lastSyncedAt: null,
+      refreshing: false,
     });
 
     const supervisor = new ConnectionSupervisor({
@@ -179,6 +191,7 @@ class BackendSession {
           this.publish({ ...this.snapshot, accountId: (account.data as AccountResponse).id });
         }
         await syncSnapshot(transport, backend.backendId);
+        this.publish({ ...this.snapshot, lastSyncedAt: new Date() });
         this.ensureSelectedSpace(backend.backendId);
         this.detachEvents?.();
         const detachRuns = attachRunEvents(transport, backend.backendId, {
@@ -228,6 +241,8 @@ class BackendSession {
       connection: IDLE,
       accountId: null,
       selectedSpaceId: null,
+      lastSyncedAt: null,
+      refreshing: false,
     });
   }
 
@@ -451,6 +466,14 @@ class BackendSession {
     return result;
   }
 
+  /** An image artifact's pixels, from the Mac; rejects while it is out of reach. */
+  readArtifactImage(artifactId: number): Promise<ArtifactImage> {
+    if (!this.isConnected() || !this.transport) {
+      return Promise.reject(new Error("Connect to your Mac to load this image"));
+    }
+    return readArtifactImage(this.transport, artifactId);
+  }
+
   /** The transcript on screen — its events trigger refetches; others wait. */
   openRun(runId: string): void {
     this.viewingRunId = runId;
@@ -527,8 +550,21 @@ class BackendSession {
       this.supervisor?.retry();
       return;
     }
-    await syncSnapshot(this.transport, backendId);
-    if (this.viewingRunId) await syncRun(this.transport, backendId, this.viewingRunId);
+    if (this.snapshot.refreshing) return;
+    this.publish({ ...this.snapshot, refreshing: true });
+    try {
+      await syncSnapshot(this.transport, backendId);
+      if (this.viewingRunId) await syncRun(this.transport, backendId, this.viewingRunId);
+      this.publish({ ...this.snapshot, lastSyncedAt: new Date(), refreshing: false });
+    } catch (error) {
+      this.publish({ ...this.snapshot, refreshing: false });
+      throw error;
+    }
+  }
+
+  /** Drop the current failure and try the Mac again now — the settings screen's "try again". */
+  retry(): void {
+    this.supervisor?.retry();
   }
 
   private isConnected(): boolean {

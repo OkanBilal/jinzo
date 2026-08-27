@@ -4,6 +4,7 @@ import { parsePromptContent } from "@/lib/prompt-chips";
 import type { TranscriptItem } from "@/lib/transcript";
 import { colors, radius, spacing, useProviderAccent } from "@/theme";
 
+import { ImageGallery } from "./artifact-image";
 import { Markdown } from "./markdown";
 import { MessageActions } from "./message-actions";
 import { PromptSegmentView } from "./prompt-chips";
@@ -64,6 +65,8 @@ export function TranscriptRow({
       return <PromptBubble item={item} providerId={providerId} />;
     case "tools":
       return <ToolBlock calls={item.calls} />;
+    case "images":
+      return <ImageGallery images={item.images} />;
     case "note":
       return (
         <ThemedText variant="monoCaption" selectable>

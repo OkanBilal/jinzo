@@ -22,6 +22,7 @@ import {
   listPendingApprovals,
 } from "./user-input-broker";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
+import type { ReadArtifactImagePayload } from "@mains/contracts/runs";
 
 // ─────────────────────────────────────────────────────────────
 // IPC Channel Names
@@ -194,6 +195,11 @@ export function registerRunsIpc(): void {
   );
 
   ipcMain.handle(
+    CHANNELS.runArtifacts.readImage,
+    handle((payload: ReadArtifactImagePayload) => runsService.readArtifactImage(payload)),
+  );
+
+  ipcMain.handle(
     CHANNELS.runArtifacts.add,
     handle((payload: CreateRunArtifactPayload) => runsService.addArtifact(payload)),
   );
@@ -266,6 +272,7 @@ export function unregisterRunsIpc(): void {
     CHANNELS.runContext.add,
     CHANNELS.runContext.remove,
     CHANNELS.runArtifacts.getByRun,
+    CHANNELS.runArtifacts.readImage,
     CHANNELS.runArtifacts.add,
     CHANNELS.runArtifacts.remove,
     CHANNELS.runToolCalls.getByRun,

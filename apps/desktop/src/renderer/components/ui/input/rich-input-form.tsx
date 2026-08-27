@@ -196,12 +196,26 @@ function buildCodeChip(code: RichCodeChipData): HTMLSpanElement {
 }
 
 /**
+ * The last node in document order inside `root` — used to spot the filler `<br>` browsers
+ * leave behind in an emptied contenteditable so it does not serialize as a real newline.
+ */
+function lastLeaf(root: HTMLElement): Node | null {
+  let node: Node | null = root.lastChild;
+  if (!node) return null;
+  while (node.lastChild) node = node.lastChild;
+  return node;
+}
+
+/**
  * Serialize the editor DOM to plain text. Skill chips are rendered as `$<name>` tokens
  * and file chips as `@<path>` tokens so external menu detection regexes still work and
  * the goal string survives a round trip.
  */
 function serializeRoot(root: HTMLElement): string {
   let out = "";
+  // Deleting the last character leaves a filler `<br>` behind; counting it as a newline
+  // would keep the editor permanently "non-empty" (placeholder gone, send button live).
+  const filler = lastLeaf(root);
   const walk = (node: Node) => {
     if (node.nodeType === Node.TEXT_NODE) {
       out += node.textContent ?? "";
@@ -221,7 +235,7 @@ function serializeRoot(root: HTMLElement): string {
         return;
       }
       if (node.tagName === "BR") {
-        out += "\n";
+        if (node !== filler) out += "\n";
         return;
       }
       if (node.tagName === "DIV" && out.length > 0 && !out.endsWith("\n")) {
