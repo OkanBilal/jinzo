@@ -33,6 +33,7 @@ import {
 import { WS_PROTOCOL_VERSION } from "@mains/contracts/ws-protocol";
 import { db } from "@/db/client";
 import {
+  aiDataConsents,
   backends,
   collections,
   modelChoices,
@@ -977,6 +978,7 @@ export function runExists(backendId: string, runId: string): boolean {
 /** Drop everything cached for a backend (forgetting a Mac). */
 export function clearBackend(backendId: string): void {
   db.transaction(() => {
+    db.delete(aiDataConsents).where(eq(aiDataConsents.backendId, backendId)).run();
     db.delete(spaceTargets).where(eq(spaceTargets.backendId, backendId)).run();
     db.delete(spaces).where(eq(spaces.backendId, backendId)).run();
     db.delete(collections).where(eq(collections.backendId, backendId)).run();

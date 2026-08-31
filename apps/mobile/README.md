@@ -1,13 +1,13 @@
 # mobile
 
-Expo/React Native client for controlling a Mains desktop backend from iOS and Android.
+Expo/React Native client for controlling a Mains desktop backend from iOS. Android support is planned for a later release.
 
 ## Requirements
 
-- Node 22.13.1 (see `.node-version`)
+- Node 24.20.0 (see `.node-version` or `.nvmrc`)
 - npm
 - An Expo account for cloud builds
-- Xcode or Android Studio only when building native apps locally
+- Xcode when building the app locally
 
 ## Development
 
@@ -31,7 +31,6 @@ For local native builds:
 
 ```bash
 npm run ios
-npm run android
 ```
 
 ## App variants
@@ -62,17 +61,17 @@ npm run build:preview
 npm run build:production
 ```
 
-After Apple and Google submission credentials are configured, build and upload both store binaries with:
+After Apple submission credentials are configured, build and upload the App Store binary with:
 
 ```bash
 npm run release
 ```
 
-`release` uploads binaries to App Store Connect and Google Play; it does not bypass TestFlight, store metadata, or app review.
+`release` uploads the binary to App Store Connect; it does not bypass TestFlight, store metadata, or app review.
 
 ## Native project policy
 
-This project uses Expo Continuous Native Generation. The `ios/` and `android/` directories are generated and ignored. Keep native configuration in `app.config.ts` or config plugins so a clean prebuild remains reproducible.
+This project uses Expo Continuous Native Generation. The `ios/` directory is generated and ignored. Keep native configuration in `app.config.ts` or config plugins so a clean prebuild remains reproducible.
 
 ## Architecture report
 

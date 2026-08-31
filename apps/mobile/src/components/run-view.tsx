@@ -7,6 +7,7 @@ import Animated, { useAnimatedKeyboard, useAnimatedStyle } from "react-native-re
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { backendSession, useSession } from "@/backend/backend-session";
+import { useAiDataConsent } from "@/components/ai-data-consent-provider";
 import { db } from "@/db/client";
 import { pendingApprovals, runArtifacts, runs, toolCalls, workspaces } from "@/db/schema";
 import { isModeId, DEFAULT_MODE_ID } from "@mains/contracts/modes";
@@ -70,6 +71,7 @@ export function RunView({
   topPadding?: number;
 }) {
   const session = useSession();
+  const { requestConsent } = useAiDataConsent();
   const backendId = session.backend?.backendId ?? "";
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -167,6 +169,7 @@ export function RunView({
   const [draft, setDraft] = useState("");
   const [contextSkills, setContextSkills] = useState<PromptSkill[]>([]);
   const [sending, setSending] = useState(false);
+  const [forking, setForking] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const send = async () => {
     const message = composeGoal(draft, contextSkills);
@@ -174,6 +177,8 @@ export function RunView({
     setSending(true);
     setSendError(null);
     try {
+      const allowed = await requestConsent(backendId, run.providerId);
+      if (!allowed) return;
       const result = await backendSession.continueRun(
         runId,
         message,
@@ -197,8 +202,12 @@ export function RunView({
   // inherits everything else from the source, so the phone sends only the
   // opening line — the desktop's, word for word.
   const fork = useCallback(async () => {
+    if (!run || forking) return;
+    setForking(true);
     setSendError(null);
     try {
+      const allowed = await requestConsent(backendId, run.providerId);
+      if (!allowed) return;
       const result = await backendSession.forkRun(runId, FORK_MESSAGE);
       if (!result.success) {
         setSendError(result.error);
@@ -207,8 +216,10 @@ export function RunView({
       router.push(`/run/${result.data.runId}` as Href);
     } catch (caught) {
       setSendError(caught instanceof Error ? caught.message : "Could not fork this run");
+    } finally {
+      setForking(false);
     }
-  }, [runId, router]);
+  }, [backendId, forking, requestConsent, run, runId, router]);
 
   const actions = useMemo<TranscriptActions | undefined>(
     () =>
@@ -218,10 +229,10 @@ export function RunView({
             isRunLive: runIsLive,
             // A fork starts a run on the Mac; without one in reach, the button
             // has nothing to offer, so it stays off the row entirely.
-            onFork: connected && !runIsLive ? fork : undefined,
+            onFork: connected && !runIsLive && !forking ? fork : undefined,
           }
         : undefined,
-    [run, closingKey, runIsLive, connected, fork],
+    [run, closingKey, runIsLive, connected, forking, fork],
   );
 
   // Stop, the desktop's verb: `runs:abort`, what its composer's stop button

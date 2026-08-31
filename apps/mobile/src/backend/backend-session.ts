@@ -23,6 +23,10 @@ import { db } from "@/db/client";
 import { runs, spaces } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import type { ServiceResponse } from "@mains/contracts/ws-protocol";
+import {
+  hasAiDataConsent,
+  missingAiDataConsentMessage,
+} from "@/lib/ai-data-consent";
 import { newCommandId } from "@/lib/ids";
 
 import {
@@ -329,6 +333,12 @@ class BackendSession {
     if (!space) {
       return { success: false, error: "That space no longer exists on your Mac" };
     }
+    if (!hasAiDataConsent(backend.backendId, space.providerId)) {
+      return {
+        success: false,
+        error: missingAiDataConsentMessage(space.providerId),
+      };
+    }
     const model = input.model ?? getModelChoice(backend.backendId, space.providerId);
     const payload: StartRunPayload = {
       accountId,
@@ -411,7 +421,16 @@ class BackendSession {
       .from(runs)
       .where(and(eq(runs.backendId, backend.backendId), eq(runs.id, runId)))
       .get();
-    const model = shownModel ?? (run ? getModelChoice(backend.backendId, run.providerId) : null);
+    if (!run) {
+      return { success: false, error: "That run is not available on this phone yet" };
+    }
+    if (!hasAiDataConsent(backend.backendId, run.providerId)) {
+      return {
+        success: false,
+        error: missingAiDataConsentMessage(run.providerId),
+      };
+    }
+    const model = shownModel ?? getModelChoice(backend.backendId, run.providerId);
     const payload: ContinueRunPayload = {
       runId,
       accountId,
@@ -438,6 +457,20 @@ class BackendSession {
     const { accountId, backend } = this.snapshot;
     if (!accountId || !backend) {
       return { success: false, error: "Not connected to your Mac yet" };
+    }
+    const run = db
+      .select({ providerId: runs.providerId })
+      .from(runs)
+      .where(and(eq(runs.backendId, backend.backendId), eq(runs.id, sourceRunId)))
+      .get();
+    if (!run) {
+      return { success: false, error: "That run is not available on this phone yet" };
+    }
+    if (!hasAiDataConsent(backend.backendId, run.providerId)) {
+      return {
+        success: false,
+        error: missingAiDataConsentMessage(run.providerId),
+      };
     }
     const payload: ForkRunPayload = { sourceRunId, accountId, message };
     const result = await this.command<ForkRunResponse>(CHANNELS.runs.fork, [payload]);

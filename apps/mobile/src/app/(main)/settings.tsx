@@ -1,6 +1,7 @@
 import * as Clipboard from "expo-clipboard";
 import Constants from "expo-constants";
 import * as Haptics from "expo-haptics";
+import * as Linking from "expo-linking";
 import { useRouter, type Href } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, ScrollView, View } from "react-native";
@@ -19,6 +20,28 @@ import { colors, spacing } from "@/theme";
 
 /** How long "Copied" stays on the diagnostics row. */
 const COPIED_FOR_MS = 2000;
+
+/** Public pages can be published later without another mobile release. */
+const EXTERNAL_LINKS = {
+  privacy: "https://mains.dev/privacy",
+  terms: "https://mains.dev/terms",
+  licenses: "https://mains.dev/licenses",
+} as const;
+
+const SUPPORT_EMAIL = "team@mains.dev";
+
+function openExternalLink(label: string, url: string): void {
+  void Linking.openURL(url).catch(() => {
+    Alert.alert(`Could not open ${label}`, `Visit ${url} in your browser.`);
+  });
+}
+
+function emailSupport(): void {
+  const subject = encodeURIComponent("Mains Mobile Support");
+  void Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${subject}`).catch(() => {
+    Alert.alert("Could not open Mail", `Email ${SUPPORT_EMAIL} for support.`);
+  });
+}
 
 /** What to do about a connection that is not live — said under the status. */
 function connectionHint(state: ConnectionState): string | null {
@@ -259,6 +282,49 @@ export default function SettingsScreen() {
             value={String(Constants.expoConfig?.extra?.appVariant ?? "production")}
           />
           <Row first={false} title="Protocol" value={String(WS_PROTOCOL_VERSION)} />
+        </Card>
+      </View>
+
+      <View style={{ gap: spacing.sm }}>
+        <ThemedText variant="title3" style={{ paddingHorizontal: spacing.xs }}>
+          Legal &amp; Support
+        </ThemedText>
+        <Card>
+          <Row
+            first
+            title="AI Data Sharing"
+            subtitle="Review or reset provider permissions"
+            chevron="chevron.right"
+            onPress={() => router.push("/ai-data-sharing" as Href)}
+          />
+          <Row
+            first={false}
+            title="Privacy Policy"
+            subtitle="How Mains handles your data"
+            chevron="arrow.up.right.square"
+            onPress={() => openExternalLink("Privacy Policy", EXTERNAL_LINKS.privacy)}
+          />
+          <Row
+            first={false}
+            title="Terms of Use"
+            subtitle="Terms for using Mains"
+            chevron="arrow.up.right.square"
+            onPress={() => openExternalLink("Terms of Use", EXTERNAL_LINKS.terms)}
+          />
+          <Row
+            first={false}
+            title="Support"
+            subtitle={`Email ${SUPPORT_EMAIL}`}
+            chevron="envelope"
+            onPress={emailSupport}
+          />
+          <Row
+            first={false}
+            title="Open Source Licenses"
+            subtitle="Open-source software used by the app"
+            chevron="arrow.up.right.square"
+            onPress={() => openExternalLink("Open Source Licenses", EXTERNAL_LINKS.licenses)}
+          />
         </Card>
       </View>
 

@@ -4,6 +4,7 @@ import { StyleSheet, useColorScheme } from "react-native";
 import { useDrawerProgress } from "react-native-drawer-layout";
 import Animated, { interpolate, useAnimatedStyle } from "react-native-reanimated";
 
+import { AiDataConsentProvider } from "@/components/ai-data-consent-provider";
 import { colors, shadows, useBrandColors } from "@/theme";
 
 /** Corner radius the main screen rounds into as the sidebar opens (≈ the device's). */
@@ -23,78 +24,94 @@ const CARD_DIM = { dark: "rgba(255,255,255,0.08)", light: "rgba(0,0,0,0.10)" };
 export default function MainLayout() {
   const brand = useBrandColors();
   return (
-    <SceneCard>
-      <Stack
-        screenOptions={{
-          headerTransparent: true,
-          headerShadowVisible: false,
-          headerLargeTitleShadowVisible: false,
-          headerLargeStyle: { backgroundColor: "transparent" },
-          headerBlurEffect: "none",
-          headerBackButtonDisplayMode: "minimal",
-          // The tint is for the back button; titles stay in the label color.
-          headerTintColor: brand.accent,
-          headerTitleStyle: { color: colors.label },
-          headerLargeTitleStyle: { color: colors.label },
-          contentStyle: { backgroundColor: colors.systemBackground },
-        }}
-      >
-        {/* Home draws its own floating controls; no navigation bar. */}
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="inbox" options={{ title: "Activity", headerLargeTitle: true }} />
-        <Stack.Screen name="run/[id]" options={{ title: "" }} />
-        <Stack.Screen name="workspace/[id]" options={{ title: "" }} />
-        <Stack.Screen name="settings" options={{ title: "Settings", headerLargeTitle: true }} />
-        <Stack.Screen
-          name="pair"
-          options={{ title: "Pair a Mac", presentation: "modal", headerLargeTitle: false }}
-        />
-        <Stack.Screen
-          name="target"
-          options={{
-            presentation: "formSheet",
-            headerShown: false,
-            sheetGrabberVisible: true,
-            sheetAllowedDetents: [0.5, 1],
-            // Transparent content = Liquid Glass sheet on iOS 26+.
-            contentStyle: { backgroundColor: "transparent" },
+    <AiDataConsentProvider>
+      <SceneCard>
+        <Stack
+          screenOptions={{
+            headerTransparent: true,
+            headerShadowVisible: false,
+            headerLargeTitleShadowVisible: false,
+            headerLargeStyle: { backgroundColor: "transparent" },
+            headerBlurEffect: "none",
+            headerBackButtonDisplayMode: "minimal",
+            // The tint is for the back button; titles stay in the label color.
+            headerTintColor: brand.accent,
+            headerTitleStyle: { color: colors.label },
+            headerLargeTitleStyle: { color: colors.label },
+            contentStyle: { backgroundColor: colors.systemBackground },
           }}
-        />
-        <Stack.Screen
-          name="model"
-          options={{
-            presentation: "formSheet",
-            headerShown: false,
-            sheetGrabberVisible: true,
-            sheetAllowedDetents: [0.62, 1],
-            contentStyle: { backgroundColor: "transparent" },
-          }}
-        />
-        <Stack.Screen
-          name="search"
-          options={{ presentation: "fullScreenModal", animation: "fade", headerShown: false }}
-        />
-        <Stack.Screen
-          name="image/[artifactId]"
-          options={{
-            presentation: "transparentModal",
-            animation: "fade",
-            headerShown: false,
-            contentStyle: { backgroundColor: "transparent" },
-          }}
-        />
-        <Stack.Screen
-          name="run-options"
-          options={{
-            presentation: "formSheet",
-            headerShown: false,
-            sheetGrabberVisible: true,
-            sheetAllowedDetents: [0.62, 1],
-            contentStyle: { backgroundColor: "transparent" },
-          }}
-        />
-      </Stack>
-    </SceneCard>
+        >
+          {/* Home draws its own floating controls; no navigation bar. */}
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="inbox" options={{ title: "Activity", headerLargeTitle: true }} />
+          <Stack.Screen name="run/[id]" options={{ title: "" }} />
+          <Stack.Screen name="workspace/[id]" options={{ title: "" }} />
+          <Stack.Screen name="settings" options={{ title: "Settings", headerLargeTitle: true }} />
+          <Stack.Screen
+            name="ai-data-sharing"
+            options={{ title: "AI Data Sharing", headerLargeTitle: true }}
+          />
+          <Stack.Screen
+            name="pair"
+            options={{ title: "Pair a Mac", presentation: "modal", headerLargeTitle: false }}
+          />
+          <Stack.Screen
+            name="target"
+            options={{
+              presentation: "formSheet",
+              headerShown: false,
+              sheetGrabberVisible: true,
+              sheetAllowedDetents: [0.5, 1],
+              // Transparent content = Liquid Glass sheet on iOS 26+.
+              contentStyle: { backgroundColor: "transparent" },
+            }}
+          />
+          <Stack.Screen
+            name="model"
+            options={{
+              presentation: "formSheet",
+              headerShown: false,
+              sheetGrabberVisible: true,
+              sheetAllowedDetents: [0.62, 1],
+              contentStyle: { backgroundColor: "transparent" },
+            }}
+          />
+          <Stack.Screen
+            name="search"
+            options={{ presentation: "fullScreenModal", animation: "fade", headerShown: false }}
+          />
+          <Stack.Screen
+            name="image/[artifactId]"
+            options={{
+              presentation: "transparentModal",
+              animation: "fade",
+              headerShown: false,
+              contentStyle: { backgroundColor: "transparent" },
+            }}
+          />
+          <Stack.Screen
+            name="run-options"
+            options={{
+              presentation: "formSheet",
+              headerShown: false,
+              sheetGrabberVisible: true,
+              sheetAllowedDetents: [0.62, 1],
+              contentStyle: { backgroundColor: "transparent" },
+            }}
+          />
+          <Stack.Screen
+            name="ai-data-consent"
+            options={{
+              presentation: "formSheet",
+              headerShown: false,
+              sheetGrabberVisible: true,
+              sheetAllowedDetents: [0.64, 1],
+              contentStyle: { backgroundColor: "transparent" },
+            }}
+          />
+        </Stack>
+      </SceneCard>
+    </AiDataConsentProvider>
   );
 }
 

@@ -241,4 +241,14 @@ export const MIGRATIONS: readonly string[] = [
   `
   ALTER TABLE workspaces ADD COLUMN root_path TEXT;
   `,
+  // v12 — explicit third-party AI data-sharing permission, local to this phone
+  `
+  CREATE TABLE ai_data_consents (
+    backend_id TEXT NOT NULL,
+    provider_id TEXT NOT NULL,
+    disclosure_version INTEGER NOT NULL,
+    accepted_at INTEGER NOT NULL,
+    PRIMARY KEY (backend_id, provider_id)
+  );
+  `,
 ];

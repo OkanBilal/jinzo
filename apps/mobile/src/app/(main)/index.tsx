@@ -9,6 +9,7 @@ import Animated, { useAnimatedKeyboard, useAnimatedStyle } from "react-native-re
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { backendSession, useSession } from "@/backend/backend-session";
+import { useAiDataConsent } from "@/components/ai-data-consent-provider";
 import { Button } from "@/components/button";
 import { ComposerBar, composerBottomPadding } from "@/components/composer-bar";
 import { GlassSurface } from "@/components/glass-surface";
@@ -52,6 +53,7 @@ export default function NewRunScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const session = useSession();
+  const { requestConsent } = useAiDataConsent();
   const backendId = session.backend?.backendId ?? "";
   const spaceId = session.selectedSpaceId ?? "";
   const connected = session.connection.kind === "connected";
@@ -154,12 +156,15 @@ export default function NewRunScreen() {
     const skills = attachedSkills(draft, contextSkills);
     setSending(true);
     setHint(null);
-    // The conversation starts here and now: the prompt goes up as a bubble
-    // before the Mac has answered, and the transcript fills in under it once
-    // it has. A refusal takes the bubble back down and leaves the draft as it
-    // was, with the reason under it.
-    homeRun.start({ text: goal, skills });
     try {
+      const allowed = await requestConsent(backendId, space.providerId);
+      if (!allowed) return;
+
+      // The conversation starts here and now: the prompt goes up as a bubble
+      // before the Mac has answered, and the transcript fills in under it once
+      // it has. A refusal takes the bubble back down and leaves the draft as it
+      // was, with the reason under it.
+      homeRun.start({ text: goal, skills });
       const result = await backendSession.startRun({
         goal,
         workspaceId: workspace?.id ?? null,

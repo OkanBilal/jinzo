@@ -76,6 +76,22 @@ export const providers = sqliteTable(
   (t) => [primaryKey({ columns: [t.backendId, t.id] })],
 );
 
+/**
+ * Permission to let one Mac send this phone's requests to one AI provider.
+ * This is deliberately phone-owned, unlike the synced provider rows above:
+ * a new Mac, provider, or disclosure version must ask again before sending.
+ */
+export const aiDataConsents = sqliteTable(
+  "ai_data_consents",
+  {
+    backendId: text("backend_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    disclosureVersion: integer("disclosure_version").notNull(),
+    acceptedAt: integer("accepted_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.backendId, t.providerId] })],
+);
+
 /** `providers:getModels` rows: what a provider can run, and each model's effort levels. */
 export const models = sqliteTable(
   "models",
@@ -344,6 +360,7 @@ export type PendingApprovalRow = typeof pendingApprovals.$inferSelect;
 export type SpaceRow = typeof spaces.$inferSelect;
 export type CollectionRow = typeof collections.$inferSelect;
 export type ProviderRow = typeof providers.$inferSelect;
+export type AiDataConsentRow = typeof aiDataConsents.$inferSelect;
 export type SpaceTargetRow = typeof spaceTargets.$inferSelect;
 export type ProjectRow = typeof projects.$inferSelect;
 export type SkillRow = typeof skills.$inferSelect;

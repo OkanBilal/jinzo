@@ -3,7 +3,7 @@
   "main": "expo-router/entry",
   "version": "0.1.0",
   "engines": {
-    "node": "^20.19.4 || ^22.13.0 || ^24.3.0 || >=25.0.0"
+    "node": "^24.20.0"
   },
   "dependencies": {
     "@expo/ui": "~57.0.13",
@@ -14,7 +14,6 @@
     "drizzle-orm": "^0.45.2",
     "expo": "~57.0.15",
     "expo-blur": "~57.0.2",
-    "expo-build-properties": "~57.0.13",
     "expo-camera": "~57.0.4",
     "expo-clipboard": "~57.0.1",
     "expo-constants": "~57.0.13",
@@ -25,7 +24,6 @@
     "expo-image": "~57.0.3",
     "expo-linking": "~57.0.7",
     "expo-network": "~57.0.1",
-    "expo-notifications": "~57.0.13",
     "expo-router": "~57.0.15",
     "expo-secure-store": "~57.0.1",
     "expo-splash-screen": "~57.0.7",
@@ -55,16 +53,14 @@
   "scripts": {
     "start": "APP_VARIANT=development expo start --dev-client",
     "start:go": "APP_VARIANT=development expo start --go",
-    "android": "APP_VARIANT=development expo run:android",
     "ios": "APP_VARIANT=development expo run:ios",
-    "web": "APP_VARIANT=development expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "doctor": "npx expo-doctor@latest",
-    "build:development": "npx eas-cli@latest build --platform all --profile development",
-    "build:preview": "npx eas-cli@latest build --platform all --profile preview",
-    "build:production": "npx eas-cli@latest build --platform all --profile production",
-    "release": "npx eas-cli@latest build --platform all --profile production --auto-submit",
+    "build:development": "npx eas-cli@latest build --platform ios --profile development",
+    "build:preview": "npx eas-cli@latest build --platform ios --profile preview",
+    "build:production": "npx eas-cli@latest build --platform ios --profile production",
+    "release": "npx eas-cli@latest build --platform ios --profile production --auto-submit",
     "licenses:generate": "node scripts/generate-third-party-notices.mjs"
   },
   "private": true

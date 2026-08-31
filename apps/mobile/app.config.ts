@@ -39,6 +39,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     slug: "mains",
     owner: "okanbilal",
     version: "0.1.0",
+    platforms: ["ios"],
     orientation: "portrait",
     icon: "./assets/images/icon.png",
     scheme: variant.scheme,
@@ -52,7 +53,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // cabled `expo run:ios --device` signs without opening Xcode.
       appleTeamId: "Y4MVJ7JSH6",
       supportsTablet: false,
-      icon: "./assets/expo.icon",
+      icon: "./assets/images/icon.png",
       infoPlist: {
         // Only TLS and WebSockets: the standard exemption, declared so
         // TestFlight stops asking about export compliance on every build.
@@ -64,20 +65,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           : undefined,
       },
     },
-    android: {
-      package: variant.identifier,
-      adaptiveIcon: {
-        backgroundColor: "#0B0E0D",
-        foregroundImage: "./assets/images/android-icon-foreground.png",
-        backgroundImage: "./assets/images/android-icon-background.png",
-        monochromeImage: "./assets/images/android-icon-monochrome.png",
-      },
-      predictiveBackGestureEnabled: true,
-    },
-    web: {
-      output: "static",
-      favicon: "./assets/images/favicon.png",
-    },
     plugins: [
       "expo-router",
       "expo-image",
@@ -85,8 +72,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         "expo-splash-screen",
         {
           backgroundColor: "#0B0E0D",
-          image: "./assets/images/splash-icon.png",
-          imageWidth: 76,
+          image: "./assets/images/icon.png",
+          imageWidth: 160,
         },
       ],
       [
@@ -94,26 +81,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         {
           cameraPermission:
             "Mains uses the camera to scan a pairing code shown on your Mac.",
-          recordAudioAndroid: false,
-        },
-      ],
-      [
-        "expo-notifications",
-        {
-          color: "#B7F34A",
-          icon: "./assets/images/android-icon-monochrome.png",
         },
       ],
       "expo-secure-store",
       "expo-sqlite",
-      [
-        "expo-build-properties",
-        {
-          android: {
-            usesCleartextTraffic: allowsDevelopmentLan,
-          },
-        },
-      ],
       "./plugins/with-ios-scene-lifecycle.cjs",
     ],
     experiments: {
