@@ -43,8 +43,7 @@ export default function MainLayout() {
         >
           {/* Home draws its own floating controls; no navigation bar. */}
           <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="inbox" options={{ title: "Activity", headerLargeTitle: true }} />
-          <Stack.Screen name="run/[id]" options={{ title: "" }} />
+            <Stack.Screen name="run/[id]" options={{ title: "" }} />
           <Stack.Screen name="workspace/[id]" options={{ title: "" }} />
           <Stack.Screen name="settings" options={{ title: "Settings", headerLargeTitle: true }} />
           <Stack.Screen

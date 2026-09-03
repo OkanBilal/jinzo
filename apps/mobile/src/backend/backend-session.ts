@@ -58,6 +58,7 @@ import {
   readArtifactImage,
 } from "./sync";
 import { isConnectionLoss, WsTransport, type CloseInfo } from "./ws-transport";
+import { createDemoTransport, isDemoEndpoint } from "./demo/transport";
 
 /**
  * The app-wide composition of paired backend + supervisor + sync: one instance
@@ -180,10 +181,13 @@ class BackendSession {
     const supervisor = new ConnectionSupervisor({
       endpoints: backend.endpoints,
       createTransport: (endpoint) => {
-        const transport = new WsTransport(toWebSocketUrl(endpoint), {
-          token: backend.deviceToken,
-          isFatalClose: isAuthRefusal,
-        });
+        // The demo Mac lives inside the app; its endpoint only picks the socket.
+        const transport = isDemoEndpoint(endpoint)
+          ? createDemoTransport()
+          : new WsTransport(toWebSocketUrl(endpoint), {
+              token: backend.deviceToken,
+              isFatalClose: isAuthRefusal,
+            });
         this.transport = transport;
         return transport;
       },

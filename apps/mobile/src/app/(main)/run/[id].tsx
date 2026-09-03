@@ -7,7 +7,7 @@ import { RunView } from "@/components/run-view";
 import { goHome } from "@/lib/home-run";
 import { useRunTitle } from "@/lib/use-run-title";
 
-/** One run under a navigation bar: opened from a list, the inbox, or a fork. */
+/** One run under a navigation bar: opened from a list, a search, or a fork. */
 export default function RunScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const runId = typeof id === "string" ? id : "";

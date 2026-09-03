@@ -71,7 +71,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         "expo-splash-screen",
         {
-          backgroundColor: "#0B0E0D",
+          // The icon is a flat #000000 square with no alpha, and the app opens
+          // on iOS's dark `systemBackground` — also pure black. Anything else
+          // here draws the icon's own square as a visible tile on launch and
+          // then jumps colour as the app takes over.
+          backgroundColor: "#000000",
           image: "./assets/images/icon.png",
           imageWidth: 160,
         },

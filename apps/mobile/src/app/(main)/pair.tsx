@@ -16,6 +16,7 @@ import {
   type PairedDevicePlatform,
   type PairingLink,
 } from "@mains/contracts/backend";
+import { startDemo } from "@/backend/demo/start";
 import { goHome } from "@/lib/home-run";
 import { colors, radius, shadows, spacing, type, useBrandColors } from "@/theme";
 
@@ -95,6 +96,11 @@ export default function PairScreen() {
   const switchTo = (mode: EntryMode) => {
     setEntryMode(mode);
     reset();
+  };
+
+  const tryDemo = async () => {
+    await startDemo();
+    goHome();
   };
 
   const status = (
@@ -201,6 +207,14 @@ export default function PairScreen() {
             )}
           </>
         )}
+
+        {/* App Review's way in, and anyone's: the whole app on sample data. */}
+        <View style={{ gap: spacing.xs, paddingTop: spacing.lg }}>
+          <ThemedText variant="footnote" style={{ color: colors.secondaryLabel, textAlign: "center" }}>
+            No Mac nearby? Explore Mains with sample data.
+          </ThemedText>
+          <Button title="Try a demo Mac" variant="ghost" onPress={() => void tryDemo()} />
+        </View>
       </ScrollView>
 
       {process.env.EXPO_OS === "ios" && (
