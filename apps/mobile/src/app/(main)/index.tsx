@@ -293,7 +293,15 @@ export default function NewRunScreen() {
             </View>
           )}
 
-
+          {hint ? (
+            <ThemedText
+              variant="footnote"
+              selectable
+              style={{ textAlign: "center", paddingHorizontal: spacing.lg, color: colors.systemOrange }}
+            >
+              {hint}
+            </ThemedText>
+          ) : null}
           {/* Run target */}
           {space && (
             <View
@@ -315,15 +323,7 @@ export default function NewRunScreen() {
             </View>
           )}
 
-          {hint ? (
-            <ThemedText
-              variant="footnote"
-              selectable
-              style={{ textAlign: "center", paddingHorizontal: spacing.lg, color: colors.systemOrange }}
-            >
-              {hint}
-            </ThemedText>
-          ) : null}
+
 
           <ComposerBar
             reservedTop={insets.top + spacing.sm + CONTROL_HEIGHT + spacing.sm}

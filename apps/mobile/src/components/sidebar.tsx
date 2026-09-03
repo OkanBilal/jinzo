@@ -243,7 +243,9 @@ export function Sidebar({ navigation }: { navigation: { closeDrawer(): void } })
               );
             case "workspace":
               return (
-                <View style={{ paddingHorizontal: spacing.sm }}>
+                // A little air, so the selected row and a pressed one below it
+                // read as two cards rather than one filled block.
+                <View style={{ paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs }}>
                   <WorkspaceRow
                     workspace={item.workspace}
                     projectIcon={projectIcons.get(item.workspace.projectId ?? "") ?? null}
