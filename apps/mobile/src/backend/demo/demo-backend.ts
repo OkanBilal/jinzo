@@ -333,6 +333,24 @@ export class DemoBackend implements DemoHandler {
     }
     const items = source.slice(start, start + 24);
     const sourceCalls = snapshot.replayRunId ? (snapshot.toolCalls[snapshot.replayRunId] ?? []) : [];
+    // A tool call belongs to the artifact it ran before — the transcript
+    // interleaves the two by time. Bucket each call into the first item
+    // recorded at or after it, so a replayed turn shows its work rather than
+    // bare prose. (Matching timestamps exactly never held: the two tables are
+    // written by different code paths, milliseconds apart.)
+    const at = (value: unknown) => Date.parse(String(value ?? "")) || 0;
+    const turnStart = start > 0 ? at(source[start - 1].createdAt) : 0;
+    const callsByItem = new Map<number, (Json & { id: number; runId: string })[]>();
+    for (const call of sourceCalls) {
+      const when = at(call.createdAt);
+      if (when < turnStart) continue;
+      let index = items.findIndex((item) => at(item.createdAt) >= when);
+      if (index < 0) index = items.length - 1;
+      if (index < 0) continue;
+      const bucket = callsByItem.get(index);
+      if (bucket) bucket.push(call);
+      else callsByItem.set(index, [call]);
+    }
 
     this.push(CHANNELS.runs.statusChanged, { runId: run.id, status: "running", ts: Date.now() });
 
@@ -371,9 +389,7 @@ export class DemoBackend implements DemoHandler {
       const id = this.nextId++;
       list.push({ ...item, id, runId: run.id, createdAt: now() });
       if (item.kind === "image") this.imageAliases.set(id, String(item.id));
-      // A tool block needs its calls: bring over the source calls created in
-      // the same breath as this artifact.
-      for (const call of sourceCalls.filter((c) => c.createdAt === item.createdAt)) {
+      for (const call of callsByItem.get(index) ?? []) {
         calls.push({ ...call, id: this.nextId++, runId: run.id, createdAt: now(), updatedAt: now() });
       }
       run.updatedAt = now();

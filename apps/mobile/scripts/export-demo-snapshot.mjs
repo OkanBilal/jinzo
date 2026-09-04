@@ -30,6 +30,8 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { parseStoredEffortLevels } from "./demo-snapshot-utils.mjs";
+
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = path.join(ROOT, "src", "backend", "demo", "demo-snapshot.json");
 const DESKTOP_DB = path.join(ROOT, "..", "desktop", ".data", "mains.db");
@@ -72,6 +74,9 @@ const SCRUB = [
   ["okanbalci", "demo"],
   ["obbalci@gmail.com", "demo@example.com"],
   ["mainsdotdev", "demo-org"],
+  // A connector's opaque id is unreadable as a prompt chip and says nothing;
+  // its display name already carries the meaning.
+  ["app-694546cd042881919bb746a8dc300f38", "skyscanner"],
 ];
 
 const argv = process.argv.slice(2);
@@ -151,7 +156,7 @@ function readCatalog() {
     return { models: {}, skills: {}, commands: {} };
   }
   const query = reader(dbPath);
-  const backendId = query("select backend_id from backends limit 1;")[0]?.backend_id;
+  const backendId = readSourceBackendId(query);
   if (!backendId) return { models: {}, skills: {}, commands: {} };
   const b = backendId.replaceAll("'", "''");
 
@@ -162,7 +167,10 @@ function readCatalog() {
       displayName: m.display_name,
       description: m.description ?? undefined,
       isDefault: bool(m.is_default),
-      supportedEffortLevels: m.effort_levels ? m.effort_levels.split(",").filter(Boolean) : undefined,
+      supportedEffortLevels: parseStoredEffortLevels(
+        m.effort_levels,
+        `${m.provider_id}/${m.id}`,
+      ),
       supportsFastMode: bool(m.supports_fast_mode),
     })),
     "providerId",
@@ -194,6 +202,18 @@ function readCatalog() {
   );
   for (const id of Object.keys(commands)) commands[id] = commands[id].slice(0, COMMAND_LIMIT);
   return { models, skills, commands };
+}
+
+/** Prefer a paired Mac; fall back to the built-in demo when it is all we have. */
+function readSourceBackendId(query) {
+  return query(`
+    select backend_id
+    from backends
+    order by case when backend_id = 'demo-mac' then 1 else 0 end,
+             last_synced_at desc,
+             rowid desc
+    limit 1;
+  `)[0]?.backend_id;
 }
 
 // ── The Mac's content ───────────────────────────────────────────────────────
@@ -327,28 +347,19 @@ function readDesktop(dbPath) {
     config: parse(p.config) ?? {},
   }));
 
-  /**
-   * Two derivations, so whichever space the demo opens on has something in it:
-   * a space whose provider never ran is dropped, and a kept space takes the
-   * mode of its newest run — the sidebar lists chats by provider *and* mode.
-   */
-  const spaceRows = query("select * from spaces where is_archived=0 order by sort_order, name;");
-  const spaces = spaceRows
-    .filter((s) => runs.some((r) => r.providerId === s.provider_id))
-    .map((s) => {
-      const newest = runs.find((r) => r.providerId === s.provider_id);
-      return {
-        id: s.id,
-        name: s.name,
-        slug: s.slug ?? s.id,
-        icon: s.icon,
-        providerId: s.provider_id,
-        mode: newest?.mode ?? s.mode,
-        model: s.model,
-        sortOrder: s.sort_order,
-        isArchived: false,
-      };
-    });
+  // Raw: the mode each space opens in is decided once the runs are final
+  // (see `deriveSpaces`), because a reassignment moves runs between providers.
+  const spaces = query("select * from spaces where is_archived=0 order by sort_order, name;").map((s) => ({
+    id: s.id,
+    name: s.name,
+    slug: s.slug ?? s.id,
+    icon: s.icon,
+    providerId: s.provider_id,
+    mode: s.mode,
+    model: s.model,
+    sortOrder: s.sort_order,
+    isArchived: false,
+  }));
 
   return {
     runs, turns, toolCalls, artifacts, artifactRows,
@@ -370,7 +381,7 @@ function readPhone() {
     );
   if (!fs.existsSync(dbPath)) throw new Error(`No database at ${dbPath}`);
   const query = reader(dbPath);
-  const backendId = query("select backend_id from backends limit 1;")[0]?.backend_id;
+  const backendId = readSourceBackendId(query);
   if (!backendId) throw new Error("No backend in the phone database");
   const b = backendId.replaceAll("'", "''");
   const isWanted = runFilter();
@@ -490,13 +501,76 @@ if (useDesktop && !fs.existsSync(desktopPath)) throw new Error(`No desktop datab
 const content = useDesktop ? readDesktop(desktopPath) : readPhone();
 const catalog = readCatalog();
 
+/**
+ * `--reassign <providerId>=<runPrefix>` hands a recorded run to another
+ * provider. The desktop only ever ran two of the four agents, and a space with
+ * nothing in it is dropped — so this is how Copilot and Cursor get a
+ * transcript to show. Only runs whose tools are common to every agent should
+ * move; the model comes from the new provider's own catalog, and any log line
+ * naming the old one is dropped on the way.
+ */
+for (const pair of (flag("reassign") ?? "").split(",").map((s) => s.trim()).filter(Boolean)) {
+  const [providerId, prefix] = pair.split("=").map((s) => s.trim());
+  const run = content.runs.find((r) => r.id.startsWith(prefix ?? ""));
+  if (!providerId || !run) throw new Error(`--reassign: no run matches "${pair}"`);
+  const models = catalog.models[providerId] ?? [];
+  const was = run.providerId;
+  run.providerId = providerId;
+  run.model = (models.find((m) => m.isDefault) ?? models[0])?.id ?? null;
+  const artifacts = content.artifacts[run.id];
+  if (artifacts) {
+    content.artifacts[run.id] = artifacts.filter(
+      (a) => !(a.kind === "log" && String(a.content ?? "").toLowerCase().includes(was.split("_")[0])),
+    );
+  }
+  console.log(`  reassigned  ${run.title ?? run.id} → ${providerId} (${run.model ?? "no model"})`);
+}
+
+/**
+ * The sidebar lists a space's chats by provider *and* mode, so a space whose
+ * pair has no runs looks broken. Two derivations keep that from happening: a
+ * space whose provider never ran is dropped, and a kept space takes its
+ * provider's busiest mode — skipping any mode an earlier space already
+ * claimed, so the demo opens showing Code *and* Work rather than the same mode
+ * twice. Whatever is left is a mode-chip away.
+ */
+content.spaces = content.spaces
+  .filter((space) => content.runs.some((r) => r.providerId === space.providerId))
+  .map((space, _index, kept) => {
+    const counts = new Map();
+    for (const r of content.runs) {
+      if (r.providerId === space.providerId) counts.set(r.mode, (counts.get(r.mode) ?? 0) + 1);
+    }
+    const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([mode]) => mode);
+    const mode = ranked.find((m) => !kept.taken?.has(m)) ?? ranked[0] ?? space.mode;
+    (kept.taken ??= new Set()).add(mode);
+    return { ...space, mode };
+  });
+
+/**
+ * The run a send replays. Named by prefix on the command line, like the
+ * others — but stored whole, because the demo backend looks it up by id.
+ * Left alone, it picks a settled run with something to show *and* tool calls
+ * to show it with, so the live run has visible work in it.
+ */
+const replayPrefix = flag("replay");
 const replayRunId =
-  flag("replay") ??
-  content.runs.find(
-    (r) => r.status === "succeeded" && (content.artifacts[r.id]?.length ?? 0) >= 3,
-  )?.id ??
+  (replayPrefix
+    ? content.runs.find((r) => r.id.startsWith(replayPrefix))
+    : content.runs.find(
+        (r) =>
+          r.status === "succeeded" &&
+          (content.artifacts[r.id]?.length ?? 0) >= 3 &&
+          (content.toolCalls[r.id]?.length ?? 0) > 0,
+      ) ??
+      content.runs.find(
+        (r) => r.status === "succeeded" && (content.artifacts[r.id]?.length ?? 0) >= 3,
+      ))?.id ??
   content.runs[0]?.id ??
   null;
+if (replayPrefix && !replayRunId?.startsWith(replayPrefix)) {
+  throw new Error(`No exported run starts with "${replayPrefix}"`);
+}
 
 let text = JSON.stringify({
   generatedAt: new Date().toISOString(),
@@ -524,7 +598,113 @@ for (const [from, to] of SCRUB) {
   // The same string as it appears escaped inside JSON values.
   text = text.replaceAll(JSON.stringify(from).slice(1, -1), JSON.stringify(to).slice(1, -1));
 }
-const snapshot = JSON.parse(text);
+const snapshot = stripIcons(JSON.parse(text));
+
+/**
+ * A security review of our own product is the one recording that must not
+ * ship: the transcript names the vulnerable file and line and spells out the
+ * chain to abuse it, which is a head start for anyone who unzips the app. The
+ * run itself is worth keeping — parallel subagents, thirty-odd tool calls,
+ * findings sorted by severity — so the shape stays and the map goes. A short
+ * line says so, rather than leaving a reader to wonder.
+ */
+const REDACTED_FINDINGS = [
+  {
+    match: /^\s*Security findings/i,
+    text: `Security findings (read-only):
+
+Details are held back in this sample transcript — the specifics are filed privately with the owners.
+
+1. **Critical (1)** — a local HTTP route serves content it should not vouch for. Fix: authenticate it, pin the response type, keep it off the app's own origin.
+2. **High (2)** — local-network transport is plaintext by default, and one file-serving API reaches outside its intended root. Fix: require TLS or restrict to a private network; apply root, type and size checks consistently.
+3. **Medium (3)** — one token path falls back to a weak encoding, and two handlers trust the shape of their input.
+
+Nothing was modified during the review.`,
+  },
+  {
+    match: /^\s*#+\s*Test-gap review/i,
+    text: `## Test-gap review
+
+Gaps are grouped by area; the file references are held back in this sample transcript.
+
+### Critical — one app ships without an automated suite
+Only lint, typecheck and build scripts are wired up, and no test files exist. The paths that carry the most risk are therefore uncovered: pairing and credential lifecycle, connection resilience across offline and foreground transitions, transport correctness (queued sends, timeouts, malformed frames), projection consistency under incremental sync, and the remote run controls.
+
+### High — service-level orchestration is untested
+Strong lower-level tests exist, but the composition above them has none: host rebinding, port semantics, rollback on a failed start, restore, shutdown, and status construction.
+
+### High — the scheduler has no tests
+Timer scheduling and persistence-sensitive execution are uncovered: create/update/delete cancellation, startup scheduling, run history on success and error, rescheduling after failure, and timer cleanup on shutdown.
+
+### Medium — protocol integration and external processes
+URL matching is covered; handler behaviour, response headers, streaming limits and expiry are not. The CLI and in-app browser integrations lack deterministic tests for missing binaries, timeouts, malformed output and lifecycle teardown.
+
+### Medium — startup and teardown, end to end
+Components are well covered individually; their lifecycle ordering and failure containment are not.`,
+  },
+  {
+    match: /^\s*#+\s*Security risks/i,
+    text: `## Security risks
+
+Both subagents finished. Consolidated below by severity; the file references and reproductions are held back in this sample transcript.
+
+- **Critical — 1 finding.** An unauthenticated local route returns content under the app's own origin. Authenticate it, constrain the response type, isolate the origin.
+- **High — 2 findings.** Plaintext transport on the local network, and a file API that can reach past its root. Require TLS (or a private network) and apply consistent path checks.
+- **Medium — 3 findings.** A weak token-encoding fallback and two handlers that trust unvalidated input.
+- **Low — 2 findings.** Logging that is noisier than it needs to be around credentials, and an error path that leaks an internal path.
+
+Read-only throughout: no files were changed.`,
+  },
+];
+
+function redactFindings(value) {
+  let redacted = 0;
+  const runs = new Set();
+  for (const [runId, list] of Object.entries(value.artifacts ?? {})) {
+    for (const artifact of list) {
+      const content = typeof artifact.content === "string" ? artifact.content : null;
+      if (!content) continue;
+      const rule = REDACTED_FINDINGS.find((r) => r.match.test(content));
+      if (!rule) continue;
+      artifact.content = rule.text;
+      runs.add(runId);
+      redacted += 1;
+    }
+  }
+  // The write-up is only half of it: the search that found the weakness names
+  // the same file. A redacted run keeps its tool rows — the verbs, the count,
+  // the timing — and loses what they were pointed at.
+  for (const runId of runs) {
+    for (const call of value.toolCalls?.[runId] ?? []) {
+      call.input = {};
+      call.output = "Withheld in this sample transcript.";
+      if (call.error) call.error = "Withheld in this sample transcript.";
+    }
+  }
+  value.redactedFindings = redacted;
+  value.redactedRuns = runs.size;
+  return value;
+}
+
+redactFindings(snapshot);
+
+/**
+ * Drop every skill's artwork. `iconSmall` / `iconLarge` are either absolute
+ * paths on the Mac or signed, expiring CDN links — the phone renders neither,
+ * and a signed URL has no business inside a shipped binary.
+ */
+function stripIcons(value) {
+  if (Array.isArray(value)) return value.map(stripIcons);
+  if (value && typeof value === "object") {
+    const out = {};
+    for (const [key, inner] of Object.entries(value)) {
+      if (key === "iconSmall" || key === "iconLarge") continue;
+      out[key] = stripIcons(inner);
+    }
+    return out;
+  }
+  return value;
+}
 
 // ── Images: read the files the *unscrubbed* rows point at, shrink, embed ────
 
@@ -579,3 +759,8 @@ console.log(`  workspaces  ${snapshot.workspaces.length}   projects ${snapshot.p
 console.log(`  images      ${Object.keys(snapshot.images).length}${missing ? ` (${missing} unreadable)` : ""}`);
 console.log(`  catalog     models ${Object.values(snapshot.models).flat().length}, skills ${Object.values(snapshot.skills).flat().length}, commands ${Object.values(snapshot.commands).flat().length}`);
 console.log(`  replay      ${snapshot.replayRunId ?? "none"}`);
+if (snapshot.redactedFindings) {
+  console.log(
+    `  redacted    ${snapshot.redactedFindings} security write-up(s), and every tool call in ${snapshot.redactedRuns} run(s)`,
+  );
+}
