@@ -2,6 +2,9 @@ import type { ConfigContext, ExpoConfig } from "expo/config";
 
 type AppVariant = "development" | "preview" | "production";
 
+const CAMERA_PERMISSION =
+  "Mains uses the camera to scan a pairing code shown on your Mac.";
+
 const VARIANTS: Record<
   AppVariant,
   { appName: string; identifier: string; scheme: string }
@@ -73,7 +76,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         {
           photosPermission:
             "Mains lets you select photos to attach to a run.",
-          cameraPermission: false,
+          cameraPermission: CAMERA_PERMISSION,
           microphonePermission: false,
         },
       ],
@@ -92,8 +95,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         "expo-camera",
         {
-          cameraPermission:
-            "Mains uses the camera to scan a pairing code shown on your Mac.",
+          cameraPermission: CAMERA_PERMISSION,
         },
       ],
       "expo-secure-store",
