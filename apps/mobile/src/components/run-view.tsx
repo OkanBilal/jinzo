@@ -11,6 +11,10 @@ import { useAiDataConsent } from "@/components/ai-data-consent-provider";
 import { db } from "@/db/client";
 import { pendingApprovals, runArtifacts, runs, toolCalls, workspaces } from "@/db/schema";
 import { isModeId, DEFAULT_MODE_ID } from "@mains/contracts/modes";
+import {
+  serializeComposerAttachments,
+  type ComposerAttachment,
+} from "@/lib/composer-attachments";
 import { attachedSkills, composeGoal } from "@/lib/context-picker";
 import type { PromptSkill } from "@/lib/prompt-chips";
 import { buildTranscript, type TranscriptItem } from "@/lib/transcript";
@@ -168,6 +172,7 @@ export function RunView({
 
   const [draft, setDraft] = useState("");
   const [contextSkills, setContextSkills] = useState<PromptSkill[]>([]);
+  const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
   const [sending, setSending] = useState(false);
   const [forking, setForking] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -179,11 +184,13 @@ export function RunView({
     try {
       const allowed = await requestConsent(backendId, run.providerId);
       if (!allowed) return;
+      const serializedAttachments = await serializeComposerAttachments(attachments);
       const result = await backendSession.continueRun(
         runId,
         message,
         attachedSkills(draft, contextSkills),
         modelSelection.selected?.id ?? null,
+        serializedAttachments,
       );
       if (!result.success) {
         setSendError(result.error);
@@ -191,6 +198,7 @@ export function RunView({
       }
       setDraft("");
       setContextSkills([]);
+      setAttachments([]);
     } catch (caught) {
       setSendError(caught instanceof Error ? caught.message : "Could not send");
     } finally {
@@ -395,6 +403,7 @@ export function RunView({
               key={approval.requestId}
               approval={approval}
               now={now}
+              providerId={providerId}
               onRespond={async ({ approved, answer }) => {
                 const result = await backendSession.respondToApproval(
                   approval.requestId,
@@ -450,6 +459,8 @@ export function RunView({
           sending={sending}
           disabled={!connected || !!runIsLive || !run}
           error={sendError}
+          attachments={attachments}
+          onAttachmentsChange={setAttachments}
           placeholder={placeholder}
           model={
             providerId && modelSelection.label

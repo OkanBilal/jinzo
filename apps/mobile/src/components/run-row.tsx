@@ -34,7 +34,7 @@ export function RunRow({
         alignItems: "center",
         gap: spacing.ms,
         paddingVertical: spacing.xs + 2,
-        paddingHorizontal: grouped ? spacing.md : spacing.sm,
+        paddingHorizontal: spacing.md,
         borderRadius: grouped ? 0 : radius.sm,
         borderCurve: "continuous",
         backgroundColor: pressed ? colors.fill : "transparent",

@@ -8,6 +8,7 @@ import type {
   AccountResponse,
   ContinueRunPayload,
   ContinueRunResponse,
+  FileAttachment,
   ForkRunPayload,
   ForkRunResponse,
   ModeId,
@@ -319,6 +320,8 @@ class BackendSession {
     collectionId?: string | null;
     /** Skills the composer attached; the Mac injects them and chips the prompt. */
     contextSkills?: SkillSummary[];
+    /** Phone-local files serialized for the Mac's attachment pipeline. */
+    attachments?: FileAttachment[];
     /** The model the composer shows — sent as is, so what you see is what runs. */
     model?: string | null;
   }): Promise<ServiceResponse<StartRunResponse>> {
@@ -353,6 +356,7 @@ class BackendSession {
       ...(model ? { model } : {}),
       ...(space.mode === "developer" && input.workspaceId ? { workspaceId: input.workspaceId } : {}),
       ...(space.mode !== "developer" && input.collectionId ? { collectionId: input.collectionId } : {}),
+      ...(input.attachments?.length ? { attachments: input.attachments } : {}),
       ...(input.contextSkills?.length ? { contextSkills: input.contextSkills } : {}),
     };
     const result = await this.command<StartRunResponse>(CHANNELS.runs.execute, [payload]);
@@ -415,6 +419,8 @@ class BackendSession {
     contextSkills?: SkillSummary[],
     /** The model the composer shows; without one, the Mac keeps the run's. */
     shownModel?: string | null,
+    /** Phone-local files serialized for the Mac's attachment pipeline. */
+    attachments?: FileAttachment[],
   ): Promise<ServiceResponse<ContinueRunResponse>> {
     const { accountId, backend } = this.snapshot;
     if (!accountId || !backend) {
@@ -440,6 +446,7 @@ class BackendSession {
       accountId,
       message,
       ...(model ? { model } : {}),
+      ...(attachments?.length ? { attachments } : {}),
       ...(contextSkills?.length ? { contextSkills } : {}),
     };
     const result = await this.command<ContinueRunResponse>(CHANNELS.runs.continue, [payload]);

@@ -181,12 +181,20 @@ export function modelPrettyName(
   model: { displayName: string; description?: string | null },
   providerId: string,
 ): string {
-  if (providerId === "cursor") return formatCursorModelName(model.displayName);
+  let name = model.displayName;
+
+  if (providerId === "cursor") name = formatCursorModelName(name);
   if (providerId === "claude_code" && model.description) {
     const first = model.description.split("·")[0].trim();
-    return first.replace(/ with 1M context$/, " [1M]");
+    name = first.replace(/ with 1M context$/, " [1M]");
   }
-  return model.displayName;
+
+  // Match desktop: humanise GPT display labels without changing the model id
+  // sent back to the provider ("GPT-5.6-Sol" -> "GPT 5.6 Sol").
+  if (/^gpt-/i.test(name)) {
+    return name.replace(/^gpt-/i, "GPT ").replace(/-/g, " ");
+  }
+  return name;
 }
 
 /** Keeps the first model when several share a label. */

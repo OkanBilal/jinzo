@@ -14,6 +14,10 @@ import { Button } from "@/components/button";
 import { ComposerBar, composerBottomPadding } from "@/components/composer-bar";
 import { GlassSurface } from "@/components/glass-surface";
 import { attachedSkills, composeGoal } from "@/lib/context-picker";
+import {
+  serializeComposerAttachments,
+  type ComposerAttachment,
+} from "@/lib/composer-attachments";
 import type { PromptSkill } from "@/lib/prompt-chips";
 import { ModeMenu } from "@/components/mode-menu";
 import { ProjectIcon } from "@/components/project-icon";
@@ -102,6 +106,7 @@ export default function NewRunScreen() {
 
   const [draft, setDraft] = useState("");
   const [contextSkills, setContextSkills] = useState<PromptSkill[]>([]);
+  const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
   const [sending, setSending] = useState(false);
   const [pendingMode, setPendingMode] = useState<ModeId | null>(null);
   const [hint, setHint] = useState<string | null>(null);
@@ -159,6 +164,7 @@ export default function NewRunScreen() {
     try {
       const allowed = await requestConsent(backendId, space.providerId);
       if (!allowed) return;
+      const serializedAttachments = await serializeComposerAttachments(attachments);
 
       // The conversation starts here and now: the prompt goes up as a bubble
       // before the Mac has answered, and the transcript fills in under it once
@@ -169,6 +175,7 @@ export default function NewRunScreen() {
         goal,
         workspaceId: workspace?.id ?? null,
         collectionId: collection?.id ?? null,
+        attachments: serializedAttachments,
         contextSkills: skills,
         model: modelSelection.selected?.id ?? null,
       });
@@ -179,6 +186,7 @@ export default function NewRunScreen() {
       }
       setDraft("");
       setContextSkills([]);
+      setAttachments([]);
       homeRun.started(result.data.runId);
     } catch (caught) {
       homeRun.clear();
@@ -334,6 +342,8 @@ export default function NewRunScreen() {
             }}
             onSend={() => void send()}
             sending={sending}
+            attachments={attachments}
+            onAttachmentsChange={setAttachments}
             placeholder={space ? `Start a run in ${space.name}` : "Start a run"}
             disabled={!session.backend || !connected || !space || !providerEnabled}
             model={

@@ -8,7 +8,141 @@ import { toolInputPreview } from "@/lib/format";
 import { colors, radius, shadows, spacing, type, useBrandColors } from "@/theme";
 
 import { Button } from "./button";
+import { SFSymbol } from "./sf-symbol";
 import { ThemedText } from "./themed-text";
+
+const VISIBLE_PARAMS_INITIAL = 4;
+const APPROVAL_META_KEYS = new Set([
+  "message",
+  "mode",
+  "requestedSchema",
+  "url",
+  "serverName",
+  "threadId",
+  "turnId",
+  "elicitationId",
+  "description",
+  "_meta",
+]);
+
+interface ApprovalParam {
+  label: string;
+  value: string;
+}
+
+interface ToolApprovalDisplay {
+  label: string;
+  message: string;
+  subtitle?: string;
+  riskLevel?: "low" | "medium" | "high";
+  params: ApprovalParam[];
+  parsed: boolean;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function titleCase(value: string): string {
+  return value
+    .replace(/[_-]+/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatParamValue(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
+function buildParamEntries(input: Record<string, unknown>, meta: Record<string, unknown> | null) {
+  if (meta && Array.isArray(meta.tool_params_display)) {
+    const displayed = meta.tool_params_display
+      .filter(isPlainObject)
+      .map((param) => ({
+        label:
+          (typeof param.display_name === "string" && param.display_name) ||
+          (typeof param.name === "string" && param.name) ||
+          "",
+        value: formatParamValue(param.value),
+      }))
+      .filter((param) => param.label);
+    if (displayed.length > 0) return displayed;
+  }
+
+  if (meta && isPlainObject(meta.tool_params)) {
+    return Object.entries(meta.tool_params).map(([key, value]) => ({
+      label: titleCase(key),
+      value: formatParamValue(value),
+    }));
+  }
+
+  return Object.entries(input)
+    .filter(([key]) => !APPROVAL_META_KEYS.has(key))
+    .map(([key, value]) => ({ label: titleCase(key), value: formatParamValue(value) }))
+    .filter((param) => param.value.length > 0);
+}
+
+/** Mobile projection of the desktop approval dialog's permission-display metadata. */
+function toolApprovalDisplay(inputJson: string | null, toolName: string): ToolApprovalDisplay {
+  const fallbackLabel = titleCase(toolName);
+  if (!inputJson) {
+    return { label: fallbackLabel, message: `Allow ${fallbackLabel}?`, params: [], parsed: true };
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(inputJson);
+    if (!isPlainObject(parsed)) {
+      return { label: fallbackLabel, message: `Allow ${fallbackLabel}?`, params: [], parsed: false };
+    }
+
+    const meta = isPlainObject(parsed._meta) ? parsed._meta : null;
+    const label =
+      (typeof meta?.connector_name === "string" && meta.connector_name) ||
+      (typeof parsed.serverName === "string" && parsed.serverName) ||
+      fallbackLabel;
+    const message =
+      (typeof parsed.message === "string" && parsed.message) || `Allow ${label}?`;
+    const subtitle =
+      (typeof meta?.subtitle === "string" && meta.subtitle) ||
+      (typeof parsed.description === "string" && parsed.description) ||
+      undefined;
+    const normalizedRisk =
+      typeof meta?.riskLevel === "string" ? meta.riskLevel.toLowerCase() : undefined;
+    const riskLevel =
+      normalizedRisk === "low" || normalizedRisk === "medium" || normalizedRisk === "high"
+        ? normalizedRisk
+        : undefined;
+
+    return {
+      label,
+      message,
+      subtitle,
+      riskLevel,
+      params: buildParamEntries(parsed, meta),
+      parsed: true,
+    };
+  } catch {
+    return { label: fallbackLabel, message: `Allow ${fallbackLabel}?`, params: [], parsed: false };
+  }
+}
+
+function riskColors(level: NonNullable<ToolApprovalDisplay["riskLevel"]>) {
+  switch (level) {
+    case "high":
+      return { foreground: colors.systemRed, background: "rgba(255, 59, 48, 0.14)" };
+    case "medium":
+      return { foreground: colors.systemOrange, background: "rgba(255, 149, 0, 0.14)" };
+    case "low":
+      return { foreground: colors.systemGreen, background: "rgba(52, 199, 89, 0.14)" };
+  }
+}
 
 export function approvalKindLabel(kind: string): string {
   switch (kind) {
@@ -55,6 +189,7 @@ export function PendingApprovalCard({
   approval,
   now,
   runTitle,
+  providerId,
   compact = false,
   onPress,
   onRespond,
@@ -63,6 +198,8 @@ export function PendingApprovalCard({
   now: number;
   /** Shown on the overview so the card says which run is asking. */
   runTitle?: string | null;
+  /** Codex supports granting the same approval for the rest of the run. */
+  providerId?: string | null;
   compact?: boolean;
   onPress?: () => void;
   /** Absent → read-only card. */
@@ -71,16 +208,24 @@ export function PendingApprovalCard({
   const brand = useBrandColors();
   const [selected, setSelected] = useState<string[]>([]);
   const [freeText, setFreeText] = useState("");
+  const [allowForRun, setAllowForRun] = useState(false);
+  const [showAllParams, setShowAllParams] = useState(false);
   const [sending, setSending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const options = parseOptions(approval.optionsJson);
   const preview = toolInputPreview(approval.toolInputJson, compact ? 70 : 160);
+  const toolDisplay = toolApprovalDisplay(approval.toolInputJson, approval.toolName);
+  const toolSubtitle = toolDisplay.subtitle ?? approval.description ?? undefined;
   const title =
     approval.kind === "tool_approval"
-      ? approval.toolName
+      ? toolDisplay.message
       : approval.header || approval.question || approval.toolName;
   const isForm = approval.kind === "elicitation" && approval.elicitationMode !== "url";
+  const visibleParams = showAllParams
+    ? toolDisplay.params
+    : toolDisplay.params.slice(0, VISIBLE_PARAMS_INITIAL);
+  const hiddenParamCount = Math.max(0, toolDisplay.params.length - VISIBLE_PARAMS_INITIAL);
 
   const respond = async (label: string, decision: ApprovalDecision) => {
     if (!onRespond || sending) return;
@@ -122,7 +267,7 @@ export function PendingApprovalCard({
       ? "Fill this form in on your Mac — the phone can only decline it."
       : compact && approval.kind !== "tool_approval"
         ? "Open the run to answer"
-        : `The Mac denies this in ${formatRemaining(approval.expiresAt, now)}`;
+        : "The Mac denies this if unanswered.";
 
   const body = (
     <View
@@ -136,21 +281,53 @@ export function PendingApprovalCard({
       }}
     >
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <View
-          style={{
-            paddingHorizontal: spacing.sm,
-            paddingVertical: spacing.xxs + 1,
-            borderRadius: radius.full,
-            backgroundColor: brand.accentSoft,
-          }}
-        >
-          <ThemedText variant="caption" style={{ color: brand.accent, fontWeight: "600" }}>
-            {approvalKindLabel(approval.kind)}
+        {approval.kind === "tool_approval" ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, flex: 1 }}>
+            <SFSymbol name="puzzlepiece.extension" size={15} tint={colors.secondaryLabel} />
+            <ThemedText variant="subhead" numberOfLines={1} style={{ fontWeight: "600", flex: 1 }}>
+              {toolDisplay.label}
+            </ThemedText>
+          </View>
+        ) : (
+          <View
+            style={{
+              paddingHorizontal: spacing.sm,
+              paddingVertical: spacing.xxs + 1,
+              borderRadius: radius.full,
+              backgroundColor: brand.accentSoft,
+            }}
+          >
+            <ThemedText variant="caption" style={{ color: brand.accent, fontWeight: "600" }}>
+              {approvalKindLabel(approval.kind)}
+            </ThemedText>
+          </View>
+        )}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+          {toolDisplay.riskLevel ? (
+            <View
+              style={{
+                paddingHorizontal: spacing.sm,
+                paddingVertical: spacing.xxs + 1,
+                borderRadius: radius.full,
+                backgroundColor: riskColors(toolDisplay.riskLevel).background,
+              }}
+            >
+              <ThemedText
+                variant="caption2"
+                style={{
+                  color: riskColors(toolDisplay.riskLevel).foreground,
+                  fontWeight: "600",
+                  textTransform: "capitalize",
+                }}
+              >
+                {toolDisplay.riskLevel} risk
+              </ThemedText>
+            </View>
+          ) : null}
+          <ThemedText variant="caption" style={{ fontVariant: ["tabular-nums"] }}>
+            {formatRemaining(approval.expiresAt, now)}
           </ThemedText>
         </View>
-        <ThemedText variant="caption" style={{ fontVariant: ["tabular-nums"] }}>
-          {formatRemaining(approval.expiresAt, now)}
-        </ThemedText>
       </View>
 
       {runTitle !== undefined && (
@@ -162,36 +339,119 @@ export function PendingApprovalCard({
       <ThemedText variant="headline" numberOfLines={compact ? 2 : undefined}>
         {title}
       </ThemedText>
+      {!compact && approval.kind === "tool_approval" && toolSubtitle ? (
+        <ThemedText variant="subhead">{toolSubtitle}</ThemedText>
+      ) : null}
       {!compact && approval.kind !== "tool_approval" && approval.header && approval.question ? (
         <ThemedText variant="callout">{approval.question}</ThemedText>
       ) : null}
-      {preview ? (
+      {preview && (approval.kind !== "tool_approval" || !toolDisplay.parsed) ? (
         <ThemedText variant="mono" numberOfLines={compact ? 1 : 3} selectable>
           {preview}
         </ThemedText>
       ) : null}
-      {!compact && approval.description ? (
+      {!compact && approval.kind !== "tool_approval" && approval.description ? (
         <ThemedText variant="subhead">{approval.description}</ThemedText>
+      ) : null}
+
+      {!compact && approval.kind === "tool_approval" && visibleParams.length > 0 ? (
+        <View
+          style={{
+            backgroundColor: colors.fill,
+            borderRadius: radius.md,
+            borderCurve: "continuous",
+            padding: spacing.ms,
+            gap: spacing.sm,
+          }}
+        >
+          {visibleParams.map((param, index) => (
+            <View key={`${param.label}-${index}`} style={{ flexDirection: "row", gap: spacing.ms }}>
+              <ThemedText variant="caption" style={{ width: 88 }}>
+                {param.label}
+              </ThemedText>
+              <ThemedText variant="mono" selectable style={{ flex: 1, color: colors.label }}>
+                {param.value}
+              </ThemedText>
+            </View>
+          ))}
+          {hiddenParamCount > 0 ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setShowAllParams((current) => !current)}
+              style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1 })}
+            >
+              <ThemedText variant="caption" style={{ color: brand.accent, fontWeight: "600" }}>
+                {showAllParams ? "Show fewer" : `Show ${hiddenParamCount} more`}
+              </ThemedText>
+            </Pressable>
+          ) : null}
+        </View>
       ) : null}
 
       {/* ── Answer surface ── */}
       {onRespond && approval.kind === "tool_approval" && (
-        <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: spacing.sm }}>
-          <Button
-            title="Deny"
-            variant="secondary"
-            size="sm"
-            loading={sending === "deny"}
-            disabled={sending !== null}
-            onPress={() => void respond("deny", { approved: false })}
-          />
-          <Button
-            title="Allow"
-            size="sm"
-            loading={sending === "allow"}
-            disabled={sending !== null}
-            onPress={() => void respond("allow", { approved: true })}
-          />
+        <View style={{ gap: spacing.sm }}>
+          {providerId === "codex" ? (
+            <Pressable
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: allowForRun, disabled: sending !== null }}
+              disabled={sending !== null}
+              onPress={() => setAllowForRun((current) => !current)}
+              style={({ pressed }) => ({
+                alignSelf: "flex-start",
+                flexDirection: "row",
+                alignItems: "center",
+                gap: spacing.sm,
+                opacity: sending !== null ? 0.45 : pressed ? 0.65 : 1,
+              })}
+            >
+              <View
+                style={{
+                  width: 20,
+                  height: 20,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: radius.sm / 2,
+                  borderCurve: "continuous",
+                  borderWidth: allowForRun ? 0 : 1.5,
+                  borderColor: colors.tertiaryLabel,
+                  backgroundColor: allowForRun ? brand.accent : "transparent",
+                }}
+              >
+                {allowForRun ? (
+                  <ThemedText
+                    variant="caption"
+                    style={{ color: brand.accentContrast, fontWeight: "700", lineHeight: 16 }}
+                  >
+                    ✓
+                  </ThemedText>
+                ) : null}
+              </View>
+              <ThemedText variant="footnote">Allow for this run</ThemedText>
+            </Pressable>
+          ) : null}
+          <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: spacing.sm }}>
+            <Button
+              title="Deny"
+              variant="secondary"
+              size="sm"
+              loading={sending === "deny"}
+              disabled={sending !== null}
+              onPress={() => void respond("deny", { approved: false })}
+            />
+            <Button
+              title="Allow"
+              size="sm"
+              loading={sending === "allow"}
+              disabled={sending !== null}
+              onPress={() =>
+                void respond("allow", {
+                  approved: true,
+                  answer: allowForRun ? "acceptForSession" : undefined,
+                })
+              }
+            />
+          </View>
         </View>
       )}
 

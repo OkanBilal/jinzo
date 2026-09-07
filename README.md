@@ -1,7 +1,7 @@
 <div align="center">
   <br />
   <a href="https://github.com/mainsdotdev/mains">
-    <img src="src/renderer/public/icon.png" width="100" alt="Mains" />
+    <img src="icon.png" width="100" alt="Mains" />
   </a>
   <br />
   <br />

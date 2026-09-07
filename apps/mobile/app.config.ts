@@ -69,6 +69,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       "expo-router",
       "expo-image",
       [
+        "expo-image-picker",
+        {
+          photosPermission:
+            "Mains lets you select photos to attach to a run.",
+          cameraPermission: false,
+          microphonePermission: false,
+        },
+      ],
+      [
         "expo-splash-screen",
         {
           // The icon is a flat #000000 square with no alpha, and the app opens

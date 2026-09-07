@@ -227,6 +227,15 @@ export interface CommandSummary {
   userFacing?: boolean;
 }
 
+/** A phone-local file serialized for the Mac's existing attachment pipeline. */
+export interface FileAttachment {
+  name: string;
+  type: "image" | "document";
+  /** Base64-encoded bytes without a data-URL prefix. */
+  data: string;
+  mimeType: string;
+}
+
 export interface StartRunPayload {
   accountId: string;
   spaceId: string;
@@ -235,6 +244,8 @@ export interface StartRunPayload {
   workspaceId?: string;
   collectionId?: string;
   model?: string;
+  /** Images/documents picked on the phone. */
+  attachments?: FileAttachment[];
   /** Skills the composer attached — the Mac injects them and chips the prompt. */
   contextSkills?: SkillSummary[];
 }
@@ -367,6 +378,8 @@ export interface ContinueRunPayload {
   message: string;
   /** Model for this continuation; omitted = the provider's default. */
   model?: string | null;
+  /** Images/documents picked on the phone. */
+  attachments?: FileAttachment[];
   /** Skills attached to this follow-up. */
   contextSkills?: SkillSummary[];
 }

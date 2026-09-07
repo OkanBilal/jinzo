@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, TextInput, View, useWindowDimensions } from "react-native";
+import { ActionSheetIOS, Pressable, TextInput, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
@@ -7,22 +7,29 @@ import {
   replaceTrigger,
   skillContext,
   skillMention,
-  type ContextBucket,
   type ContextTrigger,
   type PickerRow,
 } from "@/lib/context-picker";
+import { PROVIDER_IDS } from "@mains/contracts/provider-ids";
+import {
+  mergeComposerAttachments,
+  pickComposerDocuments,
+  pickComposerImages,
+  type ComposerAttachment,
+} from "@/lib/composer-attachments";
 import type { PromptSkill } from "@/lib/prompt-chips";
 import { useKeyboardInset } from "@/lib/use-keyboard-inset";
 import { colors, radius, spacing, type, useProviderAccent } from "@/theme";
 
 import { ContextPicker } from "./context-picker";
+import { ComposerAttachmentStrip } from "./composer-attachment-strip";
 import { GlassSurface } from "./glass-surface";
 import { SFSymbol } from "./sf-symbol";
 import { ThemedText } from "./themed-text";
 
 /**
- * What the composer needs to offer its context menu. Omitted on a screen with
- * no backend to ask — the "+" button then stays inert, as before.
+ * What the composer needs to offer its inline context menu. Attachments are
+ * phone-local and therefore do not depend on this Mac-backed context source.
  */
 export interface ComposerContext {
   backendId: string;
@@ -48,7 +55,8 @@ export function ComposerBar({
   disabled = false,
   sending = false,
   error,
-  onAdd,
+  attachments = [],
+  onAttachmentsChange,
   onStop,
   model,
   permission,
@@ -63,8 +71,9 @@ export function ComposerBar({
   disabled?: boolean;
   sending?: boolean;
   error?: string | null;
-  /** The "+" button; without a handler it is shown but inert. */
-  onAdd?: () => void;
+  /** Phone-local files waiting to travel with the next message. */
+  attachments?: ComposerAttachment[];
+  onAttachmentsChange?: (attachments: ComposerAttachment[]) => void;
   /**
    * Given only while a run is in flight: the send button becomes a stop button,
    * as it does on the desktop (`SendButton` swaps on `loading && onStop`).
@@ -74,7 +83,7 @@ export function ComposerBar({
   model?: { label: string; effort?: string | null; onPress: () => void } | null;
   /** The permission-mode pill — worth seeing before sending from a phone. */
   permission?: { label: string; onPress: () => void } | null;
-  /** Skills and commands behind `@` / `/` / `$` and the "+" button. */
+  /** Skills and commands behind the inline `@` / `/` / `$` triggers. */
   context?: ComposerContext | null;
   /** Tints the send button, the way the provider tints its prompt bubbles. */
   providerId?: string | null;
@@ -86,11 +95,10 @@ export function ComposerBar({
 }) {
   const accent = useProviderAccent(providerId);
   const canSend = !disabled && !sending && value.trim().length > 0;
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
 
-  // The "+" button opens the plugins bucket with no token in the text, the way
-  // the desktop's toolbar picker does; typing a trigger opens the full menu.
-  const [pickerBucket, setPickerBucket] = useState<ContextBucket | null>(null);
-  const [pickerOpen, setPickerOpen] = useState(false);
+  // Plugins remain behind the inline context triggers, as on the desktop;
+  // the toolbar's attachment control is reserved for images/documents.
 
   // The picker opens upward from the bar and may grow until it meets whatever
   // floats at the top of the screen — no further, or on a small phone with
@@ -111,12 +119,10 @@ export function ComposerBar({
       (reservedTop ?? insets.top + spacing.sm),
   );
   const typed = context ? detectTrigger(value) : null;
-  const trigger: ContextTrigger = pickerBucket ? "$" : (typed?.trigger ?? "@");
-  const menuVisible = Boolean(context) && (pickerOpen || typed !== null);
+  const trigger: ContextTrigger = typed?.trigger ?? "@";
+  const menuVisible = Boolean(context) && typed !== null;
 
   const closeMenu = () => {
-    setPickerOpen(false);
-    setPickerBucket(null);
     // A typed trigger keeps the menu open on its own, so dismissing means
     // dropping the token — otherwise the sheet reopens on the next render.
     if (typed) onChangeText(replaceTrigger(value, typed, ""));
@@ -146,8 +152,48 @@ export function ComposerBar({
           : `${value}${value && !/\s$/.test(value) ? " " : ""}${replacement} `,
       );
     }
-    setPickerOpen(false);
-    setPickerBucket(null);
+  };
+
+  const addPicked = (picked: ComposerAttachment[]) => {
+    if (!onAttachmentsChange || picked.length === 0) return;
+    onAttachmentsChange(mergeComposerAttachments(attachments, picked));
+    setAttachmentError(null);
+  };
+
+  const pickImages = async () => {
+    try {
+      addPicked(await pickComposerImages());
+    } catch (caught) {
+      setAttachmentError(caught instanceof Error ? caught.message : "Could not open your photos");
+    }
+  };
+
+  const pickDocuments = async () => {
+    try {
+      addPicked(await pickComposerDocuments());
+    } catch (caught) {
+      setAttachmentError(caught instanceof Error ? caught.message : "Could not open your documents");
+    }
+  };
+
+  const openAttachments = () => {
+    if (!onAttachmentsChange) return;
+    setAttachmentError(null);
+    if (providerId === PROVIDER_IDS.codex) {
+      void pickImages();
+      return;
+    }
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        title: "Add attachment",
+        options: ["Images", "Documents", "Cancel"],
+        cancelButtonIndex: 2,
+      },
+      (index) => {
+        if (index === 0) void pickImages();
+        if (index === 1) void pickDocuments();
+      },
+    );
   };
 
   return (
@@ -155,9 +201,9 @@ export function ComposerBar({
       style={{ paddingHorizontal: spacing.ms, gap: spacing.xs }}
       onLayout={(event) => setBarHeight(event.nativeEvent.layout.height)}
     >
-      {error ? (
+      {error || attachmentError ? (
         <ThemedText variant="footnote" style={{ color: colors.systemRed, paddingHorizontal: spacing.sm }}>
-          {error}
+          {error || attachmentError}
         </ThemedText>
       ) : null}
       <GlassSurface
@@ -191,18 +237,18 @@ export function ComposerBar({
           value={value}
         />
 
+        <ComposerAttachmentStrip
+          attachments={attachments}
+          onRemove={(id) =>
+            onAttachmentsChange?.(attachments.filter((attachment) => attachment.id !== id))
+          }
+        />
+
         <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
           <RoundControl
-            label={context ? "Plugins and skills" : "Add"}
-            onPress={
-              context
-                ? () => {
-                    setPickerBucket("plugins");
-                    setPickerOpen(true);
-                  }
-                : onAdd
-            }
-            disabled={!context && !onAdd}
+            label={providerId === PROVIDER_IDS.codex ? "Upload image" : "Upload file or photo"}
+            onPress={openAttachments}
+            disabled={!onAttachmentsChange}
           >
             <SFSymbol name="plus" size={18} tint={colors.label} />
           </RoundControl>
@@ -269,8 +315,7 @@ export function ComposerBar({
           providerId={context.providerId}
           workspacePath={context.workspacePath}
           trigger={trigger}
-          bucket={pickerBucket}
-          filter={pickerBucket ? "" : (typed?.filter ?? "")}
+          filter={typed?.filter ?? ""}
           maxHeight={pickerMaxHeight}
           onSelect={pick}
           onClose={closeMenu}
