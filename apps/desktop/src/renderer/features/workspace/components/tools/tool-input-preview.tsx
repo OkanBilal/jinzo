@@ -5,6 +5,8 @@ import {
   buildApprovalDiffPreviews,
   type ApprovalDiffKind,
 } from "../../lib/tool-approval-diff";
+import { parseShellCommandPreview } from "../../lib/shell-command-preview";
+import { CODE_FONT_SIZE_CSS } from "@/lib/appearance-fonts";
 import { ToolDiffBody } from "./_shared";
 
 interface ToolInputPreviewProps {
@@ -22,11 +24,11 @@ export function ToolInputPreview({ toolName, toolInput }: ToolInputPreviewProps)
   const canonName = canonicalRendererName(toolName);
   const renderer = RENDERERS[canonName]
     ?? (toolName.startsWith("[permission:") ? renderPermissionFallback : renderFallback);
-  const isDiffPreview = DIFF_RENDERERS.has(canonName);
+  const ownsSurface = SELF_CONTAINED_RENDERERS.has(canonName);
   return (
     <div
       className={`text-xs rounded-lg ${
-        isDiffPreview
+        ownsSurface
           ? ""
           : "max-h-48 space-y-2 overflow-auto bg-primary-50 dark:bg-primary/5"
       }`}
@@ -93,6 +95,75 @@ function CodeBlock({ children }: { children: React.ReactNode }) {
     <Text as="pre" size="inherit" tone="muted" className="whitespace-pre-wrap break-all px-3 py-2 mt-1">
       {children}
     </Text>
+  );
+}
+
+function ShellCommandPreview({ input }: { input: Record<string, unknown> }) {
+  const rawCommand = typeof input.command === "string"
+    ? input.command
+    : String(input.command ?? "");
+  const preview = parseShellCommandPreview(rawCommand);
+  const cwd = typeof input.cwd === "string" ? input.cwd : "";
+  const hasMeta = !!preview.shell || !!cwd || !!input.timeout;
+
+  return (
+    <div className="space-y-1.5">
+      {!!input.description && (
+        <Text
+          as="div"
+          size="xs"
+          tone="subtle"
+          className="px-0.5 leading-relaxed whitespace-pre-wrap wrap-break-word"
+        >
+          {str(input.description, 500)}
+        </Text>
+      )}
+      <div
+        className="overflow-hidden rounded-xl glass-outline bg-primary-50 dark:bg-primary/5"
+        title={preview.shell ? rawCommand : undefined}
+      >
+        {hasMeta && (
+          <div className="flex min-w-0 items-center gap-2 border-b border-primary-200/50 px-2.5 py-2 dark:border-primary-700/30">
+            {preview.shell && (
+              <Text as="span" size="xxs" tone="muted" className="shrink-0 font-mono">
+                {preview.shell}
+              </Text>
+            )}
+            {cwd && (
+              <Text
+                as="span"
+                size="xxs"
+                tone="faint"
+                className="min-w-0 truncate font-mono"
+                title={cwd}
+              >
+                {cwd}
+              </Text>
+            )}
+            {!!input.timeout && (
+              <Text as="span" size="xxs" tone="faint" className="ml-auto shrink-0">
+                {String(input.timeout)}ms
+              </Text>
+            )}
+          </div>
+        )}
+        <Text
+          as="pre"
+          size="inherit"
+          tone="muted"
+          className="noscrollbar max-h-48 overflow-auto whitespace-pre-wrap wrap-break-word px-3 py-2.5 font-mono leading-relaxed"
+          style={{ fontSize: CODE_FONT_SIZE_CSS }}
+        >
+          <span
+            aria-hidden
+            className="select-none text-primary-400 dark:text-primary-600"
+          >
+            ${" "}
+          </span>
+          {preview.command}
+        </Text>
+      </div>
+    </div>
   );
 }
 
@@ -181,21 +252,7 @@ function FileMutationCard({
 type Renderer = (input: Record<string, unknown>) => React.ReactNode;
 
 const RENDERERS: Record<string, Renderer> = {
-  Bash: (input) => (
-    <>
-      {!!input.description && (
-        <Text as="div" size="inherit" tone="subtle" className="px-3 pt-2 leading-relaxed whitespace-pre-wrap wrap-break-word">
-          {str(input.description, 500)}
-        </Text>
-      )}
-      <CodeBlock>{str(input.command, 1200)}</CodeBlock>
-      {!!input.timeout && (
-        <Text as="div" size="xxs" tone="faint" className="px-3 pb-2">
-          timeout: {String(input.timeout)}ms
-        </Text>
-      )}
-    </>
-  ),
+  Bash: (input) => <ShellCommandPreview input={input} />,
 
   Read: (input) => (
     <>
@@ -406,16 +463,7 @@ const RENDERERS: Record<string, Renderer> = {
     />
   ),
 
-  "[permission:shell]": (input) => (
-    <>
-      {!!input.cwd && (
-        <div className="px-3 pt-2">
-          <Label>cwd</Label> <Mono>{str(input.cwd)}</Mono>
-        </div>
-      )}
-      <CodeBlock>{str(input.command, 1200)}</CodeBlock>
-    </>
-  ),
+  "[permission:shell]": (input) => <ShellCommandPreview input={input} />,
 
   "[permission:read]": (input) => (
     <div className="px-3 py-2">
@@ -425,6 +473,8 @@ const RENDERERS: Record<string, Renderer> = {
 };
 
 const RENDERER_ALIASES: Record<string, string> = {
+  bash: "Bash",
+  shell: "Bash",
   edit: "Edit",
   replace: "Edit",
   edit_file: "Edit",
@@ -439,12 +489,14 @@ const RENDERER_ALIASES: Record<string, string> = {
   "[permission:write]": "[permission:write]",
 };
 
-const DIFF_RENDERERS = new Set([
+const SELF_CONTAINED_RENDERERS = new Set([
+  "Bash",
   "Edit",
   "Write",
   "Create",
   "Delete",
   "Apply_patch",
+  "[permission:shell]",
   "[permission:write]",
 ]);
 
