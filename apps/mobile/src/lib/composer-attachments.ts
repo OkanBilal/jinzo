@@ -1,4 +1,5 @@
-import { File } from "expo-file-system";
+import * as Clipboard from "expo-clipboard";
+import { File, Paths } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 
 import type { FileAttachment } from "@mains/contracts/runs";
@@ -88,6 +89,42 @@ export async function pickComposerDocuments(): Promise<ComposerAttachment[]> {
     mimeType: file.type || "application/octet-stream",
     size: file.size,
   }));
+}
+
+/**
+ * Is there an image on the clipboard right now? Answering this needs no
+ * permission — iOS only guards reading the contents, not detecting them — so
+ * the attach menu can offer Paste only when it would do something.
+ */
+export function clipboardHasImage(): Promise<boolean> {
+  return Clipboard.hasImageAsync();
+}
+
+/**
+ * The image on the clipboard, as an attachment.
+ *
+ * iOS hands it over as base64 rather than a file, and reading it is what
+ * raises the system's "Allow Paste?" prompt — so this runs only from an
+ * explicit Paste, never on its own. The bytes are written to the cache
+ * directory because everything downstream (the strip's thumbnail, the
+ * serializer) expects a file it can open.
+ */
+export async function pasteComposerImage(): Promise<ComposerAttachment[]> {
+  const image = await Clipboard.getImageAsync({ format: "png" });
+  if (!image?.data) return [];
+  const name = `pasted-${Date.now()}.png`;
+  const file = new File(Paths.cache, name);
+  await Promise.resolve(file.write(image.data, { encoding: "base64" }));
+  return [
+    {
+      id: `image:${file.uri}`,
+      name,
+      type: "image",
+      uri: file.uri,
+      mimeType: "image/png",
+      size: file.size ?? undefined,
+    },
+  ];
 }
 
 /** Preserve insertion order while ignoring the same picked file twice. */

@@ -2,9 +2,11 @@ import { CHANNELS } from "@mains/contracts/channels";
 import type {
   ArtifactImage,
   ContinueRunPayload,
+  FileAttachment,
   ForkRunPayload,
   PendingApproval,
   ReadArtifactImagePayload,
+  SkillSummary,
   SpaceModePayload,
   StartRunPayload,
   ToolApprovalResponse,
@@ -14,12 +16,17 @@ import { WS_PROTOCOL_VERSION } from "@mains/contracts/ws-protocol";
 
 import type { DemoHandler } from "./demo-socket";
 import rawSnapshot from "./demo-snapshot.json";
+import {
+  demoScenarioForPrompt,
+  type DemoScenario,
+  type DemoToolSpec,
+} from "./demo-scenarios";
 
 /**
  * The demo Mac: everything a paired Mac answers over the wire, answered from
- * a snapshot of a real one, exported by `scripts/export-demo-snapshot.mjs`.
- * Reads serve the snapshot; a send replays a recorded run back, artifact by
- * artifact, so the reviewer watches a live run without an agent anywhere near.
+ * a sanitized snapshot exported by `scripts/export-demo-snapshot.mjs`.
+ * Reads serve that snapshot; sends play a small curated local scenario so the
+ * reviewer watches the real run UI without an agent or network connection.
  */
 
 /** Rows travel as the wire DTOs with dates as ISO strings; `toDate` reads them. */
@@ -45,6 +52,14 @@ interface DemoArtifact extends Json {
   metadata: Json | null;
   createdAt: string;
 }
+interface DemoToolCall extends Json {
+  id: number;
+  runId: string;
+  toolName: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
 interface DemoSnapshot {
   backend: { backendId: string; name: string; appVersion: string };
   account: Json;
@@ -63,15 +78,14 @@ interface DemoSnapshot {
   toolCalls: Record<string, (Json & { id: number; runId: string })[]>;
   artifacts: Record<string, DemoArtifact[]>;
   images: Record<string, ArtifactImage>;
-  replayRunId: string | null;
 }
 
 const snapshot = rawSnapshot as unknown as DemoSnapshot;
 
 /** Between replayed items — slow enough to watch, fast enough for a reviewer. */
-const REPLAY_STEP_MS = 900;
+const REPLAY_STEP_MS = 700;
 /** An ignored approval answers itself, so the demo never wedges. */
-const APPROVAL_AUTO_RESOLVE_MS = 25_000;
+const APPROVAL_AUTO_RESOLVE_MS = 15_000;
 const RUN_LIST_DEFAULT = 50;
 
 const now = () => new Date().toISOString();
@@ -81,8 +95,11 @@ export class DemoBackend implements DemoHandler {
   private readonly artifacts = new Map<string, DemoArtifact[]>(
     Object.entries(snapshot.artifacts).map(([runId, list]) => [runId, list.map((a) => ({ ...a }))]),
   );
-  private readonly toolCalls = new Map<string, (Json & { id: number; runId: string })[]>(
-    Object.entries(snapshot.toolCalls).map(([runId, list]) => [runId, list.map((c) => ({ ...c }))]),
+  private readonly toolCalls = new Map<string, DemoToolCall[]>(
+    Object.entries(snapshot.toolCalls).map(([runId, list]) => [
+      runId,
+      list.map((call) => ({ ...call })) as DemoToolCall[],
+    ]),
   );
   private readonly turns = new Map<string, (Json & { id: number })[]>(
     Object.entries(snapshot.turns).map(([runId, list]) => [runId, list.map((t) => ({ ...t }))]),
@@ -92,13 +109,17 @@ export class DemoBackend implements DemoHandler {
     ...provider,
     config: { ...provider.config },
   }));
-  /** A replayed image keeps pointing at the source artifact's pixels. */
-  private readonly imageAliases = new Map<number, string>();
-  private approval: PendingApproval | null = null;
-  private approvalContinue: (() => void) | null = null;
+  private readonly approvals = new Map<string, PendingApproval>();
+  private readonly approvalContinuations = new Map<
+    string,
+    { runId: string; approve: () => void; deny: () => void }
+  >();
 
   private emit: ((channel: string, payload: unknown) => void) | null = null;
-  private readonly timers = new Set<ReturnType<typeof setTimeout>>();
+  private readonly timersByRun = new Map<
+    string,
+    Set<ReturnType<typeof setTimeout>>
+  >();
   private nextId = 1_000_000;
   private runCounter = 0;
 
@@ -114,12 +135,22 @@ export class DemoBackend implements DemoHandler {
     this.emit?.(channel, payload);
   }
 
-  private later(ms: number, fn: () => void): void {
+  private later(runId: string, ms: number, fn: () => void): void {
+    const timers = this.timersByRun.get(runId) ?? new Set();
+    this.timersByRun.set(runId, timers);
     const timer = setTimeout(() => {
-      this.timers.delete(timer);
+      timers.delete(timer);
+      if (timers.size === 0) this.timersByRun.delete(runId);
       fn();
     }, ms);
-    this.timers.add(timer);
+    timers.add(timer);
+  }
+
+  private clearTimers(runId: string): void {
+    const timers = this.timersByRun.get(runId);
+    if (!timers) return;
+    for (const timer of timers) clearTimeout(timer);
+    this.timersByRun.delete(runId);
   }
 
   // ── The wire ─────────────────────────────────────────────────────────────
@@ -167,8 +198,12 @@ export class DemoBackend implements DemoHandler {
       }
       case CHANNELS.runs.getById:
         return this.runs.find((run) => run.id === args[0]) ?? null;
-      case CHANNELS.runs.listPendingApprovals:
-        return this.approval ? [this.approval] : [];
+      case CHANNELS.runs.listPendingApprovals: {
+        const runId = typeof args[0] === "string" ? args[0] : null;
+        return [...this.approvals.values()].filter(
+          (approval) => !runId || approval.runId === runId,
+        );
+      }
       case CHANNELS.runTurns.getByRun:
         return this.turns.get(String(args[0])) ?? [];
       case CHANNELS.runToolCalls.getByRun:
@@ -180,8 +215,7 @@ export class DemoBackend implements DemoHandler {
       }
       case CHANNELS.runArtifacts.readImage: {
         const { artifactId } = args[0] as ReadArtifactImagePayload;
-        const key = this.imageAliases.get(artifactId) ?? String(artifactId);
-        const image = snapshot.images[key];
+        const image = snapshot.images[String(artifactId)];
         if (!image) throw new Error("Image file is missing");
         return image;
       }
@@ -241,7 +275,7 @@ export class DemoBackend implements DemoHandler {
     return provider;
   }
 
-  // ── Runs: every send replays the recorded run ────────────────────────────
+  // ── Runs: every send plays a bundled, prompt-matched scenario ────────────
 
   private execute(payload: StartRunPayload): { runId: string } {
     this.runCounter += 1;
@@ -271,7 +305,12 @@ export class DemoBackend implements DemoHandler {
     this.artifacts.set(runId, []);
     this.toolCalls.set(runId, []);
     this.turns.set(runId, []);
-    this.startReplay(run, payload.goal);
+    this.startReplay(
+      run,
+      payload.goal,
+      payload.attachments,
+      payload.contextSkills,
+    );
     return { runId };
   }
 
@@ -281,16 +320,24 @@ export class DemoBackend implements DemoHandler {
     run.status = "running";
     run.endedAt = null;
     run.updatedAt = now();
-    this.startReplay(run, payload.message);
+    this.startReplay(
+      run,
+      payload.message,
+      payload.attachments,
+      payload.contextSkills,
+    );
     return { runId: run.id, resumed: true };
   }
 
   private fork(payload: ForkRunPayload): { runId: string; sourceRunId: string } {
+    const source = this.runs.find((run) => run.id === payload.sourceRunId);
     const { runId } = this.execute({
       accountId: "demo-account",
-      spaceId: String(this.spaces[0]?.id ?? ""),
-      providerId: this.runs.find((r) => r.id === payload.sourceRunId)?.providerId ?? "claude_code",
+      spaceId: String(source?.spaceId ?? this.spaces[0]?.id ?? ""),
+      providerId: source?.providerId ?? "codex",
       goal: payload.message,
+      ...(source?.workspaceId ? { workspaceId: source.workspaceId } : {}),
+      ...(source?.collectionId ? { collectionId: source.collectionId } : {}),
     });
     return { runId, sourceRunId: payload.sourceRunId };
   }
@@ -298,8 +345,15 @@ export class DemoBackend implements DemoHandler {
   private abort(runId: string): void {
     const run = this.runs.find((r) => r.id === runId);
     if (!run) return;
-    for (const timer of this.timers) clearTimeout(timer);
-    this.timers.clear();
+    this.clearTimers(runId);
+    for (const approval of this.approvals.values()) {
+      if (approval.runId !== runId) continue;
+      this.approvals.delete(approval.requestId);
+      this.approvalContinuations.delete(approval.requestId);
+      this.push(CHANNELS.runs.toolApprovalResolved, {
+        requestId: approval.requestId,
+      });
+    }
     run.status = "canceled";
     run.endedAt = now();
     run.updatedAt = now();
@@ -307,122 +361,180 @@ export class DemoBackend implements DemoHandler {
   }
 
   private respondToApproval(response: ToolApprovalResponse): void {
-    if (!this.approval || this.approval.requestId !== response.requestId) return;
-    this.approval = null;
+    const approval = this.approvals.get(response.requestId);
+    const continuation = this.approvalContinuations.get(response.requestId);
+    if (!approval || !continuation) return;
+    this.approvals.delete(response.requestId);
+    this.approvalContinuations.delete(response.requestId);
     this.push(CHANNELS.runs.toolApprovalResolved, { requestId: response.requestId });
-    const resume = this.approvalContinue;
-    this.approvalContinue = null;
-    resume?.();
+    if (response.approved) continuation.approve();
+    else continuation.deny();
   }
 
   /**
-   * Replay the recorded run onto `run`: the reviewer's own prompt first, then
-   * the source's closing turn one artifact at a time, one approval in the
-   * middle, and a settled status at the end. Every step is a real
-   * `eventPersisted` push, so the phone pulls it exactly as it would live.
+   * Play a curated scenario onto `run`. The reviewer's own prompt is always
+   * the subject, and the transcript explicitly says that bundled sample data
+   * is being used. Every step is still a real `eventPersisted` push, so the
+   * phone exercises the same projection and UI as a paired Mac.
    */
-  private startReplay(run: DemoRun, prompt: string): void {
-    const source = snapshot.replayRunId ? (snapshot.artifacts[snapshot.replayRunId] ?? []) : [];
-    // The closing turn: everything after the source's last user prompt.
-    let start = 0;
-    for (let i = source.length - 1; i >= 0; i--) {
-      if (source[i].kind === "user-prompt") {
-        start = i + 1;
-        break;
-      }
-    }
-    const items = source.slice(start, start + 24);
-    const sourceCalls = snapshot.replayRunId ? (snapshot.toolCalls[snapshot.replayRunId] ?? []) : [];
-    // A tool call belongs to the artifact it ran before — the transcript
-    // interleaves the two by time. Bucket each call into the first item
-    // recorded at or after it, so a replayed turn shows its work rather than
-    // bare prose. (Matching timestamps exactly never held: the two tables are
-    // written by different code paths, milliseconds apart.)
-    const at = (value: unknown) => Date.parse(String(value ?? "")) || 0;
-    const turnStart = start > 0 ? at(source[start - 1].createdAt) : 0;
-    const callsByItem = new Map<number, (Json & { id: number; runId: string })[]>();
-    for (const call of sourceCalls) {
-      const when = at(call.createdAt);
-      if (when < turnStart) continue;
-      let index = items.findIndex((item) => at(item.createdAt) >= when);
-      if (index < 0) index = items.length - 1;
-      if (index < 0) continue;
-      const bucket = callsByItem.get(index);
-      if (bucket) bucket.push(call);
-      else callsByItem.set(index, [call]);
-    }
-
+  private startReplay(
+    run: DemoRun,
+    prompt: string,
+    attachments?: FileAttachment[],
+    contextSkills?: SkillSummary[],
+  ): void {
+    const scenario = demoScenarioForPrompt(prompt);
     this.push(CHANNELS.runs.statusChanged, { runId: run.id, status: "running", ts: Date.now() });
 
-    const list = this.artifacts.get(run.id) ?? [];
-    this.artifacts.set(run.id, list);
-    const calls = this.toolCalls.get(run.id) ?? [];
-    this.toolCalls.set(run.id, calls);
-
-    // The prompt echoes back at once, as the Mac's own copy.
-    list.push({
-      id: this.nextId++,
-      runId: run.id,
-      kind: "user-prompt",
-      content: prompt,
-      path: null,
-      metadata: { source: "user" },
-      createdAt: now(),
+    const files = (attachments ?? []).map((attachment) => ({
+      path: `/Users/demo/Shared from iPhone/${safeFileName(attachment.name)}`,
+    }));
+    this.appendArtifact(run, "user-prompt", prompt, {
+      source: "user",
+      ...(contextSkills?.length ? { skills: contextSkills } : {}),
+      ...(files.length ? { files } : {}),
     });
-    this.push(CHANNELS.runs.eventPersisted, { runId: run.id, ts: Date.now() });
 
-    const approvalAfter = Math.min(2, Math.max(items.length - 1, 0));
-    const step = (index: number) => {
+    this.later(run.id, REPLAY_STEP_MS, () => {
       if (run.status !== "running") return;
-      if (index >= items.length) {
-        run.status = "succeeded";
-        run.endedAt = now();
+      if (!run.title) {
+        run.title = scenario.title;
         run.updatedAt = now();
-        if (!run.title) {
-          run.title = (this.runs.find((r) => r.id === snapshot.replayRunId)?.title ?? "Demo run") as string;
-          this.push(CHANNELS.runs.updated, { runId: run.id, ts: Date.now() });
-        }
-        this.push(CHANNELS.runs.statusChanged, { runId: run.id, status: "succeeded", ts: Date.now() });
-        return;
+        this.push(CHANNELS.runs.updated, { runId: run.id, ts: Date.now() });
       }
-      const item = items[index];
-      const id = this.nextId++;
-      list.push({ ...item, id, runId: run.id, createdAt: now() });
-      if (item.kind === "image") this.imageAliases.set(id, String(item.id));
-      for (const call of callsByItem.get(index) ?? []) {
-        calls.push({ ...call, id: this.nextId++, runId: run.id, createdAt: now(), updatedAt: now() });
-      }
-      run.updatedAt = now();
-      this.push(CHANNELS.runs.eventPersisted, { runId: run.id, ts: Date.now() });
-
-      if (index === approvalAfter && items.length > 2) {
-        this.askApproval(run, () => this.later(REPLAY_STEP_MS, () => step(index + 1)));
-        return;
-      }
-      this.later(REPLAY_STEP_MS, () => step(index + 1));
-    };
-    this.later(REPLAY_STEP_MS, () => step(0));
+      this.appendArtifact(run, "report", scenario.intro(prompt));
+      this.playInspection(run, scenario, prompt, 0);
+    });
   }
 
-  /** One approval per replay: real card, real countdown, answers itself if ignored. */
-  private askApproval(run: DemoRun, resume: () => void): void {
-    const requestId = `demo-approval-${Date.now()}`;
-    this.approval = {
+  private playInspection(
+    run: DemoRun,
+    scenario: DemoScenario,
+    prompt: string,
+    index: number,
+  ): void {
+    this.later(run.id, REPLAY_STEP_MS, () => {
+      if (run.status !== "running") return;
+      const tool = scenario.inspectionTools[index];
+      if (!tool) {
+        this.askApproval(run, scenario, prompt);
+        return;
+      }
+      this.appendToolCall(run, tool);
+      this.playInspection(run, scenario, prompt, index + 1);
+    });
+  }
+
+  /** One approval per scenario, with genuinely different approve/deny branches. */
+  private askApproval(
+    run: DemoRun,
+    scenario: DemoScenario,
+    prompt: string,
+  ): void {
+    const requestId = `demo-approval-${Date.now()}-${this.nextId++}`;
+    const approval: PendingApproval = {
       requestId,
       runId: run.id,
       toolName: "Bash",
-      toolInput: { command: "npm run build" },
+      toolInput: { command: scenario.approval.command },
       kind: "tool_approval",
-      header: "Run a command?",
-      question: "The agent wants to run `npm run build` in the workspace.",
+      header: scenario.approval.header,
+      question: scenario.approval.question,
       timestamp: Date.now(),
       expiresAt: Date.now() + APPROVAL_AUTO_RESOLVE_MS,
     };
-    this.approvalContinue = resume;
-    this.push(CHANNELS.runs.toolApprovalRequest, this.approval);
-    this.later(APPROVAL_AUTO_RESOLVE_MS, () => {
-      if (this.approval?.requestId !== requestId) return;
+    this.approvals.set(requestId, approval);
+    this.approvalContinuations.set(requestId, {
+      runId: run.id,
+      approve: () => {
+        if (run.status !== "running") return;
+        this.appendToolCall(run, {
+          toolName: "Bash",
+          input: {
+            command: scenario.approval.command,
+            description: "Validate the sample mobile workspace",
+          },
+          output: scenario.approval.output,
+        });
+        this.finishAfterReport(run, scenario.approvedResult(prompt));
+      },
+      deny: () => {
+        if (run.status !== "running") return;
+        this.finishAfterReport(run, scenario.deniedResult(prompt));
+      },
+    });
+    this.push(CHANNELS.runs.toolApprovalRequest, approval);
+    this.later(run.id, APPROVAL_AUTO_RESOLVE_MS, () => {
+      if (!this.approvals.has(requestId)) return;
       this.respondToApproval({ requestId, approved: true });
     });
   }
+
+  private appendArtifact(
+    run: DemoRun,
+    kind: string,
+    content: string,
+    metadata: Json = { source: "assistant.message", isFromSubagent: false },
+  ): void {
+    const list = this.artifacts.get(run.id) ?? [];
+    this.artifacts.set(run.id, list);
+    list.push({
+      id: this.nextId++,
+      runId: run.id,
+      kind,
+      content,
+      path: null,
+      metadata,
+      createdAt: now(),
+    });
+    run.updatedAt = now();
+    this.push(CHANNELS.runs.eventPersisted, { runId: run.id, ts: Date.now() });
+  }
+
+  private appendToolCall(run: DemoRun, tool: DemoToolSpec): void {
+    const calls = this.toolCalls.get(run.id) ?? [];
+    this.toolCalls.set(run.id, calls);
+    const timestamp = now();
+    calls.push({
+      id: this.nextId++,
+      runId: run.id,
+      toolName: tool.toolName,
+      status: "done",
+      input: tool.input,
+      output: tool.output,
+      error: null,
+      startedAt: timestamp,
+      endedAt: timestamp,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+    run.updatedAt = timestamp;
+    this.push(CHANNELS.runs.eventPersisted, { runId: run.id, ts: Date.now() });
+  }
+
+  private finishAfterReport(run: DemoRun, report: string): void {
+    this.later(run.id, REPLAY_STEP_MS, () => {
+      if (run.status !== "running") return;
+      this.appendArtifact(run, "report", report);
+      this.later(run.id, REPLAY_STEP_MS, () => this.finishRun(run));
+    });
+  }
+
+  private finishRun(run: DemoRun): void {
+    if (run.status !== "running") return;
+    run.status = "succeeded";
+    run.endedAt = now();
+    run.updatedAt = now();
+    this.clearTimers(run.id);
+    this.push(CHANNELS.runs.statusChanged, {
+      runId: run.id,
+      status: "succeeded",
+      ts: Date.now(),
+    });
+  }
+}
+
+function safeFileName(name: string): string {
+  const cleaned = name.replace(/[\\/\0]/g, "-").trim();
+  return cleaned || "attachment";
 }

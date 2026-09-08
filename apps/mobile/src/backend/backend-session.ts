@@ -59,7 +59,11 @@ import {
   readArtifactImage,
 } from "./sync";
 import { isConnectionLoss, WsTransport, type CloseInfo } from "./ws-transport";
-import { createDemoTransport, isDemoEndpoint } from "./demo/transport";
+import {
+  createDemoTransport,
+  DEMO_BACKEND_ID,
+  isDemoEndpoint,
+} from "./demo/transport";
 
 /**
  * The app-wide composition of paired backend + supervisor + sync: one instance
@@ -113,6 +117,22 @@ function platformSignals(): SupervisorSignals {
           listener(state === "active");
         });
         return () => subscription.remove();
+      },
+    },
+  };
+}
+
+/** Demo Mode is fully on-device and must also work without a network. */
+function demoSignals(): SupervisorSignals {
+  const signals = platformSignals();
+  return {
+    ...signals,
+    network: {
+      async isOnline() {
+        return true;
+      },
+      subscribe() {
+        return () => {};
       },
     },
   };
@@ -216,7 +236,7 @@ class BackendSession {
         }
         return descriptor;
       },
-      signals: platformSignals(),
+      signals: backend.backendId === DEMO_BACKEND_ID ? demoSignals() : platformSignals(),
     });
     this.supervisor = supervisor;
     this.unsubscribeSupervisor = supervisor.subscribe(() => {
@@ -340,7 +360,10 @@ class BackendSession {
     if (!space) {
       return { success: false, error: "That space no longer exists on your Mac" };
     }
-    if (!hasAiDataConsent(backend.backendId, space.providerId)) {
+    if (
+      backend.backendId !== DEMO_BACKEND_ID &&
+      !hasAiDataConsent(backend.backendId, space.providerId)
+    ) {
       return {
         success: false,
         error: missingAiDataConsentMessage(space.providerId),
@@ -434,7 +457,10 @@ class BackendSession {
     if (!run) {
       return { success: false, error: "That run is not available on this phone yet" };
     }
-    if (!hasAiDataConsent(backend.backendId, run.providerId)) {
+    if (
+      backend.backendId !== DEMO_BACKEND_ID &&
+      !hasAiDataConsent(backend.backendId, run.providerId)
+    ) {
       return {
         success: false,
         error: missingAiDataConsentMessage(run.providerId),
@@ -477,7 +503,10 @@ class BackendSession {
     if (!run) {
       return { success: false, error: "That run is not available on this phone yet" };
     }
-    if (!hasAiDataConsent(backend.backendId, run.providerId)) {
+    if (
+      backend.backendId !== DEMO_BACKEND_ID &&
+      !hasAiDataConsent(backend.backendId, run.providerId)
+    ) {
       return {
         success: false,
         error: missingAiDataConsentMessage(run.providerId),

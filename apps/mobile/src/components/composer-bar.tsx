@@ -12,7 +12,9 @@ import {
 } from "@/lib/context-picker";
 import { PROVIDER_IDS } from "@mains/contracts/provider-ids";
 import {
+  clipboardHasImage,
   mergeComposerAttachments,
+  pasteComposerImage,
   pickComposerDocuments,
   pickComposerImages,
   type ComposerAttachment,
@@ -168,6 +170,19 @@ export function ComposerBar({
     }
   };
 
+  const pasteImage = async () => {
+    try {
+      const pasted = await pasteComposerImage();
+      if (pasted.length === 0) {
+        setAttachmentError("There is no image on the clipboard.");
+        return;
+      }
+      addPicked(pasted);
+    } catch (caught) {
+      setAttachmentError(caught instanceof Error ? caught.message : "Could not paste that image");
+    }
+  };
+
   const pickDocuments = async () => {
     try {
       addPicked(await pickComposerDocuments());
@@ -176,23 +191,31 @@ export function ComposerBar({
     }
   };
 
-  const openAttachments = () => {
+  const openAttachments = async () => {
     if (!onAttachmentsChange) return;
     setAttachmentError(null);
-    if (providerId === PROVIDER_IDS.codex) {
+    // Paste is offered only when there is an image to paste; checking costs no
+    // permission, while reading the clipboard would raise the system prompt.
+    const canPaste = await clipboardHasImage().catch(() => false);
+    // Codex takes images only, so with an empty clipboard there is nothing to
+    // choose between and the picker opens straight away.
+    const documents = providerId !== PROVIDER_IDS.codex;
+    if (!canPaste && !documents) {
       void pickImages();
       return;
     }
+    const actions: { label: string; run: () => void }[] = [
+      { label: "Images", run: () => void pickImages() },
+      ...(documents ? [{ label: "Documents", run: () => void pickDocuments() }] : []),
+      ...(canPaste ? [{ label: "Paste image", run: () => void pasteImage() }] : []),
+    ];
     ActionSheetIOS.showActionSheetWithOptions(
       {
         title: "Add attachment",
-        options: ["Images", "Documents", "Cancel"],
-        cancelButtonIndex: 2,
+        options: [...actions.map((a) => a.label), "Cancel"],
+        cancelButtonIndex: actions.length,
       },
-      (index) => {
-        if (index === 0) void pickImages();
-        if (index === 1) void pickDocuments();
-      },
+      (index) => actions[index]?.run(),
     );
   };
 
@@ -247,7 +270,7 @@ export function ComposerBar({
         <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
           <RoundControl
             label={providerId === PROVIDER_IDS.codex ? "Upload image" : "Upload file or photo"}
-            onPress={openAttachments}
+            onPress={() => void openAttachments()}
             disabled={!onAttachmentsChange}
           >
             <SFSymbol name="plus" size={18} tint={colors.label} />

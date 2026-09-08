@@ -2,6 +2,8 @@ import { WS_PROTOCOL_VERSION } from "@mains/contracts/ws-protocol";
 
 import { backendSession } from "../backend-session";
 import { savePairedBackend } from "../paired-backend-store";
+import { setSpaceTarget } from "../sync";
+import { DEMO_SPACE_ID } from "./demo-scenarios";
 import { DEMO_BACKEND_ID, DEMO_ENDPOINT } from "./transport";
 import snapshot from "./demo-snapshot.json";
 
@@ -22,4 +24,13 @@ export async function startDemo(): Promise<void> {
     protocolVersion: WS_PROTOCOL_VERSION,
   });
   await backendSession.start();
+  // Open on the scenario's useful path instead of the snapshot's first space:
+  // Code mode, Codex, and the sample `mains` workspace already selected.
+  backendSession.selectSpace(DEMO_SPACE_ID);
+  const workspace = snapshot.workspaces.find((item) => item.name === "mains");
+  if (workspace) {
+    setSpaceTarget(DEMO_BACKEND_ID, DEMO_SPACE_ID, {
+      workspaceId: workspace.id,
+    });
+  }
 }

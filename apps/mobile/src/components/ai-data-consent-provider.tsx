@@ -15,10 +15,13 @@ import {
   hasAiDataConsent,
   type AiProviderDisclosure,
 } from "@/lib/ai-data-consent";
+import { DEMO_BACKEND_ID } from "@/backend/demo/transport";
 
 export interface PendingAiDataConsent {
   backendId: string;
   disclosure: AiProviderDisclosure;
+  /** Demo Mode exercises the disclosure UI but sends nothing off-device. */
+  isDemo: boolean;
 }
 
 interface ActiveRequest {
@@ -45,6 +48,7 @@ const AiDataConsentContext = createContext<AiDataConsentContextValue | null>(nul
 export function AiDataConsentProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const activeRef = useRef<ActiveRequest | null>(null);
+  const seenDemoDisclosuresRef = useRef(new Set<string>());
   const [pending, setPending] = useState<PendingAiDataConsent | null>(null);
 
   const settle = useCallback((allowed: boolean) => {
@@ -57,7 +61,14 @@ export function AiDataConsentProvider({ children }: { children: ReactNode }) {
 
   const requestConsent = useCallback(
     (backendId: string, providerId: string): Promise<boolean> => {
-      if (hasAiDataConsent(backendId, providerId)) return Promise.resolve(true);
+      const key = `${backendId}:${providerId}`;
+      const isDemo = backendId === DEMO_BACKEND_ID;
+      if (
+        (isDemo && seenDemoDisclosuresRef.current.has(key)) ||
+        (!isDemo && hasAiDataConsent(backendId, providerId))
+      ) {
+        return Promise.resolve(true);
+      }
 
       const disclosure = aiProviderDisclosure(providerId);
       if (!disclosure) {
@@ -66,13 +77,12 @@ export function AiDataConsentProvider({ children }: { children: ReactNode }) {
         );
       }
 
-      const key = `${backendId}:${providerId}`;
       const active = activeRef.current;
       if (active) {
         return active.key === key ? active.promise : Promise.resolve(false);
       }
 
-      const nextPending = { backendId, disclosure };
+      const nextPending = { backendId, disclosure, isDemo };
       let resolveRequest: (allowed: boolean) => void = () => {};
       const promise = new Promise<boolean>((resolve) => {
         resolveRequest = resolve;
@@ -93,10 +103,14 @@ export function AiDataConsentProvider({ children }: { children: ReactNode }) {
   const allowPending = useCallback(() => {
     const active = activeRef.current;
     if (!active) return;
-    grantAiDataConsent(
-      active.pending.backendId,
-      active.pending.disclosure.providerId,
-    );
+    if (active.pending.isDemo) {
+      seenDemoDisclosuresRef.current.add(active.key);
+    } else {
+      grantAiDataConsent(
+        active.pending.backendId,
+        active.pending.disclosure.providerId,
+      );
+    }
     settle(true);
   }, [settle]);
 

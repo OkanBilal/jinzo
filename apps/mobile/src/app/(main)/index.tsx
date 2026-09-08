@@ -9,6 +9,9 @@ import Animated, { useAnimatedKeyboard, useAnimatedStyle } from "react-native-re
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { backendSession, useSession } from "@/backend/backend-session";
+import { DEMO_SUGGESTED_PROMPT } from "@/backend/demo/demo-scenarios";
+import { startDemo } from "@/backend/demo/start";
+import { DEMO_BACKEND_ID } from "@/backend/demo/transport";
 import { useAiDataConsent } from "@/components/ai-data-consent-provider";
 import { Button } from "@/components/button";
 import { ComposerBar, composerBottomPadding } from "@/components/composer-bar";
@@ -61,6 +64,7 @@ export default function NewRunScreen() {
   const backendId = session.backend?.backendId ?? "";
   const spaceId = session.selectedSpaceId ?? "";
   const connected = session.connection.kind === "connected";
+  const isDemo = backendId === DEMO_BACKEND_ID;
 
   const spaceQuery = useLiveQuery(
     db.select().from(spaces).where(and(eq(spaces.backendId, backendId), eq(spaces.id, spaceId))).limit(1),
@@ -108,6 +112,7 @@ export default function NewRunScreen() {
   const [contextSkills, setContextSkills] = useState<PromptSkill[]>([]);
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
   const [sending, setSending] = useState(false);
+  const [demoStarting, setDemoStarting] = useState(false);
   const [pendingMode, setPendingMode] = useState<ModeId | null>(null);
   const [hint, setHint] = useState<string | null>(null);
 
@@ -147,6 +152,19 @@ export default function NewRunScreen() {
     const result = await backendSession.setSpaceMode(space.id, mode);
     setPendingMode(null);
     if (!result.success) setHint(result.error);
+  };
+
+  const tryDemo = async () => {
+    if (demoStarting) return;
+    setDemoStarting(true);
+    setHint(null);
+    try {
+      await startDemo();
+    } catch (caught) {
+      setHint(caught instanceof Error ? caught.message : "Could not start Demo Mode");
+    } finally {
+      setDemoStarting(false);
+    }
   };
 
   const send = async () => {
@@ -298,6 +316,12 @@ export default function NewRunScreen() {
                 Open Mains on the desktop, turn on network access or Tailscale HTTPS, and scan its pairing code.
               </ThemedText>
               <Button title="Scan pairing code" onPress={() => router.push("/pair" as Href)} />
+              <Button
+                title="Try Demo Mode on this phone"
+                variant="secondary"
+                loading={demoStarting}
+                onPress={() => void tryDemo()}
+              />
             </View>
           )}
 
@@ -310,6 +334,35 @@ export default function NewRunScreen() {
               {hint}
             </ThemedText>
           ) : null}
+          {isDemo && space && !draft.trim() ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Use suggested demo prompt: ${DEMO_SUGGESTED_PROMPT}`}
+              onPress={() => {
+                setDraft(DEMO_SUGGESTED_PROMPT);
+                setHint(null);
+              }}
+              style={({ pressed }) => ({
+                flexDirection: "row",
+                alignItems: "center",
+                gap: spacing.sm,
+                marginHorizontal: spacing.md,
+                paddingHorizontal: spacing.ms,
+                paddingVertical: spacing.sm,
+                borderRadius: radius.md,
+                borderCurve: "continuous",
+                backgroundColor: colors.fill,
+                opacity: pressed ? 0.65 : 1,
+              })}
+            >
+              <SFSymbol name="sparkles" size={14} tint={colors.secondaryLabel} />
+              <ThemedText variant="footnote" numberOfLines={2} style={{ flex: 1 }}>
+                Suggested demo: {DEMO_SUGGESTED_PROMPT}
+              </ThemedText>
+              <SFSymbol name="arrow.up.left" size={12} tint={colors.tertiaryLabel} />
+            </Pressable>
+          ) : null}
+
           {/* Run target */}
           {space && (
             <View
@@ -330,8 +383,6 @@ export default function NewRunScreen() {
               />
             </View>
           )}
-
-
 
           <ComposerBar
             reservedTop={insets.top + spacing.sm + CONTROL_HEIGHT + spacing.sm}

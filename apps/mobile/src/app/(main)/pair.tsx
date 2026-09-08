@@ -1,4 +1,5 @@
 import { type BarcodeScanningResult, CameraView, useCameraPermissions } from "expo-camera";
+import * as Clipboard from "expo-clipboard";
 import Constants from "expo-constants";
 import * as Linking from "expo-linking";
 import { Stack, useRouter } from "expo-router";
@@ -50,6 +51,8 @@ export default function PairScreen() {
   );
   const [entryMode, setEntryMode] = useState<EntryMode>("camera");
   const [manualValue, setManualValue] = useState("");
+  const [demoStarting, setDemoStarting] = useState(false);
+  const [demoError, setDemoError] = useState<string | null>(null);
 
   useEffect(() => {
     const subscription = Linking.addEventListener("url", ({ url }) => {
@@ -63,6 +66,22 @@ export default function PairScreen() {
     const link = parsePairingLink(value);
     setScanState(link ? { kind: "detected", link } : { kind: "invalid" });
   }, []);
+
+  /**
+   * Read the link off the clipboard.
+   *
+   * `UIPasteControl` would skip iOS's "Allow Paste?" prompt, but it hands the
+   * content over as item providers the system then refuses to authorize —
+   * with no callback to JS, so the button simply does nothing. Reading the
+   * string outright is one prompt and always works; on a screen used once,
+   * that is the better trade.
+   */
+  const pasteLink = useCallback(async () => {
+    const pasted = (await Clipboard.getStringAsync()).trim();
+    if (!pasted) return;
+    setManualValue(pasted);
+    accept(pasted);
+  }, [accept]);
 
   const handleScan = useCallback(
     (result: BarcodeScanningResult) => accept(result.data),
@@ -99,8 +118,17 @@ export default function PairScreen() {
   };
 
   const tryDemo = async () => {
-    await startDemo();
-    goHome();
+    if (demoStarting) return;
+    setDemoStarting(true);
+    setDemoError(null);
+    try {
+      await startDemo();
+      goHome();
+    } catch (error) {
+      setDemoError(error instanceof Error ? error.message : "Could not start Demo Mode");
+    } finally {
+      setDemoStarting(false);
+    }
   };
 
   const status = (
@@ -147,13 +175,12 @@ export default function PairScreen() {
               ]}
               value={manualValue}
             />
-            {scanState.kind === "scanning" && (
-              <Button
-                title="Use this link"
-                disabled={manualValue.trim().length === 0}
-                onPress={() => accept(manualValue)}
-              />
-            )}
+            {scanState.kind === "scanning" &&
+              (manualValue.trim().length === 0 ? (
+                <Button title="Paste link" onPress={() => void pasteLink()} />
+              ) : (
+                <Button title="Use this link" onPress={() => accept(manualValue)} />
+              ))}
             {status}
             <Button title="Use the camera instead" variant="ghost" onPress={() => switchTo("camera")} />
           </>
@@ -213,7 +240,21 @@ export default function PairScreen() {
           <ThemedText variant="footnote" style={{ color: colors.secondaryLabel, textAlign: "center" }}>
             No Mac nearby? Explore Mains with sample data.
           </ThemedText>
-          <Button title="Try a demo Mac" variant="ghost" onPress={() => void tryDemo()} />
+          <Button
+            title="Try Demo Mode"
+            variant="ghost"
+            loading={demoStarting}
+            onPress={() => void tryDemo()}
+          />
+          {demoError ? (
+            <ThemedText
+              variant="footnote"
+              selectable
+              style={{ color: colors.systemOrange, textAlign: "center" }}
+            >
+              {demoError}
+            </ThemedText>
+          ) : null}
         </View>
       </ScrollView>
 

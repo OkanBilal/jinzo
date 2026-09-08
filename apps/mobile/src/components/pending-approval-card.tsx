@@ -5,7 +5,7 @@ import { Pressable, TextInput, View } from "react-native";
 
 import type { PendingApprovalRow } from "@/db/schema";
 import { toolInputPreview } from "@/lib/format";
-import { colors, radius, shadows, spacing, type, useBrandColors } from "@/theme";
+import { colors, radius, shadows, spacing, type, useProviderAccentPair } from "@/theme";
 
 import { Button } from "./button";
 import { SFSymbol } from "./sf-symbol";
@@ -205,7 +205,7 @@ export function PendingApprovalCard({
   /** Absent → read-only card. */
   onRespond?: (decision: ApprovalDecision) => Promise<void>;
 }) {
-  const brand = useBrandColors();
+  const provider = useProviderAccentPair(providerId);
   const [selected, setSelected] = useState<string[]>([]);
   const [freeText, setFreeText] = useState("");
   const [allowForRun, setAllowForRun] = useState(false);
@@ -294,10 +294,10 @@ export function PendingApprovalCard({
               paddingHorizontal: spacing.sm,
               paddingVertical: spacing.xxs + 1,
               borderRadius: radius.full,
-              backgroundColor: brand.accentSoft,
+              backgroundColor: provider.soft,
             }}
           >
-            <ThemedText variant="caption" style={{ color: brand.accent, fontWeight: "600" }}>
+            <ThemedText variant="caption" style={{ color: provider.accent, fontWeight: "600" }}>
               {approvalKindLabel(approval.kind)}
             </ThemedText>
           </View>
@@ -364,23 +364,50 @@ export function PendingApprovalCard({
             gap: spacing.sm,
           }}
         >
-          {visibleParams.map((param, index) => (
-            <View key={`${param.label}-${index}`} style={{ flexDirection: "row", gap: spacing.ms }}>
-              <ThemedText variant="caption" style={{ width: 88 }}>
-                {param.label}
-              </ThemedText>
-              <ThemedText variant="mono" selectable style={{ flex: 1, color: colors.label }}>
-                {param.value}
-              </ThemedText>
-            </View>
-          ))}
+          {visibleParams.map((param, index) => {
+            const isCommand = param.label.toLocaleLowerCase("en-US") === "command";
+            return isCommand ? (
+              <View
+                key={`${param.label}-${index}`}
+                accessible
+                accessibilityLabel={`Command: ${param.value}`}
+                style={{ flexDirection: "row", alignItems: "flex-start", gap: spacing.sm }}
+              >
+                <ThemedText
+                  variant="mono"
+                  style={{ color: provider.accent, fontWeight: "600" }}
+                >
+                  $
+                </ThemedText>
+                <ThemedText
+                  variant="mono"
+                  selectable
+                  style={{ flex: 1, color: colors.label }}
+                >
+                  {param.value}
+                </ThemedText>
+              </View>
+            ) : (
+              <View
+                key={`${param.label}-${index}`}
+                style={{ flexDirection: "row", gap: spacing.ms }}
+              >
+                <ThemedText variant="caption" style={{ width: 88 }}>
+                  {param.label}
+                </ThemedText>
+                <ThemedText variant="mono" selectable style={{ flex: 1, color: colors.label }}>
+                  {param.value}
+                </ThemedText>
+              </View>
+            );
+          })}
           {hiddenParamCount > 0 ? (
             <Pressable
               accessibilityRole="button"
               onPress={() => setShowAllParams((current) => !current)}
               style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1 })}
             >
-              <ThemedText variant="caption" style={{ color: brand.accent, fontWeight: "600" }}>
+              <ThemedText variant="caption" style={{ color: provider.accent, fontWeight: "600" }}>
                 {showAllParams ? "Show fewer" : `Show ${hiddenParamCount} more`}
               </ThemedText>
             </Pressable>
@@ -415,13 +442,13 @@ export function PendingApprovalCard({
                   borderCurve: "continuous",
                   borderWidth: allowForRun ? 0 : 1.5,
                   borderColor: colors.tertiaryLabel,
-                  backgroundColor: allowForRun ? brand.accent : "transparent",
+                  backgroundColor: allowForRun ? provider.accent : "transparent",
                 }}
               >
                 {allowForRun ? (
                   <ThemedText
                     variant="caption"
-                    style={{ color: brand.accentContrast, fontWeight: "700", lineHeight: 16 }}
+                    style={{ color: colors.onTint, fontWeight: "700", lineHeight: 16 }}
                   >
                     ✓
                   </ThemedText>
@@ -442,6 +469,7 @@ export function PendingApprovalCard({
             <Button
               title="Allow"
               size="sm"
+              style={{ backgroundColor: provider.accent }}
               loading={sending === "allow"}
               disabled={sending !== null}
               onPress={() =>
@@ -473,14 +501,14 @@ export function PendingApprovalCard({
                       paddingVertical: spacing.sm + 2,
                       borderRadius: radius.md,
                       borderCurve: "continuous",
-                      backgroundColor: active ? brand.accentSoft : colors.fill,
+                      backgroundColor: active ? provider.soft : colors.fill,
                       opacity: pressed ? 0.7 : 1,
                       gap: spacing.xxs,
                     })}
                   >
                     <ThemedText
                       variant="callout"
-                      style={{ fontWeight: "500", color: active ? brand.accent : colors.label }}
+                      style={{ fontWeight: "500", color: active ? provider.accent : colors.label }}
                     >
                       {option.label}
                     </ThemedText>
@@ -529,6 +557,7 @@ export function PendingApprovalCard({
             <Button
               title="Send"
               size="sm"
+              style={{ backgroundColor: provider.accent }}
               loading={sending === "send"}
               disabled={sending !== null || questionAnswer === null}
               onPress={() =>
@@ -554,6 +583,7 @@ export function PendingApprovalCard({
             <Button
               title="Open & accept"
               size="sm"
+              style={{ backgroundColor: provider.accent }}
               loading={sending === "accept"}
               disabled={sending !== null}
               onPress={() => {
