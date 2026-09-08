@@ -807,7 +807,7 @@ const api = {
   },
   // Terminal operations
   terminal: {
-    create: (payload: { id: string; cwd: string }) =>
+    create: (payload: { id: string; cwd?: string }) =>
       ipcRenderer.invoke(CHANNELS.terminal.create, payload),
     write: (id: string, data: string) =>
       ipcRenderer.invoke(CHANNELS.terminal.write, id, data),

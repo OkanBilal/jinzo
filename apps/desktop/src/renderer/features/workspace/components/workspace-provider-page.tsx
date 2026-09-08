@@ -16,6 +16,7 @@ import { parseStructuralPlanSnapshot } from "@/features/workspace/components/tod
 import {
   useWorkspacePage,
   useToolApproval,
+  useProviderAuthTerminal,
   PluginLogoProvider,
 } from "@/features/workspace/hooks";
 import { CONTENT_COLUMN_GUTTER } from "@/features/workspace/lib/content-column";
@@ -51,6 +52,7 @@ export function WorkspaceProviderPage({
     planExit: planExitConfig,
     enableForkRun,
     enableSuggestions,
+    label: providerLabel,
   } = getProviderVariant(variant);
   const modeConfig = useModeConfig();
   const onboardingCompleted = useAppSelector(
@@ -62,6 +64,13 @@ export function WorkspaceProviderPage({
   const { data: providerData } = useGetProviderByIdQuery(providerId);
   const [updateProvider] = useUpdateProviderMutation();
   const bottomTerminal = useBottomTerminal();
+  const authTerminal = useProviderAuthTerminal();
+  const activeAuthTerminal =
+    authTerminal.session?.providerId === providerId
+      ? authTerminal.session
+      : null;
+  const showWorkspaceTerminal =
+    !!ws.currentWorkspace && modeConfig.showTerminal;
 
   const { pendingApprovals, respond: respondToolApproval } = useToolApproval(
     ws.runs,
@@ -374,12 +383,29 @@ export function WorkspaceProviderPage({
       </div>
       </div>
 
-      {ws.currentWorkspace && modeConfig.showTerminal && (
+      {(activeAuthTerminal || showWorkspaceTerminal) && (
         <TerminalSection
-          workspaceId={ws.currentWorkspace.id}
-          rootPath={ws.currentWorkspace.rootPath}
-          isOpen={bottomTerminal.isOpen}
-          onClose={bottomTerminal.close}
+          id={
+            activeAuthTerminal
+              ? `auth-${providerId}`
+              : ws.currentWorkspace!.id
+          }
+          rootPath={
+            activeAuthTerminal
+              ? undefined
+              : ws.currentWorkspace!.rootPath
+          }
+          isOpen={activeAuthTerminal ? true : bottomTerminal.isOpen}
+          title={
+            activeAuthTerminal
+              ? `Sign in to ${providerLabel}`
+              : "Terminal"
+          }
+          pendingCommand={activeAuthTerminal?.pendingCommand}
+          onPendingCommandSent={authTerminal.markCommandSent}
+          onClose={
+            activeAuthTerminal ? authTerminal.close : bottomTerminal.close
+          }
         />
       )}
     </div>

@@ -4,7 +4,7 @@ import {
   getProviderVariant,
   type ProviderVariant,
 } from "@/lib/provider-variants";
-import { useBottomTerminal } from "@/hooks/use-bottom-terminal";
+import { useProviderAuthTerminal } from "@/features/workspace/hooks/use-provider-auth-terminal";
 import { useUpdateProviderCliMutation } from "@/lib/redux/api";
 
 interface ProviderAuthNoticeProps {
@@ -18,9 +18,9 @@ interface ProviderAuthNoticeProps {
 }
 
 /**
- * Yellow auth notice with a one-click recovery: "Sign in" opens the bottom
- * terminal and runs the variant's `authLoginCommand` (the login flows are
- * interactive, so they live in the terminal rather than a headless spawn).
+ * Yellow auth notice with a one-click recovery: "Sign in" opens a scoped
+ * provider-auth terminal and runs the variant's `authLoginCommand` (the login
+ * flows are interactive, so they live in a PTY rather than a headless spawn).
  * Used above the composer (signed-out preflight) and in the transcript when
  * a run fails with an auth-classified error.
  */
@@ -32,8 +32,8 @@ export function ProviderAuthNotice({
   isRechecking = false,
   className = "",
 }: ProviderAuthNoticeProps) {
-  const { runCommand } = useBottomTerminal();
-  const { authLoginCommand } = getProviderVariant(variant);
+  const authTerminal = useProviderAuthTerminal();
+  const { providerId, authLoginCommand } = getProviderVariant(variant);
 
   return (
     <div
@@ -60,7 +60,7 @@ export function ProviderAuthNotice({
           variant="subtle"
           tooltip={`Runs \`${authLoginCommand}\` in the terminal`}
           tooltipPosition="top-left"
-          onClick={() => runCommand(authLoginCommand)}
+          onClick={() => authTerminal.open(providerId, authLoginCommand)}
           className=" glass-outline bg-warning/10 text-warning hover:text-warning/80 hover:bg-warning/20! transition-colors cursor-pointer"
         >
           Sign in

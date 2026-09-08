@@ -12,19 +12,25 @@ const XtermTerminal = lazy(() =>
 );
 
 interface TerminalSectionProps {
-  workspaceId: string;
-  rootPath: string;
+  id: string;
+  rootPath?: string;
   isOpen: boolean;
+  title?: string;
+  pendingCommand?: string | null;
+  onPendingCommandSent?: () => void;
   onClose?: () => void;
 }
 
 export function TerminalSection({
-  workspaceId,
+  id,
   rootPath,
   isOpen,
+  title = "Terminal",
+  pendingCommand,
+  onPendingCommandSent,
   onClose,
 }: TerminalSectionProps) {
-  const terminalId = `terminal-${workspaceId}`;
+  const terminalId = `terminal-${id}`;
 
   return (
     <div
@@ -35,7 +41,7 @@ export function TerminalSection({
         <div className="flex items-center gap-1">
           <Bash className="size-4 text-primary-600 dark:text-primary-400" />
           <Body size="s" tone="muted" weight="medium">
-            Terminal
+            {title}
           </Body>
         </div>
         {onClose && (
@@ -55,6 +61,8 @@ export function TerminalSection({
             <XtermTerminal
               id={terminalId}
               rootPath={rootPath}
+              pendingCommand={pendingCommand}
+              onPendingCommandSent={onPendingCommandSent}
             />
           </Suspense>
         </div>

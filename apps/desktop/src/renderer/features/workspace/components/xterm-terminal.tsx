@@ -3,8 +3,6 @@ import { appApi, appEvents } from "@/lib/transport";
 import { Terminal, ITheme } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { useDarkMode } from "@/hooks/use-dark-mode";
-import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
-import { clearPendingTerminalCommand } from "@/lib/redux/slices/workspaceSlice";
 
 const baseThemeColors = {
   dark: {
@@ -64,20 +62,25 @@ const getTheme = (variant: string | undefined, isDark: boolean): ITheme => {
 
 interface XtermTerminalProps {
   id: string;
-  rootPath: string;
+  /** Undefined asks the backend to start the PTY in its own home directory. */
+  rootPath?: string;
   variant?: string;
+  pendingCommand?: string | null;
+  onPendingCommandSent?: () => void;
 }
 
-export function XtermTerminal({ id, rootPath, variant }: XtermTerminalProps) {
+export function XtermTerminal({
+  id,
+  rootPath,
+  variant,
+  pendingCommand,
+  onPendingCommandSent,
+}: XtermTerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
   const { darkMode } = useDarkMode();
-  const dispatch = useAppDispatch();
-  const pendingCommand = useAppSelector(
-    (state) => state.workspace.pendingTerminalCommand,
-  );
   const [ptyReady, setPtyReady] = useState(false);
 
   const theme = useMemo(() => getTheme(variant, darkMode), [variant, darkMode]);
@@ -115,9 +118,8 @@ export function XtermTerminal({ id, rootPath, variant }: XtermTerminalProps) {
       fitAddon.fit();
     });
 
-    // Create the PTY backend. Readiness is tracked so queued one-shot
-    // commands (useBottomTerminal().runCommand) aren't written into a PTY
-    // that doesn't exist yet.
+    // Create the PTY backend. Readiness is tracked so queued one-shot commands
+    // aren't written into a PTY that doesn't exist yet.
     let disposed = false;
     setPtyReady(false);
     void Promise.resolve(appApi.terminal.create({ id, cwd: rootPath })).then(
@@ -177,8 +179,8 @@ export function XtermTerminal({ id, rootPath, variant }: XtermTerminalProps) {
   useEffect(() => {
     if (!ptyReady || !pendingCommand) return;
     appApi.terminal.write(id, `${pendingCommand}\r`);
-    dispatch(clearPendingTerminalCommand());
-  }, [ptyReady, pendingCommand, id, dispatch]);
+    onPendingCommandSent?.();
+  }, [ptyReady, pendingCommand, id, onPendingCommandSent]);
 
   return (
     <div

@@ -7,7 +7,7 @@ import { CHANNELS } from "../../../shared/ipc-kit/channels";
 export function registerTerminalIpc(): void {
   ipcMain.handle(
     CHANNELS.terminal.create,
-    async (ctx: { clientId?: string }, payload: { id: string; cwd: string }) => {
+    async (ctx: { clientId?: string }, payload: { id: string; cwd?: string }) => {
       try {
         // On the WS path `ctx.clientId` is the connection that created the
         // terminal, so its output is scoped to that client. On the local path it

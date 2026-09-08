@@ -1,5 +1,6 @@
 import * as pty from "node-pty";
 import { existsSync } from "fs";
+import os from "os";
 import path from "path";
 
 type DataCallback = (id: string, data: string) => void;
@@ -28,11 +29,13 @@ function getSafeEnv(): Record<string, string> {
 }
 
 export const terminalService = {
-  create(id: string, cwd: string, onData: DataCallback): void {
+  create(id: string, cwd: string | undefined, onData: DataCallback): void {
     // Kill existing instance if present
     this.destroy(id);
 
-    const resolved = path.resolve(cwd);
+    // Provider login terminals are workspace-less. Resolve their cwd on the
+    // backend, not in the renderer, so remote backends use their own home.
+    const resolved = path.resolve(cwd || os.homedir());
     if (!existsSync(resolved)) {
       throw new Error(`Terminal cwd does not exist: ${resolved}`);
     }

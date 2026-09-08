@@ -8,6 +8,7 @@ export { useWorkspacePage } from "./use-workspace-page";
 export { useBackgroundRuns } from "./use-background-runs";
 export type { BackgroundRunsView } from "./use-background-runs";
 export { useProviderModels } from "./use-provider-models";
+export { useProviderAuthTerminal } from "./use-provider-auth-terminal";
 export {
   PluginLogoProvider,
   usePluginLogoMap,

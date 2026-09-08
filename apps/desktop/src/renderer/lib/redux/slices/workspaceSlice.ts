@@ -16,6 +16,12 @@ export interface ReviewTab {
   status: string;
 }
 
+export interface ProviderAuthTerminalState {
+  providerId: string;
+  /** Cleared after XtermTerminal writes it into the ready PTY. */
+  pendingCommand: string | null;
+}
+
 export interface WorkspaceState {
   activeWorkspaceId: string | null;
   activeWorkspaceIdByProvider: Record<string, string>;
@@ -48,10 +54,11 @@ export interface WorkspaceState {
   pendingGoal: string | null;
   pendingAutoExecute: boolean;
   /**
-   * One-shot command queued for the bottom terminal (e.g. a provider login).
-   * Consumed and cleared by XtermTerminal once the PTY is ready.
+   * Purpose-scoped provider login terminal. Unlike the general workspace
+   * terminal this may be shown in every mode, but only after an explicit
+   * Sign in action. It is intentionally not part of persisted renderer state.
    */
-  pendingTerminalCommand: string | null;
+  providerAuthTerminal: ProviderAuthTerminalState | null;
   pendingReviewTarget: {
     type: "uncommittedChanges" | "baseBranch" | "commit" | "custom";
     branch?: string;
@@ -88,7 +95,7 @@ const initialState: WorkspaceState = {
   openNoteTabs: [],
   pendingGoal: null,
   pendingAutoExecute: false,
-  pendingTerminalCommand: null,
+  providerAuthTerminal: null,
   pendingReviewTarget: null,
   pendingRunId: null,
   selectedCollectionId: null,
@@ -138,6 +145,9 @@ const workspaceSlice = createSlice({
       if (state.selectedProviderId !== action.payload) {
         state.previousNonEditorTab = null;
         state.activeTab = "editor";
+        // A login PTY belongs to the provider that opened it. Never carry its
+        // prompt or a not-yet-written command into the next space.
+        state.providerAuthTerminal = null;
       }
       state.selectedProviderId = action.payload;
     },
@@ -287,11 +297,22 @@ const workspaceSlice = createSlice({
       state.pendingGoal = null;
       state.pendingAutoExecute = false;
     },
-    setPendingTerminalCommand: (state, action: PayloadAction<string>) => {
-      state.pendingTerminalCommand = action.payload;
+    openProviderAuthTerminal: (
+      state,
+      action: PayloadAction<{ providerId: string; command: string }>,
+    ) => {
+      state.providerAuthTerminal = {
+        providerId: action.payload.providerId,
+        pendingCommand: action.payload.command,
+      };
     },
-    clearPendingTerminalCommand: (state) => {
-      state.pendingTerminalCommand = null;
+    markProviderAuthCommandSent: (state) => {
+      if (state.providerAuthTerminal) {
+        state.providerAuthTerminal.pendingCommand = null;
+      }
+    },
+    closeProviderAuthTerminal: (state) => {
+      state.providerAuthTerminal = null;
     },
     setPendingReviewTarget: (state, action: PayloadAction<WorkspaceState["pendingReviewTarget"]>) => {
       state.pendingReviewTarget = action.payload;
@@ -343,8 +364,9 @@ export const {
   setPendingGoal,
   setPendingAutoExecute,
   clearPendingGoal,
-  setPendingTerminalCommand,
-  clearPendingTerminalCommand,
+  openProviderAuthTerminal,
+  markProviderAuthCommandSent,
+  closeProviderAuthTerminal,
   setPendingReviewTarget,
   clearPendingReviewTarget,
   setPendingRunId,

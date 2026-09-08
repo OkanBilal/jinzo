@@ -2,6 +2,9 @@ import { describe, it, expect } from "vitest";
 import reducer, {
   addContextItem,
   clearContextItems,
+  closeProviderAuthTerminal,
+  markProviderAuthCommandSent,
+  openProviderAuthTerminal,
   removeContextItem,
   setActiveTab,
   setActiveWorkspaceId,
@@ -85,6 +88,42 @@ describe("workspaceSlice — the active tab across a space (provider) switch", (
   it("keeps the tab when the same provider is set again", () => {
     const state = reducer(onRunTab(), setWorkspaceProvider("claude_code"));
     expect(state.activeTab).toBe("run-from-claude");
+  });
+});
+
+describe("workspaceSlice — provider auth terminal", () => {
+  const opened = () =>
+    reducer(
+      undefined,
+      openProviderAuthTerminal({
+        providerId: "claude_code",
+        command: "claude auth login",
+      }),
+    );
+
+  it("opens with a command for exactly one provider", () => {
+    expect(opened().providerAuthTerminal).toEqual({
+      providerId: "claude_code",
+      pendingCommand: "claude auth login",
+    });
+  });
+
+  it("keeps the terminal open after the queued command is sent", () => {
+    const state = reducer(opened(), markProviderAuthCommandSent());
+    expect(state.providerAuthTerminal).toEqual({
+      providerId: "claude_code",
+      pendingCommand: null,
+    });
+  });
+
+  it("clears the terminal and any pending command when closed", () => {
+    const state = reducer(opened(), closeProviderAuthTerminal());
+    expect(state.providerAuthTerminal).toBeNull();
+  });
+
+  it("does not carry an auth terminal across provider switches", () => {
+    const state = reducer(opened(), setWorkspaceProvider("codex"));
+    expect(state.providerAuthTerminal).toBeNull();
   });
 });
 

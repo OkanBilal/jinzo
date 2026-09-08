@@ -24,6 +24,8 @@ vi.mock("fs", async (importOriginal) => {
 
 import { terminalService } from "./terminal.service";
 import * as pty from "node-pty";
+import os from "os";
+import path from "path";
 
 describe("terminalService", () => {
   beforeEach(() => {
@@ -48,6 +50,16 @@ describe("terminalService", () => {
           cwd: "/home/user",
           env: expect.any(Object),
         }),
+      );
+    });
+
+    it("uses the backend home directory for a workspace-less terminal", () => {
+      terminalService.create("auth", undefined, vi.fn());
+
+      expect(pty.spawn).toHaveBeenCalledWith(
+        expect.any(String),
+        [],
+        expect.objectContaining({ cwd: path.resolve(os.homedir()) }),
       );
     });
 
