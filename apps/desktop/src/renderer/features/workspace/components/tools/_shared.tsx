@@ -302,9 +302,15 @@ export function ToolOutputBody({
  * The actual diff renderer is async: a collapsed tool row does not need to
  * parse `@pierre/diffs` and Shiki during app startup.
  */
-export function ToolDiffBody({ patch }: { patch: string }) {
+export function ToolDiffBody({
+  patch,
+  className = "max-h-80",
+}: {
+  patch: string;
+  className?: string;
+}) {
   return (
-    <div className="max-h-80 overflow-y-auto noscrollbar p-0.5">
+    <div className={`overflow-y-auto noscrollbar p-0.5 ${className}`}>
       <Suspense
         fallback={
           <Text

@@ -1,5 +1,11 @@
 import { coerceToolOutput } from "../../lib/parse-tool-content";
 import { Text } from "@/components/ui";
+import { FileIconComponent } from "@/components/ui/icons";
+import {
+  buildApprovalDiffPreviews,
+  type ApprovalDiffKind,
+} from "../../lib/tool-approval-diff";
+import { ToolDiffBody } from "./_shared";
 
 interface ToolInputPreviewProps {
   toolName: string;
@@ -13,13 +19,18 @@ export function ToolInputPreview({ toolName, toolInput }: ToolInputPreviewProps)
   const input = normalizeInput(toolInput);
 
   // Case-insensitive lookup (Copilot sends "edit", Claude sends "Edit")
-  const renderer = RENDERERS[toolName]
-    ?? RENDERERS[toolName.charAt(0).toUpperCase() + toolName.slice(1)]
+  const canonName = canonicalRendererName(toolName);
+  const renderer = RENDERERS[canonName]
     ?? (toolName.startsWith("[permission:") ? renderPermissionFallback : renderFallback);
-  const canonName = RENDERERS[toolName] ? toolName : toolName.charAt(0).toUpperCase() + toolName.slice(1);
-  const noBg = canonName === "Edit" || canonName === "Write" || canonName === "Create" || canonName === "Apply_patch" || toolName === "[permission:write]";
+  const isDiffPreview = DIFF_RENDERERS.has(canonName);
   return (
-    <div className={`text-xs rounded-lg overflow-x-auto max-h-48 space-y-2 ${noBg ? "" : "bg-primary-50 dark:bg-primary/5"}`}>
+    <div
+      className={`text-xs rounded-lg ${
+        isDiffPreview
+          ? ""
+          : "max-h-48 space-y-2 overflow-auto bg-primary-50 dark:bg-primary/5"
+      }`}
+    >
       {renderer(input)}
     </div>
   );
@@ -37,35 +48,17 @@ function normalizeInput(input: Record<string, unknown>): Record<string, unknown>
 }
 
 function filePath(input: Record<string, unknown>): string {
-  return str(input.fileName ?? input.filePath ?? input.file_path ?? input.path ?? input.file ?? "");
+  return str(
+    input.fileName ??
+      input.filePath ??
+      input.file_path ??
+      input.path ??
+      input.file ??
+      "",
+  );
 }
 
-/**
- * Copilot's apply_patch passes the whole `*** Begin Patch …` envelope as a
- * string (usually under `args`). Pull the target file out of the
- * `*** Update File:` header and reduce the envelope to a +/-/context diff body
- * that DiffView understands (drop the `*** …` markers and `@@` hunk lines).
- */
-function parseApplyPatchEnvelope(input: Record<string, unknown>): {
-  file: string;
-  body: string;
-} {
-  const isEnv = (v: unknown): v is string =>
-    typeof v === "string" && v.includes("*** Begin Patch");
-  const patch =
-    [input.args, input.patch, input.input, input.content].find(isEnv) ??
-    Object.values(input).find(isEnv) ??
-    "";
-  if (!patch) return { file: "", body: "" };
-  const fileMatch = patch.match(/\*\*\* (?:Update|Add|Delete|Move to) File: (.+)/);
-  const body = patch
-    .split("\n")
-    .filter((l) => !l.startsWith("*** ") && !l.startsWith("@@"))
-    .join("\n");
-  return { file: fileMatch ? fileMatch[1].trim() : "", body };
-}
-
-/** Approval / tool preview: show only the filename, not the full absolute path */
+/** Compact filename used by read-only previews and the mutation path row. */
 function basenameDisplay(p: string): string {
   if (!p) return "";
   const normalized = p.replace(/\\/g, "/").trim();
@@ -103,42 +96,83 @@ function CodeBlock({ children }: { children: React.ReactNode }) {
   );
 }
 
-function DiffView({ diff, oldStr, newStr }: { diff?: string; oldStr?: string; newStr?: string }) {
-  let lines: { prefix: string; text: string; type: "add" | "remove" | "context" }[] = [];
-
-  if (diff) {
-    lines = diff
-      .split("\n")
-      .filter((l) => !l.startsWith("diff ") && !l.startsWith("index ") && !l.startsWith("--- ") && !l.startsWith("+++ ") && !l.startsWith("@@") && l !== "")
-      .map((l) => {
-        if (l.startsWith("+")) return { prefix: "+", text: l.slice(1), type: "add" as const };
-        if (l.startsWith("-")) return { prefix: "-", text: l.slice(1), type: "remove" as const };
-        return { prefix: " ", text: l.startsWith(" ") ? l.slice(1) : l, type: "context" as const };
-      });
-  } else if (oldStr || newStr) {
-    if (oldStr) for (const l of oldStr.split("\n")) lines.push({ prefix: "-", text: l, type: "remove" });
-    if (newStr) for (const l of newStr.split("\n")) lines.push({ prefix: "+", text: l, type: "add" });
-  }
-
-  if (lines.length === 0) return null;
+function FileMutationPreview({
+  kind,
+  input,
+}: {
+  kind: ApprovalDiffKind;
+  input: Record<string, unknown>;
+}) {
+  const previews = buildApprovalDiffPreviews(kind, input);
 
   return (
-    <Text as="div" size="xs" tone="inherit" className="leading-relaxed font-mono max-h-40 overflow-y-auto noscrollbar">
-      {lines.map((l, lineNum) => (
-        <div
-          key={`${lineNum}:${l.type}`}
-          className={
-            l.type === "add"
-              ? "text-success bg-primary-50 dark:bg-primary-950/30 px-2"
-              : l.type === "remove"
-                ? "text-danger bg-primary-50 dark:bg-primary-950/30 px-2"
-                : "text-primary-600 dark:text-primary-400 px-2"
-          }
-        >
-          {l.prefix}{l.text}
-        </div>
+    <div
+      className={`noscrollbar space-y-3 ${
+        previews.length > 1 ? "max-h-80 overflow-y-auto" : ""
+      }`}
+    >
+      {previews.map((preview, index) => (
+        <FileMutationCard
+          key={`${preview.filePath}:${index}`}
+          filePath={preview.filePath}
+          patch={preview.patch}
+          shareScroll={previews.length > 1}
+        />
       ))}
-    </Text>
+    </div>
+  );
+}
+
+function FileMutationCard({
+  filePath,
+  patch,
+  shareScroll,
+}: {
+  filePath: string;
+  patch: string;
+  shareScroll: boolean;
+}) {
+  const normalizedPath = filePath.replace(/\\/g, "/");
+  const fileName = basenameDisplay(normalizedPath) || "File";
+  const directory = normalizedPath.slice(0, -fileName.length);
+  const extension = fileName.includes(".")
+    ? fileName.slice(fileName.lastIndexOf(".") + 1)
+    : undefined;
+
+  return (
+    <div className="space-y-1.5">
+      <div
+        className="flex min-w-0 items-center gap-1.5 px-0.5"
+        title={normalizedPath || undefined}
+      >
+        <FileIconComponent
+          extension={extension}
+          fileName={fileName}
+          className="size-3.5 shrink-0"
+        />
+        <Text
+          as="div"
+          size="xs"
+          tone="muted"
+          className="flex min-w-0 font-mono"
+        >
+          {directory && (
+            <span className="min-w-0 truncate text-primary-500 dark:text-primary-500">
+              {directory}
+            </span>
+          )}
+          <span className="shrink-0">{fileName}</span>
+        </Text>
+      </div>
+      {patch && (
+        <div className="overflow-hidden rounded-md border border-primary-200/50 dark:border-primary-700/30">
+          <ToolDiffBody
+            patch={patch}
+            className={shareScroll ? "max-h-none" : undefined}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -179,73 +213,20 @@ const RENDERERS: Record<string, Renderer> = {
     </>
   ),
 
-  Write: (input) => (
-    <>
-      <div className="px-1 pb-1">
-        <Label>file</Label>{" "}
-        <Mono>{basenameDisplay(str(input.file_path))}</Mono>
-      </div>
-      {!!input.content && (
-        <div className="bg-primary-50 dark:bg-primary/5 rounded-lg">
-          <DiffView newStr={str(input.content, 600)} />
-        </div>
-      )}
-    </>
-  ),
+  Write: (input) => <FileMutationPreview kind="write" input={input} />,
 
   // Copilot CLI file-creation tool: input is { file_text, path }. Show the
   // filename + the new content as an all-added diff (mirrors Write) instead of
   // dumping the entire file_text as a raw param value.
-  Create: (input) => {
-    const content = input.file_text ?? input.content;
-    return (
-      <>
-        <div className="px-1 pb-1">
-          <Label>file</Label>{" "}
-          <Mono>{basenameDisplay(filePath(input))}</Mono>
-        </div>
-        {!!content && (
-          <div className="bg-primary-50 dark:bg-primary/5 rounded-lg">
-            <DiffView newStr={str(content, 600)} />
-          </div>
-        )}
-      </>
-    );
-  },
+  Create: (input) => <FileMutationPreview kind="write" input={input} />,
 
-  Edit: (input) => (
-    <>
-      <div className="px-1 pb-1">
-        <Label>file</Label>{" "}
-        <Mono>
-          {basenameDisplay(str(input.file_path ?? input.path))}
-        </Mono>
-      </div>
-      <div className="bg-primary-50 dark:bg-primary/5 rounded-lg">
-        <DiffView
-          oldStr={input.old_string ? str(input.old_string, 600) : input.old_str ? str(input.old_str, 600) : undefined}
-          newStr={input.new_string ? str(input.new_string, 600) : input.new_str ? str(input.new_str, 600) : undefined}
-        />
-      </div>
-    </>
+  Edit: (input) => <FileMutationPreview kind="edit" input={input} />,
+
+  Delete: (input) => <FileMutationPreview kind="delete" input={input} />,
+
+  Apply_patch: (input) => (
+    <FileMutationPreview kind="apply-patch" input={input} />
   ),
-
-  Apply_patch: (input) => {
-    const { file, body } = parseApplyPatchEnvelope(input);
-    return (
-      <>
-        <div className="px-1 pb-1">
-          <Label>file</Label>{" "}
-          <Mono>{basenameDisplay(file)}</Mono>
-        </div>
-        {!!body && (
-          <div className="bg-primary-50 dark:bg-primary/5 rounded-lg">
-            <DiffView diff={body} />
-          </div>
-        )}
-      </>
-    );
-  },
 
   // Copilot CLI's sql tool: { description, query } (session-state todo DB).
   Sql: (input) => (
@@ -419,17 +400,10 @@ const RENDERERS: Record<string, Renderer> = {
   ),
 
   "[permission:write]": (input) => (
-    <>
-
-      <div className="px-1 pb-1">
-        <Label>file</Label> <Mono>{basenameDisplay(filePath(input))}</Mono>
-      </div>
-      {!!input.diff && (
-        <div className="bg-primary-50 dark:bg-primary/5 rounded-lg">
-          <DiffView diff={String(input.diff)} />
-        </div>
-      )}
-    </>
+    <FileMutationPreview
+      kind={permissionDiffKind(input.kind)}
+      input={input}
+    />
   ),
 
   "[permission:shell]": (input) => (
@@ -449,6 +423,43 @@ const RENDERERS: Record<string, Renderer> = {
     </div>
   ),
 };
+
+const RENDERER_ALIASES: Record<string, string> = {
+  edit: "Edit",
+  replace: "Edit",
+  edit_file: "Edit",
+  write: "Write",
+  writeifempty: "Write",
+  write_file: "Write",
+  create_file: "Write",
+  create: "Create",
+  delete: "Delete",
+  delete_file: "Delete",
+  apply_patch: "Apply_patch",
+  "[permission:write]": "[permission:write]",
+};
+
+const DIFF_RENDERERS = new Set([
+  "Edit",
+  "Write",
+  "Create",
+  "Delete",
+  "Apply_patch",
+  "[permission:write]",
+]);
+
+function canonicalRendererName(toolName: string): string {
+  return RENDERER_ALIASES[toolName.toLowerCase()]
+    ?? (RENDERERS[toolName]
+      ? toolName
+      : toolName.charAt(0).toUpperCase() + toolName.slice(1));
+}
+
+function permissionDiffKind(kind: unknown): ApprovalDiffKind {
+  if (kind === "add" || kind === "create") return "write";
+  if (kind === "delete") return "delete";
+  return "edit";
+}
 
 function renderPermissionFallback(input: Record<string, unknown>): React.ReactNode {
   const { kind: _, toolCallId: __, ...rest } = input;
