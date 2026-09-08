@@ -25,7 +25,7 @@ const COPIED_FOR_MS = 2000;
 const EXTERNAL_LINKS = {
   privacy: "https://mains.dev/privacy",
   terms: "https://mains.dev/terms",
-  licenses: "https://mains.dev/licenses",
+  licenses: "https://mains.dev/license",
 } as const;
 
 const SUPPORT_EMAIL = "team@mains.dev";
