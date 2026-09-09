@@ -60,7 +60,7 @@ export function MarkdownLink({
             ?.scrollIntoView({ behavior: "smooth", block: "center" });
         }}
         title={href}
-        className="inline whitespace-normal wrap-break-word text-left text-primary-600 underline cursor-pointer hover:text-primary-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 dark:text-primary-400 dark:hover:text-primary-200"
+        className="inline whitespace-normal wrap-break-word text-left text-accent hover:underline cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 "
       >
         {children}
       </a>
@@ -100,7 +100,7 @@ export function MarkdownLink({
           window.api.shell.openExternal(href);
         }
       }}
-      className="inline whitespace-normal wrap-break-word text-left text-primary-600 underline cursor-pointer hover:text-primary-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 dark:text-primary-400 dark:hover:text-primary-200"
+      className="inline whitespace-normal wrap-break-word text-left text-accent hover:underline cursor-pointer  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 "
     >
       {children}
     </a>

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { useIsDarkMode } from "@/hooks/use-is-dark-mode";
 import { File, EditProvider } from "@pierre/diffs/react";
-import type { CreateEditor, FileContents } from "@pierre/diffs/react";
+import type { EditorFactory, FileContents } from "@pierre/diffs/react";
 import { Editor, type EditorOptions } from "@pierre/diffs/edit";
 import {
   setSelectedFileContent,
@@ -26,7 +26,7 @@ type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
 
 // Not exported by @pierre/diffs — extracted from the option's signature.
 type SelectionActionCtx = Parameters<
-  NonNullable<EditorOptions<undefined>["renderSelectionAction"]>
+  NonNullable<EditorOptions<"file", undefined, undefined>["renderSelectionAction"]>
 >[0];
 
 interface CodeViewerProps {
@@ -179,12 +179,16 @@ export function CodeViewer({
     }, AUTOSAVE_DELAY_MS);
   }, [enqueueSave]);
 
-  const createEditor = useCallback<CreateEditor<undefined>>(
-    (surfaceOptions) =>
-      new Editor({
-        clipboard: { readText: () => navigator.clipboard.readText() },
-        ...surfaceOptions,
-      }),
+  const createEditor = useCallback<EditorFactory<undefined, undefined>>(
+    (editorType, surfaceOptions, editStateKey) =>
+      new Editor(
+        editorType,
+        {
+          clipboard: { readText: () => navigator.clipboard.readText() },
+          ...surfaceOptions,
+        },
+        editStateKey,
+      ),
     [],
   );
 
@@ -226,10 +230,10 @@ export function CodeViewer({
     [dispatch, filePath, filename],
   );
 
-  const editorOptions = useMemo<EditorOptions<undefined>>(
+  const editorOptions = useMemo<EditorOptions<"file", undefined, undefined>>(
     () => ({
       onChange: (edited) => {
-        draftRef.current = edited.contents;
+        draftRef.current = edited.file.contents;
         if (pausedRef.current) return;
         setSaveState("dirty");
         schedule();
