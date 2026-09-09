@@ -92,7 +92,7 @@ describe("markdownComponents / links", () => {
 
     const link = screen.getByRole("link", { name: url });
     expect(link.tagName).toBe("A");
-    expect(link.className).toContain("break-words");
+    expect(link.className).toContain("wrap-break-word");
     expect(link.parentElement?.tagName).toBe("P");
     expect(link.parentElement?.textContent).toBe(
       `${url} Could you give me a summary?`,
