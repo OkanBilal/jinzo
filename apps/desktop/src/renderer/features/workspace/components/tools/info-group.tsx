@@ -8,7 +8,6 @@ import {
   Picture,
   Document,
   Codex,
-  Sparkles,
   External,
   ArrowUp,
   Finder,
@@ -16,9 +15,7 @@ import {
 } from "@/components/ui/icons";
 import { ProviderIcon } from "../provider-icon";
 import { ImagePreviewModal } from "../image-preview-modal";
-import { FileIconComponent } from "@/components/ui/icons";
 import {
-  Body,
   Button,
   DropdownMenu,
   DropdownMenuItem,
@@ -34,6 +31,11 @@ import { DocumentArtifact } from "@/features/workspace/components/tools/document
 import { ImageGenerationLoader } from "@/features/workspace/components/tools/image-generation-loader";
 import { classifyDocType, type DocType } from "@/lib/document-viewer";
 import { useSmoothText } from "../../hooks/use-smooth-text";
+import {
+  PromptMarkdown,
+  promptMessageMentionsFile,
+  type PromptMarkdownSkill,
+} from "../prompt-markdown";
 
 const IMAGE_PATH_REGEX = /([~/]?[\w./-]+\.(?:png|jpe?g|webp|gif))\b/gi;
 
@@ -64,198 +66,6 @@ function resolveImagePath(
   if (!workspaceRoot) return null;
   const sep = workspaceRoot.endsWith("/") ? "" : "/";
   return `${workspaceRoot}${sep}${rawPath}`;
-}
-
-interface PromptSkillMeta {
-  name: string;
-  path?: string;
-  description?: string;
-  displayName?: string;
-  shortDescription?: string;
-  iconSmall?: string;
-  iconLarge?: string;
-  brandColor?: string;
-  scope?: string;
-}
-
-function PromptSkillChipIcon({ skill }: { skill: PromptSkillMeta }) {
-  const [failed, setFailed] = useState(false);
-  const iconPath = skill.iconLarge || skill.iconSmall;
-  const resolved = useLocalImageUrl(iconPath);
-  if (iconPath && resolved && !failed) {
-    return (
-      <img
-        src={resolved}
-        alt=""
-        className="w-3 h-3 rounded shrink-0 object-contain"
-        style={
-          skill.brandColor ? { backgroundColor: skill.brandColor } : undefined
-        }
-        onError={() => setFailed(true)}
-      />
-    );
-  }
-  return <Sparkles className="w-3 h-3 shrink-0" />;
-}
-
-function PromptSkillInlineChip({ skill }: { skill: PromptSkillMeta }) {
-  const label = skill.displayName || skill.name;
-  const tooltip = skill.shortDescription || skill.description || label;
-  return (
-    <span
-      className="inline-flex align-middle items-center gap-1 px-1.5 mb-0.5 h-6 mx-0.5 rounded-lg text-xs font-medium leading-none select-none bg-primary dark:bg-primary-300/10 dark:text-primary-200 text-primary-800"
-      title={tooltip}
-    >
-      <span className="inline-flex items-center justify-center size-3.5 shrink-0 rounded-sm overflow-hidden">
-        <PromptSkillChipIcon skill={skill} />
-      </span>
-      <span className="leading-none">{label}</span>
-    </span>
-  );
-}
-
-interface PromptFileMeta {
-  fullPath: string;
-  basename: string;
-}
-
-function PromptFileInlineChip({ file }: { file: PromptFileMeta }) {
-  const dotIdx = file.basename.lastIndexOf(".");
-  const extension =
-    dotIdx > 0 && dotIdx < file.basename.length - 1
-      ? file.basename.slice(dotIdx + 1)
-      : undefined;
-  return (
-    <span
-      className="inline-flex align-middle items-center gap-1 px-1.5 mb-0.5 h-6 mx-0.5 rounded-lg text-xs font-medium leading-none select-none bg-primary dark:bg-primary-300/10 dark:text-primary-200 text-primary-800 "
-      title={file.fullPath}
-    >
-      <span className="inline-flex items-center justify-center size-3.5 shrink-0">
-        <FileIconComponent
-          extension={extension}
-          fileName={file.basename}
-          className="size-3.5"
-        />
-      </span>
-      <span className="leading-none">{file.basename}</span>
-    </span>
-  );
-}
-
-const REGEX_ESC = /[.*+?^${}()|[\]\\]/g;
-
-// Matches the code-selection mention token the composer serializes
-// (`@/abs/path#L19-24` or `@/abs/path#L19`). Self-describing — the chip is
-// rendered from the token alone, no run metadata needed.
-const CODE_SELECTION_TOKEN_SRC = "@(?<code>\\/[^\\s#]+#L\\d+(?:-\\d+)?)(?![\\w-])";
-const CODE_SELECTION_TEST_RE = new RegExp(CODE_SELECTION_TOKEN_SRC);
-
-function PromptCodeSelectionInlineChip({ token }: { token: string }) {
-  const hashIdx = token.lastIndexOf("#L");
-  const fullPath = token.slice(0, hashIdx);
-  const range = token.slice(hashIdx + 2);
-  const basename = fullPath.split("/").pop() ?? fullPath;
-  const dotIdx = basename.lastIndexOf(".");
-  const extension =
-    dotIdx > 0 && dotIdx < basename.length - 1
-      ? basename.slice(dotIdx + 1)
-      : undefined;
-  return (
-    <span
-      className="inline-flex align-middle items-center gap-1 px-1.5 mb-0.5 h-6 mx-0.5 rounded-lg text-xs font-medium leading-none select-none bg-primary dark:bg-primary-300/10 dark:text-primary-200 text-primary-800"
-      title={token}
-    >
-      <span className="inline-flex items-center justify-center size-3.5 shrink-0">
-        <FileIconComponent
-          extension={extension}
-          fileName={basename}
-          className="size-3.5"
-        />
-      </span>
-      <span className="leading-none font-mono">
-        {basename}:{range}
-      </span>
-    </span>
-  );
-}
-
-/**
- * Tokenizes a user prompt message and renders `$<skillname>` / `@<path>` substrings as inline chips.
- * Tolerates a duplicated `:<name>` suffix produced by older skill serializations so legacy runs
- * still display cleanly without leaving the literal word visible. Records which file paths were
- * matched inline (via `matchedFilePaths`) so the caller can omit them from the external file row.
- */
-function renderMessageWithChips(
-  message: string,
-  skills: PromptSkillMeta[],
-  files: PromptFileMeta[],
-  matchedFilePaths: Set<string>,
-) {
-  if (!message) return null;
-  const hasCodeToken = CODE_SELECTION_TEST_RE.test(message);
-  if (skills.length === 0 && files.length === 0 && !hasCodeToken) return message;
-  const skillByName = new Map(skills.map((s) => [s.name, s]));
-  const fileByPath = new Map(files.map((f) => [f.fullPath, f]));
-  const parts: string[] = [];
-  if (skills.length > 0) {
-    const names = skills
-      .map((s) => s.name)
-      .sort((a, b) => b.length - a.length)
-      .map((n) => n.replace(REGEX_ESC, "\\$&"));
-    parts.push(`\\$(?<skill>${names.join("|")})(?::[\\w-]+)?(?![\\w-])`);
-  }
-  // Before the file alternative: a code token extends a file path, so at the
-  // same `@` the plain-path alternative would otherwise win and strand `#L…`.
-  if (hasCodeToken) {
-    parts.push(CODE_SELECTION_TOKEN_SRC);
-  }
-  if (files.length > 0) {
-    const paths = files
-      .map((f) => f.fullPath)
-      .sort((a, b) => b.length - a.length)
-      .map((p) => p.replace(REGEX_ESC, "\\$&"));
-    parts.push(`@(?<file>${paths.join("|")})(?![\\w./-])`);
-  }
-  const re = new RegExp(parts.join("|"), "g");
-  const out: React.ReactNode[] = [];
-  let lastIdx = 0;
-  let key = 0;
-  let match: RegExpExecArray | null;
-  while ((match = re.exec(message)) !== null) {
-    if (match.index > lastIdx) {
-      out.push(
-        <span key={`t${key++}`}>{message.slice(lastIdx, match.index)}</span>,
-      );
-    }
-    const skillName = match.groups?.skill;
-    const filePath = match.groups?.file;
-    const codeToken = match.groups?.code;
-    if (skillName) {
-      const skill = skillByName.get(skillName);
-      out.push(
-        skill ? (
-          <PromptSkillInlineChip key={`c${key++}`} skill={skill} />
-        ) : (
-          <span key={`t${key++}`}>{match[0]}</span>
-        ),
-      );
-    } else if (codeToken) {
-      out.push(<PromptCodeSelectionInlineChip key={`c${key++}`} token={codeToken} />);
-    } else if (filePath) {
-      const file = fileByPath.get(filePath);
-      if (file) {
-        matchedFilePaths.add(filePath);
-        out.push(<PromptFileInlineChip key={`c${key++}`} file={file} />);
-      } else {
-        out.push(<span key={`t${key++}`}>{match[0]}</span>);
-      }
-    }
-    lastIdx = match.index + match[0].length;
-  }
-  if (lastIdx < message.length) {
-    out.push(<span key={`t${key++}`}>{message.slice(lastIdx)}</span>);
-  }
-  return out;
 }
 
 interface InfoGroupProps {
@@ -314,7 +124,7 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
       captureName?: string;
       sourcePath?: string;
     }>;
-    const skills = (event.metadata?.skills ?? []) as PromptSkillMeta[];
+    const skills = (event.metadata?.skills ?? []) as PromptMarkdownSkill[];
 
     if (isReview) {
       const reviewTarget = event.metadata?.reviewTarget as string | undefined;
@@ -356,23 +166,18 @@ function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
       );
     }
 
-    const matchedFilePaths = new Set<string>();
-    const renderedMessage = renderMessageWithChips(
-      message,
-      skills,
-      files,
-      matchedFilePaths,
-    );
     const externalFiles = files.filter(
-      (f) => !matchedFilePaths.has(f.fullPath),
+      (file) => !promptMessageMentionsFile(message, file.fullPath),
     );
     return (
       <div className="w-full overflow-hidden">
         <div className="w-full py-2 flex justify-end">
-          <div className="flex flex-col items-end gap-2 max-w-[80%]">
-            <div className="px-3.5 py-2 rounded-2xl bg-primary-50 dark:bg-primary/5 ">
-              <div>
-                <Body className="leading-7 whitespace-pre-wrap">{renderedMessage}</Body>
+          <div className="flex min-w-0 max-w-[80%] flex-col items-end gap-2">
+            <div className="min-w-0 max-w-full px-3.5 py-2 rounded-2xl bg-primary-50 dark:bg-primary/5">
+              <div className="prose prose-sm dark:prose-invert max-w-none text-left">
+                <PromptMarkdown skills={skills} files={files}>
+                  {message}
+                </PromptMarkdown>
               </div>
             </div>
             {previewAtt && (

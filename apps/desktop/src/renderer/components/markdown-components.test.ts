@@ -2,11 +2,15 @@
 
 import { createElement } from "react";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { isRemoteImageSrc, markdownComponents } from "./markdown-components";
+
+vi.mock("@/features/workspace/hooks/use-open-file-in-editor", () => ({
+  useOpenFileInEditor: () => vi.fn(),
+}));
 
 afterEach(cleanup);
 
@@ -77,6 +81,22 @@ describe("markdownComponents / code", () => {
     expect(code.tagName).toBe("CODE");
     expect(code.closest("pre")).toBeNull();
     expect(code.className).toContain("rounded");
+  });
+});
+
+describe("markdownComponents / links", () => {
+  it("keeps a long external URL inline with the surrounding prompt text", () => {
+    const url =
+      "https://www.nair.sh/guides-and-opinions/communicating-your-expertise/why-senior-developers-fail-to-communicate-their-expertise";
+    renderMarkdown(`[${url}](${url}) Could you give me a summary?`);
+
+    const link = screen.getByRole("link", { name: url });
+    expect(link.tagName).toBe("A");
+    expect(link.className).toContain("break-words");
+    expect(link.parentElement?.tagName).toBe("P");
+    expect(link.parentElement?.textContent).toBe(
+      `${url} Could you give me a summary?`,
+    );
   });
 });
 

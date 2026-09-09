@@ -7,6 +7,10 @@ import {
   useState,
 } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import ReactMarkdown from "react-markdown";
+import type { Components } from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { markdownComponents } from "@/components/markdown-components";
 import { FileIconComponent } from "@/components/ui/icons";
 import { Sparkles } from "@/components/ui/icons";
 import { applySignedSrc } from "@/lib/local-image-url";
@@ -87,6 +91,107 @@ const FILE_PATH_ATTR = "data-file-path";
 const CODE_CHIP_ATTR = "data-code-chip";
 const CODE_KEY_ATTR = "data-code-key";
 const CHIP_KEY_SEP = "";
+
+const composerMarkdownComponents: Components = {
+  ...markdownComponents,
+  // Reading-mode links trigger navigation. Inside a contenteditable they must
+  // remain editable text while retaining enough metadata to serialize back.
+  a: ({ href, children }) => (
+    <span
+      data-markdown-link={href ?? ""}
+      className="text-primary-600 underline dark:text-primary-400"
+    >
+      {children}
+    </span>
+  ),
+  // Do not initiate a network request merely because Markdown was pasted.
+  img: ({ src, alt }) => (
+    <span
+      data-markdown-image-src={typeof src === "string" ? src : ""}
+      data-markdown-image-alt={alt ?? ""}
+      className="inline-flex rounded-lg bg-primary-200/40 px-2 py-1 text-xs text-primary-600 dark:bg-primary/10 dark:text-primary-400"
+    >
+      {alt?.trim() || "Image"}
+    </span>
+  ),
+};
+
+function looksLikeMarkdownSource(text: string): boolean {
+  return (
+    /(^|\n)\s*(?:#{1,6}\s|\x60{3}|~~~|>\s|[-*+]\s|\d+\.\s|\|.+\|\s*$)/m.test(
+      text,
+    ) ||
+    /(?:\x60[^\x60\n]+\x60|\*\*[^*\n]+\*\*|__[^_\n]+__|!?\[[^\]\n]+\]\([^)]+\))/.test(
+      text,
+    )
+  );
+}
+
+function buildMarkdownFragment(text: string): DocumentFragment {
+  const markup = renderToStaticMarkup(
+    <ReactMarkdown
+      components={composerMarkdownComponents}
+      remarkPlugins={[remarkGfm]}
+    >
+      {text}
+    </ReactMarkdown>,
+  );
+  const template = document.createElement("template");
+  template.innerHTML = markup;
+  removeRendererWhitespace(template.content);
+  return template.content;
+}
+
+const MARKDOWN_BLOCK_TAGS = new Set([
+  "BLOCKQUOTE",
+  "H1",
+  "H2",
+  "H3",
+  "H4",
+  "H5",
+  "H6",
+  "LI",
+  "OL",
+  "P",
+  "TABLE",
+  "TBODY",
+  "TD",
+  "TFOOT",
+  "TH",
+  "THEAD",
+  "TR",
+  "UL",
+]);
+
+/**
+ * React's static renderer inserts formatting newlines between block elements.
+ * The composer intentionally preserves whitespace for ordinary text, so those
+ * implementation-only text nodes would otherwise become visible blank lines.
+ */
+function removeRendererWhitespace(fragment: DocumentFragment) {
+  const containers: ParentNode[] = [
+    fragment,
+    ...Array.from(fragment.querySelectorAll("*")),
+  ];
+  for (const container of containers) {
+    const containsMarkdownBlocks =
+      container === fragment ||
+      Array.from(container.children).some((child) =>
+        MARKDOWN_BLOCK_TAGS.has(child.tagName),
+      );
+    if (!containsMarkdownBlocks) continue;
+
+    for (const child of Array.from(container.childNodes)) {
+      if (
+        child.nodeType === Node.TEXT_NODE &&
+        /^\s+$/.test(child.textContent ?? "") &&
+        /[\r\n]/.test(child.textContent ?? "")
+      ) {
+        container.removeChild(child);
+      }
+    }
+  }
+}
 
 function buildChip(skill: RichSkillChipData): HTMLSpanElement {
   const chip = document.createElement("span");
@@ -206,46 +311,211 @@ function lastLeaf(root: HTMLElement): Node | null {
   return node;
 }
 
+function serializeChildren(node: Node, filler: Node | null): string {
+  let out = "";
+  for (const child of Array.from(node.childNodes)) {
+    if (
+      child instanceof HTMLElement &&
+      child.tagName === "DIV" &&
+      out.length > 0 &&
+      !out.endsWith("\n")
+    ) {
+      out += "\n";
+    }
+    out += serializeEditorNode(child, filler);
+  }
+  return out;
+}
+
+function serializeTable(table: HTMLTableElement, filler: Node | null): string {
+  const rows = Array.from(table.rows);
+  if (rows.length === 0) return "";
+  const row = (cells: HTMLCollectionOf<HTMLTableCellElement>) =>
+    "| " +
+    Array.from(cells)
+      .map((cell) =>
+        serializeChildren(cell, filler)
+          .trim()
+          .replace(/\|/g, "\\|")
+          .replace(/\n+/g, "<br>"),
+      )
+      .join(" | ") +
+    " |";
+  const header = rows[0];
+  const separator =
+    "| " + Array.from(header.cells, () => "---").join(" | ") + " |";
+  return [row(header.cells), separator, ...rows.slice(1).map((r) => row(r.cells))].join(
+    "\n",
+  );
+}
+
+function serializeList(
+  list: HTMLOListElement | HTMLUListElement,
+  filler: Node | null,
+): string {
+  const ordered = list.tagName === "OL";
+  const start = ordered ? Number(list.getAttribute("start") ?? "1") : 1;
+  const items = Array.from(list.children).filter(
+    (child): child is HTMLLIElement => child.tagName === "LI",
+  );
+
+  return items
+    .map((item, index) => {
+      const nested = Array.from(item.children).filter(
+        (child) => child.tagName === "UL" || child.tagName === "OL",
+      );
+      let content = Array.from(item.childNodes)
+        .filter((child) => !nested.includes(child as Element))
+        .map((child) => serializeEditorNode(child, filler))
+        .join("")
+        .trim()
+        .replace(/\n{2,}/g, "\n");
+      const marker = ordered ? String(start + index) + ". " : "- ";
+      content = content.replace(/\n/g, "\n" + " ".repeat(marker.length));
+      let output = marker + content;
+      for (const child of nested) {
+        const nestedText = serializeEditorNode(child, filler).trimEnd();
+        output +=
+          "\n" +
+          nestedText
+            .split("\n")
+            .map((line) => "  " + line)
+            .join("\n");
+      }
+      return output;
+    })
+    .join("\n");
+}
+
+function serializeEditorNode(node: Node, filler: Node | null): string {
+  if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? "";
+  if (!(node instanceof HTMLElement)) {
+    return serializeChildren(node, filler);
+  }
+
+  if (node.getAttribute(CHIP_ATTR) === "true") {
+    return "$" + (node.getAttribute(CHIP_NAME_ATTR) ?? "");
+  }
+  if (node.getAttribute(FILE_CHIP_ATTR) === "true") {
+    return "@" + (node.getAttribute(FILE_PATH_ATTR) ?? "");
+  }
+  if (node.getAttribute(CODE_CHIP_ATTR) === "true") {
+    return "@" + (node.getAttribute(CODE_KEY_ATTR) ?? "");
+  }
+
+  const children = () => serializeChildren(node, filler);
+  switch (node.tagName) {
+    case "BR":
+      return node === filler ? "" : "\n";
+    case "P":
+      return children() + "\n\n";
+    case "H1":
+    case "H2":
+    case "H3":
+    case "H4":
+    case "H5":
+    case "H6": {
+      const level = Number(node.tagName.slice(1));
+      return "#".repeat(level) + " " + children() + "\n\n";
+    }
+    case "STRONG":
+    case "B":
+      return "**" + children() + "**";
+    case "EM":
+    case "I":
+      return "*" + children() + "*";
+    case "S":
+    case "DEL":
+      return "~~" + children() + "~~";
+    case "CODE": {
+      if (node.parentElement?.tagName === "PRE") return node.textContent ?? "";
+      const value = node.textContent ?? "";
+      const tick = String.fromCharCode(96);
+      const longestRun = Math.max(
+        0,
+        ...(value.match(/\x60+/g) ?? []).map((run) => run.length),
+      );
+      const fence = tick.repeat(Math.max(1, longestRun + 1));
+      return fence + value + fence;
+    }
+    case "PRE": {
+      const code = node.querySelector("code");
+      const value = code?.textContent ?? node.textContent ?? "";
+      const language =
+        code?.className.match(/(?:^|\s)language-([^\s]+)/)?.[1] ?? "";
+      const tick = String.fromCharCode(96);
+      const longestRun = Math.max(
+        0,
+        ...(value.match(/\x60{3,}/g) ?? []).map((run) => run.length),
+      );
+      const fence = tick.repeat(Math.max(3, longestRun + 1));
+      return (
+        fence +
+        language +
+        "\n" +
+        value.replace(/\n$/, "") +
+        "\n" +
+        fence +
+        "\n\n"
+      );
+    }
+    case "UL":
+    case "OL":
+      return (
+        serializeList(node as HTMLUListElement | HTMLOListElement, filler) +
+        "\n\n"
+      );
+    case "BLOCKQUOTE": {
+      const value = children().trim();
+      return (
+        value
+          .split("\n")
+          .map((line) => "> " + line)
+          .join("\n") + "\n\n"
+      );
+    }
+    case "TABLE":
+      return serializeTable(node as HTMLTableElement, filler) + "\n\n";
+    case "A": {
+      const href = node.getAttribute("href") ?? "";
+      return "[" + children() + "](" + href + ")";
+    }
+    case "HR":
+      return "---\n\n";
+    case "IMG": {
+      const src = node.getAttribute("src") ?? "";
+      const alt = node.getAttribute("alt") ?? "";
+      return "![" + alt + "](" + src + ")";
+    }
+    case "INPUT":
+      return node.getAttribute("type") === "checkbox"
+        ? node.hasAttribute("checked")
+          ? "[x] "
+          : "[ ] "
+        : "";
+    case "SPAN": {
+      const href = node.getAttribute("data-markdown-link");
+      if (href !== null) return "[" + children() + "](" + href + ")";
+      const imageSrc = node.getAttribute("data-markdown-image-src");
+      if (imageSrc !== null) {
+        const alt = node.getAttribute("data-markdown-image-alt") ?? "";
+        return "![" + alt + "](" + imageSrc + ")";
+      }
+      return children();
+    }
+    default:
+      return children();
+  }
+}
+
 /**
- * Serialize the editor DOM to plain text. Skill chips are rendered as `$<name>` tokens
- * and file chips as `@<path>` tokens so external menu detection regexes still work and
- * the goal string survives a round trip.
+ * Serialize editable rich Markdown back to the source text sent to providers.
+ * Composer chips keep their established token forms.
  */
 function serializeRoot(root: HTMLElement): string {
-  let out = "";
-  // Deleting the last character leaves a filler `<br>` behind; counting it as a newline
-  // would keep the editor permanently "non-empty" (placeholder gone, send button live).
-  const filler = lastLeaf(root);
-  const walk = (node: Node) => {
-    if (node.nodeType === Node.TEXT_NODE) {
-      out += node.textContent ?? "";
-      return;
-    }
-    if (node instanceof HTMLElement) {
-      if (node.getAttribute(CHIP_ATTR) === "true") {
-        out += "$" + (node.getAttribute(CHIP_NAME_ATTR) ?? "");
-        return;
-      }
-      if (node.getAttribute(FILE_CHIP_ATTR) === "true") {
-        out += "@" + (node.getAttribute(FILE_PATH_ATTR) ?? "");
-        return;
-      }
-      if (node.getAttribute(CODE_CHIP_ATTR) === "true") {
-        out += "@" + (node.getAttribute(CODE_KEY_ATTR) ?? "");
-        return;
-      }
-      if (node.tagName === "BR") {
-        if (node !== filler) out += "\n";
-        return;
-      }
-      if (node.tagName === "DIV" && out.length > 0 && !out.endsWith("\n")) {
-        out += "\n";
-      }
-      for (const child of Array.from(node.childNodes)) walk(child);
-    }
-  };
-  for (const child of Array.from(root.childNodes)) walk(child);
-  return out;
+  // Deleting the last character leaves a filler BR behind; counting it as a
+  // newline would keep the editor permanently non-empty.
+  return serializeChildren(root, lastLeaf(root));
 }
 
 function rebuildContent(
@@ -257,6 +527,11 @@ function rebuildContent(
 ) {
   while (root.firstChild) root.removeChild(root.firstChild);
   if (text.length === 0) return;
+  root.appendChild(
+    looksLikeMarkdownSource(text)
+      ? buildMarkdownFragment(text)
+      : document.createTextNode(text),
+  );
 
   const escRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const skillNames =
@@ -273,7 +548,6 @@ function rebuildContent(
       : [];
 
   if (skillNames.length === 0 && filePaths.length === 0 && codeKeys.length === 0) {
-    root.appendChild(document.createTextNode(text));
     return;
   }
 
@@ -293,66 +567,61 @@ function rebuildContent(
   }
   const re = new RegExp(parts.join("|"), "g");
 
-  let lastIdx = 0;
-  let match: RegExpExecArray | null;
-  while ((match = re.exec(text)) !== null) {
-    if (match.index > lastIdx) {
-      root.appendChild(document.createTextNode(text.slice(lastIdx, match.index)));
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const textNodes: Text[] = [];
+  let current: Node | null;
+  while ((current = walker.nextNode())) textNodes.push(current as Text);
+
+  for (const textNode of textNodes) {
+    if (textNode.parentElement?.closest("code, [data-markdown-link]")) continue;
+    const value = textNode.data;
+    const fragment = document.createDocumentFragment();
+    let lastIndex = 0;
+    let matched = false;
+    let match: RegExpExecArray | null;
+    re.lastIndex = 0;
+
+    while ((match = re.exec(value)) !== null) {
+      matched = true;
+      if (match.index > lastIndex) {
+        fragment.appendChild(
+          document.createTextNode(value.slice(lastIndex, match.index)),
+        );
+      }
+      const skillName = match.groups?.skill;
+      const filePath = match.groups?.file;
+      const codeKey = match.groups?.code;
+      if (skillName) {
+        const data = skillChipMap!.get(skillName);
+        fragment.appendChild(
+          data ? buildChip(data) : document.createTextNode(match[0]),
+        );
+      } else if (codeKey) {
+        const data = codeChipMap!.get(codeKey);
+        fragment.appendChild(
+          data ? buildCodeChip(data) : document.createTextNode(match[0]),
+        );
+      } else if (filePath) {
+        const data = fileChipMap!.get(filePath);
+        fragment.appendChild(
+          data ? buildFileChip(data) : document.createTextNode(match[0]),
+        );
+      }
+      lastIndex = match.index + match[0].length;
     }
-    const skillName = match.groups?.skill;
-    const filePath = match.groups?.file;
-    const codeKey = match.groups?.code;
-    if (skillName) {
-      const data = skillChipMap!.get(skillName);
-      root.appendChild(data ? buildChip(data) : document.createTextNode(match[0]));
-    } else if (codeKey) {
-      const data = codeChipMap!.get(codeKey);
-      root.appendChild(data ? buildCodeChip(data) : document.createTextNode(match[0]));
-    } else if (filePath) {
-      const data = fileChipMap!.get(filePath);
-      root.appendChild(data ? buildFileChip(data) : document.createTextNode(match[0]));
+
+    if (!matched) continue;
+    if (lastIndex < value.length) {
+      fragment.appendChild(document.createTextNode(value.slice(lastIndex)));
     }
-    lastIdx = match.index + match[0].length;
-  }
-  if (lastIdx < text.length) {
-    root.appendChild(document.createTextNode(text.slice(lastIdx)));
+    textNode.replaceWith(fragment);
   }
 }
 
 function serializeFragment(node: Node): string {
-  let out = "";
-  const walk = (n: Node) => {
-    if (n.nodeType === Node.TEXT_NODE) {
-      out += n.textContent ?? "";
-      return;
-    }
-    if (n instanceof HTMLElement) {
-      if (n.getAttribute(CHIP_ATTR) === "true") {
-        out += "$" + (n.getAttribute(CHIP_NAME_ATTR) ?? "");
-        return;
-      }
-      if (n.getAttribute(FILE_CHIP_ATTR) === "true") {
-        out += "@" + (n.getAttribute(FILE_PATH_ATTR) ?? "");
-        return;
-      }
-      if (n.getAttribute(CODE_CHIP_ATTR) === "true") {
-        out += "@" + (n.getAttribute(CODE_KEY_ATTR) ?? "");
-        return;
-      }
-      if (n.tagName === "BR") {
-        out += "\n";
-        return;
-      }
-      if (n.tagName === "DIV" && out.length > 0 && !out.endsWith("\n")) {
-        out += "\n";
-      }
-      for (const c of Array.from(n.childNodes)) walk(c);
-      return;
-    }
-    for (const c of Array.from(n.childNodes)) walk(c);
-  };
-  walk(node);
-  return out;
+  return node instanceof HTMLElement
+    ? serializeEditorNode(node, null)
+    : serializeChildren(node, null);
 }
 
 function getTextBeforeCaret(root: HTMLElement): string | null {
@@ -645,10 +914,20 @@ export const RichInputForm = forwardRef<RichInputFormHandle, RichInputFormProps>
       if (!sel || sel.rangeCount === 0) return;
       const range = sel.getRangeAt(0);
       range.deleteContents();
-      const node = document.createTextNode(text);
-      range.insertNode(node);
+
+      const isMarkdown = looksLikeMarkdownSource(text);
+      const fragment = isMarkdown
+        ? buildMarkdownFragment(text)
+        : document.createDocumentFragment();
+      if (!isMarkdown) {
+        fragment.appendChild(document.createTextNode(text));
+      }
+      const lastInsertedNode = fragment.lastChild;
+      if (!lastInsertedNode) return;
+
+      range.insertNode(fragment);
       const after = document.createRange();
-      after.setStartAfter(node);
+      after.setStartAfter(lastInsertedNode);
       after.collapse(true);
       sel.removeAllRanges();
       sel.addRange(after);
@@ -667,7 +946,7 @@ export const RichInputForm = forwardRef<RichInputFormHandle, RichInputFormProps>
           onInput={fireChange}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
-          className="rounded-2xl w-full pl-5 pr-24 pt-4 pb-1 text-sm outline-none whitespace-pre-wrap wrap-break-word
+          className="rounded-2xl w-full pl-5 pr-24 pt-4 pb-1 text-sm outline-none whitespace-pre-wrap wrap-break-word [&>p]:my-2 [&>p:first-child]:mt-0 [&>p:last-child]:mb-0
             min-h-12 max-h-80 overflow-y-auto noscrollbar
             dark:text-primary-300 text-primary-700"
         />

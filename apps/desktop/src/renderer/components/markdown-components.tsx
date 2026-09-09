@@ -35,7 +35,13 @@ function isFileHref(href: string): boolean {
  * File references render as an icon chip and open in the editor tab; real
  * URLs open in the system browser; `#fragment` links stay inside the document.
  */
-function MarkdownLink({ href, children }: { href?: string; children?: ReactNode }) {
+export function MarkdownLink({
+  href,
+  children,
+}: {
+  href?: string;
+  children?: ReactNode;
+}) {
   const openFileInEditor = useOpenFileInEditor();
 
   // A fragment names a node in this very document — GFM footnote references
@@ -44,18 +50,20 @@ function MarkdownLink({ href, children }: { href?: string; children?: ReactNode 
   // left every footnote link dead.
   if (href?.startsWith("#")) {
     return (
-      <Button
-        onClick={() => {
+      <a
+        href={href}
+        onClick={(event) => {
+          event.preventDefault();
           const id = decodeURIComponent(href.slice(1));
           document
             .getElementById(id)
             ?.scrollIntoView({ behavior: "smooth", block: "center" });
         }}
         title={href}
-        className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 underline cursor-pointer inline"
+        className="inline whitespace-normal wrap-break-word text-left text-primary-600 underline cursor-pointer hover:text-primary-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 dark:text-primary-400 dark:hover:text-primary-200"
       >
         {children}
-      </Button>
+      </a>
     );
   }
 
@@ -84,16 +92,18 @@ function MarkdownLink({ href, children }: { href?: string; children?: ReactNode 
   }
 
   return (
-    <Button
-      onClick={() => {
+    <a
+      href={href}
+      onClick={(event) => {
+        event.preventDefault();
         if (href) {
           window.api.shell.openExternal(href);
         }
       }}
-      className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 underline cursor-pointer inline"
+      className="inline whitespace-normal wrap-break-word text-left text-primary-600 underline cursor-pointer hover:text-primary-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 dark:text-primary-400 dark:hover:text-primary-200"
     >
       {children}
-    </Button>
+    </a>
   );
 }
 
